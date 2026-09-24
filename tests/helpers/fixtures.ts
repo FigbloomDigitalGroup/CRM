@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { adminDb } from "../../src/db/adminClient";
+import { resolveActiveMembership } from "../../src/repositories/memberships";
 import { seedOrganizationDefaults } from "../../src/services/organizationDefaults";
 
 /**
@@ -41,6 +42,31 @@ export async function createTestMembership(
     },
   });
   return { user, membership };
+}
+
+/**
+ * Creates a fresh user + active membership with the given role and returns
+ * the resolved `AuthContext` shape the service layer expects -- the
+ * standard way service-layer tests get "a user acting as role X in
+ * organization Y" without going through any HTTP/session plumbing.
+ */
+export async function createTestContext(
+  organizationId: string,
+  roleKey: string,
+  userEmailPrefix = "test.ctx",
+) {
+  const { user } = await createTestMembership(
+    organizationId,
+    roleKey,
+    userEmailPrefix,
+  );
+  const ctx = await resolveActiveMembership(user.id, organizationId);
+  if (!ctx) {
+    throw new Error(
+      "Expected a resolvable active membership immediately after creating one.",
+    );
+  }
+  return ctx;
 }
 
 export async function getLeadStatusId(organizationId: string, key = "NEW") {

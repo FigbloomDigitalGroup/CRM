@@ -67,10 +67,32 @@ export async function resolveActiveMembership(
 
   return {
     membershipId: membership.id,
+    userId: membership.userId,
     organizationId: membership.organizationId,
     roleKey: membership.role.key,
     permissionKeys: membership.role.rolePermissions.map(
       (rp) => rp.permission.key,
     ),
   };
+}
+
+export type ActiveMembership = NonNullable<
+  Awaited<ReturnType<typeof resolveActiveMembership>>
+>;
+
+/** Active members of an organization, for assignment/ownership pickers. */
+export async function listOrganizationMemberships(organizationId: string) {
+  const memberships = await adminDb.membership.findMany({
+    where: { organizationId, status: MembershipStatus.ACTIVE },
+    include: { user: true, role: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return memberships.map((m) => ({
+    membershipId: m.id,
+    userName: m.user.name,
+    userEmail: m.user.email,
+    roleKey: m.role.key,
+    roleName: m.role.name,
+  }));
 }

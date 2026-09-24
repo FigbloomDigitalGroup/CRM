@@ -1,27 +1,30 @@
 # FigBloom CRM
 
-Core CRM data model and database foundation for FigBloom Digital Group
-(Linear **FIG-438**), implementing the architecture and access-control
-baseline from **FIG-436** (V1 Architecture & Tenant Model) and **FIG-437**
-(Authentication, Organizations, Roles & Tenant Isolation), scoped by
-**FIG-300** (MVP Scope) and **FIG-299** (Core CRM Data Model).
+Core CRM foundation for FigBloom Digital Group: the database/tenant model
+from **FIG-438**, plus lead/contact/company management from **FIG-439**,
+implementing the architecture and access-control baseline from **FIG-436**
+(V1 Architecture & Tenant Model) and **FIG-437** (Authentication,
+Organizations, Roles & Tenant Isolation), scoped by **FIG-300** (MVP Scope)
+and **FIG-299** (Core CRM Data Model).
 
 See `documents/` for the full planning trail (research, stakeholder
 requirements, MVP scope, data model, architecture) and
 `IMPLEMENTATION_NOTES.md` for the specific decisions made while turning
-those documents into a running schema.
+those documents into a running application.
 
 ## Stack
 
-- **Node.js + TypeScript**
+- **Next.js (App Router) + React + TypeScript** for the API routes and UI
 - **PostgreSQL** with **Prisma** (schema + migrations + client)
 - **Row-level security (RLS)** as a database-enforced, defense-in-depth
   tenant boundary, on top of application-level `organizationId` scoping
 - **Vitest** for the automated test suite (migrations, seed data,
-  relationships, tenant isolation, authorization foundation)
+  relationships, tenant isolation, authorization foundation, service-layer
+  permission enforcement)
 
-This is a database/data-access foundation only — there is no HTTP API or UI
-yet. Those are FIG-439 and later.
+FIG-440 (deals/pipeline), FIG-441 (activities/tasks/audit UI), FIG-442
+(website lead capture API) and FIG-443 (dashboards/reporting) build on top
+of this.
 
 ## Local setup
 
@@ -48,9 +51,20 @@ separate `figbloom_crm_test` database — see `tests/globalSetup.ts`):
 npm test
 ```
 
+Run the app itself:
+
+```bash
+npm run dev   # http://localhost:3000, then visit /dev-login
+```
+
+`/dev-login` is a placeholder, no-password login — pick one of the five
+seeded dev users (one per V1 role) to explore the app as that role. See
+"Dev login" below before treating this as real authentication.
+
 Other scripts: `npm run typecheck`, `npm run lint`, `npm run format`,
 `npm run migrate:dev` (interactive, for authoring new migrations),
-`npm run migrate:deploy` (non-interactive, for CI/deploys).
+`npm run migrate:deploy` (non-interactive, for CI/deploys), `npm run build`
+/ `npm run start` (production build/serve).
 
 ## Why there are two Postgres roles
 
@@ -85,11 +99,41 @@ variable — **never** from a value committed to source control. See
    explicitly. Layers 1–2 are the backstop for when this is missing, not a
    replacement for it.
 
-## Repository layer
+## Application layers
 
-`src/repositories/*` contains a representative (not exhaustive) slice of
-data-access functions — organizations, memberships/authorization
-resolution, companies, leads (including the lead→deal conversion
-workflow), and audit events — demonstrating the patterns FIG-439/440/441
-should extend for the remaining entities (contacts, deals detail,
-activities, tasks, communications, proposal references).
+`src/repositories/*` -> `src/services/*` -> `src/app/api/**/route.ts` /
+`src/app/**/page.tsx`, matching FIG-436 section 10's request flow:
+
+- **Repositories** (`src/repositories/*`) are thin, org-scoped data access
+  — always take `organizationId` explicitly, always run through
+  `withOrgContext`. No permission checks here.
+- **Services** (`src/services/*`) are where FIG-437's RBAC is actually
+  enforced: every function takes an `AuthContext` (a resolved active
+  membership + its permission keys) and calls `requirePermission` /
+  `requireOwnedRecordPermission` before touching data. Route handlers and
+  pages call services, never repositories directly.
+- **Routes/pages** (`src/app/**`) resolve the `AuthContext` via
+  `resolveRequestContext(orgSlug)` and delegate. `NotFoundError` means the
+  record doesn't exist in the caller's organization at all; `ForbiddenError`
+  means it exists but the caller's role/ownership doesn't permit the action
+  (existence isn't treated as secret between colleagues in the same org —
+  see `src/services/leadService.ts`).
+
+Coverage is representative, not exhaustive: Companies, Contacts, and Leads
+(including lead ownership/assignment — FIG-439's actual scope) have full
+CRUD + search + duplicate detection + a UI. Deals (beyond the FIG-438
+lead-conversion demo), Activities, Tasks, Communications, and Proposal
+References have full schema/constraint coverage but no service/API/UI
+layer yet — that's FIG-440/441.
+
+## Dev login (not real authentication)
+
+`src/auth/devSession.ts` is a signed-cookie placeholder with **no password
+check** — it exists only so FIG-439's permission/ownership logic can be
+exercised through real HTTP requests and real screens before FIG-437's
+actual auth provider (OAuth/SSO/etc., still an open decision) is chosen and
+built. Visit `/dev-login`, pick a seeded user, done. It must be replaced
+wholesale, not extended, when real auth lands — nothing downstream depends
+on its internals, only on the `userId: string | null` it produces
+(`getCurrentUserId()` / `resolveRequestContext()` in
+`src/auth/requestContext.ts`).

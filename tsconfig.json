@@ -1,23 +1,33 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "lib": ["ES2022"],
-    "outDir": "dist",
-    "rootDir": ".",
+    "lib": ["ES2022", "dom", "dom.iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "preserve",
+    "allowJs": true,
+    "noEmit": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": false,
-    "sourceMap": true,
+    "isolatedModules": true,
+    "incremental": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "plugins": [{ "name": "next" }]
   },
-  "include": ["src", "prisma", "tests", "vitest.config.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src",
+    "prisma",
+    "tests",
+    "scripts",
+    "vitest.config.ts",
+    "next-env.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", ".next"]
 }
