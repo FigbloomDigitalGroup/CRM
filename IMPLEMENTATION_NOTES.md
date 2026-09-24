@@ -6,7 +6,8 @@ decision is discovered ... document the decision ... and continue"). None
 of these reopen the Organization = Tenant / User ≠ Membership / RBAC
 baseline — they resolve things those documents left open.
 
-The FIG-438 notes are below; FIG-439 and FIG-440 notes follow, in order.
+The FIG-438 notes are below; FIG-439, FIG-440, and FIG-441 notes follow, in
+order.
 
 ## Stack choice
 
@@ -451,3 +452,153 @@ defects — the FIG-439 bug pattern (unguarded service calls crashing pages
 for roles with no view permission) was already anticipated and guarded
 for every new page from the start, having just been fixed three times over
 in the previous ticket.
+
+---
+
+# FIG-441 Implementation Notes
+
+FIG-441 ("Build activities, follow-up tasks, reminders, and audit history")
+is the last of the FIG-436-through-FIG-441 chain before FIG-443
+(dashboards/reporting), which depends on it. Like FIG-440, the schema
+(`Activity`, `Task`, `Communication`, `AuditEvent`) and permission catalog
+(`activities.*`, `tasks.*`, `audit.view`) already existed from FIG-438 —
+this ticket is service/API/UI work plus, notably, actually *wiring up*
+`recordAuditEvent`, which FIG-438 built but never called from anywhere.
+
+## Activities and Tasks reuse the parent record's own view check, not a new permission
+
+Both `activities.view`/`activities.create` and `tasks.view.own`/`.all` are
+flat permissions in the FIG-437 catalog — they say nothing about *which*
+Company/Contact/Lead/Deal the caller may attach an activity or task to.
+Left unchecked, a Sales rep holding the flat `activities.create` could log
+(and read back) an activity against a colleague's lead they have no
+`leads.view.*` access to at all, purely by knowing its id — a real
+authorization gap, not a hypothetical one, since `leads.view.own` exists
+specifically to prevent that colleague from seeing the lead itself.
+`src/services/recordAccess.ts#assertCanAccessLinkedRecords` closes this by
+calling each parent's own service-layer view function
+(`companyService.getCompany`, `contactService.getContact`,
+`leadService.getLead`, `dealService.getDeal`) for every linked id before
+the activity/task permission check runs — reusing the ownership scoping
+that already exists there rather than inventing
+`activities.view.own`/`.all` and `tasks.view.own`/`.all`-per-parent-type
+permissions the catalog doesn't have. This is also why Delivery (no lead
+permissions at all, but `deals.view.all`) can log a "handoff meeting"
+activity against a Deal but not against a Lead — exactly the persona
+boundary FIG-297 describes.
+
+## Tasks have no `tasks.edit` permission — a judgment call, documented
+
+The FIG-437 catalog defines `tasks.create`, `tasks.assign.own`,
+`tasks.assign.any`, `tasks.view.own`, `tasks.view.all` — no edit/complete
+permission at all. Per the "permission matrix is provisional" note above,
+the judgment call made in `taskService.ts#canManageTask`: a task may be
+updated (status changed, marked complete, edited) by its assignee, its
+creator, or anyone holding `tasks.assign.any` (the same "can touch
+anyone's tasks" breadth Management already has for assignment) — but
+only after the caller passes the ordinary view check first. Reassigning
+an *existing* task to someone else additionally requires
+`tasks.assign.any` specifically, mirroring `leads.assign`'s separation
+from edit; a caller with only `tasks.assign.own` can create a task
+assigned to themselves but can never hand it to someone else.
+
+## Task `completedAt`, like Deal `outcome`, is derived from status — never client-set directly
+
+Same discipline as `dealService.ts#resolveOutcomeFields`
+(FIG-440): `updateTask`'s service-facing input has a `status` field, and
+`completedAt` is computed from it (`new Date()` when status becomes
+`COMPLETED`, `null` for any other status) rather than accepted as a raw
+value from the request body. Reopening a completed task (moving it back
+to `IN_PROGRESS`) clears `completedAt` the same way reopening a deal
+clears `wonAt`/`lostAt`.
+
+## "Reminders" is the existing derived-overdue mechanism, not a new notification system
+
+The ticket title mentions "reminders," but no FIG-299/FIG-436 source
+document describes an actual notification/email/push delivery mechanism,
+and no AC bullet asks for one — the AC instead says "due and overdue
+follow-ups are visible to assignees and authorized managers," which
+FIG-438's `Task.dueAt` + FIG-436 section 13's derived-overdue-state design
+already covers by construction. Building an actual reminder-delivery
+system (email/push notifications on a schedule) was treated as out of
+scope: it would require a background job/scheduler and a notification
+channel that no other part of this codebase has, and no document
+describes wanting one for V1. "Reminders" is implemented as: overdue is
+computed at query time (`repositories/tasks.ts#listTasks`'s `overdueOnly`
+filter: `dueAt` in the past AND status still `PENDING`/`IN_PROGRESS`),
+visible on the dashboard (an "N overdue task(s)" count linking to a
+pre-filtered Tasks list) and on the standalone Tasks page's filter.
+
+## Audit events: wiring up a table FIG-438 built but nothing called
+
+`recordAuditEvent` existed since FIG-438 (append-only at the DB level —
+`figbloom_app` has UPDATE/DELETE revoked on `audit_events`) but was never
+invoked outside its own repository file or a test. FIG-441 wires it into
+the mutations that are actually reachable through the app today and
+plausibly "important" per the AC: `leadService.assignLead` (ownership
+reassignment), `dealService.updateDeal` (only when a pipeline-stage
+transition actually changes the outcome — not on every unrelated field
+edit), and `companyService.updateCompany`/`contactService.updateContact`
+(only when `ownerMembershipId` is present in the input and differs from
+the current value). The last two have no UI control that drives an owner
+change yet (FIG-439 never built one), but the repository-level capability
+already exists and is exercised by the test suite directly, so auditing
+it now costs nothing and avoids a silent gap the moment a future ticket
+adds that control. Audit history itself is read-only, gated by
+`audit.view` (Management-only in the FIG-438 seed), and surfaced on Lead
+and Deal detail pages — not Company/Contact, since those have no
+UI-reachable owner-change control yet either.
+
+## Company and Deal get a real timeline; Lead gets one too; Contact does not
+
+FIG-441's AC explicitly says "Customer and deal timelines show activities
+in chronological order" — "Customer" per FIG-299/FIG-438 is Company
+("Company remains the canonical account identity"), so the Company and
+Deal detail pages both get `ActivityTimeline`. The Lead detail page also
+gets one, even though the AC doesn't name Lead specifically: logging a
+call or note against a lead being worked is one of the single most common
+"log calls, meetings, emails, WhatsApp summaries, and notes" (AC1)
+workflows in a sales process, and withholding it from the one screen
+where that logging would actually happen during qualification would be a
+strange, arbitrary gap. Contact does not get one — Contact is already the
+secondary entity in this data model (per the FIG-438 note "Company remains
+the canonical account identity"), and no AC bullet or source document
+calls for a contact-level timeline; adding one would be scope creep with
+no requirement behind it.
+
+## What FIG-441 explicitly does not include
+
+- **Communications.** The schema/permission catalog (`communications.view`/
+  `communications.create`) already exists from FIG-438, but no FIG-441 AC
+  bullet requires a separate channel-specific logging feature distinct
+  from Activity — AC1's "log calls, meetings, emails, WhatsApp summaries,
+  and notes" maps exactly onto `ActivityType`'s existing enum values
+  (CALL/MEETING/EMAIL/WHATSAPP/NOTE/OTHER). Building a full parallel
+  Communication CRUD+UI on top of that, with no AC asking for it, would be
+  exactly the kind of unrequested feature addition FIG-438's own
+  section 3 warns against. It remains schema/permission-ready for a
+  future ticket if the team decides channel-specific (inbound/outbound)
+  logging distinct from the Activity timeline is actually needed.
+- **A real reminder-delivery mechanism.** See "'Reminders' is the existing
+  derived-overdue mechanism" above.
+- **Task/Activity sections on the Company or Contact detail pages** (Tasks)
+  and **on the Contact detail page** (Activities). See the two notes above.
+- **Audit history on Company/Contact detail pages.** See "Audit events"
+  above — no UI-reachable mutation to audit there yet.
+
+## Manual end-to-end verification
+
+Same approach as FIG-439/440: dev server + an HTTP walkthrough script
+logging in as all five seeded roles plus a second Sales user, driving
+routes directly. Covered: activity creation rejected with no linked
+record; chronological ordering; ownership-scoped read/write on a lead
+(Sales2 blocked from a colleague's deal timeline); Delivery logging
+against a deal it can view but not edit; Finance blocked from Activities
+entirely; task creation with assignee defaulting/overridden per
+`tasks.assign.own` vs `.any`; a non-assignee/non-creator colleague blocked
+from completing someone else's task; the overdue filter; audit history
+recording and retrieval, gated correctly by `audit.view`; and page
+rendering (Tasks page, Deal/Company detail pages showing their new
+sections) across every role with no crashes. 33/33 checks passed, plus
+targeted follow-ups (dashboard overdue count, lead detail sections,
+nonexistent-task 404) with no defects found.

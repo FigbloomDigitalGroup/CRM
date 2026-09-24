@@ -2,9 +2,15 @@ import { notFound } from "next/navigation";
 import { hasPermission } from "@/auth/context";
 import { ForbiddenError, NotFoundError } from "@/auth/errors";
 import { resolveRequestContext } from "@/auth/requestContext";
+import { listActivitiesForLead } from "@/services/activityService";
+import { listAuditHistory } from "@/services/auditService";
 import { listCompanies } from "@/services/companyService";
 import { getLead } from "@/services/leadService";
 import { getFormReferenceData } from "@/services/referenceDataService";
+import { listTasks } from "@/services/taskService";
+import { ActivityTimeline } from "../../_shared/ActivityTimeline";
+import { AuditHistory } from "../../_shared/AuditHistory";
+import { TaskSection } from "../../_shared/TaskSection";
 import { EditLeadForm } from "./EditLeadForm";
 import { AssignLeadControl } from "../AssignLeadControl";
 import { ConvertLeadControl } from "./ConvertLeadControl";
@@ -45,6 +51,27 @@ export default async function LeadDetailPage({
   const companies = canConvert && !lead.companyId
     ? await listCompanies(ctx)
     : [];
+
+  let activities: Awaited<ReturnType<typeof listActivitiesForLead>> = [];
+  try {
+    activities = await listActivitiesForLead(ctx, leadId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
+  let tasks: Awaited<ReturnType<typeof listTasks>> = [];
+  try {
+    tasks = await listTasks(ctx, { leadId });
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
+  let auditEvents: Awaited<ReturnType<typeof listAuditHistory>> = [];
+  try {
+    auditEvents = await listAuditHistory(ctx, "Lead", leadId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
 
   return (
     <div>
@@ -121,6 +148,46 @@ export default async function LeadDetailPage({
           }}
           leadStatuses={referenceData.leadStatuses}
           leadSources={referenceData.leadSources}
+        />
+      )}
+
+      {hasPermission(ctx, "activities.view") && (
+        <ActivityTimeline
+          orgSlug={orgSlug}
+          parentField="leadId"
+          parentId={lead.id}
+          activities={activities.map((a) => ({
+            ...a,
+            occurredAt: a.occurredAt.toISOString(),
+          }))}
+          members={referenceData.members}
+          canCreate={hasPermission(ctx, "activities.create")}
+        />
+      )}
+
+      {(hasPermission(ctx, "tasks.view.own") ||
+        hasPermission(ctx, "tasks.view.all")) && (
+        <TaskSection
+          orgSlug={orgSlug}
+          parentField="leadId"
+          parentId={lead.id}
+          tasks={tasks.map((t) => ({
+            ...t,
+            dueAt: t.dueAt ? t.dueAt.toISOString() : null,
+          }))}
+          members={referenceData.members}
+          canCreate={hasPermission(ctx, "tasks.create")}
+          canAssignAny={hasPermission(ctx, "tasks.assign.any")}
+        />
+      )}
+
+      {hasPermission(ctx, "audit.view") && (
+        <AuditHistory
+          events={auditEvents.map((e) => ({
+            ...e,
+            createdAt: e.createdAt.toISOString(),
+          }))}
+          members={referenceData.members}
         />
       )}
     </div>

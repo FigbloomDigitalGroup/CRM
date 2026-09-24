@@ -2,8 +2,13 @@ import { notFound } from "next/navigation";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { hasPermission } from "@/auth/context";
 import { ForbiddenError, NotFoundError } from "@/auth/errors";
+import { listActivitiesForCompany } from "@/services/activityService";
+import { listAuditHistory } from "@/services/auditService";
 import { getCompany } from "@/services/companyService";
 import { listContacts } from "@/services/contactService";
+import { getFormReferenceData } from "@/services/referenceDataService";
+import { ActivityTimeline } from "../../_shared/ActivityTimeline";
+import { AuditHistory } from "../../_shared/AuditHistory";
 import { EditCompanyForm } from "./EditCompanyForm";
 
 export default async function CompanyDetailPage({
@@ -30,6 +35,22 @@ export default async function CompanyDetailPage({
   const contacts = hasPermission(ctx, "contacts.view")
     ? await listContacts(ctx, { companyId })
     : [];
+
+  const referenceData = await getFormReferenceData(ctx);
+
+  let activities: Awaited<ReturnType<typeof listActivitiesForCompany>> = [];
+  try {
+    activities = await listActivitiesForCompany(ctx, companyId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
+  let auditEvents: Awaited<ReturnType<typeof listAuditHistory>> = [];
+  try {
+    auditEvents = await listAuditHistory(ctx, "Company", companyId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
 
   return (
     <div>
@@ -83,6 +104,30 @@ export default async function CompanyDetailPage({
             </tbody>
           </table>
         </>
+      )}
+
+      {hasPermission(ctx, "activities.view") && (
+        <ActivityTimeline
+          orgSlug={orgSlug}
+          parentField="companyId"
+          parentId={company.id}
+          activities={activities.map((a) => ({
+            ...a,
+            occurredAt: a.occurredAt.toISOString(),
+          }))}
+          members={referenceData.members}
+          canCreate={hasPermission(ctx, "activities.create")}
+        />
+      )}
+
+      {hasPermission(ctx, "audit.view") && (
+        <AuditHistory
+          events={auditEvents.map((e) => ({
+            ...e,
+            createdAt: e.createdAt.toISOString(),
+          }))}
+          members={referenceData.members}
+        />
       )}
     </div>
   );

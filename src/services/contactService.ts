@@ -1,6 +1,7 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { NotFoundError } from "../auth/errors";
+import { recordAuditEvent } from "../repositories/auditEvents";
 import {
   createContact as createContactRecord,
   findPossibleDuplicateContacts,
@@ -46,6 +47,24 @@ export async function updateContact(
   input: UpdateContactInput,
 ) {
   requirePermission(ctx, "contacts.edit");
+
+  // Ownership changes are auditable (FIG-441 AC) regardless of which
+  // other fields this same edit also touches.
+  if (input.ownerMembershipId !== undefined) {
+    const previous = await getContactById(ctx.organizationId, contactId);
+    if (previous && previous.ownerMembershipId !== input.ownerMembershipId) {
+      await recordAuditEvent({
+        organizationId: ctx.organizationId,
+        actorMembershipId: ctx.membershipId,
+        action: "contact.owner_reassigned",
+        entityType: "Contact",
+        entityId: contactId,
+        previousValue: { ownerMembershipId: previous.ownerMembershipId },
+        newValue: { ownerMembershipId: input.ownerMembershipId },
+      });
+    }
+  }
+
   return updateContactRecord(ctx.organizationId, contactId, input);
 }
 

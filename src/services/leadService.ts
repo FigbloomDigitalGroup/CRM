@@ -11,6 +11,7 @@ import {
   LeadAlreadyConvertedError,
   LeadMissingCompanyError,
 } from "../repositories/deals";
+import { recordAuditEvent } from "../repositories/auditEvents";
 import {
   createLead as createLeadRecord,
   findPossibleDuplicateLeads,
@@ -130,7 +131,7 @@ export async function assignLead(
   newOwnerMembershipId: string,
 ) {
   requirePermission(ctx, "leads.assign");
-  await loadOwnedLead(ctx, leadId);
+  const lead = await loadOwnedLead(ctx, leadId);
 
   // A missing/empty id must fail loudly, not silently: Prisma treats an
   // `undefined` filter value as "omit this condition" (so `id: undefined`
@@ -163,7 +164,25 @@ export async function assignLead(
     );
   }
 
-  return reassignLeadOwner(ctx.organizationId, leadId, targetMembership.id);
+  const reassigned = await reassignLeadOwner(
+    ctx.organizationId,
+    leadId,
+    targetMembership.id,
+  );
+
+  // Ownership changes are auditable (FIG-441 AC) -- fire-and-forget-ish,
+  // but awaited so a failure here surfaces rather than silently vanishing.
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "lead.owner_reassigned",
+    entityType: "Lead",
+    entityId: leadId,
+    previousValue: { ownerMembershipId: lead.ownerMembershipId },
+    newValue: { ownerMembershipId: targetMembership.id },
+  });
+
+  return reassigned;
 }
 
 export interface ConvertLeadServiceInput {

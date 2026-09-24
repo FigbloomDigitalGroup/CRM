@@ -6,6 +6,7 @@ import {
 } from "../auth/context";
 import { NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
+import { recordAuditEvent } from "../repositories/auditEvents";
 import {
   createDeal as createDealRecord,
   getDealById,
@@ -203,5 +204,21 @@ export async function updateDeal(
     pipelineStageId: input.pipelineStageId,
     ...outcomeFields,
   });
+
+  // Outcome changes (won/lost/reopened) are auditable (FIG-441 AC) --
+  // only recorded when the stage transition actually flipped the outcome,
+  // not on every unrelated field edit.
+  if (outcomeFields && outcomeFields.outcome !== deal.outcome) {
+    await recordAuditEvent({
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      action: "deal.outcome_changed",
+      entityType: "Deal",
+      entityId: dealId,
+      previousValue: { outcome: deal.outcome, pipelineStageId: deal.pipelineStageId },
+      newValue: { outcome: outcomeFields.outcome, pipelineStageId: input.pipelineStageId },
+    });
+  }
+
   return maskValue(ctx, updated);
 }

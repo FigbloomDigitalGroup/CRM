@@ -4,6 +4,7 @@ import { listCompanies } from "@/services/companyService";
 import { listContacts } from "@/services/contactService";
 import { listDeals } from "@/services/dealService";
 import { listLeads } from "@/services/leadService";
+import { listTasks } from "@/services/taskService";
 
 export default async function OrgDashboardPage({
   params,
@@ -25,8 +26,11 @@ export default async function OrgDashboardPage({
   const canViewDeals =
     hasPermission(ctx, "deals.view.own") ||
     hasPermission(ctx, "deals.view.all");
+  const canViewTasks =
+    hasPermission(ctx, "tasks.view.own") ||
+    hasPermission(ctx, "tasks.view.all");
 
-  const [leads, contacts, companies, deals] = await Promise.all([
+  const [leads, contacts, companies, deals, overdueTasks] = await Promise.all([
     canViewLeads ? listLeads(ctx) : Promise.resolve([]),
     hasPermission(ctx, "contacts.view")
       ? listContacts(ctx)
@@ -35,6 +39,7 @@ export default async function OrgDashboardPage({
       ? listCompanies(ctx)
       : Promise.resolve([]),
     canViewDeals ? listDeals(ctx) : Promise.resolve([]),
+    canViewTasks ? listTasks(ctx, { overdueOnly: true }) : Promise.resolve([]),
   ]);
 
   return (
@@ -72,6 +77,16 @@ export default async function OrgDashboardPage({
           <p>
             <a href={`/o/${orgSlug}/deals`}>
               {deals.length} deal(s) visible to you
+            </a>
+          </p>
+        )}
+        {canViewTasks && (
+          <p>
+            <a
+              href={`/o/${orgSlug}/tasks?overdueOnly=true`}
+              className={overdueTasks.length > 0 ? "overdue" : undefined}
+            >
+              {overdueTasks.length} overdue task(s)
             </a>
           </p>
         )}

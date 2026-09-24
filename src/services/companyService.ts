@@ -1,6 +1,7 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { NotFoundError } from "../auth/errors";
+import { recordAuditEvent } from "../repositories/auditEvents";
 import {
   createCompany as createCompanyRecord,
   findPossibleDuplicateCompanies,
@@ -54,6 +55,24 @@ export async function updateCompany(
   input: UpdateCompanyInput,
 ) {
   requirePermission(ctx, "companies.edit");
+
+  // Ownership changes are auditable (FIG-441 AC) regardless of which
+  // other fields this same edit also touches.
+  if (input.ownerMembershipId !== undefined) {
+    const previous = await getCompanyById(ctx.organizationId, companyId);
+    if (previous && previous.ownerMembershipId !== input.ownerMembershipId) {
+      await recordAuditEvent({
+        organizationId: ctx.organizationId,
+        actorMembershipId: ctx.membershipId,
+        action: "company.owner_reassigned",
+        entityType: "Company",
+        entityId: companyId,
+        previousValue: { ownerMembershipId: previous.ownerMembershipId },
+        newValue: { ownerMembershipId: input.ownerMembershipId },
+      });
+    }
+  }
+
   return updateCompanyRecord(ctx.organizationId, companyId, input);
 }
 

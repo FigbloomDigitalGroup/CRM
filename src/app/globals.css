@@ -200,3 +200,23 @@ button:disabled {
 .deal-card .value {
   font-weight: 600;
 }
+
+.timeline {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.timeline li {
+  border-left: 2px solid var(--border);
+  padding-left: 10px;
+  font-size: 13px;
+}
+
+.overdue {
+  color: var(--danger);
+  font-weight: 600;
+}

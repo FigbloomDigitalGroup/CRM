@@ -1,8 +1,9 @@
 # FigBloom CRM
 
 Core CRM foundation for FigBloom Digital Group: the database/tenant model
-from **FIG-438**, lead/contact/company management from **FIG-439**, and
-deals/pipeline/lead-conversion from **FIG-440**, implementing the
+from **FIG-438**, lead/contact/company management from **FIG-439**,
+deals/pipeline/lead-conversion from **FIG-440**, and
+activities/tasks/audit history from **FIG-441**, implementing the
 architecture and access-control baseline from **FIG-436** (V1 Architecture &
 Tenant Model) and **FIG-437** (Authentication, Organizations, Roles &
 Tenant Isolation), scoped by **FIG-300** (MVP Scope) and **FIG-299** (Core
@@ -23,8 +24,8 @@ those documents into a running application.
   relationships, tenant isolation, authorization foundation, service-layer
   permission enforcement)
 
-FIG-441 (activities/tasks/audit UI), FIG-442 (website lead capture API) and
-FIG-443 (dashboards/reporting) build on top of this.
+FIG-442 (website lead capture API) and FIG-443 (dashboards/reporting) build
+on top of this.
 
 ## Local setup
 
@@ -126,9 +127,14 @@ board grouped by stage, lead-to-deal conversion, and won/lost-outcome
 recording (FIG-440's scope) — see "Deal outcomes are driven by pipeline
 stage" below. Proposal References have a minimal create/list/status-update
 slice scoped to a single deal, deliberately not a full proposal-generation
-subsystem (FIG-438 section 11). Activities, Tasks, and Communications have
-full schema/constraint coverage but no service/API/UI layer yet — that's
-FIG-441.
+subsystem (FIG-438 section 11). Activities and Tasks (FIG-441's scope) have
+full CRUD + a timeline/list UI, linked to any of Company/Contact/Lead/Deal;
+see "Activities and Tasks share one ownership check" below. Audit history
+is recorded for lead/deal/company/contact ownership changes and deal
+outcome changes, and surfaced read-only on Lead and Deal detail pages for
+`audit.view` holders. Communications have full schema/constraint coverage
+but no service/API/UI layer — see "What FIG-441 explicitly does not
+include" in `IMPLEMENTATION_NOTES.md`.
 
 ## Deal outcomes are driven by pipeline stage, not set directly
 
@@ -154,6 +160,22 @@ requires the dedicated `deals.view.value` permission. A caller with
 still sees every deal, just with `value` masked to `null` and a
 `valueMasked: true` flag on the response rather than the record being
 withheld outright.
+
+## Activities and Tasks share one ownership check
+
+Both link to an arbitrary subset of Company/Contact/Lead/Deal, and both
+have their own flat permission (`activities.*`/`tasks.*`) that says
+nothing about *which* records the caller may touch. Rather than inventing
+a parallel ownership model for each,
+`src/services/recordAccess.ts#assertCanAccessLinkedRecords` reuses each
+parent's own service-layer view check (`companyService.getCompany`,
+`leadService.getLead`, etc.) — the same place lead/deal ownership scoping
+already lives — so a Sales rep can't read or write an activity/task
+against a colleague's lead just because they hold the flat permission.
+Tasks have no dedicated `tasks.edit` permission in the FIG-437 catalog
+(only create/assign/view); a task may be updated by its assignee, its
+creator, or anyone holding `tasks.assign.any` — see
+`src/services/taskService.ts#canManageTask` for the reasoning.
 
 ## Dev login (not real authentication)
 
