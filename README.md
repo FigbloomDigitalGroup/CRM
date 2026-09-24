@@ -2,12 +2,12 @@
 
 Core CRM foundation for FigBloom Digital Group: the database/tenant model
 from **FIG-438**, lead/contact/company management from **FIG-439**,
-deals/pipeline/lead-conversion from **FIG-440**, and
-activities/tasks/audit history from **FIG-441**, implementing the
-architecture and access-control baseline from **FIG-436** (V1 Architecture &
-Tenant Model) and **FIG-437** (Authentication, Organizations, Roles &
-Tenant Isolation), scoped by **FIG-300** (MVP Scope) and **FIG-299** (Core
-CRM Data Model).
+deals/pipeline/lead-conversion from **FIG-440**,
+activities/tasks/audit history from **FIG-441**, and role-specific
+dashboards/reporting from **FIG-443**, implementing the architecture and
+access-control baseline from **FIG-436** (V1 Architecture & Tenant Model)
+and **FIG-437** (Authentication, Organizations, Roles & Tenant Isolation),
+scoped by **FIG-300** (MVP Scope) and **FIG-299** (Core CRM Data Model).
 
 See `documents/` for the full planning trail (research, stakeholder
 requirements, MVP scope, data model, architecture) and
@@ -24,8 +24,9 @@ those documents into a running application.
   relationships, tenant isolation, authorization foundation, service-layer
   permission enforcement)
 
-FIG-442 (website lead capture API) and FIG-443 (dashboards/reporting) build
-on top of this.
+FIG-442 (website lead capture API) is the one remaining ticket in this
+chain, still open pending an auth-mechanism decision for its public,
+unauthenticated endpoint (see IMPLEMENTATION_NOTES.md).
 
 ## Local setup
 
@@ -134,7 +135,10 @@ is recorded for lead/deal/company/contact ownership changes and deal
 outcome changes, and surfaced read-only on Lead and Deal detail pages for
 `audit.view` holders. Communications have full schema/constraint coverage
 but no service/API/UI layer — see "What FIG-441 explicitly does not
-include" in `IMPLEMENTATION_NOTES.md`.
+include" in `IMPLEMENTATION_NOTES.md`. A `/reports` page (FIG-443) gives
+every role with any reporting permission a personal "actionable work"
+view, and gives `reporting.view.all` holders organization-wide metrics
+with owner/source/stage/service/date-range filters — see "Reports" below.
 
 ## Deal outcomes are driven by pipeline stage, not set directly
 
@@ -176,6 +180,28 @@ Tasks have no dedicated `tasks.edit` permission in the FIG-437 catalog
 (only create/assign/view); a task may be updated by its assignee, its
 creator, or anyone holding `tasks.assign.any` — see
 `src/services/taskService.ts#canManageTask` for the reasoning.
+
+## Reports
+
+`/o/[orgSlug]/reports` (`src/services/reportingService.ts`) has two parts,
+gated independently:
+
+- **Your actionable work** — due-today follow-ups, overdue tasks, new
+  leads, and stalled deals (open, past their expected close date). Shown
+  to anyone holding `reporting.view.own` *or* `.all`, but each sub-section
+  reuses the existing `leadService`/`dealService`/`taskService` own/all
+  scoping and value masking rather than re-deriving it, so it degrades
+  per-role automatically (e.g. Finance, which has no `tasks.*`/`leads.*`
+  permission at all, simply sees those sections empty).
+- **Organization metrics** — lead volume by source, conversion rate,
+  won/lost deals, pipeline value by stage, sales by service, and
+  follow-up performance, filterable by owner/source/stage/service/date
+  range. Gated by `reporting.view.all` (Management-only in the FIG-438
+  seed); value-bearing aggregates are nulled out (not the whole metric
+  withheld) for a caller without `deals.view.value`, the same masking
+  discipline as individual deals. Metric definitions are documented
+  in-page (a "Metric definitions" panel) as well as in
+  `IMPLEMENTATION_NOTES.md`.
 
 ## Dev login (not real authentication)
 

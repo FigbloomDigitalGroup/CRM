@@ -48,6 +48,9 @@ export default async function OrgLayout({
   const canViewTasks =
     hasPermission(ctx, "tasks.view.own") ||
     hasPermission(ctx, "tasks.view.all");
+  const canViewReports =
+    hasPermission(ctx, "reporting.view.own") ||
+    hasPermission(ctx, "reporting.view.all");
 
   return (
     <>
@@ -57,6 +60,7 @@ export default async function OrgLayout({
         {canViewLeads && <a href={`/o/${orgSlug}/leads`}>Leads</a>}
         {canViewDeals && <a href={`/o/${orgSlug}/deals`}>Deals</a>}
         {canViewTasks && <a href={`/o/${orgSlug}/tasks`}>Tasks</a>}
+        {canViewReports && <a href={`/o/${orgSlug}/reports`}>Reports</a>}
         {hasPermission(ctx, "companies.view") && (
           <a href={`/o/${orgSlug}/companies`}>Companies</a>
         )}

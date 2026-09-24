@@ -103,6 +103,14 @@ export interface ListDealsFilters {
   pipelineStageId?: string;
   outcome?: "OPEN" | "WON" | "LOST";
   companyId?: string;
+  serviceId?: string;
+  /**
+   * "Stalled" (FIG-443's Sales-dashboard AC) is defined as: still open, and
+   * past the expected close date it was given. This overrides `outcome` if
+   * both are passed -- there's no call site that does that today, but if
+   * one ever does, stalled-ness (an open deal past due) should win.
+   */
+  stalledOnly?: boolean;
 }
 
 export async function listDeals(
@@ -117,6 +125,10 @@ export async function listDeals(
         pipelineStageId: filters.pipelineStageId,
         outcome: filters.outcome,
         companyId: filters.companyId,
+        serviceId: filters.serviceId,
+        ...(filters.stalledOnly
+          ? { outcome: "OPEN", expectedCloseDate: { lt: new Date() } }
+          : {}),
         ...(filters.query
           ? {
               OR: [

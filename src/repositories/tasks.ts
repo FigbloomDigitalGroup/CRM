@@ -79,11 +79,16 @@ export interface ListTasksFilters {
   leadId?: string;
   dealId?: string;
   overdueOnly?: boolean;
+  /** "Due today," "due this week," etc. (FIG-443) -- independent of overdueOnly. */
+  dueAfter?: Date;
+  dueBefore?: Date;
 }
 
 /**
  * "Overdue" is derived at query time (dueAt in the past AND not
- * completed/cancelled), never stored -- FIG-436 section 13.
+ * completed/cancelled), never stored -- FIG-436 section 13. `overdueOnly`
+ * wins over `dueAfter`/`dueBefore` if a caller somehow passes both (no
+ * call site does).
  */
 export async function listTasks(
   organizationId: string,
@@ -99,6 +104,14 @@ export async function listTasks(
         contactId: filters.contactId,
         leadId: filters.leadId,
         dealId: filters.dealId,
+        ...(filters.dueAfter || filters.dueBefore
+          ? {
+              dueAt: {
+                ...(filters.dueAfter ? { gte: filters.dueAfter } : {}),
+                ...(filters.dueBefore ? { lt: filters.dueBefore } : {}),
+              },
+            }
+          : {}),
         ...(filters.overdueOnly
           ? {
               dueAt: { lt: new Date() },

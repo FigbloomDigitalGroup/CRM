@@ -106,6 +106,8 @@ export interface ListLeadsFilters {
   leadStatusId?: string;
   leadSourceId?: string;
   temperature?: "HOT" | "WARM" | "COLD";
+  createdAfter?: Date;
+  createdBefore?: Date;
 }
 
 export async function listLeads(
@@ -120,6 +122,14 @@ export async function listLeads(
         leadStatusId: filters.leadStatusId,
         leadSourceId: filters.leadSourceId,
         temperature: filters.temperature,
+        ...(filters.createdAfter || filters.createdBefore
+          ? {
+              createdAt: {
+                ...(filters.createdAfter ? { gte: filters.createdAfter } : {}),
+                ...(filters.createdBefore ? { lt: filters.createdBefore } : {}),
+              },
+            }
+          : {}),
         ...(filters.query
           ? {
               OR: [

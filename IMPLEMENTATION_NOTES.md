@@ -6,8 +6,8 @@ decision is discovered ... document the decision ... and continue"). None
 of these reopen the Organization = Tenant / User ≠ Membership / RBAC
 baseline — they resolve things those documents left open.
 
-The FIG-438 notes are below; FIG-439, FIG-440, and FIG-441 notes follow, in
-order.
+The FIG-438 notes are below; FIG-439, FIG-440, FIG-441, and FIG-443 notes
+follow, in order (FIG-442 was deferred — see the end of this file).
 
 ## Stack choice
 
@@ -602,3 +602,181 @@ rendering (Tasks page, Deal/Company detail pages showing their new
 sections) across every role with no crashes. 33/33 checks passed, plus
 targeted follow-ups (dashboard overdue count, lead detail sections,
 nonexistent-task 404) with no defects found.
+
+---
+
+# FIG-443 Implementation Notes
+
+FIG-443 ("Build role-specific CRM dashboards and reporting") is almost
+entirely aggregation and UI on top of what FIG-439/440/441 already built:
+Leads/Deals/Tasks already have full service-layer own/all permission
+scoping and (for deals) value masking, so "your actionable work" reuses
+those services directly rather than re-deriving their authorization
+logic. The genuinely new piece is `src/repositories/reporting.ts`'s
+Prisma `groupBy`/`aggregate` queries for the six Management-facing
+metrics the AC names.
+
+## FIG-442 was deferred, not skipped
+
+Sequencing so far had been strictly following the "blocks/blockedBy"
+chain narrated in each report (FIG-439 -> FIG-440 -> FIG-441), which gave
+the impression FIG-442 was next. It isn't, dependency-wise: FIG-442 only
+`blockedBy`s FIG-436/437/439 (already done) and nothing else in the chain
+depends on it. It was raised, and explicitly deferred by request, because
+it's a different kind of ticket from every one built so far: a
+public-facing, unauthenticated endpoint (a website contact form has no
+CRM session), whereas every route built through FIG-441 assumes a
+resolved org membership. That's a real design decision (API key? signed
+webhook? something else?) which shouldn't be made silently on a
+placeholder basis the way `dev-login` was for FIG-439 -- see the note at
+the end of this file for what's still open there.
+
+## "My work" is reuse, not new authorization logic
+
+`reportingService.ts#getMyActionableWork` calls
+`leadService.listLeads`/`dealService.listDeals`/`taskService.listTasks`
+directly with new filter parameters (`createdAfter`, `stalledOnly`,
+`dueAfter`/`dueBefore` -- added to their respective repositories this
+ticket) rather than querying Prisma directly. This means the dashboard
+automatically inherits every permission/ownership rule already tested in
+FIG-439/440/441 (Sales sees only their own; Delivery has no lead access
+at all; deal values stay masked for non-owners without
+`deals.view.value`) instead of a second, parallel implementation of the
+same rules that could drift out of sync. Each call is wrapped in
+`ignoreForbidden()` so a role missing the underlying permission (Finance
+has no `tasks.*`/`leads.*` at all) gets an empty section instead of a
+500 for the whole dashboard.
+
+## "Stalled deal" and "due today" are judgment calls, documented
+
+Neither FIG-297 nor FIG-436 defines these precisely. Chosen definitions
+(both are one-line, easily revisited if Michael/the team wants
+different ones):
+
+- **Stalled deal**: open (`outcome = OPEN`) and past its
+  `expectedCloseDate`. An alternative considered was "no activity logged
+  in N days," but that requires an arbitrary N and a join against
+  Activity that adds real query cost for a metric whose only source
+  document mention is the bare AC phrase "stalled deals" -- the
+  close-date definition is simpler, already has a field for it, and is
+  directly actionable (the rep quoted a date and missed it).
+- **Due today**: `dueAt` within the caller's server-side "today" (UTC
+  calendar day) and status still `PENDING`/`IN_PROGRESS`. No timezone is
+  modeled anywhere in this schema yet (FIG-437 section 18 territory), so
+  this is the same simplification every other date-handling code in the
+  app already makes.
+
+## Metric definitions: date-range semantics differ by metric, and that's deliberate
+
+AC5 ("metric definitions are documented") is satisfied both in-product
+(a "Metric definitions" panel on the Reports page) and here, because two
+of the six metrics are date-ranged by a *different* timestamp than the
+other four, which isn't obvious from the metric name alone:
+
+- **Lead volume by source** and **Conversion**: scoped by the lead's
+  `createdAt` -- "how many leads came in, and from where, during this
+  window."
+- **Won/Lost deals** and **Sales by service**: scoped by `wonAt`/`lostAt`
+  -- "how much did we close during this window," regardless of when the
+  underlying deal was first created (a deal opened three months ago that
+  closed yesterday counts as yesterday's win, not three-months-ago's).
+- **Pipeline value by stage**: deliberately *not* date-ranged at all --
+  it's a snapshot of currently-open deals, since "what's in the pipeline
+  right now" isn't a historical question the way the other five are.
+- **Follow-up performance**: scoped by the task's `dueAt` -- "how did we
+  do against what was due in this window."
+- Conversion rate itself is defined as: of the leads *created* in the
+  window, what fraction have `convertedAt` set *as of today* (not
+  gated on the conversion itself having happened inside the window) --
+  otherwise a lead created on day 1 of a 30-day window and converted on
+  day 45 would never count as converted in any report, which would
+  understate conversion for every window that doesn't happen to be
+  open-ended.
+- No explicit range defaults to the **last 30 days** (`dateTo` defaults
+  to now, `dateFrom` to 30 days before that).
+
+## Deal-value masking extends from records to aggregates
+
+FIG-440 already masks `value` to `null` on an individual Deal for a
+viewer without `deals.view.value` (Delivery: `deals.view.all` but not
+`.view.value`). Aggregates can't be masked the same granular way -- a sum
+either reflects real numbers or it doesn't -- so
+`reportingService.ts#getOrganizationMetrics` nulls out every value-bearing
+aggregate (won value, pipeline-by-stage sums, sales-by-service sums)
+outright when the caller lacks `deals.view.value`, returning counts
+unmasked. No seeded role currently exercises this branch (`reporting.view.all`
+and `deals.view.value` are both Management-only today), but it's written
+permission-first rather than role-name-first on purpose, the same
+discipline used throughout this codebase, and is covered by a test that
+manually strips the permission from an otherwise-real context to prove
+the branch works before any future permission-matrix change might expose it.
+
+## Two real bugs found by the manual walkthrough, not the unit tests
+
+1. **`dealService.createDeal` 500'd whenever `expectedCloseDate` was
+   provided.** Prisma's client throws (rather than coercing) when a
+   DateTime-typed field is given a plain `"YYYY-MM-DD"` string instead of
+   a full ISO-8601 datetime or a `Date` object. `updateDeal` already
+   converted this correctly (`new Date(input.expectedCloseDate)`);
+   `createDeal` never did. This bug has been *live since FIG-440* --
+   `CreateDealForm.tsx`'s expected-close-date field has always sent a
+   plain date string from an `<input type="date">` -- and neither
+   FIG-440's nor FIG-441's automated tests or manual walkthroughs
+   happened to create a deal with that field set, so it went unnoticed
+   for two tickets until FIG-443's "stalled deal" test scenario needed a
+   deal with a past expected close date. Fixed by applying the exact
+   same `new Date(...)` conversion `createDeal` was missing; regression
+   test added (`tests/dealService.test.ts`, "accepts a plain
+   'YYYY-MM-DD' expectedCloseDate string").
+2. **`getSalesByService` silently ignored the `serviceId` filter.**
+   The repository function groups results *by* `serviceId` but never
+   included it in the `where` clause, so filtering the Reports page by a
+   specific service still returned every service's won-deal totals
+   lumped together (or, worse, attributed to whichever single row the
+   filter happened to still match). Every other filtered aggregate in
+   the same file (`getDealOutcomeSummary`, `getPipelineValueByStage`)
+   does include it -- this was a one-line omission, not a design gap,
+   caught by the walkthrough's "filter by a nonexistent serviceId should
+   return empty results" check, which returned real unfiltered data
+   instead. Fixed by adding the missing `serviceId: filters.serviceId`
+   line; regression test added (`tests/reportingService.test.ts`,
+   "filters salesByService by serviceId").
+
+Both bugs are further confirmation of the pattern noted in the FIG-439
+section above: a green unit-test suite and clean typecheck/build had
+already been reached before either was found, purely because no existing
+test happened to exercise "create a deal with this specific optional
+field set" or "filter this specific aggregate by the field it's grouped
+by."
+
+## Manual end-to-end verification
+
+Same approach as every prior ticket: dev server + an HTTP walkthrough
+script logging in as all five seeded roles plus a second Sales user.
+First pass found the two bugs above (24/28 checks passed, all 4 failures
+diagnosed: 2 real bugs, 1 test artifact from the dev database's
+accumulated leftover data across every prior manual-walkthrough session
+in this same `figbloom` org, 1 false positive from asserting against a
+substring that also appears in the page's own "Metric definitions"
+glossary text). Second pass, after fixing both real bugs and correcting
+the one bad assertion: 28/28 checks passed, covering both report
+endpoints, permission boundaries (Sales/Delivery/Restricted Technical/
+Finance all correctly forbidden from the organization-wide report),
+filter correctness, page rendering for every role, and the nav link's
+permission-gated visibility.
+
+## What's still open: FIG-442's authentication mechanism
+
+FIG-442 needs a decision before it can be implemented: how does a public
+website form authenticate to a secure lead-capture endpoint, when there's
+no human session to resolve? Options raised: a static per-organization
+API key (simplest, matches "secure integration path" in the AC, but is a
+long-lived shared secret); a signed webhook (HMAC signature over the
+payload, more correct for the "webhook" framing FIG-442's own title uses,
+but more integration work for whoever builds the website side); or
+building everything else (validation, duplicate handling, assignment
+rules, failure logging/recovery) behind a route with the auth check
+factored out, leaving the exact mechanism an explicit open decision for
+Michael/the team to confirm -- the same "provisional, not final" pattern
+already used for the FIG-437 permission matrix and the `dev-login`
+placeholder. No option has been chosen yet.

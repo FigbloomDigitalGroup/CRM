@@ -31,6 +31,19 @@ describe("dealService", () => {
     expect(deal.ownerMembershipId).toBe(ctx.membershipId);
   });
 
+  it("accepts a plain 'YYYY-MM-DD' expectedCloseDate string without throwing", async () => {
+    // Regression: createDeal used to pass the client's raw date string
+    // straight through to Prisma, which throws (rather than coercing) for
+    // a DateTime field given a date-only string -- found via FIG-443's
+    // manual walkthrough, but live since FIG-440 (CreateDealForm has
+    // always sent a plain date string from an <input type="date">).
+    const org = await createTestOrganization();
+    const ctx = await createTestContext(org.id, "SALES");
+
+    const deal = await createTestDeal(ctx, { expectedCloseDate: "2026-09-19" });
+    expect(deal.expectedCloseDate?.toISOString().slice(0, 10)).toBe("2026-09-19");
+  });
+
   it("does not mask value for the deal's own owner even without deals.view.value", async () => {
     const org = await createTestOrganization();
     const salesCtx = await createTestContext(org.id, "SALES");

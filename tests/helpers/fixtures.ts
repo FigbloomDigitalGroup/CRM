@@ -95,3 +95,10 @@ export async function getLostReasonId(
   });
   return reason.id;
 }
+
+export async function getServiceId(organizationId: string, key = "CRM") {
+  const service = await adminDb.service.findFirstOrThrow({
+    where: { organizationId, key },
+  });
+  return service.id;
+}

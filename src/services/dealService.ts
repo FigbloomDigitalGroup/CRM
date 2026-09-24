@@ -18,8 +18,11 @@ import {
 
 export type CreateDealServiceInput = Omit<
   CreateDealInput,
-  "organizationId" | "createdByMembershipId" | "ownerMembershipId"
-> & { ownerMembershipId?: string };
+  | "organizationId"
+  | "createdByMembershipId"
+  | "ownerMembershipId"
+  | "expectedCloseDate"
+> & { ownerMembershipId?: string; expectedCloseDate?: string };
 
 type DealWithOwner = { ownerMembershipId: string; value: unknown };
 
@@ -55,6 +58,14 @@ export async function createDeal(
     organizationId: ctx.organizationId,
     createdByMembershipId: ctx.membershipId,
     ownerMembershipId: input.ownerMembershipId ?? ctx.membershipId,
+    // Regression: this used to pass the client's raw date string straight
+    // through to Prisma, which throws (not coerces) for a DateTime field
+    // given a date-only string -- found via FIG-443's manual walkthrough
+    // when creating a deal with an expected close date set, but live since
+    // FIG-440 (CreateDealForm has always sent a plain "YYYY-MM-DD" string).
+    expectedCloseDate: input.expectedCloseDate
+      ? new Date(input.expectedCloseDate)
+      : undefined,
   });
   return maskValue(ctx, deal);
 }
