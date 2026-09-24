@@ -2,6 +2,7 @@ import { resolveRequestContext } from "@/auth/requestContext";
 import { hasPermission } from "@/auth/context";
 import { listCompanies } from "@/services/companyService";
 import { listContacts } from "@/services/contactService";
+import { listDeals } from "@/services/dealService";
 import { listLeads } from "@/services/leadService";
 
 export default async function OrgDashboardPage({
@@ -21,8 +22,11 @@ export default async function OrgDashboardPage({
   const canViewLeads =
     hasPermission(ctx, "leads.view.own") ||
     hasPermission(ctx, "leads.view.all");
+  const canViewDeals =
+    hasPermission(ctx, "deals.view.own") ||
+    hasPermission(ctx, "deals.view.all");
 
-  const [leads, contacts, companies] = await Promise.all([
+  const [leads, contacts, companies, deals] = await Promise.all([
     canViewLeads ? listLeads(ctx) : Promise.resolve([]),
     hasPermission(ctx, "contacts.view")
       ? listContacts(ctx)
@@ -30,6 +34,7 @@ export default async function OrgDashboardPage({
     hasPermission(ctx, "companies.view")
       ? listCompanies(ctx)
       : Promise.resolve([]),
+    canViewDeals ? listDeals(ctx) : Promise.resolve([]),
   ]);
 
   return (
@@ -60,6 +65,13 @@ export default async function OrgDashboardPage({
           <p>
             <a href={`/o/${orgSlug}/companies`}>
               {companies.length} compan{companies.length === 1 ? "y" : "ies"}
+            </a>
+          </p>
+        )}
+        {canViewDeals && (
+          <p>
+            <a href={`/o/${orgSlug}/deals`}>
+              {deals.length} deal(s) visible to you
             </a>
           </p>
         )}

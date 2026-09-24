@@ -42,6 +42,9 @@ export default async function OrgLayout({
   const canViewLeads =
     hasPermission(ctx, "leads.view.own") ||
     hasPermission(ctx, "leads.view.all");
+  const canViewDeals =
+    hasPermission(ctx, "deals.view.own") ||
+    hasPermission(ctx, "deals.view.all");
 
   return (
     <>
@@ -49,6 +52,7 @@ export default async function OrgLayout({
         <strong>FigBloom CRM</strong>
         <a href={`/o/${orgSlug}`}>Dashboard</a>
         {canViewLeads && <a href={`/o/${orgSlug}/leads`}>Leads</a>}
+        {canViewDeals && <a href={`/o/${orgSlug}/deals`}>Deals</a>}
         {hasPermission(ctx, "companies.view") && (
           <a href={`/o/${orgSlug}/companies`}>Companies</a>
         )}

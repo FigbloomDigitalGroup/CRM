@@ -7,6 +7,11 @@ import {
 import { NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import {
+  convertLeadToDeal,
+  LeadAlreadyConvertedError,
+  LeadMissingCompanyError,
+} from "../repositories/deals";
+import {
   createLead as createLeadRecord,
   findPossibleDuplicateLeads,
   getLeadById,
@@ -159,6 +164,75 @@ export async function assignLead(
   }
 
   return reassignLeadOwner(ctx.organizationId, leadId, targetMembership.id);
+}
+
+export interface ConvertLeadServiceInput {
+  companyId?: string;
+  ownerMembershipId?: string;
+  pipelineStageId?: string;
+  serviceId?: string;
+  value?: number | string;
+  expectedCloseDate?: string;
+  notes?: string;
+}
+
+/**
+ * Conversion is gated the same way an edit would be (ownership via
+ * leads.edit.own/all) *and* requires the dedicated `leads.convert`
+ * permission -- both are true for Management and Sales in the FIG-438
+ * seed, but they're deliberately separate checks: converting mutates the
+ * lead (stamps convertedAt) so ownership applies, while `leads.convert`
+ * is what actually gates the ability to create a Deal from it at all.
+ */
+export async function convertLead(
+  ctx: AuthContext,
+  leadId: string,
+  input: ConvertLeadServiceInput = {},
+) {
+  const lead = await loadOwnedLead(ctx, leadId);
+  requireOwnedRecordPermission(
+    ctx,
+    "leads.edit.own",
+    "leads.edit.all",
+    lead.ownerMembershipId,
+  );
+  requirePermission(ctx, "leads.convert");
+
+  if (lead.convertedAt) {
+    throw new ValidationError(
+      "This lead has already been converted to a deal.",
+    );
+  }
+  if (!lead.companyId && !input.companyId) {
+    throw new ValidationError(
+      "A company is required to convert this lead -- attach an existing " +
+        "company to the lead first, or pass companyId.",
+    );
+  }
+
+  try {
+    return await convertLeadToDeal({
+      organizationId: ctx.organizationId,
+      leadId,
+      companyId: input.companyId,
+      ownerMembershipId: input.ownerMembershipId,
+      pipelineStageId: input.pipelineStageId,
+      serviceId: input.serviceId,
+      value: input.value,
+      expectedCloseDate: input.expectedCloseDate
+        ? new Date(input.expectedCloseDate)
+        : undefined,
+      notes: input.notes,
+    });
+  } catch (err) {
+    if (
+      err instanceof LeadAlreadyConvertedError ||
+      err instanceof LeadMissingCompanyError
+    ) {
+      throw new ValidationError(err.message);
+    }
+    throw err;
+  }
 }
 
 export async function checkDuplicateLeads(

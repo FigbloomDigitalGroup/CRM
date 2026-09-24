@@ -6,7 +6,7 @@ decision is discovered ... document the decision ... and continue"). None
 of these reopen the Organization = Tenant / User ≠ Membership / RBAC
 baseline — they resolve things those documents left open.
 
-The FIG-438 notes are below; FIG-439 notes are at the end of this file.
+The FIG-438 notes are below; FIG-439 and FIG-440 notes follow, in order.
 
 ## Stack choice
 
@@ -328,3 +328,126 @@ than merely-wrong owner id). The manual end-to-end pass is not a formality
 on top of the automated suite — it found real, user-facing defects the
 automated suite had a coverage gap for, and each one became a permanent
 regression test afterward.
+
+---
+
+# FIG-440 Implementation Notes
+
+FIG-440 ("Build deals, pipeline stages, and lead conversion") builds
+directly on schema/permissions FIG-438 already seeded in anticipation of
+it (`Deal`, `PipelineStage`, `LostReason`, the `deals.*`/`leads.convert`
+permission catalog) — this ticket is almost entirely service/API/UI work,
+following FIG-439's exact layering (`src/repositories/*` ->
+`src/services/*` -> `src/app/api/**` / `src/app/**`).
+
+## `convertLeadToDeal` moved from the Lead repository to the Deal repository
+
+FIG-438 had put a minimal, representative `convertLeadToDeal` in
+`src/repositories/leads.ts` (documented there as intentionally
+incomplete — see the FIG-438 note above, "Lead→Deal conversion: what
+FIG-438 implements vs. defers to FIG-440"). It now lives in
+`src/repositories/deals.ts` instead: it *creates a Deal*, so the Deal
+repository is its home even though it starts from a Lead id — this also
+puts it next to `createDeal`, which deliberately has **no** `leadId`
+parameter, so linking a Deal to its originating Lead (and stamping that
+Lead's `convertedAt`) can only ever happen through this one function,
+never as a side door via a bare `POST /deals { leadId }`.
+
+## Company resolution for a lead converted with no company
+
+FIG-438 explicitly deferred this ("inventing that resolution logic here
+would be exactly the kind of speculative, ahead-of-scope implementation
+FIG-438 section 3 warns against"). The FIG-440 resolution taken is
+deliberately the smallest reasonable one, not a "create a company inline
+from the lead's contact details" subsystem: `convertLeadToDeal` now
+accepts an optional `companyId` override, used only when the lead has
+none; `leadService.convertLead` requires the caller to supply one in that
+case (via a company picker in the UI, `ConvertLeadControl.tsx`) or the
+conversion is rejected with a `ValidationError`. Creating a *new* company
+as part of conversion is not implemented — the caller must pick an
+existing one first (e.g. via the Companies screen), which is consistent
+with FIG-438's "duplicate company detection warns, never auto-creates."
+
+## Deal outcome is derived from pipeline stage, not an independently-settable field
+
+`Deal.outcome`/`wonAt`/`lostAt`/`lostReasonId` exist as real columns (with
+a DB-level CHECK constraint from FIG-438: `deals_outcome_consistency_chk`),
+but the FIG-440 service layer treats the *pipeline stage* as the single
+source of truth for all four: moving a deal onto a stage flagged `isWon`
+records WON, onto a stage flagged `isLost` requires a `lostReasonId` and
+records LOST, and onto any other stage reopens it
+(`dealService.ts#resolveOutcomeFields`). `updateDeal`'s client-facing input
+type has no `outcome`/`wonAt`/`lostAt` fields at all, and `lostReasonId` is
+only ever written as a value the outcome resolver computed — never a
+direct pass-through of request body — so a client cannot PATCH a deal
+straight to `{ outcome: "WON" }` without actually moving it through a
+won-flagged stage. This was a deliberate design choice over letting the
+UI set stage and outcome as two independent fields, which would let them
+drift out of sync (a real risk the DB CHECK constraint alone doesn't fully
+prevent, since it only enforces "LOST implies lostAt + lostReasonId," not
+"outcome matches the current stage's isWon/isLost flags").
+
+## Deal value masking reuses ownership, doesn't invent a new permission
+
+FIG-438's `prisma/seedData.ts` comment already reconciles FIG-297 Q56/Q57
+(Sales can see the value on deals they quote, but org-wide value
+visibility needs `deals.view.value`). FIG-440 implements that exactly:
+`dealService.ts#maskValue` returns the record with `value: null` and a
+`valueMasked: true` flag whenever the caller lacks `deals.view.value` and
+doesn't own the deal — applied uniformly to `getDeal`, `listDeals`,
+`createDeal`, and `updateDeal`'s return values. The record itself is never
+withheld (Delivery, which has `deals.view.all` but not `deals.view.value`,
+still sees the deal exists, who owns it, its stage, and its expected close
+date — just not the number), consistent with FIG-439's "existence isn't a
+secret between colleagues" convention for `NotFoundError`/`ForbiddenError`.
+
+## Proposal References: a minimal slice, on purpose
+
+FIG-438 section 11 explicitly scoped `ProposalReference` as "reference
+only," not a proposal-generation subsystem. FIG-440's AC lists "proposal
+status" as one of a deal's tracked attributes, so a minimal
+create/list/status-update slice was added
+(`src/services/proposalService.ts`, nested under a deal:
+`/api/orgs/[orgSlug]/deals/[dealId]/proposals`) rather than either
+skipping it entirely or building document generation/e-signature/etc.
+There's no `proposals.view.own`/`proposals.view.all` split in the FIG-437
+permission catalog (just `proposals.view`/`proposals.manage`), so instead
+of inventing a new permission dimension, proposal access reuses the
+parent Deal's own/all ownership gate (`deals.view.*`/`deals.edit.*`) in
+addition to the proposal permission itself — otherwise a Sales rep with
+`proposals.manage` could read or write proposals on a colleague's deal by
+guessing its id, which the Deal-level ownership check already exists to
+prevent.
+
+## What FIG-440 explicitly does not include
+
+- **Company/contact creation during conversion.** See "Company resolution"
+  above — an existing company must be picked, none is created inline.
+- **Configurable pipeline stages via a settings UI.** The AC's "Pipeline
+  stages are configurable per organization" is satisfied by the existing
+  FIG-438 data model (`PipelineStage` is already per-organization, seeded
+  per org, and gated behind `configuration.manage`) and surfaced read-only
+  via `getFormReferenceData`; a dedicated stage-management screen (add/
+  reorder/rename stages) was not built, as no FIG-440 AC calls for one and
+  it would be speculative UI ahead of an actual settings-area ticket.
+- **Full proposal generation/e-signature/document flow.** See "Proposal
+  References" above.
+
+## Manual end-to-end verification
+
+Same approach as FIG-439 (dev server + a scripted HTTP walkthrough logging
+in as all five seeded roles plus a second ad-hoc Sales user, driving every
+route directly, not just the service layer): lead-to-deal conversion
+(including the missing-company and already-converted rejection paths),
+direct deal creation, ownership scoping between two Sales peers, deal
+value masking for Delivery vs. Finance vs. the owner, won/lost pipeline
+stage transitions (including the missing-lost-reason rejection and
+reopening a closed deal), an outcome-bypass attempt via a raw PATCH, and
+proposal reference create/status-update with the same ownership gate —
+36 checks, all passing, plus targeted follow-up checks for page-level
+rendering (dashboard, pipeline board, deal detail) across every role and a
+nonexistent-deal-id 404. Unlike FIG-439, this pass did not surface any new
+defects — the FIG-439 bug pattern (unguarded service calls crashing pages
+for roles with no view permission) was already anticipated and guarded
+for every new page from the start, having just been fixed three times over
+in the previous ticket.

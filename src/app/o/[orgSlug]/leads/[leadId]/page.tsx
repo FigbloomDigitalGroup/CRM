@@ -2,10 +2,12 @@ import { notFound } from "next/navigation";
 import { hasPermission } from "@/auth/context";
 import { ForbiddenError, NotFoundError } from "@/auth/errors";
 import { resolveRequestContext } from "@/auth/requestContext";
+import { listCompanies } from "@/services/companyService";
 import { getLead } from "@/services/leadService";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { EditLeadForm } from "./EditLeadForm";
 import { AssignLeadControl } from "../AssignLeadControl";
+import { ConvertLeadControl } from "./ConvertLeadControl";
 
 export default async function LeadDetailPage({
   params,
@@ -38,6 +40,11 @@ export default async function LeadDetailPage({
     hasPermission(ctx, "leads.edit.all") ||
     (hasPermission(ctx, "leads.edit.own") &&
       lead.ownerMembershipId === ctx.membershipId);
+  const canConvert =
+    hasPermission(ctx, "leads.convert") && canEdit && !lead.convertedAt;
+  const companies = canConvert && !lead.companyId
+    ? await listCompanies(ctx)
+    : [];
 
   return (
     <div>
@@ -83,6 +90,18 @@ export default async function LeadDetailPage({
             leadId={lead.id}
             currentOwnerMembershipId={lead.ownerMembershipId}
             members={referenceData.members}
+          />
+        </div>
+      )}
+
+      {canConvert && (
+        <div className="card">
+          <strong>Convert to deal</strong>
+          <ConvertLeadControl
+            orgSlug={orgSlug}
+            leadId={lead.id}
+            hasCompany={Boolean(lead.companyId)}
+            companies={companies.map((c) => ({ id: c.id, name: c.name }))}
           />
         </div>
       )}

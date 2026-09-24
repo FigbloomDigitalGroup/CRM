@@ -1,11 +1,12 @@
 # FigBloom CRM
 
 Core CRM foundation for FigBloom Digital Group: the database/tenant model
-from **FIG-438**, plus lead/contact/company management from **FIG-439**,
-implementing the architecture and access-control baseline from **FIG-436**
-(V1 Architecture & Tenant Model) and **FIG-437** (Authentication,
-Organizations, Roles & Tenant Isolation), scoped by **FIG-300** (MVP Scope)
-and **FIG-299** (Core CRM Data Model).
+from **FIG-438**, lead/contact/company management from **FIG-439**, and
+deals/pipeline/lead-conversion from **FIG-440**, implementing the
+architecture and access-control baseline from **FIG-436** (V1 Architecture &
+Tenant Model) and **FIG-437** (Authentication, Organizations, Roles &
+Tenant Isolation), scoped by **FIG-300** (MVP Scope) and **FIG-299** (Core
+CRM Data Model).
 
 See `documents/` for the full planning trail (research, stakeholder
 requirements, MVP scope, data model, architecture) and
@@ -22,9 +23,8 @@ those documents into a running application.
   relationships, tenant isolation, authorization foundation, service-layer
   permission enforcement)
 
-FIG-440 (deals/pipeline), FIG-441 (activities/tasks/audit UI), FIG-442
-(website lead capture API) and FIG-443 (dashboards/reporting) build on top
-of this.
+FIG-441 (activities/tasks/audit UI), FIG-442 (website lead capture API) and
+FIG-443 (dashboards/reporting) build on top of this.
 
 ## Local setup
 
@@ -120,11 +120,40 @@ variable — **never** from a value committed to source control. See
   see `src/services/leadService.ts`).
 
 Coverage is representative, not exhaustive: Companies, Contacts, and Leads
-(including lead ownership/assignment — FIG-439's actual scope) have full
-CRUD + search + duplicate detection + a UI. Deals (beyond the FIG-438
-lead-conversion demo), Activities, Tasks, Communications, and Proposal
-References have full schema/constraint coverage but no service/API/UI
-layer yet — that's FIG-440/441.
+(including lead ownership/assignment — FIG-439's scope) have full CRUD +
+search + duplicate detection + a UI. Deals also have full CRUD, a pipeline
+board grouped by stage, lead-to-deal conversion, and won/lost-outcome
+recording (FIG-440's scope) — see "Deal outcomes are driven by pipeline
+stage" below. Proposal References have a minimal create/list/status-update
+slice scoped to a single deal, deliberately not a full proposal-generation
+subsystem (FIG-438 section 11). Activities, Tasks, and Communications have
+full schema/constraint coverage but no service/API/UI layer yet — that's
+FIG-441.
+
+## Deal outcomes are driven by pipeline stage, not set directly
+
+`Deal.outcome`/`wonAt`/`lostAt`/`lostReasonId` can only change as a side
+effect of moving a deal onto a different `PipelineStage` (see
+`src/services/dealService.ts#resolveOutcomeFields`): a stage flagged
+`isWon` records WON, a stage flagged `isLost` requires a `lostReasonId` and
+records LOST, and any other stage reopens the deal. The API/service layer
+never accepts `outcome` as a raw client-supplied field, so a deal can't be
+marked won or lost without actually moving it through a won/lost-flagged
+stage — the stage is the single source of truth, avoiding two
+independently-settable fields (a status flag and a stage) going out of
+sync.
+
+## Deal value visibility
+
+FIG-297 Q56 ("Sales cannot see cost/margin figures") and Q57 ("deal values
+are Management + Finance only") are reconciled the same way FIG-438 does:
+the owner of a deal can always see the value they themselves quoted
+(`deals.view.own`/`deals.edit.own`), but seeing another member's deal value
+requires the dedicated `deals.view.value` permission. A caller with
+`deals.view.all` but not `deals.view.value` (Delivery, in the FIG-438 seed)
+still sees every deal, just with `value` masked to `null` and a
+`valueMasked: true` flag on the response rather than the record being
+withheld outright.
 
 ## Dev login (not real authentication)
 

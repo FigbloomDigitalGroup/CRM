@@ -192,4 +192,97 @@ describe("leadService", () => {
     const stillOriginal = await leadService.getLead(managementCtx, lead.id);
     expect(stillOriginal.ownerMembershipId).toBe(originalOwner);
   });
+
+  describe("convertLead", () => {
+    it("converts an owned, company-attached lead into a deal and stamps convertedAt", async () => {
+      const org = await createTestOrganization();
+      const ctx = await createTestContext(org.id, "SALES");
+      const leadStatusId = await getLeadStatusId(org.id);
+      const { company } = await createCompany(ctx, { name: "Convert Co" });
+      const { lead } = await leadService.createLead(ctx, {
+        leadStatusId,
+        companyId: company.id,
+      });
+
+      const deal = await leadService.convertLead(ctx, lead.id);
+      expect(deal.leadId).toBe(lead.id);
+      expect(deal.companyId).toBe(company.id);
+      expect(deal.ownerMembershipId).toBe(ctx.membershipId);
+
+      const converted = await leadService.getLead(ctx, lead.id);
+      expect(converted.convertedAt).not.toBeNull();
+    });
+
+    it("requires a company to convert a lead that has none", async () => {
+      const org = await createTestOrganization();
+      const ctx = await createTestContext(org.id, "SALES");
+      const leadStatusId = await getLeadStatusId(org.id);
+      const { lead } = await leadService.createLead(ctx, { leadStatusId });
+
+      await expect(leadService.convertLead(ctx, lead.id)).rejects.toThrow(
+        ValidationError,
+      );
+    });
+
+    it("accepts a companyId override for a lead with no company attached", async () => {
+      const org = await createTestOrganization();
+      const ctx = await createTestContext(org.id, "SALES");
+      const leadStatusId = await getLeadStatusId(org.id);
+      const { company } = await createCompany(ctx, { name: "Override Co" });
+      const { lead } = await leadService.createLead(ctx, { leadStatusId });
+
+      const deal = await leadService.convertLead(ctx, lead.id, {
+        companyId: company.id,
+      });
+      expect(deal.companyId).toBe(company.id);
+    });
+
+    it("rejects converting the same lead twice", async () => {
+      const org = await createTestOrganization();
+      const ctx = await createTestContext(org.id, "MANAGEMENT");
+      const leadStatusId = await getLeadStatusId(org.id);
+      const { company } = await createCompany(ctx, { name: "Twice Co" });
+      const { lead } = await leadService.createLead(ctx, {
+        leadStatusId,
+        companyId: company.id,
+      });
+
+      await leadService.convertLead(ctx, lead.id);
+      await expect(leadService.convertLead(ctx, lead.id)).rejects.toThrow(
+        ValidationError,
+      );
+    });
+
+    it("Sales cannot convert a lead they do not own", async () => {
+      const org = await createTestOrganization();
+      const ownerCtx = await createTestContext(org.id, "SALES", "owner");
+      const otherCtx = await createTestContext(org.id, "SALES", "other");
+      const leadStatusId = await getLeadStatusId(org.id);
+      const { company } = await createCompany(ownerCtx, { name: "Owned Co" });
+      const { lead } = await leadService.createLead(ownerCtx, {
+        leadStatusId,
+        companyId: company.id,
+      });
+
+      await expect(leadService.convertLead(otherCtx, lead.id)).rejects.toThrow(
+        ForbiddenError,
+      );
+    });
+
+    it("Delivery (no leads.convert or leads.edit.*) cannot convert a lead", async () => {
+      const org = await createTestOrganization();
+      const salesCtx = await createTestContext(org.id, "SALES", "owner");
+      const deliveryCtx = await createTestContext(org.id, "DELIVERY", "viewer");
+      const leadStatusId = await getLeadStatusId(org.id);
+      const { company } = await createCompany(salesCtx, { name: "Delivery Co" });
+      const { lead } = await leadService.createLead(salesCtx, {
+        leadStatusId,
+        companyId: company.id,
+      });
+
+      await expect(
+        leadService.convertLead(deliveryCtx, lead.id),
+      ).rejects.toThrow(ForbiddenError);
+    });
+  });
 });

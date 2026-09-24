@@ -6,7 +6,8 @@ import {
 } from "../src/db/orgScopedClient";
 import { recordAuditEvent } from "../src/repositories/auditEvents";
 import { createCompany, listCompanies } from "../src/repositories/companies";
-import { convertLeadToDeal, createLead } from "../src/repositories/leads";
+import { createLead } from "../src/repositories/leads";
+import { convertLeadToDeal } from "../src/repositories/deals";
 import {
   createTestMembership,
   createTestOrganization,

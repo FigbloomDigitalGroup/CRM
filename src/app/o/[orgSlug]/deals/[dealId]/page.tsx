@@ -1,0 +1,146 @@
+import { notFound } from "next/navigation";
+import { hasPermission } from "@/auth/context";
+import { ForbiddenError, NotFoundError } from "@/auth/errors";
+import { resolveRequestContext } from "@/auth/requestContext";
+import { listContacts } from "@/services/contactService";
+import { getDeal } from "@/services/dealService";
+import { listProposalReferences } from "@/services/proposalService";
+import { getFormReferenceData } from "@/services/referenceDataService";
+import { EditDealForm } from "./EditDealForm";
+import { ProposalReferences } from "./ProposalReferences";
+
+export default async function DealDetailPage({
+  params,
+}: {
+  params: Promise<{ orgSlug: string; dealId: string }>;
+}) {
+  const { orgSlug, dealId } = await params;
+  const ctx = await resolveRequestContext(orgSlug);
+
+  let deal;
+  try {
+    deal = await getDeal(ctx, dealId);
+  } catch (err) {
+    if (err instanceof NotFoundError) {
+      notFound();
+    }
+    if (err instanceof ForbiddenError) {
+      return (
+        <p className="error">
+          This deal exists but you do not have permission to view it.
+        </p>
+      );
+    }
+    throw err;
+  }
+
+  // proposals.view is Sales/Management-only (Delivery/Finance/Restricted
+  // Technical have neither) -- listProposalReferences fails closed for
+  // them, so this section is simply omitted rather than crashing the page.
+  let proposals: Awaited<ReturnType<typeof listProposalReferences>> = [];
+  try {
+    proposals = await listProposalReferences(ctx, dealId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
+  const [referenceData, contacts] = await Promise.all([
+    getFormReferenceData(ctx),
+    hasPermission(ctx, "contacts.view")
+      ? listContacts(ctx)
+      : Promise.resolve([]),
+  ]);
+
+  const canEdit =
+    hasPermission(ctx, "deals.edit.all") ||
+    (hasPermission(ctx, "deals.edit.own") &&
+      deal.ownerMembershipId === ctx.membershipId);
+  const canManageProposals = hasPermission(ctx, "proposals.manage") && canEdit;
+
+  const valueDisplay = deal.valueMasked
+    ? "hidden"
+    : deal.value === null
+      ? "not set"
+      : `${deal.currency} ${Number(deal.value).toLocaleString()}`;
+
+  return (
+    <div>
+      <p>
+        <a href={`/o/${orgSlug}/deals`}>&larr; Deals</a>
+      </p>
+      <h1>{deal.company.name}</h1>
+
+      <div className="card">
+        <p>
+          Stage: <span className="badge">{deal.pipelineStage.name}</span>
+          &nbsp; Outcome: <span className="badge">{deal.outcome}</span>
+        </p>
+        <p>Service: {deal.service?.name ?? "--"}</p>
+        <p>
+          Primary contact:{" "}
+          {deal.primaryContact
+            ? `${deal.primaryContact.firstName} ${deal.primaryContact.lastName ?? ""}`
+            : "--"}
+        </p>
+        <p>Value: {valueDisplay}</p>
+        <p>
+          Expected close:{" "}
+          {deal.expectedCloseDate
+            ? new Date(deal.expectedCloseDate).toLocaleDateString()
+            : "--"}
+        </p>
+        {deal.outcome === "LOST" && (
+          <p>Lost reason: {deal.lostReason?.name ?? "--"}</p>
+        )}
+        <p>
+          Owner:{" "}
+          {referenceData.members.find(
+            (m) => m.membershipId === deal.ownerMembershipId,
+          )?.userName ?? "--"}
+        </p>
+        {deal.lead && <p className="badge">Converted from a lead</p>}
+        <p>Notes: {deal.notes ?? "--"}</p>
+      </div>
+
+      {canEdit && (
+        <EditDealForm
+          orgSlug={orgSlug}
+          deal={{
+            id: deal.id,
+            primaryContactId: deal.primaryContactId,
+            serviceId: deal.serviceId,
+            pipelineStageId: deal.pipelineStageId,
+            value: deal.valueMasked || deal.value === null ? "" : String(deal.value),
+            currency: deal.currency,
+            expectedCloseDate: deal.expectedCloseDate
+              ? deal.expectedCloseDate.toISOString().slice(0, 10)
+              : "",
+            notes: deal.notes,
+          }}
+          contacts={contacts.map((c) => ({
+            id: c.id,
+            name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
+          }))}
+          services={referenceData.services}
+          pipelineStages={referenceData.pipelineStages}
+          lostReasons={referenceData.lostReasons}
+        />
+      )}
+
+      {hasPermission(ctx, "proposals.view") && canEdit && (
+        <ProposalReferences
+          orgSlug={orgSlug}
+          dealId={deal.id}
+          proposals={proposals.map((p) => ({
+            id: p.id,
+            proposalNumber: p.proposalNumber,
+            status: p.status,
+            amount: p.amount === null ? null : String(p.amount),
+            currency: p.currency,
+          }))}
+          canManage={canManageProposals}
+        />
+      )}
+    </div>
+  );
+}
