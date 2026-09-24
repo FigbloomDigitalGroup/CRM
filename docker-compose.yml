@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: figbloom_crm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: figbloom
+      POSTGRES_PASSWORD: figbloom
+      POSTGRES_DB: figbloom_crm_dev
+    ports:
+      - "55432:5432"
+    volumes:
+      - figbloom_crm_pg_data:/var/lib/postgresql/data
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql
+
+volumes:
+  figbloom_crm_pg_data:

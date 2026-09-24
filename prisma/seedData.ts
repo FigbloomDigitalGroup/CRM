@@ -1,0 +1,375 @@
+/**
+ * Global role/permission catalog for CRM V1.
+ *
+ * The five roles come directly from FIG-436 section 5 / FIG-437 section 8.
+ * The permission list and role->permission mapping are this implementer's
+ * best-effort, smallest-reasonable reading of FIG-437 section 9 combined
+ * with the role descriptions in FIG-297 Q56 -- FIG-437 section 18
+ * explicitly leaves "Final permission matrix" as an open decision pending
+ * confirmation by Michael/the project lead. Treat this as a seeded starting
+ * point to unblock FIG-438/FIG-439, not as an approved matrix. See
+ * IMPLEMENTATION_NOTES.md.
+ *
+ * One deliberate reconciliation: FIG-297 Q56 says Sales "cannot see cost or
+ * margin figures" while Q57 says "deal values ... Management + Finance
+ * only." FIG-299 does not model margin/cost as CRM fields at all, so the
+ * practical resolution here is that Sales can view/edit the *value* field
+ * on deals they own (they are the ones quoting it) via deals.view.own /
+ * deals.edit.own, but do not get deals.view.value, which represents
+ * organization-wide value visibility used for aggregate reporting.
+ */
+
+export const ROLES = [
+  {
+    key: "MANAGEMENT",
+    name: "Management",
+    description: "Oversight, reporting, and team supervision.",
+  },
+  {
+    key: "SALES",
+    name: "Sales",
+    description:
+      "Lead, contact, company, deal, activity, and follow-up management.",
+  },
+  {
+    key: "DELIVERY",
+    name: "Delivery",
+    description:
+      "Sales-to-delivery visibility and customer/project handoff context.",
+  },
+  {
+    key: "FINANCE",
+    name: "Finance",
+    description:
+      "Financially relevant customer/deal information and finance workflows.",
+  },
+  {
+    key: "RESTRICTED_TECHNICAL",
+    name: "Restricted Technical",
+    description:
+      "Least-privilege technical support and troubleshooting access.",
+  },
+] as const;
+
+export const PERMISSIONS: { key: string; area: string; description: string }[] =
+  [
+    {
+      key: "organization.view",
+      area: "Organization",
+      description: "View the active organization's context/profile.",
+    },
+    {
+      key: "organization.manage_settings",
+      area: "Organization",
+      description: "Manage organization CRM configuration.",
+    },
+    {
+      key: "membership.view",
+      area: "Membership",
+      description: "View organization memberships.",
+    },
+    {
+      key: "membership.manage",
+      area: "Membership",
+      description: "Add or deactivate organization memberships.",
+    },
+    {
+      key: "role.assign",
+      area: "Roles",
+      description: "Assign or change a membership's role.",
+    },
+
+    {
+      key: "leads.view.own",
+      area: "Leads",
+      description: "View leads the user owns.",
+    },
+    {
+      key: "leads.view.all",
+      area: "Leads",
+      description: "View all organization leads.",
+    },
+    { key: "leads.create", area: "Leads", description: "Create leads." },
+    {
+      key: "leads.edit.own",
+      area: "Leads",
+      description: "Edit leads the user owns.",
+    },
+    {
+      key: "leads.edit.all",
+      area: "Leads",
+      description: "Edit any lead in the organization.",
+    },
+    {
+      key: "leads.assign",
+      area: "Leads",
+      description: "Reassign lead ownership.",
+    },
+    {
+      key: "leads.convert",
+      area: "Leads",
+      description: "Convert a lead into a deal.",
+    },
+    { key: "leads.export", area: "Leads", description: "Export lead records." },
+
+    {
+      key: "contacts.view",
+      area: "Contacts & Companies",
+      description: "View contacts.",
+    },
+    {
+      key: "contacts.create",
+      area: "Contacts & Companies",
+      description: "Create contacts.",
+    },
+    {
+      key: "contacts.edit",
+      area: "Contacts & Companies",
+      description: "Edit contacts.",
+    },
+    {
+      key: "contacts.export",
+      area: "Contacts & Companies",
+      description: "Export contact records.",
+    },
+    {
+      key: "companies.view",
+      area: "Contacts & Companies",
+      description: "View companies.",
+    },
+    {
+      key: "companies.create",
+      area: "Contacts & Companies",
+      description: "Create companies.",
+    },
+    {
+      key: "companies.edit",
+      area: "Contacts & Companies",
+      description: "Edit companies.",
+    },
+    {
+      key: "companies.export",
+      area: "Contacts & Companies",
+      description: "Export company records.",
+    },
+
+    {
+      key: "deals.view.own",
+      area: "Deals",
+      description: "View deals the user owns.",
+    },
+    {
+      key: "deals.view.all",
+      area: "Deals",
+      description: "View all organization deals (read-only).",
+    },
+    { key: "deals.create", area: "Deals", description: "Create deals." },
+    {
+      key: "deals.edit.own",
+      area: "Deals",
+      description: "Edit deals the user owns.",
+    },
+    {
+      key: "deals.edit.all",
+      area: "Deals",
+      description: "Edit any deal in the organization.",
+    },
+    {
+      key: "deals.view.value",
+      area: "Deals",
+      description:
+        "View deal value figures organization-wide (aggregate/reporting use).",
+    },
+    { key: "deals.export", area: "Deals", description: "Export deal records." },
+
+    {
+      key: "activities.create",
+      area: "Activities & Tasks",
+      description: "Log an activity.",
+    },
+    {
+      key: "activities.view",
+      area: "Activities & Tasks",
+      description: "View activity history.",
+    },
+    {
+      key: "tasks.create",
+      area: "Activities & Tasks",
+      description: "Create a task.",
+    },
+    {
+      key: "tasks.assign.own",
+      area: "Activities & Tasks",
+      description: "Assign a task to self or an owned record.",
+    },
+    {
+      key: "tasks.assign.any",
+      area: "Activities & Tasks",
+      description: "Assign a task to any organization member.",
+    },
+    {
+      key: "tasks.view.own",
+      area: "Activities & Tasks",
+      description: "View own tasks.",
+    },
+    {
+      key: "tasks.view.all",
+      area: "Activities & Tasks",
+      description: "View all organization tasks.",
+    },
+
+    {
+      key: "communications.view",
+      area: "Communications",
+      description: "View communication records.",
+    },
+    {
+      key: "communications.create",
+      area: "Communications",
+      description: "Log a communication.",
+    },
+
+    {
+      key: "proposals.view",
+      area: "Proposals",
+      description: "View proposal references.",
+    },
+    {
+      key: "proposals.manage",
+      area: "Proposals",
+      description: "Create/update proposal references.",
+    },
+
+    {
+      key: "finance.view.payments",
+      area: "Finance",
+      description: "View payment/invoice-related information.",
+    },
+    {
+      key: "finance.manage.payments",
+      area: "Finance",
+      description: "Manage payment/invoice-related information.",
+    },
+
+    {
+      key: "reporting.view.own",
+      area: "Reporting",
+      description: "View reports scoped to the user's own records.",
+    },
+    {
+      key: "reporting.view.all",
+      area: "Reporting",
+      description: "View organization-wide reports.",
+    },
+
+    {
+      key: "configuration.manage",
+      area: "Configuration",
+      description:
+        "Manage controlled reference data (lead sources, pipeline stages, etc.).",
+    },
+
+    { key: "audit.view", area: "Audit", description: "View audit history." },
+    {
+      key: "export.bulk",
+      area: "Export",
+      description: "Perform bulk/organization-wide exports.",
+    },
+  ];
+
+export const ROLE_PERMISSIONS: Record<string, string[]> = {
+  MANAGEMENT: [
+    "organization.view",
+    "organization.manage_settings",
+    "membership.view",
+    "membership.manage",
+    "role.assign",
+    "leads.view.all",
+    "leads.create",
+    "leads.edit.all",
+    "leads.assign",
+    "leads.convert",
+    "leads.export",
+    "contacts.view",
+    "contacts.create",
+    "contacts.edit",
+    "contacts.export",
+    "companies.view",
+    "companies.create",
+    "companies.edit",
+    "companies.export",
+    "deals.view.all",
+    "deals.create",
+    "deals.edit.all",
+    "deals.view.value",
+    "deals.export",
+    "activities.create",
+    "activities.view",
+    "tasks.create",
+    "tasks.assign.any",
+    "tasks.view.all",
+    "communications.view",
+    "communications.create",
+    "proposals.view",
+    "proposals.manage",
+    "finance.view.payments",
+    "reporting.view.all",
+    "configuration.manage",
+    "audit.view",
+    "export.bulk",
+  ],
+  SALES: [
+    "leads.view.own",
+    "leads.create",
+    "leads.edit.own",
+    "leads.convert",
+    "contacts.view",
+    "contacts.create",
+    "contacts.edit",
+    "companies.view",
+    "companies.create",
+    "companies.edit",
+    "deals.view.own",
+    "deals.create",
+    "deals.edit.own",
+    "activities.create",
+    "activities.view",
+    "tasks.create",
+    "tasks.assign.own",
+    "tasks.view.own",
+    "communications.view",
+    "communications.create",
+    "proposals.view",
+    "proposals.manage",
+    "reporting.view.own",
+  ],
+  DELIVERY: [
+    "contacts.view",
+    "companies.view",
+    "deals.view.all",
+    "activities.create",
+    "activities.view",
+    "tasks.create",
+    "tasks.assign.own",
+    "tasks.view.own",
+    "communications.view",
+    "communications.create",
+    "reporting.view.own",
+  ],
+  FINANCE: [
+    "contacts.view",
+    "companies.view",
+    "deals.view.all",
+    "deals.view.value",
+    "finance.view.payments",
+    "finance.manage.payments",
+    "reporting.view.own",
+  ],
+  RESTRICTED_TECHNICAL: [
+    "tasks.view.own",
+    "tasks.create",
+    "tasks.assign.own",
+    "activities.view",
+    "communications.view",
+  ],
+};

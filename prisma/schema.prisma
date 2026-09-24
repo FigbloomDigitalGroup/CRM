@@ -1,0 +1,814 @@
+// FigBloom CRM — Core Data Model (FIG-438)
+//
+// Implements the business/data-model baseline established in FIG-299 (Core
+// CRM Data Model), scoped by FIG-300 (MVP Scope), and constrained by the
+// access-control architecture in FIG-436/FIG-437 (Organization = Tenant,
+// User != Membership, server-side RBAC, strict organization scoping).
+//
+// This file defines the ORM-level shape (single-column FKs, for ergonomic
+// querying). Tenant-safety is enforced in the database beyond what this file
+// expresses: see migrations/*_tenant_integrity_constraints and
+// *_row_level_security, which add composite (organization_id, parent_id)
+// foreign keys and Postgres RLS policies so that no organization-scoped
+// child row can ever reference a parent row in a different organization,
+// and so isolation holds even if an application-layer filter is missed.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// 1. Identity & tenant foundation
+// ---------------------------------------------------------------------------
+
+enum OrganizationStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Organization {
+  id        String             @id @default(uuid())
+  name      String
+  slug      String             @unique
+  status    OrganizationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now()) @map("created_at")
+  updatedAt DateTime           @updatedAt @map("updated_at")
+
+  memberships             Membership[]
+  settings                OrganizationSetting[]
+  companies               Company[]
+  contacts                Contact[]
+  leads                   Lead[]
+  deals                   Deal[]
+  activities              Activity[]
+  tasks                   Task[]
+  communications          Communication[]
+  proposalReferences      ProposalReference[]
+  companyServices         CompanyService[]
+  auditEvents             AuditEvent[]
+  leadSources             LeadSource[]
+  leadStatuses            LeadStatus[]
+  pipelineStages          PipelineStage[]
+  customerLifecycleStates CustomerLifecycleState[]
+  lostReasons             LostReason[]
+  services                Service[]
+
+  @@map("organizations")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// A User is the global authenticated identity. It is intentionally NOT the
+/// tenant boundary — see FIG-437 section 5.1. Exact auth-provider integration
+/// (password hashing scheme, SSO, etc.) is an open implementation decision
+/// per FIG-437 section 18; passwordHash is nullable so external-IdP users can
+/// exist without a local credential.
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  name         String
+  phone        String?
+  passwordHash String?    @map("password_hash")
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  memberships Membership[]
+  auditEvents AuditEvent[] @relation("AuditActorUser")
+
+  @@map("users")
+}
+
+/// Global, fixed V1 role catalog (Management, Sales, Delivery, Finance,
+/// Restricted Technical — FIG-436 section 5, FIG-437 section 8). Roles are an
+/// application/security rule, not organization-configurable data (FIG-436
+/// section 8 explicitly lists RBAC as a security rule, distinct from the
+/// configurable business values in the same table), so this is a global
+/// catalog rather than an organization-scoped table.
+model Role {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(true) @map("is_system")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  memberships     Membership[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+/// Permission catalog backing the role/permission mapping required by
+/// FIG-437 section 9. The exact final permission matrix is an explicitly
+/// open decision (FIG-437 section 18); this seed is the smallest reasonable
+/// interpretation needed to unblock FIG-438 — see IMPLEMENTATION_NOTES.md.
+model Permission {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  area        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INACTIVE
+}
+
+/// A Membership is the user's relationship to one Organization — the tenant
+/// boundary itself (FIG-437 section 5.2). It is deliberately a separate
+/// concept from User so a user may hold memberships in multiple
+/// organizations in the future without changing their global identity.
+///
+/// Ownership of CRM records is modeled as a reference to a Membership (not
+/// directly to a User) precisely so that "record owner" is automatically
+/// organization-scoped: a membership belongs to exactly one organization, so
+/// any FK to a membership carries an implicit, DB-checkable organization
+/// binding once the tenant-integrity migration adds the composite FK
+/// (organization_id, owner_membership_id) -> memberships(organization_id, id).
+model Membership {
+  id             String           @id @default(uuid())
+  organizationId String           @map("organization_id")
+  userId         String           @map("user_id")
+  roleId         String           @map("role_id")
+  status         MembershipStatus @default(ACTIVE)
+  invitedAt      DateTime?        @map("invited_at")
+  joinedAt       DateTime?        @map("joined_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  ownedCompanies         Company[]           @relation("CompanyOwner")
+  createdCompanies       Company[]           @relation("CompanyCreatedBy")
+  ownedContacts          Contact[]           @relation("ContactOwner")
+  createdContacts        Contact[]           @relation("ContactCreatedBy")
+  ownedLeads             Lead[]              @relation("LeadOwner")
+  createdLeads           Lead[]              @relation("LeadCreatedBy")
+  ownedDeals             Deal[]              @relation("DealOwner")
+  createdDeals           Deal[]              @relation("DealCreatedBy")
+  authoredActivities     Activity[]          @relation("ActivityAuthor")
+  assignedTasks          Task[]              @relation("TaskAssignee")
+  createdTasks           Task[]              @relation("TaskCreatedBy")
+  authoredCommunications Communication[]     @relation("CommunicationAuthor")
+  ownedProposals         ProposalReference[] @relation("ProposalOwner")
+  auditEvents            AuditEvent[]        @relation("AuditActorMembership")
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, id])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("memberships")
+}
+
+/// Generic organization-scoped configuration bucket for values that do not
+/// warrant a dedicated table in V1 (e.g. lead-assignment rules) — FIG-436
+/// section 8 lists "Assignment rules" and "Organization CRM settings" as
+/// configurable organization data without further structure.
+model OrganizationSetting {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  key            String
+  value          Json
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@map("organization_settings")
+}
+
+// ---------------------------------------------------------------------------
+// 2. Controlled reference data (organization-scoped, per FIG-436 section 8)
+// ---------------------------------------------------------------------------
+
+model LeadSource {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  key            String
+  name           String
+  description    String?
+  sequence       Int      @default(0)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads        Lead[]
+
+  @@unique([organizationId, key])
+  @@unique([organizationId, id])
+  @@index([organizationId, isActive])
+  @@map("lead_sources")
+}
+
+/// Lead Status is deliberately separate from Lead Temperature (a fixed
+/// HOT/WARM/COLD classification kept as a native enum, FIG-299 section 5.1)
+/// and from Deal Pipeline Stage / Customer Lifecycle State (AC3).
+model LeadStatus {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  key            String
+  name           String
+  description    String?
+  sequence       Int      @default(0)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads        Lead[]
+
+  @@unique([organizationId, key])
+  @@unique([organizationId, id])
+  @@index([organizationId, isActive])
+  @@map("lead_statuses")
+}
+
+/// Deal Pipeline Stage. Kept strictly separate from Lead Status and Customer
+/// Lifecycle State (AC3) — a Deal only exists once a Lead has qualified, so
+/// the stage catalog covers the deal-side portion of the FIG-299 workflow
+/// (Qualifying -> ... -> Closed Won/Lost). See IMPLEMENTATION_NOTES.md for
+/// the reasoning behind the specific seeded stage split.
+model PipelineStage {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  key            String
+  name           String
+  description    String?
+  sequence       Int      @default(0)
+  probability    Int?
+  isWon          Boolean  @default(false) @map("is_won")
+  isLost         Boolean  @default(false) @map("is_lost")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deals        Deal[]
+
+  @@unique([organizationId, key])
+  @@unique([organizationId, id])
+  @@index([organizationId, isActive])
+  @@map("pipeline_stages")
+}
+
+/// Customer Lifecycle State applies at the Company (account) level — FIG-438
+/// task section 4 explicitly forbids a separate generic `customers` entity;
+/// Company remains the canonical account identity, and lifecycle is one of
+/// its attributes (FIG-299 section 7).
+model CustomerLifecycleState {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  key            String
+  name           String
+  description    String?
+  sequence       Int      @default(0)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  companies    Company[]
+
+  @@unique([organizationId, key])
+  @@unique([organizationId, id])
+  @@index([organizationId, isActive])
+  @@map("customer_lifecycle_states")
+}
+
+/// Shared catalog of lost/disqualification reasons, referenced by both Lead
+/// and Deal (FIG-297 Q16 lists reasons that apply to either).
+model LostReason {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  key            String
+  name           String
+  description    String?
+  sequence       Int      @default(0)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads        Lead[]
+  deals        Deal[]
+
+  @@unique([organizationId, key])
+  @@unique([organizationId, id])
+  @@index([organizationId, isActive])
+  @@map("lost_reasons")
+}
+
+/// FigBloom's own service/product catalog (Web Dev, Branding, CCTV,
+/// Starlink/Internet, HR automation, etc. — FIG-297 section 2.2).
+model Service {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  key            String
+  name           String
+  category       String?
+  description    String?
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads           Lead[]
+  deals           Deal[]
+  companyServices CompanyService[]
+
+  @@unique([organizationId, key])
+  @@unique([organizationId, id])
+  @@index([organizationId, isActive])
+  @@map("services")
+}
+
+// ---------------------------------------------------------------------------
+// 3. Core CRM records
+// ---------------------------------------------------------------------------
+
+/// Company is the CRM's canonical business/account entity (FIG-438 section
+/// 4). Duplicate company names are legitimate (section 9) so no uniqueness
+/// is enforced on name — duplicate detection is an application-level
+/// concern informed by name/email/phone indexes.
+model Company {
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  name                  String
+  industry              String?
+  website               String?
+  location              String?
+  phone                 String?
+  email                 String?
+  notes                 String?
+  lifecycleStateId      String?  @map("lifecycle_state_id")
+  ownerMembershipId     String?  @map("owner_membership_id")
+  createdByMembershipId String?  @map("created_by_membership_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lifecycleState CustomerLifecycleState? @relation(fields: [lifecycleStateId], references: [id], onDelete: SetNull)
+  owner          Membership?             @relation("CompanyOwner", fields: [ownerMembershipId], references: [id], onDelete: SetNull)
+  createdBy      Membership?             @relation("CompanyCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: SetNull)
+
+  contacts        Contact[]
+  leads           Lead[]
+  deals           Deal[]
+  activities      Activity[]
+  tasks           Task[]
+  communications  Communication[]
+  companyServices CompanyService[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId])
+  @@index([organizationId, ownerMembershipId])
+  @@index([organizationId, lifecycleStateId])
+  @@index([organizationId, name])
+  @@index([organizationId, email])
+  @@index([organizationId, phone])
+  @@map("companies")
+}
+
+/// Contact represents a person, distinct from Company. A contact without a
+/// company is supported (FIG-438 section 4 "Where the approved requirements
+/// allow a contact without a company, support that appropriately").
+model Contact {
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  companyId             String?  @map("company_id")
+  firstName             String   @map("first_name")
+  lastName              String?  @map("last_name")
+  phone                 String?
+  email                 String?
+  jobTitle              String?  @map("job_title")
+  department            String?
+  socialProfiles        Json?    @map("social_profiles")
+  notes                 String?
+  ownerMembershipId     String?  @map("owner_membership_id")
+  createdByMembershipId String?  @map("created_by_membership_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  owner        Membership?  @relation("ContactOwner", fields: [ownerMembershipId], references: [id], onDelete: SetNull)
+  createdBy    Membership?  @relation("ContactCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: SetNull)
+
+  leads          Lead[]
+  dealsAsPrimary Deal[]          @relation("DealPrimaryContact")
+  activities     Activity[]
+  tasks          Task[]
+  communications Communication[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId])
+  @@index([organizationId, companyId])
+  @@index([organizationId, ownerMembershipId])
+  @@index([organizationId, email])
+  @@index([organizationId, phone])
+  @@map("contacts")
+}
+
+enum LeadTemperature {
+  HOT
+  WARM
+  COLD
+}
+
+/// Lead represents a prospect before/during qualification (FIG-438 section
+/// 4). Lead Status, Lead Temperature and Lead Source are all controlled,
+/// independent classifications (AC3/AC4). qualificationData holds the
+/// service-specific qualification questions identified in FIG-297 section 6
+/// (e.g. property/internet-specific questions) without requiring a bespoke
+/// custom-fields subsystem in V1.
+model Lead {
+  id                    String          @id @default(uuid())
+  organizationId        String          @map("organization_id")
+  companyId             String?         @map("company_id")
+  contactId             String?         @map("contact_id")
+  leadSourceId          String?         @map("lead_source_id")
+  leadStatusId          String          @map("lead_status_id")
+  temperature           LeadTemperature @default(WARM)
+  serviceInterestId     String?         @map("service_interest_id")
+  ownerMembershipId     String?         @map("owner_membership_id")
+  qualificationData     Json?           @map("qualification_data")
+  lostReasonId          String?         @map("lost_reason_id")
+  nextFollowUpAt        DateTime?       @map("next_follow_up_at")
+  convertedAt           DateTime?       @map("converted_at")
+  notes                 String?
+  createdByMembershipId String?         @map("created_by_membership_id")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company         Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact         Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  leadSource      LeadSource?  @relation(fields: [leadSourceId], references: [id], onDelete: SetNull)
+  leadStatus      LeadStatus   @relation(fields: [leadStatusId], references: [id], onDelete: Restrict)
+  serviceInterest Service?     @relation(fields: [serviceInterestId], references: [id], onDelete: SetNull)
+  owner           Membership?  @relation("LeadOwner", fields: [ownerMembershipId], references: [id], onDelete: SetNull)
+  createdBy       Membership?  @relation("LeadCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: SetNull)
+  lostReason      LostReason?  @relation(fields: [lostReasonId], references: [id], onDelete: SetNull)
+
+  deals          Deal[]
+  activities     Activity[]
+  tasks          Task[]
+  communications Communication[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId])
+  @@index([organizationId, leadStatusId])
+  @@index([organizationId, leadSourceId])
+  @@index([organizationId, temperature])
+  @@index([organizationId, ownerMembershipId])
+  @@index([organizationId, companyId])
+  @@index([organizationId, nextFollowUpAt])
+  @@map("leads")
+}
+
+enum DealOutcome {
+  OPEN
+  WON
+  LOST
+}
+
+/// Deal represents a sales opportunity with its own Pipeline Stage, kept
+/// strictly separate from Lead Status and Customer Lifecycle State (AC3).
+/// The unique (organizationId, leadId) constraint prevents a single Lead
+/// from being converted into more than one Deal (FIG-436 section 12,
+/// "Duplicate conversion is prevented"), while still allowing many Deals
+/// with no originating Lead (leadId null, e.g. an existing-customer upsell).
+model Deal {
+  id                    String      @id @default(uuid())
+  organizationId        String      @map("organization_id")
+  companyId             String      @map("company_id")
+  primaryContactId      String?     @map("primary_contact_id")
+  leadId                String?     @map("lead_id")
+  serviceId             String?     @map("service_id")
+  ownerMembershipId     String      @map("owner_membership_id")
+  pipelineStageId       String      @map("pipeline_stage_id")
+  value                 Decimal?    @db.Decimal(14, 2)
+  currency              String      @default("KES")
+  expectedCloseDate     DateTime?   @map("expected_close_date") @db.Date
+  outcome               DealOutcome @default(OPEN)
+  lostReasonId          String?     @map("lost_reason_id")
+  wonAt                 DateTime?   @map("won_at")
+  lostAt                DateTime?   @map("lost_at")
+  notes                 String?
+  createdByMembershipId String?     @map("created_by_membership_id")
+  createdAt             DateTime    @default(now()) @map("created_at")
+  updatedAt             DateTime    @updatedAt @map("updated_at")
+
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company        Company       @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  primaryContact Contact?      @relation("DealPrimaryContact", fields: [primaryContactId], references: [id], onDelete: SetNull)
+  lead           Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  service        Service?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  owner          Membership    @relation("DealOwner", fields: [ownerMembershipId], references: [id], onDelete: Restrict)
+  createdBy      Membership?   @relation("DealCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: SetNull)
+  pipelineStage  PipelineStage @relation(fields: [pipelineStageId], references: [id], onDelete: Restrict)
+  lostReason     LostReason?   @relation(fields: [lostReasonId], references: [id], onDelete: SetNull)
+
+  activities         Activity[]
+  tasks              Task[]
+  communications     Communication[]
+  proposalReferences ProposalReference[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, leadId])
+  @@index([organizationId])
+  @@index([organizationId, pipelineStageId])
+  @@index([organizationId, ownerMembershipId])
+  @@index([organizationId, companyId])
+  @@index([organizationId, outcome])
+  @@index([organizationId, expectedCloseDate])
+  @@map("deals")
+}
+
+// ---------------------------------------------------------------------------
+// 4. Operational records
+// ---------------------------------------------------------------------------
+
+enum ActivityType {
+  CALL
+  MEETING
+  NOTE
+  EMAIL
+  WHATSAPP
+  OTHER
+}
+
+/// Activity is the CRM timeline/interaction log (FIG-438 section 10). Every
+/// activity must relate to at least one of Company/Contact/Lead/Deal — this
+/// is enforced both here (application layer) and by a CHECK constraint added
+/// in the tenant-integrity migration.
+model Activity {
+  id                 String       @id @default(uuid())
+  organizationId     String       @map("organization_id")
+  type               ActivityType
+  subject            String?
+  description        String?
+  occurredAt         DateTime     @default(now()) @map("occurred_at")
+  outcome            String?
+  authorMembershipId String       @map("author_membership_id")
+  companyId          String?      @map("company_id")
+  contactId          String?      @map("contact_id")
+  leadId             String?      @map("lead_id")
+  dealId             String?      @map("deal_id")
+  createdAt          DateTime     @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       Membership   @relation("ActivityAuthor", fields: [authorMembershipId], references: [id], onDelete: Restrict)
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  communications Communication[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId])
+  @@index([organizationId, companyId, occurredAt])
+  @@index([organizationId, leadId, occurredAt])
+  @@index([organizationId, dealId, occurredAt])
+  @@index([organizationId, contactId, occurredAt])
+  @@index([organizationId, authorMembershipId])
+  @@map("activities")
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+/// Task represents actionable follow-up work (FIG-438 section 10). "Overdue"
+/// is a derived state (dueAt in the past AND status not in
+/// COMPLETED/CANCELLED) rather than a stored column, per FIG-436 section 13
+/// ("Overdue state is derived and represented consistently") — the
+/// [organizationId, status, dueAt] index exists to make that derivation
+/// cheap at query time.
+model Task {
+  id                    String       @id @default(uuid())
+  organizationId        String       @map("organization_id")
+  title                 String
+  description           String?
+  assigneeMembershipId  String       @map("assignee_membership_id")
+  createdByMembershipId String       @map("created_by_membership_id")
+  dueAt                 DateTime?    @map("due_at")
+  priority              TaskPriority @default(MEDIUM)
+  status                TaskStatus   @default(PENDING)
+  completedAt           DateTime?    @map("completed_at")
+  companyId             String?      @map("company_id")
+  contactId             String?      @map("contact_id")
+  leadId                String?      @map("lead_id")
+  dealId                String?      @map("deal_id")
+  createdAt             DateTime     @default(now()) @map("created_at")
+  updatedAt             DateTime     @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignee     Membership   @relation("TaskAssignee", fields: [assigneeMembershipId], references: [id], onDelete: Restrict)
+  createdBy    Membership   @relation("TaskCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: Restrict)
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([organizationId, assigneeMembershipId, status])
+  @@index([organizationId, status, dueAt])
+  @@index([organizationId, leadId])
+  @@index([organizationId, dealId])
+  @@map("tasks")
+}
+
+enum CommunicationChannel {
+  EMAIL
+  PHONE
+  WHATSAPP
+  SMS
+  MEETING
+  SOCIAL
+  OTHER
+}
+
+enum CommunicationDirection {
+  INBOUND
+  OUTBOUND
+}
+
+/// Communication captures channel-specific interaction detail (FIG-438
+/// section 10). It may optionally point at the Activity timeline entry it
+/// corresponds to, avoiding duplicate parallel histories.
+model Communication {
+  id                 String                 @id @default(uuid())
+  organizationId     String                 @map("organization_id")
+  channel            CommunicationChannel
+  direction          CommunicationDirection
+  occurredAt         DateTime               @default(now()) @map("occurred_at")
+  subject            String?
+  summary            String
+  externalReference  String?                @map("external_reference")
+  authorMembershipId String                 @map("author_membership_id")
+  activityId         String?                @map("activity_id")
+  companyId          String?                @map("company_id")
+  contactId          String?                @map("contact_id")
+  leadId             String?                @map("lead_id")
+  dealId             String?                @map("deal_id")
+  createdAt          DateTime               @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  author       Membership   @relation("CommunicationAuthor", fields: [authorMembershipId], references: [id], onDelete: Restrict)
+  activity     Activity?    @relation(fields: [activityId], references: [id], onDelete: SetNull)
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([organizationId, companyId, occurredAt])
+  @@index([organizationId, leadId, occurredAt])
+  @@index([organizationId, dealId, occurredAt])
+  @@index([organizationId, channel])
+  @@map("communications")
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+/// Proposal/quotation *reference* only — FIG-438 section 11 explicitly
+/// excludes a full proposal-generation subsystem from V1.
+model ProposalReference {
+  id                String         @id @default(uuid())
+  organizationId    String         @map("organization_id")
+  dealId            String         @map("deal_id")
+  proposalNumber    String         @map("proposal_number")
+  status            ProposalStatus @default(DRAFT)
+  amount            Decimal?       @db.Decimal(14, 2)
+  currency          String         @default("KES")
+  ownerMembershipId String?        @map("owner_membership_id")
+  sentAt            DateTime?      @map("sent_at")
+  respondedAt       DateTime?      @map("responded_at")
+  documentReference String?        @map("document_reference")
+  notes             String?
+  createdAt         DateTime       @default(now()) @map("created_at")
+  updatedAt         DateTime       @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  owner        Membership?  @relation("ProposalOwner", fields: [ownerMembershipId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, dealId, proposalNumber])
+  @@index([organizationId])
+  @@index([organizationId, dealId])
+  @@index([organizationId, status])
+  @@map("proposal_references")
+}
+
+enum CompanyServiceStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+/// Tracks which services a Company has/had, independent of any single Deal —
+/// supports "multiple services per customer" (FIG-297 section 8.4) and the
+/// future renewal/retainer reporting called out in FIG-297 section 11.
+model CompanyService {
+  id             String               @id @default(uuid())
+  organizationId String               @map("organization_id")
+  companyId      String               @map("company_id")
+  serviceId      String               @map("service_id")
+  status         CompanyServiceStatus @default(ACTIVE)
+  startDate      DateTime?            @map("start_date") @db.Date
+  endDate        DateTime?            @map("end_date") @db.Date
+  notes          String?
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  service      Service      @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId])
+  @@index([organizationId, companyId])
+  @@index([organizationId, serviceId, status])
+  @@map("company_services")
+}
+
+// ---------------------------------------------------------------------------
+// 5. Governance
+// ---------------------------------------------------------------------------
+
+/// Audit events are append-only (FIG-436 section 13, FIG-437 section 14).
+/// organizationId is nullable to allow platform-level events (e.g.
+/// organization provisioning) that precede any organization-scoped action;
+/// ordinary business-record events always carry it. Immutability (no
+/// UPDATE/DELETE for the application role) is enforced in
+/// migrations/*_row_level_security via a REVOKE, not just by omitting an
+/// updatedAt column here.
+model AuditEvent {
+  id                String   @id @default(uuid())
+  organizationId    String?  @map("organization_id")
+  actorUserId       String?  @map("actor_user_id")
+  actorMembershipId String?  @map("actor_membership_id")
+  action            String
+  entityType        String   @map("entity_type")
+  entityId          String?  @map("entity_id")
+  previousValue     Json?    @map("previous_value")
+  newValue          Json?    @map("new_value")
+  metadata          Json?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUser       User?         @relation("AuditActorUser", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorMembership Membership?   @relation("AuditActorMembership", fields: [actorMembershipId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, entityType, entityId])
+  @@index([organizationId, actorMembershipId])
+  @@map("audit_events")
+}
