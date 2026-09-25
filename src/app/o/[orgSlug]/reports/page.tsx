@@ -134,122 +134,152 @@ export default async function ReportsPage({
             30 days when no dates are chosen).
           </p>
 
-          <h2>Lead volume by source</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Source</th>
-                <th>Leads</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orgMetrics.leadVolumeBySource.map((row) => (
-                <tr key={row.leadSourceId ?? "unknown"}>
-                  <td>{sourceName(row.leadSourceId)}</td>
-                  <td>{row._count._all}</td>
-                </tr>
-              ))}
-              {orgMetrics.leadVolumeBySource.length === 0 && (
-                <tr>
-                  <td colSpan={2}>No leads in range.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <div className="stat-grid">
+            <div className="stat-card">
+              <div className="stat-label">
+                <span className="dot dot-blue" />
+                Conversion
+              </div>
+              <div className="stat-value">
+                {orgMetrics.leadConversion.total > 0
+                  ? Math.round(
+                      (orgMetrics.leadConversion.converted /
+                        orgMetrics.leadConversion.total) *
+                        100,
+                    )
+                  : 0}
+                %
+              </div>
+              <div className="stat-caption">
+                {orgMetrics.leadConversion.converted} of{" "}
+                {orgMetrics.leadConversion.total} leads converted
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">
+                <span className="dot dot-green" />
+                Won deals
+              </div>
+              <div className="stat-value">{orgMetrics.dealOutcomes.won.count}</div>
+              <div className="stat-caption">
+                value {money(orgMetrics.dealOutcomes.won.value)}
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">
+                <span className="dot dot-red" />
+                Lost deals
+              </div>
+              <div className="stat-value">{orgMetrics.dealOutcomes.lost.count}</div>
+              <div className="stat-caption">in the selected range</div>
+            </div>
+          </div>
 
-          <h2>Conversion</h2>
-          <p>
-            {orgMetrics.leadConversion.converted} of {orgMetrics.leadConversion.total}{" "}
-            leads created in range have converted (
-            {orgMetrics.leadConversion.total > 0
-              ? Math.round(
-                  (orgMetrics.leadConversion.converted /
-                    orgMetrics.leadConversion.total) *
-                    100,
-                )
-              : 0}
-            %).
-          </p>
+          <div className="grid-2">
+            <div className="card">
+              <strong>Lead volume by source</strong>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Source</th>
+                    <th>Leads</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orgMetrics.leadVolumeBySource.map((row) => (
+                    <tr key={row.leadSourceId ?? "unknown"}>
+                      <td>{sourceName(row.leadSourceId)}</td>
+                      <td>{row._count._all}</td>
+                    </tr>
+                  ))}
+                  {orgMetrics.leadVolumeBySource.length === 0 && (
+                    <tr>
+                      <td colSpan={2}>No leads in range.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-          <h2>Won / Lost deals</h2>
-          <p>
-            Won: {orgMetrics.dealOutcomes.won.count} deal(s), value{" "}
-            {money(orgMetrics.dealOutcomes.won.value)} &nbsp; Lost:{" "}
-            {orgMetrics.dealOutcomes.lost.count} deal(s)
-          </p>
+            <div className="card">
+              <strong>Pipeline value by stage (current snapshot)</strong>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Stage</th>
+                    <th>Open deals</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orgMetrics.pipelineByStage.map((row) => (
+                    <tr key={row.pipelineStageId}>
+                      <td>{stageName(row.pipelineStageId)}</td>
+                      <td>{row._count._all}</td>
+                      <td>{money(row._sum.value)}</td>
+                    </tr>
+                  ))}
+                  {orgMetrics.pipelineByStage.length === 0 && (
+                    <tr>
+                      <td colSpan={3}>No open deals.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-          <h2>Pipeline value by stage (current snapshot)</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Stage</th>
-                <th>Open deals</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orgMetrics.pipelineByStage.map((row) => (
-                <tr key={row.pipelineStageId}>
-                  <td>{stageName(row.pipelineStageId)}</td>
-                  <td>{row._count._all}</td>
-                  <td>{money(row._sum.value)}</td>
-                </tr>
-              ))}
-              {orgMetrics.pipelineByStage.length === 0 && (
-                <tr>
-                  <td colSpan={3}>No open deals.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            <div className="card">
+              <strong>Sales by service</strong>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Won deals</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orgMetrics.salesByService.map((row) => (
+                    <tr key={row.serviceId ?? "unspecified"}>
+                      <td>{serviceName(row.serviceId)}</td>
+                      <td>{row._count._all}</td>
+                      <td>{money(row._sum.value)}</td>
+                    </tr>
+                  ))}
+                  {orgMetrics.salesByService.length === 0 && (
+                    <tr>
+                      <td colSpan={3}>No won deals in range.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-          <h2>Sales by service</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th>Won deals</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orgMetrics.salesByService.map((row) => (
-                <tr key={row.serviceId ?? "unspecified"}>
-                  <td>{serviceName(row.serviceId)}</td>
-                  <td>{row._count._all}</td>
-                  <td>{money(row._sum.value)}</td>
-                </tr>
-              ))}
-              {orgMetrics.salesByService.length === 0 && (
-                <tr>
-                  <td colSpan={3}>No won deals in range.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-
-          <h2>Follow-up performance (tasks due in range)</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Status</th>
-                <th>Count</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orgMetrics.followUpBreakdown.map((row) => (
-                <tr key={row.status}>
-                  <td>{row.status}</td>
-                  <td>{row._count._all}</td>
-                </tr>
-              ))}
-              {orgMetrics.followUpBreakdown.length === 0 && (
-                <tr>
-                  <td colSpan={2}>No tasks due in range.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            <div className="card">
+              <strong>Follow-up performance (tasks due in range)</strong>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orgMetrics.followUpBreakdown.map((row) => (
+                    <tr key={row.status}>
+                      <td>{row.status}</td>
+                      <td>{row._count._all}</td>
+                    </tr>
+                  ))}
+                  {orgMetrics.followUpBreakdown.length === 0 && (
+                    <tr>
+                      <td colSpan={2}>No tasks due in range.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </>
       )}
 

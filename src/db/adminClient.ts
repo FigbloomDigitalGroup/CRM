@@ -16,5 +16,19 @@ import { PrismaClient } from "@prisma/client";
  * src/db/orgScopedClient.ts (`withOrgContext`) instead, so that tenant
  * isolation is enforced by the database (RLS) and not merely assumed by
  * application code (FIG-437 section 16, "Server-Side Enforcement").
+ *
+ * Cached on `globalThis` in dev: `next dev`'s hot-module-reload re-runs this
+ * module on every file save without ever calling `$disconnect()` on the
+ * previous instance, so without this cache each reload leaks a whole new
+ * connection pool -- enough edits and Postgres's `max_connections` is
+ * exhausted (the standard Prisma-on-Next.js pitfall; see
+ * https://www.prisma.io/docs/guides/nextjs). Production has exactly one
+ * long-lived process, so the cache is a no-op there.
  */
-export const adminDb = new PrismaClient();
+const globalForPrisma = globalThis as unknown as { adminDb?: PrismaClient };
+
+export const adminDb = globalForPrisma.adminDb ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.adminDb = adminDb;
+}

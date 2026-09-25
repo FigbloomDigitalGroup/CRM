@@ -5,10 +5,19 @@ import { Prisma, PrismaClient } from "@prisma/client";
  * Postgres role (see scripts/db-admin.ts), the only role RLS actually
  * restricts. Never export this client for direct unscoped use; all access
  * must go through `withOrgContext`.
+ *
+ * Cached on `globalThis` in dev for the same reason as `adminDb` in
+ * src/db/adminClient.ts -- see that file's comment.
  */
-const appDb = new PrismaClient({
-  datasourceUrl: process.env.APP_DATABASE_URL,
-});
+const globalForPrisma = globalThis as unknown as { appDb?: PrismaClient };
+
+const appDb =
+  globalForPrisma.appDb ??
+  new PrismaClient({ datasourceUrl: process.env.APP_DATABASE_URL });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.appDb = appDb;
+}
 
 export type OrgScopedClient = Prisma.TransactionClient;
 

@@ -98,18 +98,20 @@ export default async function DealsPage({
       {hasPermission(ctx, "deals.create") && (
         <>
           <h2>New deal</h2>
-          <CreateDealForm
-            orgSlug={orgSlug}
-            companies={companies.map((c) => ({ id: c.id, name: c.name }))}
-            contacts={contacts.map((c) => ({
-              id: c.id,
-              name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
-            }))}
-            services={referenceData.services}
-            pipelineStages={referenceData.pipelineStages.filter(
-              (s) => !s.isWon && !s.isLost,
-            )}
-          />
+          <div className="card">
+            <CreateDealForm
+              orgSlug={orgSlug}
+              companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+              contacts={contacts.map((c) => ({
+                id: c.id,
+                name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
+              }))}
+              services={referenceData.services}
+              pipelineStages={referenceData.pipelineStages.filter(
+                (s) => !s.isWon && !s.isLost,
+              )}
+            />
+          </div>
         </>
       )}
     </div>

@@ -43,42 +43,50 @@ export default async function CompaniesPage({
         </button>
       </form>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Industry</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Lifecycle</th>
-          </tr>
-        </thead>
-        <tbody>
-          {companies.map((c) => (
-            <tr key={c.id}>
-              <td>
-                <a href={`/o/${orgSlug}/companies/${c.id}`}>{c.name}</a>
-              </td>
-              <td>{c.industry ?? "--"}</td>
-              <td>{c.email ?? "--"}</td>
-              <td>{c.phone ?? "--"}</td>
-              <td>
-                {c.lifecycleStateId ? <span className="badge">set</span> : "--"}
-              </td>
-            </tr>
-          ))}
-          {companies.length === 0 && (
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <table>
+          <thead>
             <tr>
-              <td colSpan={5}>No companies yet.</td>
+              <th>Name</th>
+              <th>Industry</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Lifecycle</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {companies.map((c) => (
+              <tr key={c.id}>
+                <td>
+                  <a href={`/o/${orgSlug}/companies/${c.id}`}>{c.name}</a>
+                </td>
+                <td>{c.industry ?? "--"}</td>
+                <td>{c.email ?? "--"}</td>
+                <td>{c.phone ?? "--"}</td>
+                <td>
+                  {c.lifecycleStateId ? (
+                    <span className="badge badge-green">set</span>
+                  ) : (
+                    "--"
+                  )}
+                </td>
+              </tr>
+            ))}
+            {companies.length === 0 && (
+              <tr>
+                <td colSpan={5}>No companies yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {hasPermission(ctx, "companies.create") && (
         <>
           <h2>New company</h2>
-          <CreateCompanyForm orgSlug={orgSlug} />
+          <div className="card">
+            <CreateCompanyForm orgSlug={orgSlug} />
+          </div>
         </>
       )}
     </div>

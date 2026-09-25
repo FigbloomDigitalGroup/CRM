@@ -4,6 +4,7 @@ import { UnauthorizedError } from "@/auth/errors";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { adminDb } from "@/db/adminClient";
 import { LogoutButton } from "./LogoutButton";
+import { Sidebar } from "./_shared/Sidebar";
 
 export default async function OrgLayout({
   children,
@@ -22,10 +23,12 @@ export default async function OrgLayout({
       redirect("/dev-login");
     }
     return (
-      <div className="page">
-        <p className="error">
-          {err instanceof Error ? err.message : "Access denied."}
-        </p>
+      <div className="auth-shell">
+        <div className="auth-card">
+          <p className="error">
+            {err instanceof Error ? err.message : "Access denied."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -51,29 +54,56 @@ export default async function OrgLayout({
   const canViewReports =
     hasPermission(ctx, "reporting.view.own") ||
     hasPermission(ctx, "reporting.view.all");
+  const canViewCompanies = hasPermission(ctx, "companies.view");
+  const canViewContacts = hasPermission(ctx, "contacts.view");
+
+  const roleName = ctx.roleKey
+    .split("_")
+    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
+    .join(" ");
+
+  const now = new Date();
+  const datetime = now
+    .toLocaleString("en-GB", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+    .replace(",", " ·")
+    .toUpperCase();
 
   return (
-    <>
-      <nav className="nav">
-        <strong>FigBloom CRM</strong>
-        <a href={`/o/${orgSlug}`}>Dashboard</a>
-        {canViewLeads && <a href={`/o/${orgSlug}/leads`}>Leads</a>}
-        {canViewDeals && <a href={`/o/${orgSlug}/deals`}>Deals</a>}
-        {canViewTasks && <a href={`/o/${orgSlug}/tasks`}>Tasks</a>}
-        {canViewReports && <a href={`/o/${orgSlug}/reports`}>Reports</a>}
-        {hasPermission(ctx, "companies.view") && (
-          <a href={`/o/${orgSlug}/companies`}>Companies</a>
-        )}
-        {hasPermission(ctx, "contacts.view") && (
-          <a href={`/o/${orgSlug}/contacts`}>Contacts</a>
-        )}
-        <div className="spacer" />
-        <span className="who">
-          {user.name} &middot; {ctx.roleKey}
-        </span>
-        <LogoutButton />
-      </nav>
-      <div className="page">{children}</div>
-    </>
+    <div className="app-shell">
+      <Sidebar
+        orgSlug={orgSlug}
+        userName={user.name}
+        roleName={roleName}
+        canViewLeads={canViewLeads}
+        canViewDeals={canViewDeals}
+        canViewTasks={canViewTasks}
+        canViewReports={canViewReports}
+        canViewCompanies={canViewCompanies}
+        canViewContacts={canViewContacts}
+        logoutButton={<LogoutButton />}
+      />
+      <div className="main">
+        <header className="topbar">
+          <div>
+            <p className="topbar-datetime">{datetime}</p>
+          </div>
+          <div className="topbar-right">
+            <span className="pill">
+              <span className="avatar">
+                {user.name.trim().charAt(0).toUpperCase() || "?"}
+              </span>
+              {user.name}
+            </span>
+          </div>
+        </header>
+        <div className="page">{children}</div>
+      </div>
+    </div>
   );
 }

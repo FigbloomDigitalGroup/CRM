@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { adminDb } from "@/db/adminClient";
 import { DevLoginForm } from "./DevLoginForm";
 
@@ -15,16 +16,24 @@ export default async function DevLoginPage() {
   }));
 
   return (
-    <div className="page">
-      <h1>FigBloom CRM -- Dev Login</h1>
-      <p className="warning">
-        This is a placeholder login for local development (FIG-439). It picks
-        one of the seeded dev users with no password check -- real
-        authentication is a separate, not-yet-scheduled piece of work (FIG-437
-        leaves the auth provider choice open). Do not build on this for anything
-        beyond exercising permission logic locally.
-      </p>
-      <DevLoginForm options={options} />
+    <div className="auth-shell">
+      <div className="auth-card">
+        <div className="auth-brand">
+          <Image src="/figbloom-logo.jpg" alt="" width={40} height={40} priority />
+          <div className="auth-brand-name">
+            Figbloom<span className="accent"> CRM</span>
+          </div>
+        </div>
+        <h1 style={{ fontSize: 19 }}>Dev login</h1>
+        <p className="warning">
+          Placeholder login for local development (FIG-439) -- picks a seeded
+          dev user with no password check. Real authentication is separate,
+          not-yet-scheduled work (FIG-437 leaves the auth provider choice
+          open). Do not build on this beyond exercising permission logic
+          locally.
+        </p>
+        <DevLoginForm options={options} />
+      </div>
     </div>
   );
 }

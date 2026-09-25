@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "FigBloom CRM",
+  title: "CRM | Figbloom",
   description:
     "FigBloom Digital Group CRM (FIG-439 -- leads, contacts, companies)",
 };
@@ -13,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body>{children}</body>
     </html>
   );

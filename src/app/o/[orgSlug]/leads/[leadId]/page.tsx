@@ -85,7 +85,18 @@ export default async function LeadDetailPage({
       <div className="card">
         <p>
           Status: <span className="badge">{lead.leadStatus.name}</span> &nbsp;
-          Temperature: <span className="badge">{lead.temperature}</span>
+          Temperature:{" "}
+          <span
+            className={`badge badge-${
+              lead.temperature === "HOT"
+                ? "red"
+                : lead.temperature === "WARM"
+                  ? "orange"
+                  : "blue"
+            }`}
+          >
+            {lead.temperature}
+          </span>
         </p>
         <p>Source: {lead.leadSource?.name ?? "--"}</p>
         <p>

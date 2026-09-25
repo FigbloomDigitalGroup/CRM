@@ -48,45 +48,49 @@ export default async function ContactsPage({
         </button>
       </form>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Company</th>
-            <th>Job title</th>
-            <th>Email</th>
-            <th>Phone</th>
-          </tr>
-        </thead>
-        <tbody>
-          {contacts.map((c) => (
-            <tr key={c.id}>
-              <td>
-                <a href={`/o/${orgSlug}/contacts/${c.id}`}>
-                  {c.firstName} {c.lastName ?? ""}
-                </a>
-              </td>
-              <td>{c.company?.name ?? "--"}</td>
-              <td>{c.jobTitle ?? "--"}</td>
-              <td>{c.email ?? "--"}</td>
-              <td>{c.phone ?? "--"}</td>
-            </tr>
-          ))}
-          {contacts.length === 0 && (
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <table>
+          <thead>
             <tr>
-              <td colSpan={5}>No contacts yet.</td>
+              <th>Name</th>
+              <th>Company</th>
+              <th>Job title</th>
+              <th>Email</th>
+              <th>Phone</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {contacts.map((c) => (
+              <tr key={c.id}>
+                <td>
+                  <a href={`/o/${orgSlug}/contacts/${c.id}`}>
+                    {c.firstName} {c.lastName ?? ""}
+                  </a>
+                </td>
+                <td>{c.company?.name ?? "--"}</td>
+                <td>{c.jobTitle ?? "--"}</td>
+                <td>{c.email ?? "--"}</td>
+                <td>{c.phone ?? "--"}</td>
+              </tr>
+            ))}
+            {contacts.length === 0 && (
+              <tr>
+                <td colSpan={5}>No contacts yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {hasPermission(ctx, "contacts.create") && (
         <>
           <h2>New contact</h2>
-          <CreateContactForm
-            orgSlug={orgSlug}
-            companies={companies.map((c) => ({ id: c.id, name: c.name }))}
-          />
+          <div className="card">
+            <CreateContactForm
+              orgSlug={orgSlug}
+              companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+            />
+          </div>
         </>
       )}
     </div>

@@ -88,72 +88,86 @@ export default async function LeadsPage({
         </button>
       </form>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Company / Contact</th>
-            <th>Status</th>
-            <th>Temperature</th>
-            <th>Source</th>
-            <th>Owner</th>
-            {canAssign && <th>Reassign</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {leads.map((lead) => (
-            <tr key={lead.id}>
-              <td>
-                <a href={`/o/${orgSlug}/leads/${lead.id}`}>
-                  {lead.company?.name ??
-                    lead.contact?.firstName ??
-                    "(no company/contact)"}
-                </a>
-              </td>
-              <td>{lead.leadStatus.name}</td>
-              <td>
-                <span className="badge">{lead.temperature}</span>
-              </td>
-              <td>{lead.leadSource?.name ?? "--"}</td>
-              <td>
-                {referenceData.members.find(
-                  (m) => m.membershipId === lead.ownerMembershipId,
-                )?.userName ?? "--"}
-              </td>
-              {canAssign && (
-                <td>
-                  <AssignLeadControl
-                    orgSlug={orgSlug}
-                    leadId={lead.id}
-                    currentOwnerMembershipId={lead.ownerMembershipId}
-                    members={referenceData.members}
-                  />
-                </td>
-              )}
-            </tr>
-          ))}
-          {leads.length === 0 && (
+      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+        <table>
+          <thead>
             <tr>
-              <td colSpan={canAssign ? 6 : 5}>No leads visible to you yet.</td>
+              <th>Company / Contact</th>
+              <th>Status</th>
+              <th>Temperature</th>
+              <th>Source</th>
+              <th>Owner</th>
+              {canAssign && <th>Reassign</th>}
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {leads.map((lead) => (
+              <tr key={lead.id}>
+                <td>
+                  <a href={`/o/${orgSlug}/leads/${lead.id}`}>
+                    {lead.company?.name ??
+                      lead.contact?.firstName ??
+                      "(no company/contact)"}
+                  </a>
+                </td>
+                <td>{lead.leadStatus.name}</td>
+                <td>
+                  <span
+                    className={`badge badge-${temperatureColor(lead.temperature)}`}
+                  >
+                    {lead.temperature}
+                  </span>
+                </td>
+                <td>{lead.leadSource?.name ?? "--"}</td>
+                <td>
+                  {referenceData.members.find(
+                    (m) => m.membershipId === lead.ownerMembershipId,
+                  )?.userName ?? "--"}
+                </td>
+                {canAssign && (
+                  <td>
+                    <AssignLeadControl
+                      orgSlug={orgSlug}
+                      leadId={lead.id}
+                      currentOwnerMembershipId={lead.ownerMembershipId}
+                      members={referenceData.members}
+                    />
+                  </td>
+                )}
+              </tr>
+            ))}
+            {leads.length === 0 && (
+              <tr>
+                <td colSpan={canAssign ? 6 : 5}>No leads visible to you yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {hasPermission(ctx, "leads.create") && (
         <>
           <h2>New lead</h2>
-          <CreateLeadForm
-            orgSlug={orgSlug}
-            leadStatuses={referenceData.leadStatuses}
-            leadSources={referenceData.leadSources}
-            companies={companies.map((c) => ({ id: c.id, name: c.name }))}
-            contacts={contacts.map((c) => ({
-              id: c.id,
-              name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
-            }))}
-          />
+          <div className="card">
+            <CreateLeadForm
+              orgSlug={orgSlug}
+              leadStatuses={referenceData.leadStatuses}
+              leadSources={referenceData.leadSources}
+              companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+              contacts={contacts.map((c) => ({
+                id: c.id,
+                name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
+              }))}
+            />
+          </div>
         </>
       )}
     </div>
   );
+}
+
+function temperatureColor(temperature: "HOT" | "WARM" | "COLD") {
+  if (temperature === "HOT") return "red";
+  if (temperature === "WARM") return "orange";
+  return "blue";
 }

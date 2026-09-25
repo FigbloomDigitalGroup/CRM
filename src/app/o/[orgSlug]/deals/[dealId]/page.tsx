@@ -103,7 +103,18 @@ export default async function DealDetailPage({
       <div className="card">
         <p>
           Stage: <span className="badge">{deal.pipelineStage.name}</span>
-          &nbsp; Outcome: <span className="badge">{deal.outcome}</span>
+          &nbsp; Outcome:{" "}
+          <span
+            className={`badge${
+              deal.outcome === "WON"
+                ? " badge-green"
+                : deal.outcome === "LOST"
+                  ? " badge-red"
+                  : ""
+            }`}
+          >
+            {deal.outcome}
+          </span>
         </p>
         <p>Service: {deal.service?.name ?? "--"}</p>
         <p>

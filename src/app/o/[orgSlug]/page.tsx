@@ -42,53 +42,120 @@ export default async function OrgDashboardPage({
     canViewTasks ? listTasks(ctx, { overdueOnly: true }) : Promise.resolve([]),
   ]);
 
+  const stats: {
+    label: string;
+    dot: "red" | "orange" | "green" | "blue";
+    value: number;
+    caption: string;
+    href: string;
+  }[] = [];
+
+  if (canViewLeads) {
+    stats.push({
+      label: "Leads",
+      dot: "blue",
+      value: leads.length,
+      caption: hasPermission(ctx, "leads.view.all")
+        ? "visible organization-wide"
+        : "owned by you",
+      href: `/o/${orgSlug}/leads`,
+    });
+  }
+  if (canViewDeals) {
+    stats.push({
+      label: "Deals",
+      dot: "green",
+      value: deals.length,
+      caption: hasPermission(ctx, "deals.view.all")
+        ? "visible organization-wide"
+        : "owned by you",
+      href: `/o/${orgSlug}/deals`,
+    });
+  }
+  if (canViewTasks) {
+    stats.push({
+      label: "Overdue tasks",
+      dot: overdueTasks.length > 0 ? "red" : "green",
+      value: overdueTasks.length,
+      caption: "past due, still open",
+      href: `/o/${orgSlug}/tasks?overdueOnly=true`,
+    });
+  }
+  if (hasPermission(ctx, "companies.view")) {
+    stats.push({
+      label: "Companies",
+      dot: "orange",
+      value: companies.length,
+      caption: `${contacts.length} contact${contacts.length === 1 ? "" : "s"} across them`,
+      href: `/o/${orgSlug}/companies`,
+    });
+  }
+
   return (
     <div>
-      <h1>Dashboard</h1>
-      <div className="card">
-        <p>
-          Signed in as <strong>{ctx.roleKey}</strong>. This dashboard shows what
-          you personally have access to -- the counts below already reflect your
-          role's permission boundaries (e.g. a Sales membership only ever sees
-          its own leads here, never the whole organization's).
-        </p>
-      </div>
-      <div className="card">
-        {canViewLeads && (
-          <p>
-            <a href={`/o/${orgSlug}/leads`}>
-              {leads.length} lead(s) visible to you
+      <h1 className="today-heading">Today</h1>
+      <p className="who">
+        Signed in as <strong>{ctx.roleKey}</strong> -- every number below already
+        reflects your role&apos;s permission boundaries.
+      </p>
+
+      {stats.length > 0 && (
+        <div className="stat-grid">
+          {stats.map((s) => (
+            <a key={s.label} href={s.href} className="stat-card" style={{ display: "block" }}>
+              <div className="stat-label">
+                <span className={`dot dot-${s.dot}`} />
+                {s.label}
+              </div>
+              <div className="stat-value">{s.value}</div>
+              <div className={`stat-bar bar-${s.dot}`}>
+                <span style={{ width: s.value > 0 ? "100%" : "8%" }} />
+              </div>
+              <div className="stat-caption">{s.caption}</div>
             </a>
+          ))}
+        </div>
+      )}
+
+      <div className="grid-2">
+        <div className="card">
+          <strong>Overview</strong>
+          <p style={{ margin: 0, fontSize: 13.5, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+            This dashboard shows what you personally have access to -- a Sales
+            membership only ever sees its own leads and deals here, never the
+            whole organization&apos;s, and a role with no reporting permission
+            at all sees a plainer view than this.
           </p>
-        )}
-        {hasPermission(ctx, "contacts.view") && (
-          <p>
-            <a href={`/o/${orgSlug}/contacts`}>{contacts.length} contact(s)</a>
-          </p>
-        )}
-        {hasPermission(ctx, "companies.view") && (
-          <p>
-            <a href={`/o/${orgSlug}/companies`}>
-              {companies.length} compan{companies.length === 1 ? "y" : "ies"}
-            </a>
-          </p>
-        )}
-        {canViewDeals && (
-          <p>
-            <a href={`/o/${orgSlug}/deals`}>
-              {deals.length} deal(s) visible to you
-            </a>
-          </p>
-        )}
+        </div>
+
         {canViewTasks && (
-          <p>
-            <a
-              href={`/o/${orgSlug}/tasks?overdueOnly=true`}
-              className={overdueTasks.length > 0 ? "overdue" : undefined}
-            >
-              {overdueTasks.length} overdue task(s)
-            </a>
-          </p>
+          <div className="card">
+            <strong>Needs your attention</strong>
+            {overdueTasks.length === 0 ? (
+              <p className="panel-empty">Nothing overdue right now.</p>
+            ) : (
+              <ul className="panel-list">
+                {overdueTasks.slice(0, 5).map((t) => (
+                  <li key={t.id} className="panel-row">
+                    <div>
+                      <div className="panel-row-title">{t.title}</div>
+                      <div className="panel-row-meta">
+                        Due {t.dueAt ? new Date(t.dueAt).toLocaleDateString() : "--"}
+                      </div>
+                    </div>
+                    <span className="badge badge-red">overdue</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {overdueTasks.length > 5 && (
+              <p style={{ marginTop: 12 }}>
+                <a href={`/o/${orgSlug}/tasks?overdueOnly=true`}>
+                  All {overdueTasks.length} overdue tasks &rarr;
+                </a>
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>
