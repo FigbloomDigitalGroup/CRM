@@ -5,6 +5,8 @@ import { resolveRequestContext } from "@/auth/requestContext";
 import { adminDb } from "@/db/adminClient";
 import { LogoutButton } from "./LogoutButton";
 import { Sidebar } from "./_shared/Sidebar";
+import { ThemeToggle } from "./_shared/ThemeToggle";
+import { IconBell, IconChevronDown } from "./_shared/icons";
 
 export default async function OrgLayout({
   children,
@@ -56,6 +58,7 @@ export default async function OrgLayout({
     hasPermission(ctx, "reporting.view.all");
   const canViewCompanies = hasPermission(ctx, "companies.view");
   const canViewContacts = hasPermission(ctx, "contacts.view");
+  const canManageSettings = hasPermission(ctx, "configuration.manage");
 
   const roleName = ctx.roleKey
     .split("_")
@@ -86,6 +89,7 @@ export default async function OrgLayout({
         canViewReports={canViewReports}
         canViewCompanies={canViewCompanies}
         canViewContacts={canViewContacts}
+        canManageSettings={canManageSettings}
         logoutButton={<LogoutButton />}
       />
       <div className="main">
@@ -94,12 +98,26 @@ export default async function OrgLayout({
             <p className="topbar-datetime">{datetime}</p>
           </div>
           <div className="topbar-right">
-            <span className="pill">
-              <span className="avatar">
-                {user.name.trim().charAt(0).toUpperCase() || "?"}
-              </span>
-              {user.name}
-            </span>
+            <button type="button" className="icon-button" title="Notifications" aria-label="Notifications">
+              <IconBell />
+            </button>
+            <ThemeToggle />
+            <details className="account-menu">
+              <summary>
+                <span className="pill">
+                  <span className="avatar">
+                    {user.name.trim().charAt(0).toUpperCase() || "?"}
+                  </span>
+                  {user.name}
+                  <IconChevronDown />
+                </span>
+              </summary>
+              <div className="account-menu-panel">
+                <div className="account-menu-name">{user.name}</div>
+                <div className="account-menu-role">{roleName}</div>
+                <LogoutButton withLabel />
+              </div>
+            </details>
           </div>
         </header>
         <div className="page">{children}</div>

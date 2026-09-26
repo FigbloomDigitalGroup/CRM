@@ -780,3 +780,218 @@ factored out, leaving the exact mechanism an explicit open decision for
 Michael/the team to confirm -- the same "provisional, not final" pattern
 already used for the FIG-437 permission matrix and the `dev-login`
 placeholder. No option has been chosen yet.
+
+---
+
+# FIG-442 Implementation Notes
+
+FIG-442 ("Build website lead capture API and assignment workflow") picks up
+exactly where the FIG-443 note above left off: the authentication mechanism
+decision. Resolved per FIG-438 section 19's "if a genuinely unresolved
+technical decision is discovered... document the decision and continue" --
+the same latitude every ticket in this chain has used for its own open
+questions (stack choice, tenant-safety mechanism, permission matrix, etc.).
+
+## Choosing the authentication mechanism: static API key over a signed webhook
+
+Chosen: a static per-organization API key, sent as the `x-figbloom-api-key`
+header (`src/auth/websiteApiKey.ts`). Reasoning:
+
+- The two options on the table trade off differently for a **first-party**
+  integration (FigBloom's own marketing site) than they would for a
+  multi-tenant public API with untrusted third-party consumers. An HMAC
+  signed-webhook scheme exists to let a *receiver* verify a sender it does
+  not otherwise trust without sharing a bearer secret over the wire (the
+  GitHub/Stripe webhook pattern) -- valuable when the payload travels through
+  infrastructure you don't control. Here, FigBloom controls both ends (its
+  own CRM and its own website backend), so that property buys nothing, at
+  the cost of more integration work for whoever builds the website side
+  (Q49 in the stakeholder questionnaire already treats "documented REST
+  APIs and webhooks" as the selection bar, not a signature scheme
+  specifically).
+- The stakeholder questionnaire's own answer to Q47 describes the desired
+  behavior as "auto-create, auto-stamp... unconditionally" -- a simple,
+  reliable, low-ceremony integration was explicitly valued over one that's
+  maximally defensible against a threat model (a compromised website
+  backend) that a signed webhook does not fully solve either (whoever holds
+  the signing secret can still forge requests).
+- Only the SHA-256 **hash** of the key is ever persisted (`WebsiteApiKey.
+  keyHash`); the plaintext is returned exactly once, at generation time,
+  matching how most API-key providers handle this class of credential (a
+  fast hash is appropriate here specifically because the key is
+  high-entropy/machine-generated, unlike a human-chosen password where a
+  slow hash defends against guessing).
+- One active key per organization, no rotation-overlap window: rotating
+  replaces the key outright. A low-traffic, single-consumer integration
+  doesn't need the added complexity of multiple simultaneously-valid keys;
+  the settings page (`/o/[orgSlug]/settings`) warns before regenerating for
+  exactly this reason.
+- The public route lives in its own namespace, `/api/public/orgs/[orgSlug]/
+  leads`, deliberately separate from `/api/orgs/[orgSlug]/**` (which always
+  assumes a resolved membership session via `resolveRequestContext`) so the
+  session-based and API-key-based trust boundaries can never accidentally
+  share authorization logic -- a route under the wrong namespace by mistake
+  fails loudly (wrong function signature) rather than silently reusing the
+  wrong auth check.
+- Every authentication failure mode (unknown org slug, no key configured,
+  wrong key, inactive organization) throws the *identical* generic message
+  (`resolveWebsitePublicContext` in `src/auth/websiteApiKey.ts`). This is
+  deliberately **stricter** than the "existence isn't a secret between
+  colleagues" convention `leadService.ts` documents for authenticated,
+  same-organization callers -- that convention is about people who already
+  work together; this endpoint is reachable by anyone on the public
+  internet, so leaking which organization slugs exist via a distinguishable
+  error would be a real (if minor) information disclosure.
+
+## Round-robin lead assignment: fixed policy, not a configurable rules engine
+
+FIG-436 section 8 lists "assignment rules" as organization-configurable
+data, and `OrganizationSetting` (added in FIG-438 specifically anticipating
+this) is the schema hook for it. FIG-442 uses that hook only to persist the
+round-robin **cursor** (`organization_settings` key
+`website_lead_assignment_cursor`, defined in
+`src/repositories/leadIngestion.ts` and pre-seeded by
+`seedOrganizationDefaults` so a row always exists to lock) -- it does not
+build a settings UI to *choose* a different assignment strategy. That
+mirrors FIG-440's decision not to build pipeline-stage configuration UI:
+the data model supports future configurability, but no ticket has asked for
+the UI to actually change the rule, and building one speculatively would be
+exactly the ahead-of-scope work FIG-438 section 3 warns against. The fixed
+V1 policy is round-robin across active memberships whose role holds
+`leads.edit.own` (today, exactly Sales) -- looked up by permission, not a
+hard-coded `"SALES"` role key, so it keeps working if the permission matrix
+changes later without a code change (the same discipline
+`dealService.ts#resolveOutcomeFields` and the LeadStatus-key-avoidance note
+above already apply elsewhere).
+
+If an organization has zero active reps holding `leads.edit.own` (an
+unusual/misconfigured state -- every seeded dev organization has at least
+one Sales membership), the lead is created unowned (`ownerMembershipId:
+null`) rather than the request failing; Management already sees it via
+`leads.view.all` with a blank owner column, the same rendering the Leads
+list already had for any other unowned lead.
+
+## Round-robin concurrency safety: `SELECT ... FOR UPDATE` on the cursor row
+
+Two website submissions arriving at nearly the same moment must not both
+read the same "last assigned" cursor and hand the same rep two leads in a
+row while skipping the next rep entirely. `pickNextAssignmentOwner`
+(`src/repositories/leadIngestion.ts`) takes a row lock on the cursor's
+`organization_settings` row (`FOR UPDATE`) inside the same transaction as
+the rest of the ingestion, before reading it -- a second concurrent
+submission's transaction blocks until the first commits, so the read
+(cursor) -> compute (next rep) -> write (new cursor) sequence is atomic
+with respect to other ingestions for the same organization. This is why the
+cursor row is pre-seeded rather than created lazily on first use: `SELECT
+... FOR UPDATE` locks nothing if the row doesn't exist yet, which would
+reopen exactly the race this is meant to close for an organization's very
+first website lead.
+
+## Company/Contact resolution: reuse-by-match, not "warn and always create"
+
+FIG-438/439 established a UI-facing pattern for Companies/Contacts/Leads:
+duplicate detection always warns, but creation always proceeds, because a
+human is present to look at the warning and decide. There is no human
+present for an automated website submission, so
+`src/repositories/leadIngestion.ts#ingestWebsiteLead` uses a different,
+appropriately-adapted rule: the Contact is looked up by exact
+(case-insensitive) email or phone match and *reused* if found (attaching
+its existing Company if the new submission supplied one and the contact
+had none yet); the Company is looked up by exact (case-insensitive) name
+match and reused the same way. Only the Lead itself is unconditionally
+created fresh on every submission -- each inbound inquiry is treated as a
+new, real event worth tracking (matching Q47's "auto-create... every
+time"), even from a contact who has submitted the form before, while
+avoiding an ever-growing pile of duplicate Contact/Company rows that no one
+would ever get a chance to warn about or merge.
+
+## "Acknowledgement workflow" is an internal follow-up Task, not outbound email/SMS
+
+The MVP scope document's Website Integration section (4.10) and the
+stakeholder questionnaire's Q47 both use the word "acknowledgement," which
+could mean an automated reply to the website visitor. This codebase has no
+email/SMS-sending infrastructure anywhere, and FIG-441 already made the
+equivalent call for "reminders" ("no AC bullet asks for [an outbound
+notification/delivery mechanism]... building one was treated as out of
+scope: it would require a background job/scheduler and a notification
+channel no other part of this codebase has"). FIG-442 reuses that exact
+precedent rather than reopening it: on a successful submission with an
+assigned owner, `ingestWebsiteLead` creates a Task ("Follow up on new
+website lead," due in 24 hours, `HIGH` priority, linked to the new Lead,
+assigned to its owner) inside the same transaction. This surfaces
+immediately in the owner's Tasks list and is covered by FIG-441's existing
+overdue-task mechanism if it's missed -- "acknowledgement" is implemented as
+"a tracked, time-boxed internal follow-up," not a message sent back to the
+website visitor. `Task.assigneeMembershipId` and `.createdByMembershipId`
+are both required, non-nullable columns with no "system" pseudo-membership
+concept anywhere in this schema, so the task is recorded as self-assigned
+by its owner (`createdByMembershipId = assigneeMembershipId`) -- the
+closest honest attribution available without inventing new schema for a
+single system-generated field. When there is no owner to assign (the
+zero-active-reps edge case above), no task is created; there is no
+membership to attach it to.
+
+## Service/product interest: best-effort match, never a rejection reason
+
+Q46 lists "Service required" as a field the website form may send, but the
+value arrives as free text from a marketing site, not a validated selection
+from this organization's actual Service catalog. `ingestWebsiteLead`
+attempts a case-insensitive match against the catalog's `name`, or an
+uppercased/underscored match against its `key` (so both `"CCTV"` and
+`"cctv"` resolve, matching the seeded `Service.key` convention from
+`organizationDefaults.ts`); an unmatched value does not fail the
+submission -- the lead is still created, with the raw string preserved in
+`qualificationData.unmatchedService` for a human to reconcile, consistent
+with the "losing a lead to a strict form is the failure mode being
+eliminated" reasoning already used for required-field choices below.
+
+## Required fields: the smallest set that can ever be contacted back
+
+Q46 lists many optional fields (budget, preferred contact method) that were
+already marked "defer"/"skip" by the stakeholder answers themselves.
+`src/services/websiteLeadService.ts#validateWebsiteLeadInput` requires only
+`name` and *at least one of* `email`/`phone` -- literally the minimum
+needed to ever follow up with this person -- and is deliberately forgiving
+about everything else (an unrecognized service, missing UTM params) rather
+than rejecting the request, because a public lead-capture form has no human
+on the other end able to fix a validation error and resubmit.
+
+## What FIG-442 explicitly does not include
+
+- **A configurable assignment-rules engine or settings UI for it.** See
+  "Round-robin lead assignment" above -- the fixed round-robin policy is the
+  deliberately smallest reasonable V1 behavior; `OrganizationSetting` is
+  used only for the round-robin's own cursor state.
+- **Outbound acknowledgement email/SMS to the website visitor.** See
+  "'Acknowledgement workflow'" above -- reuses FIG-441's precedent that a
+  real notification-delivery mechanism is out of scope for this codebase.
+- **Multiple simultaneously-valid API keys / a rotation overlap window.**
+  One active key per organization; regenerating invalidates the previous
+  key immediately. Revisit if a second real integration consumer appears.
+- **A generic "create a company/contact from any external system" mapping
+  layer.** This is deliberately specific to the one integration named in
+  scope (a website lead form); FIG-437 section 18 already leaves other
+  external systems (the stakeholder-mentioned e-commerce/property-management
+  platforms) as separate, not-yet-scheduled decisions.
+- **HMAC-signed webhook support as an alternative to the API key.** See
+  "Choosing the authentication mechanism" above.
+
+## Manual end-to-end verification
+
+Same discipline as every prior ticket: dev server + a scripted HTTP
+walkthrough, not just the unit-test suite. Covered, all passing: the
+Settings page renders for Management and shows a permission-denied message
+(not a crash) for Sales; key generation and regeneration through the
+authenticated route; the public endpoint rejecting a missing key, a wrong
+key, and an unknown organization slug all with the *same* error message
+(no enumeration); required-field validation (400) without a key-check
+bypass; a valid submission (200) that is then actually visible in
+Management's Leads list by its company name and whose auto-created
+follow-up task is visible in the Tasks list. 19/19 checks passed. The
+automated suite additionally covers round-robin fairness and wraparound
+across multiple Sales memberships (order-independent, since two
+memberships created in the same test can tie on `createdAt`), the
+unowned-lead fallback when no Sales membership exists, contact/company
+reuse-by-match on a repeat submission (including case-insensitivity), best-
+effort service matching, and that a key stops authenticating the moment it
+is regenerated.

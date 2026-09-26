@@ -2,15 +2,20 @@
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
+  IconChevronsLeft,
   IconCompanies,
   IconContacts,
   IconDashboard,
   IconDeals,
   IconLeads,
   IconReports,
+  IconSettings,
   IconTasks,
 } from "./icons";
+
+const COLLAPSE_STORAGE_KEY = "figbloom-sidebar-collapsed";
 
 interface NavLink {
   href: string;
@@ -31,6 +36,7 @@ export function Sidebar({
   canViewReports,
   canViewCompanies,
   canViewContacts,
+  canManageSettings,
   logoutButton,
 }: {
   orgSlug: string;
@@ -42,10 +48,33 @@ export function Sidebar({
   canViewReports: boolean;
   canViewCompanies: boolean;
   canViewContacts: boolean;
+  canManageSettings: boolean;
   logoutButton: React.ReactNode;
 }) {
   const pathname = usePathname();
   const base = `/o/${orgSlug}`;
+
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem(COLLAPSE_STORAGE_KEY) === "1");
+    } catch {
+      // localStorage unavailable (private browsing, etc.) -- default to expanded.
+    }
+  }, []);
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(COLLAPSE_STORAGE_KEY, next ? "1" : "0");
+      } catch {
+        // Best-effort persistence only.
+      }
+      return next;
+    });
+  }
 
   const workspace: NavLink[] = [
     { href: base, label: "Dashboard", icon: <IconDashboard />, visible: true, exact: true },
@@ -58,6 +87,7 @@ export function Sidebar({
   const manage: NavLink[] = [
     { href: `${base}/companies`, label: "Companies", icon: <IconCompanies />, visible: canViewCompanies },
     { href: `${base}/contacts`, label: "Contacts", icon: <IconContacts />, visible: canViewContacts },
+    { href: `${base}/settings`, label: "Settings", icon: <IconSettings />, visible: canManageSettings },
   ];
 
   function isActive(link: NavLink) {
@@ -72,10 +102,11 @@ export function Sidebar({
         <a
           key={l.href}
           href={l.href}
+          title={l.label}
           className={`sidebar-link${isActive(l) ? " active" : ""}`}
         >
           {l.icon}
-          {l.label}
+          <span className="sidebar-link-label">{l.label}</span>
         </a>
       ));
   }
@@ -83,24 +114,33 @@ export function Sidebar({
   const initial = userName.trim().charAt(0).toUpperCase() || "?";
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
       <div className="sidebar-brand">
         <Image src="/figbloom-logo.jpg" alt="" width={32} height={32} priority />
-        <div>
+        <div className="sidebar-brand-text">
           <div className="sidebar-brand-name">
             Figbloom<span className="accent"> CRM</span>
           </div>
           <div className="sidebar-brand-sub">Digital Group</div>
         </div>
+        <button
+          type="button"
+          className="sidebar-collapse-toggle"
+          onClick={toggleCollapsed}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <IconChevronsLeft />
+        </button>
       </div>
 
       <nav className="sidebar-nav">
-        <div className="sidebar-section">
+        <div className="sidebar-section sidebar-section-workspace">
           <div className="sidebar-section-label">Workspace</div>
           {renderLinks(workspace)}
         </div>
-        {(canViewCompanies || canViewContacts) && (
-          <div className="sidebar-section">
+        {(canViewCompanies || canViewContacts || canManageSettings) && (
+          <div className="sidebar-section sidebar-section-manage">
             <div className="sidebar-section-label">Manage</div>
             {renderLinks(manage)}
           </div>

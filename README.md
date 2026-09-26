@@ -139,6 +139,10 @@ include" in `IMPLEMENTATION_NOTES.md`. A `/reports` page (FIG-443) gives
 every role with any reporting permission a personal "actionable work"
 view, and gives `reporting.view.all` holders organization-wide metrics
 with owner/source/stage/service/date-range filters — see "Reports" below.
+FIG-442 adds one route that intentionally does *not* follow this layering:
+`/api/public/orgs/[orgSlug]/leads` has no `AuthContext` at all (there is no
+session to resolve) and is authenticated by an API key instead — see
+"Website lead capture" below.
 
 ## Deal outcomes are driven by pipeline stage, not set directly
 
@@ -202,6 +206,22 @@ gated independently:
   discipline as individual deals. Metric definitions are documented
   in-page (a "Metric definitions" panel) as well as in
   `IMPLEMENTATION_NOTES.md`.
+
+## Website lead capture (FIG-442)
+
+`POST /api/public/orgs/[orgSlug]/leads` lets FigBloom's public website send
+form submissions straight into the CRM as leads, with no CRM session
+involved — a deliberately separate, differently-authenticated namespace
+from every other route under `/api/orgs/[orgSlug]/**`. Authenticated by a
+static per-organization API key (`x-figbloom-api-key` header), generated
+and rotated from `/o/[orgSlug]/settings` (Management-only, `configuration.
+manage`) — see that page for the exact request shape. Only `name` and one
+of `email`/`phone` are required; everything else (company, service
+interest, message, UTM params) is best-effort and never blocks the
+submission. See `IMPLEMENTATION_NOTES.md`'s FIG-442 section for why a
+static key was chosen over a signed webhook, and for the round-robin
+assignment + acknowledgement-task workflow every accepted submission
+triggers.
 
 ## Dev login (not real authentication)
 

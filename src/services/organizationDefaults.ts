@@ -1,4 +1,5 @@
 import { adminDb } from "../db/adminClient";
+import { WEBSITE_LEAD_ASSIGNMENT_CURSOR_KEY } from "../repositories/leadIngestion";
 
 /**
  * Default controlled-value catalog applied to every new organization.
@@ -200,4 +201,19 @@ export async function seedOrganizationDefaults(
       }),
     ),
   );
+
+  await adminDb.organizationSetting.upsert({
+    where: {
+      organizationId_key: {
+        organizationId,
+        key: WEBSITE_LEAD_ASSIGNMENT_CURSOR_KEY,
+      },
+    },
+    update: {},
+    create: {
+      organizationId,
+      key: WEBSITE_LEAD_ASSIGNMENT_CURSOR_KEY,
+      value: { lastMembershipId: null },
+    },
+  });
 }

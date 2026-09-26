@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { IconLogout } from "./_shared/icons";
 
-export function LogoutButton() {
+export function LogoutButton({ withLabel = false }: { withLabel?: boolean }) {
   const router = useRouter();
 
   async function handleLogout() {
@@ -20,6 +20,7 @@ export function LogoutButton() {
       aria-label="Log out"
     >
       <IconLogout />
+      {withLabel && <span>Log out</span>}
     </button>
   );
 }

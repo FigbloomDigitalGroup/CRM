@@ -41,6 +41,7 @@ model Organization {
 
   memberships             Membership[]
   settings                OrganizationSetting[]
+  websiteApiKey           WebsiteApiKey?
   companies               Company[]
   contacts                Contact[]
   leads                   Lead[]
@@ -180,6 +181,7 @@ model Membership {
   authoredCommunications Communication[]     @relation("CommunicationAuthor")
   ownedProposals         ProposalReference[] @relation("ProposalOwner")
   auditEvents            AuditEvent[]        @relation("AuditActorMembership")
+  createdWebsiteApiKeys  WebsiteApiKey[]     @relation("WebsiteApiKeyCreatedBy")
 
   @@unique([organizationId, userId])
   @@unique([organizationId, id])
@@ -204,6 +206,29 @@ model OrganizationSetting {
 
   @@unique([organizationId, key])
   @@map("organization_settings")
+}
+
+/// Static per-organization credential authenticating the public, session-less
+/// website lead-capture endpoint (FIG-442) -- see IMPLEMENTATION_NOTES.md
+/// "FIG-442: choosing the website integration's authentication mechanism"
+/// for why this shape was chosen over a signed webhook. Only the SHA-256
+/// hash is ever stored; the plaintext key is shown to the caller exactly
+/// once, at generation time. One active key per organization -- rotating
+/// replaces it outright (no overlap window).
+model WebsiteApiKey {
+  id                    String    @id @default(uuid())
+  organizationId        String    @unique @map("organization_id")
+  keyHash               String    @map("key_hash")
+  keyPrefix             String    @map("key_prefix")
+  createdByMembershipId String?   @map("created_by_membership_id")
+  lastUsedAt            DateTime? @map("last_used_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    Membership?  @relation("WebsiteApiKeyCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: SetNull)
+
+  @@map("website_api_keys")
 }
 
 // ---------------------------------------------------------------------------
