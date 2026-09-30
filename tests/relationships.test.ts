@@ -9,12 +9,11 @@ import {
 } from "./helpers/fixtures";
 
 /**
- * These tests use `adminDb` deliberately (bypassing RLS) so that what is
- * being verified is specifically the composite tenant-integrity foreign
- * keys and CHECK constraints from
- * prisma/migrations/*_tenant_integrity_and_rls -- constraints that apply to
- * every role, not just the RLS-restricted application role. RLS itself is
- * covered separately in tests/tenant-isolation.test.ts.
+ * Uses `adminDb` (bypassing RLS) on purpose, so what's being verified is
+ * specifically the composite tenant-integrity foreign keys and CHECK
+ * constraints from prisma/migrations/*_tenant_integrity_and_rls -- these
+ * apply to every role, not just the RLS-restricted application role. RLS
+ * itself is covered separately in tests/tenant-isolation.test.ts.
  */
 describe("core relationships", () => {
   it("creates a full Company -> Contact -> Lead -> Deal chain within one organization", async () => {

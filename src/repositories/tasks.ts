@@ -35,10 +35,9 @@ export async function createTask(input: CreateTaskInput) {
 }
 
 /**
- * `completedAt` is only ever set here as a value the service layer derived
- * from a `status` transition (mirrors `dealService.ts`'s outcome/stage
- * discipline) -- never a direct pass-through of client input, so a task
- * can't be marked COMPLETED without also stamping when.
+ * `completedAt` is set here only as a value the service layer derives from
+ * a `status` transition, never passed through directly -- a task can't be
+ * marked COMPLETED without stamping when.
  */
 export interface UpdateTaskInput {
   title?: string;
@@ -85,10 +84,9 @@ export interface ListTasksFilters {
 }
 
 /**
- * "Overdue" is derived at query time (dueAt in the past AND not
- * completed/cancelled), never stored -- FIG-436 section 13. `overdueOnly`
- * wins over `dueAfter`/`dueBefore` if a caller somehow passes both (no
- * call site does).
+ * "Overdue" is derived at query time (past due, not completed/cancelled),
+ * never stored (FIG-436). `overdueOnly` wins if a caller passes both it
+ * and `dueAfter`/`dueBefore`, though no call site does.
  */
 export async function listTasks(
   organizationId: string,

@@ -27,13 +27,12 @@ export type CreateDealServiceInput = Omit<
 type DealWithOwner = { ownerMembershipId: string; value: unknown };
 
 /**
- * FIG-437 section 9's reconciliation of FIG-297 Q56 ("Sales cannot see cost
- * or margin figures") with Q57 ("deal values are Management + Finance
- * only"): the owner of a deal can see the value they themselves quoted
- * (via deals.view.own/deals.edit.own), but organization-wide value
- * visibility -- e.g. Delivery, which has deals.view.all but not
- * deals.view.value -- requires the dedicated permission. Anyone else gets
- * the value masked rather than the whole deal withheld.
+ * Reconciles "Sales cannot see cost or margin figures" with "deal values
+ * are Management + Finance only" (FIG-297): the owner of a deal can see
+ * the value they quoted themselves, but org-wide value visibility (e.g.
+ * Delivery, which has deals.view.all but not deals.view.value) requires
+ * the dedicated permission. Anyone else gets the value masked rather than
+ * the whole deal withheld.
  */
 function maskValue<T extends DealWithOwner>(
   ctx: AuthContext,
@@ -58,11 +57,9 @@ export async function createDeal(
     organizationId: ctx.organizationId,
     createdByMembershipId: ctx.membershipId,
     ownerMembershipId: input.ownerMembershipId ?? ctx.membershipId,
-    // Regression: this used to pass the client's raw date string straight
-    // through to Prisma, which throws (not coerces) for a DateTime field
-    // given a date-only string -- found via FIG-443's manual walkthrough
-    // when creating a deal with an expected close date set, but live since
-    // FIG-440 (CreateDealForm has always sent a plain "YYYY-MM-DD" string).
+    // Prisma throws (doesn't coerce) for a DateTime field given a
+    // date-only string, so convert here. Bug existed since FIG-440
+    // (CreateDealForm sends a plain "YYYY-MM-DD" string), caught in FIG-443.
     expectedCloseDate: input.expectedCloseDate
       ? new Date(input.expectedCloseDate)
       : undefined,
@@ -117,13 +114,12 @@ export async function listDeals(
 }
 
 /**
- * The pipeline stage is the single source of truth for a deal's outcome
- * (AC "Won and lost outcomes are recorded with controlled reasons"): moving
- * a deal onto a won-flagged stage records WON automatically, moving it onto
- * a lost-flagged stage requires a lost reason, and moving it onto any other
- * stage reopens it. This is the only path that can set outcome/wonAt/lostAt
- * -- see the comment on `UpdateDealInput` in repositories/deals.ts for why
- * they're never taken directly from client input.
+ * Pipeline stage is the single source of truth for a deal's outcome:
+ * moving onto a won-flagged stage records WON automatically, onto a
+ * lost-flagged stage requires a lost reason, onto anything else reopens
+ * it. This is the only path that sets outcome/wonAt/lostAt -- see
+ * `UpdateDealInput` in repositories/deals.ts for why those are never
+ * taken directly from client input.
  */
 async function resolveOutcomeFields(
   organizationId: string,

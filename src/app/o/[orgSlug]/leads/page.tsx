@@ -23,10 +23,9 @@ export default async function LeadsPage({
   const { q, leadStatusId, temperature } = await searchParams;
   const ctx = await resolveRequestContext(orgSlug);
 
-  // Delivery, Finance, and Restricted Technical have no leads.view.* at all
-  // (correctly, per FIG-297 Q56) -- listLeads() fails closed rather than
-  // returning an empty list, so this must be caught explicitly instead of
-  // crashing the page for those roles.
+  // Delivery, Finance, and Restricted Technical have no leads.view.* at all,
+  // so listLeads() fails closed rather than returning an empty list -- this
+  // must be caught explicitly instead of crashing the page for those roles.
   let leads;
   try {
     leads = await listLeads(ctx, {

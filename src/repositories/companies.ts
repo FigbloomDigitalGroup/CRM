@@ -34,11 +34,9 @@ export interface ListCompaniesFilters {
 }
 
 /**
- * Every organization-scoped repository function follows the same shape:
- * accept `organizationId` explicitly, run inside `withOrgContext`, and
- * still filter/scope by it in the query even though RLS would also block a
- * mismatch — the two layers are deliberately redundant (FIG-437 section 16,
- * "Defense in Depth").
+ * Org-scoped functions take `organizationId` explicitly, run inside
+ * `withOrgContext`, and still filter by it in the query -- redundant with
+ * RLS, but defense in depth (FIG-437).
  */
 export async function createCompany(input: CreateCompanyInput) {
   return withOrgContext(input.organizationId, (tx) =>
@@ -87,8 +85,8 @@ export async function getCompanyById(
 
 /**
  * `query` matches (case-insensitive) against name, email, or phone. Company
- * names are deliberately NOT unique (FIG-438 section 9 — "company names may
- * legitimately repeat"), so this is search, not exact lookup.
+ * names aren't unique (FIG-438 -- they may legitimately repeat), so this is
+ * search, not exact lookup.
  */
 export async function listCompanies(
   organizationId: string,
@@ -116,10 +114,9 @@ export async function listCompanies(
 }
 
 /**
- * Duplicate *detection*, not prevention: surfaces likely-same companies by
- * name/email/phone so the caller (UI or API consumer) can warn before
- * committing to a create, without hard-blocking legitimate re-entries
- * (FIG-438 section 9).
+ * Detection, not prevention: surfaces likely-same companies by
+ * name/email/phone so the caller can warn before creating, without
+ * hard-blocking legitimate re-entries (FIG-438).
  */
 export async function findPossibleDuplicateCompanies(
   organizationId: string,

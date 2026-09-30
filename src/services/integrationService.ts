@@ -8,13 +8,9 @@ import {
 } from "../repositories/websiteApiKeys";
 
 /**
- * Reuses `configuration.manage` (Management-only in the FIG-438 seed)
- * rather than inventing a new permission -- FIG-436 section 8 already lists
- * the website integration's assignment rules alongside pipeline
- * stages/lead sources as organization-configurable data, and this is the
- * same kind of "who's allowed to change how this organization is set up"
- * decision (same reasoning FIG-440 used to reuse the Deal ownership gate
- * for Proposal References rather than adding proposals.view.own/.all).
+ * Reuses `configuration.manage` (Management-only) rather than inventing a
+ * new permission -- this is the same "who's allowed to change how the org
+ * is set up" bucket as pipeline stages and lead sources.
  */
 const PERMISSION = "configuration.manage";
 

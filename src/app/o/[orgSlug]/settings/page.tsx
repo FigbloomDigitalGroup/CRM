@@ -27,7 +27,7 @@ export default async function SettingsPage({
           Lets FigBloom&apos;s public website send form submissions straight
           into the CRM as leads. Submissions are auto-assigned to a sales rep
           in rotation and auto-stamped with source &quot;Website&quot; and the
-          submission time (FIG-442).
+          submission time.
         </p>
 
         {status.configured ? (

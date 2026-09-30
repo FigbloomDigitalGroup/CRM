@@ -25,11 +25,10 @@ export interface CreateDealInput {
 }
 
 /**
- * Deliberately has no `leadId` parameter -- linking a Deal to its
- * originating Lead is exclusively the job of `convertLeadToDeal` below,
- * which also stamps the Lead's `convertedAt`. Accepting a bare `leadId`
- * here would let a caller attach a Deal to a Lead without marking that
- * Lead converted, leaving the two records inconsistent.
+ * No `leadId` param -- linking a Deal to its originating Lead is the job of
+ * `convertLeadToDeal` below, which also stamps the Lead's `convertedAt`. A
+ * bare `leadId` here would let a Deal attach without marking the Lead
+ * converted, leaving the two records inconsistent.
  */
 export async function createDeal(input: CreateDealInput) {
   return withOrgContext(input.organizationId, (tx) =>
@@ -53,12 +52,10 @@ export async function createDeal(input: CreateDealInput) {
 }
 
 /**
- * Outcome (`outcome`/`wonAt`/`lostAt`) and `lostReasonId` are only ever
- * written here as values the service layer computed from a pipeline-stage
- * transition (see `dealService.ts#resolveOutcomeFields`) -- never as a
- * direct pass-through of client input, so a caller can't PATCH a deal
- * straight to `outcome: "WON"` without actually moving it through a
- * won-flagged stage.
+ * `outcome`/`wonAt`/`lostAt`/`lostReasonId` are set here only as values the
+ * service layer computed from a pipeline-stage transition
+ * (`dealService.ts#resolveOutcomeFields`), never a direct pass-through of
+ * client input -- a caller can't PATCH straight to `outcome: "WON"`.
  */
 export interface UpdateDealInput {
   primaryContactId?: string | null;
@@ -105,10 +102,9 @@ export interface ListDealsFilters {
   companyId?: string;
   serviceId?: string;
   /**
-   * "Stalled" (FIG-443's Sales-dashboard AC) is defined as: still open, and
-   * past the expected close date it was given. This overrides `outcome` if
-   * both are passed -- there's no call site that does that today, but if
-   * one ever does, stalled-ness (an open deal past due) should win.
+   * Stalled = still open and past its expected close date (FIG-443).
+   * Overrides `outcome` if both are passed, though no call site does that
+   * today.
    */
   stalledOnly?: boolean;
 }
@@ -178,12 +174,10 @@ export interface ConvertLeadToDealInput {
 }
 
 /**
- * Implements the Lead -> Deal conversion workflow (FIG-436 section 12): it
- * is an application-level workflow (not a bare status flip), it carries
- * source/owner/qualification context forward, applies a configured initial
- * stage, resolves a company for leads that were captured without one, and
- * prevents duplicate conversion via the unique (organizationId, leadId)
- * constraint on Deal.
+ * Lead -> Deal conversion (FIG-436): carries owner/service/notes context
+ * forward, applies a configured initial pipeline stage, resolves a company
+ * for leads captured without one, and relies on the unique
+ * (organizationId, leadId) constraint on Deal to prevent double conversion.
  */
 export async function convertLeadToDeal(input: ConvertLeadToDealInput) {
   return withOrgContext(input.organizationId, async (tx) => {
@@ -261,8 +255,7 @@ export async function convertLeadToDeal(input: ConvertLeadToDealInput) {
         err instanceof Prisma.PrismaClientKnownRequestError &&
         err.code === "P2002"
       ) {
-        // Unique (organizationId, leadId) constraint on Deal — see FIG-436
-        // section 12, "Duplicate conversion is prevented."
+        // Unique (organizationId, leadId) constraint on Deal caught the race.
         throw new LeadAlreadyConvertedError(lead.id);
       }
       throw err;

@@ -32,10 +32,8 @@ function isOverdue(task: Task) {
 }
 
 /**
- * Reused as both the standalone Tasks page's list and the compact
- * "linked tasks" section on Lead/Deal detail pages (FIG-441 AC: "Tasks
- * can be ... linked to relevant CRM records" and "Due and overdue
- * follow-ups are visible to assignees and authorized managers").
+ * Reused as both the standalone Tasks page's list and the compact "linked
+ * tasks" section on Lead/Deal detail pages (FIG-441).
  */
 export function TaskSection({
   orgSlug,

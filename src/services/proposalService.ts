@@ -11,12 +11,12 @@ import {
 } from "../repositories/proposalReferences";
 
 /**
- * Proposal references have no own/all permission split (FIG-437's catalog
- * only defines `proposals.view`/`proposals.manage`), so instead of
- * inventing one we reuse the parent Deal's own/all ownership gate: a caller
- * may only view or manage proposals on a deal they're already allowed to
- * view/edit. This also stops a Sales rep with `proposals.manage` from
- * touching proposals on a colleague's deal by guessing its id.
+ * Proposal references have no own/all permission split (only
+ * `proposals.view`/`proposals.manage`), so this reuses the parent Deal's
+ * own/all ownership gate: a caller may only view or manage proposals on a
+ * deal they're already allowed to view/edit. This also stops a Sales rep
+ * with `proposals.manage` from touching a colleague's proposals by
+ * guessing the deal id.
  */
 async function loadOwnedDealForProposals(ctx: AuthContext, dealId: string) {
   const deal = await getDealById(ctx.organizationId, dealId);

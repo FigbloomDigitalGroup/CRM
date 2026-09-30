@@ -22,7 +22,7 @@ export default async function OrgLayout({
     ctx = await resolveRequestContext(orgSlug);
   } catch (err) {
     if (err instanceof UnauthorizedError) {
-      redirect("/dev-login");
+      redirect("/login");
     }
     return (
       <div className="auth-shell">
@@ -39,11 +39,9 @@ export default async function OrgLayout({
     where: { id: ctx.userId },
   });
 
-  // Hiding a link the role can't use is a usability nicety, not the
-  // security boundary -- every underlying page still enforces its own
-  // permission check server-side regardless of what the nav shows
-  // (FIG-437 section 10: "Role-specific UI improves usability but is not
-  // a security boundary").
+  // Hiding a link the role can't use is a usability nicety, not a security
+  // boundary -- every page still enforces its own permission check
+  // server-side regardless of what the nav shows.
   const canViewLeads =
     hasPermission(ctx, "leads.view.own") ||
     hasPermission(ctx, "leads.view.all");

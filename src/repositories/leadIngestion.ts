@@ -2,12 +2,10 @@ import type { Prisma } from "@prisma/client";
 import { type OrgScopedClient, withOrgContext } from "../db/orgScopedClient";
 
 /**
- * Key under which the website lead-capture round-robin assignment cursor is
- * stored in `OrganizationSetting`. Pre-seeded by
- * `src/services/organizationDefaults.ts` (which imports this constant back
- * from here, keeping the repository layer the source of truth for its own
- * storage key) so a row always exists to `SELECT ... FOR UPDATE` against —
- * see `pickNextAssignmentOwner` below.
+ * Storage key for the round-robin assignment cursor in
+ * `OrganizationSetting`. Pre-seeded by `organizationDefaults.ts` (which
+ * imports this constant back from here) so a row always exists to
+ * `SELECT ... FOR UPDATE` against in `pickNextAssignmentOwner` below.
  */
 export const WEBSITE_LEAD_ASSIGNMENT_CURSOR_KEY =
   "website_lead_assignment_cursor";
@@ -42,21 +40,17 @@ function splitName(name: string): { firstName: string; lastName?: string } {
 }
 
 /**
- * Round-robin owner assignment across the organization's active reps
- * (FIG-436 section 8 lists "assignment rules" as org-configurable data, but
- * no ticket has built a rules-configuration UI/engine -- see
- * IMPLEMENTATION_NOTES.md's "FIG-442: lead-assignment rule" note for why
- * this fixed round-robin policy, rather than a configurable one, is the
- * deliberately smallest reasonable V1 behavior).
+ * Round-robin owner assignment across active reps. Assignment rules are
+ * meant to be org-configurable eventually (FIG-436), but no rules engine
+ * exists yet, so this fixed round-robin is the V1 stand-in (see
+ * IMPLEMENTATION_NOTES.md's FIG-442 notes).
  *
- * The pool is "active memberships whose role can own a lead"
- * (`leads.edit.own`), not a hard-coded "SALES" role key, so it adapts if the
- * permission matrix changes later without a code change.
+ * Pool = active memberships whose role has `leads.edit.own`, not a
+ * hard-coded "SALES" role, so it tracks the permission matrix.
  *
- * Must run inside the same transaction as the Lead create it's feeding —
- * `SELECT ... FOR UPDATE` locks the cursor row for the duration of the
- * transaction, so two concurrent website submissions can't both read the
- * same cursor and assign the same rep twice in a row.
+ * Must run in the same transaction as the Lead create it's feeding:
+ * `SELECT ... FOR UPDATE` locks the cursor row for the transaction's
+ * duration, so two concurrent submissions can't grab the same rep.
  */
 async function pickNextAssignmentOwner(
   tx: OrgScopedClient,
@@ -117,18 +111,14 @@ async function pickNextAssignmentOwner(
 }
 
 /**
- * The full "receive a website form submission as a CRM lead" pipeline
- * (FIG-436 section 4.10 / FIG-442): resolve-or-create the Company/Contact,
- * auto-stamp source + an initial status, best-effort resolve a service
- * interest, round-robin assign an owner, and fire the "acknowledgement"
- * follow-up task (see IMPLEMENTATION_NOTES.md's FIG-442 notes for why an
- * internal Task is the acknowledgement mechanism, not an outbound
- * email/SMS system this codebase has no infrastructure for).
+ * Turns a website form submission into a CRM lead (FIG-442): resolve-or-
+ * create the Company/Contact, stamp source + initial status, resolve a
+ * service interest, round-robin assign an owner, and create a follow-up
+ * Task as the acknowledgement (there's no outbound email/SMS
+ * infrastructure yet).
  *
- * Everything happens inside one `withOrgContext` transaction so a failure
- * partway through (e.g. no configured lead status) leaves nothing
- * half-created — a website submission either becomes a fully-formed lead or
- * nothing at all.
+ * Runs in one transaction so a failure partway through (e.g. no configured
+ * lead status) leaves nothing half-created.
  */
 export async function ingestWebsiteLead(
   organizationId: string,

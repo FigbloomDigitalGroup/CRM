@@ -35,10 +35,9 @@ export async function createActivity(input: CreateActivityInput) {
 }
 
 /**
- * Every call site scopes by exactly one parent record (see
- * `activityService.ts`, which authorizes against that specific parent
- * before calling this) -- a timeline is always "activities for this lead"
- * or "for this deal," never an unscoped org-wide feed.
+ * Callers scope by exactly one parent record (`activityService.ts`
+ * authorizes against that parent before calling this) -- a timeline is
+ * always "activities for this lead/deal," never an unscoped org-wide feed.
  */
 export interface ListActivitiesFilters {
   companyId?: string;
@@ -47,11 +46,7 @@ export interface ListActivitiesFilters {
   dealId?: string;
 }
 
-/**
- * "Chronological order" (FIG-441 AC) is taken literally: oldest first, the
- * order a reader would narrate the relationship's history in, not the
- * newest-first "recent activity feed" convention some CRMs use instead.
- */
+/** Oldest first (FIG-441): reads as history, not a "recent activity" feed. */
 export async function listActivities(
   organizationId: string,
   filters: ListActivitiesFilters,

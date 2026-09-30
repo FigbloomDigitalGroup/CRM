@@ -13,17 +13,15 @@ export interface LinkedRecordIds {
 }
 
 /**
- * Shared by Activities and Tasks (FIG-441): both link to an arbitrary
- * subset of Company/Contact/Lead/Deal, and both have their own flat
- * permission (`activities.*`/`tasks.*`) that says nothing about *which*
- * records the caller may touch. Rather than inventing a parallel
- * ownership model, this reuses each parent's own service-layer view check
- * -- which is exactly where lead/deal ownership scoping already lives
- * (`leads.view.own` vs `.all`, etc.) -- so a Sales rep can't read or write
- * an activity/task against a colleague's lead just because they hold the
- * flat permission. `requireAtLeastOne` is only relevant for Activities
- * (the DB enforces "at least one" for that table via
- * `activities_has_subject_chk`); Tasks are allowed to stand alone.
+ * Shared by Activities and Tasks: both link to an arbitrary subset of
+ * Company/Contact/Lead/Deal, and both have a flat permission
+ * (`activities.*`/`tasks.*`) that says nothing about *which* records the
+ * caller may touch. Rather than inventing a parallel ownership model,
+ * this reuses each parent's own service-layer view check, so a Sales rep
+ * can't read or write an activity/task against a colleague's lead just by
+ * holding the flat permission. `requireAtLeastOne` only applies to
+ * Activities (DB-enforced via `activities_has_subject_chk`); Tasks may
+ * stand alone.
  */
 export async function assertCanAccessLinkedRecords(
   ctx: AuthContext,

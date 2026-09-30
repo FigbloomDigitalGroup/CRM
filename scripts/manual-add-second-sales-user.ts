@@ -8,6 +8,8 @@
  * with: `npx tsx scripts/manual-add-second-sales-user.ts`.
  */
 import "dotenv/config";
+import { DEV_FIXTURE_PASSWORD } from "../src/auth/devAccounts";
+import { hashPassword } from "../src/auth/password";
 import { adminDb } from "../src/db/adminClient";
 
 async function main() {
@@ -18,10 +20,17 @@ async function main() {
     where: { key: "SALES" },
   });
 
+  // Same shared local-dev password as prisma/seed.ts's dev users, so this
+  // user can also sign in through the real /login flow, not just /dev-login.
+  const passwordHash = await hashPassword(DEV_FIXTURE_PASSWORD);
   const user = await adminDb.user.upsert({
     where: { email: "dev.sales2@figbloom.local" },
-    update: {},
-    create: { email: "dev.sales2@figbloom.local", name: "Dev Sales Two" },
+    update: { passwordHash },
+    create: {
+      email: "dev.sales2@figbloom.local",
+      name: "Dev Sales Two",
+      passwordHash,
+    },
   });
 
   await adminDb.membership.upsert({

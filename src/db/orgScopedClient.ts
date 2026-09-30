@@ -22,32 +22,26 @@ if (process.env.NODE_ENV !== "production") {
 export type OrgScopedClient = Prisma.TransactionClient;
 
 /**
- * Establishes the active-organization context required by FIG-437 section
- * 7 ("Active Organization Context") before running `fn`, and enforces it at
- * two independent layers:
+ * Establishes the active-organization context before running `fn`, enforced
+ * at two layers:
  *
- *   1. Database (primary, defense-in-depth): `set_config` sets the
- *      Postgres session variable the RLS policies from
- *      *_tenant_integrity_and_rls check. It is set with `is_local = true`
- *      inside a transaction, so it can never leak onto a pooled connection
- *      outside this call.
- *   2. Application (the caller's responsibility): repositories built on top
- *      of this helper must still filter by `organizationId` explicitly.
- *      RLS is the backstop for when that filter is missing, not a
- *      replacement for it (FIG-437 section 16, "Defense in Depth").
+ *   1. Database (primary, defense-in-depth): `set_config` sets the Postgres
+ *      session variable the RLS policies check. It's set with
+ *      `is_local = true` inside a transaction, so it can never leak onto a
+ *      pooled connection outside this call.
+ *   2. Application: repositories built on this helper must still filter by
+ *      `organizationId` explicitly. RLS is the backstop for when that
+ *      filter is missing, not a replacement for it.
  *
  * `organizationId` must come from an already-authorized membership lookup,
- * never taken as-is from an unauthenticated client request (FIG-437
- * section 7: "A client-supplied organization ID is never sufficient
- * authorization by itself").
+ * never taken as-is from an unauthenticated client request.
  */
 export async function withOrgContext<T>(
   organizationId: string,
   fn: (tx: OrgScopedClient) => Promise<T>,
 ): Promise<T> {
   if (!organizationId) {
-    // Fail closed (FIG-437 section 16) rather than running the callback
-    // with no tenant context at all.
+    // Fail closed rather than run the callback with no tenant context.
     throw new Error("withOrgContext requires a non-empty organizationId.");
   }
 

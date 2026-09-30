@@ -119,7 +119,7 @@ describe("leadService", () => {
     expect(updated.notes).toBe("updated by owner");
   });
 
-  it("Sales cannot reassign lead ownership (leads.assign is Management-only per the FIG-438 seed)", async () => {
+  it("Sales cannot reassign lead ownership (leads.assign is Management-only)", async () => {
     const org = await createTestOrganization();
     const ownerCtx = await createTestContext(org.id, "SALES", "owner");
     const otherCtx = await createTestContext(org.id, "SALES", "other");
@@ -167,9 +167,7 @@ describe("leadService", () => {
     // Regression test: Prisma treats `id: undefined` in a `where` filter as
     // "no filter" and `undefined` in a `data` update as "leave unchanged" --
     // an earlier version of assignLead let a missing id slip through both,
-    // so a malformed request silently no-op'd instead of failing. Found via
-    // the manual FIG-439 end-to-end walkthrough (curl/Node script hitting
-    // the running dev server), not by an earlier version of this suite.
+    // so a malformed request silently no-op'd instead of failing.
     const org = await createTestOrganization();
     const managementCtx = await createTestContext(org.id, "MANAGEMENT");
     const leadStatusId = await getLeadStatusId(org.id);

@@ -1,22 +1,16 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 /**
- * THIS IS NOT THE FIG-437 AUTHENTICATION IMPLEMENTATION.
+ * Placeholder auth, not the real implementation. Real sessions now exist
+ * (src/auth/session.ts, FIG-592) and are checked first everywhere identity
+ * is resolved (src/auth/requestContext.ts) -- this remains only as a local
+ * development convenience for exercising permission/ownership logic without
+ * setting a password on a seeded user, and is hard-disabled outside
+ * development (see src/app/dev-login/page.tsx and
+ * src/app/api/dev-session/route.ts).
  *
- * FIG-437 section 18 explicitly leaves "exact authentication provider" and
- * "exact session/token strategy" as open decisions for a future ticket
- * (real login, password/SSO, provider choice — NextAuth, Clerk, Supabase
- * Auth, or a bespoke implementation). FIG-439 needs *some* way to identify
- * "the current user" so its permission/ownership logic (leads.view.own,
- * leads.assign, etc.) can be exercised end-to-end through real HTTP
- * requests and UI screens.
- *
- * This module is the smallest thing that unblocks that: a signed cookie
- * containing a userId, chosen from the FIG-438 seed's dev users via
- * /dev-login, with no password check at all. It must be replaced wholesale
- * — not extended — when real authentication is implemented; nothing
- * downstream (services, API routes) depends on its internals, only on the
- * `userId: string | null` it produces.
+ * A signed cookie holding a userId, picked from the FIG-438 seed's dev users
+ * via /dev-login, with no password check.
  */
 
 const COOKIE_NAME = "figbloom_dev_session";

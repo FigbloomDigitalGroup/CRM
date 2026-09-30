@@ -23,12 +23,9 @@ interface Member {
 }
 
 /**
- * A single reusable timeline: Company and Deal detail pages both render
- * this against their own parent id (FIG-441 AC "Customer and deal
- * timelines show activities in chronological order"); the Lead detail
- * page also uses it, since logging a call/note against a lead is the most
- * common of the "log calls, meetings, emails, WhatsApp summaries, and
- * notes" workflows the AC describes.
+ * Single reusable timeline component: Company, Deal, and Lead detail pages
+ * all render this against their own parent id (FIG-441) to log calls,
+ * meetings, emails, WhatsApp summaries, and notes chronologically.
  */
 export function ActivityTimeline({
   orgSlug,

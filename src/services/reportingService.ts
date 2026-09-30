@@ -30,12 +30,11 @@ async function ignoreForbidden<T>(promise: Promise<T[]>): Promise<T[]> {
 }
 
 /**
- * "Actionable work" (FIG-443's Sales-dashboard AC): due-today follow-ups,
- * overdue tasks, new leads, and stalled deals -- all reusing the existing
- * service-layer own/all permission scoping and value masking, rather than
- * re-deriving it here. Each piece independently no-ops to `[]` if the
- * caller's role lacks that underlying permission (e.g. Finance has no
- * tasks.* or leads.* permission at all) instead of failing the whole
+ * "Actionable work": due-today follow-ups, overdue tasks, new leads, and
+ * stalled deals, reusing the existing service-layer own/all scoping and
+ * value masking rather than re-deriving it here. Each piece independently
+ * no-ops to `[]` if the caller's role lacks that permission (e.g. Finance
+ * has no tasks.* or leads.* at all) instead of failing the whole
  * dashboard.
  */
 export async function getMyActionableWork(ctx: AuthContext) {
@@ -75,10 +74,9 @@ export interface OrganizationMetricsFilters {
 
 /**
  * Value-bearing aggregates (pipeline value, won value, sales by service)
- * are nulled out for a caller who lacks `deals.view.value` -- same
- * reconciliation of FIG-297 Q56/Q57 as `dealService.ts#maskValue`, just
- * applied to sums instead of individual records (an aggregate can't be
- * partially masked the way a list of records can, so it's shown in full
+ * are nulled out for a caller who lacks `deals.view.value` -- same rule
+ * as `dealService.ts#maskValue`, applied to sums instead of individual
+ * records (an aggregate can't be partially masked, so it's shown in full
  * or not at all).
  */
 export async function getOrganizationMetrics(

@@ -14,12 +14,11 @@ export default async function OrgDashboardPage({
   const { orgSlug } = await params;
   const ctx = await resolveRequestContext(orgSlug);
 
-  // Not every role has any lead visibility at all -- Finance and Delivery
-  // explicitly should not see the sales pipeline (FIG-297 Q56: "Finance ...
-  // Cannot browse open pipeline or unqualified leads"), and Restricted
-  // Technical has no CRM-record permissions by design. listLeads() fails
-  // closed (throws ForbiddenError) rather than returning an empty list in
-  // that case, so this must be gated the same way contacts/companies are.
+  // Not every role has any lead visibility at all (Finance/Delivery don't
+  // see the sales pipeline; Restricted Technical has no CRM-record access
+  // by design). listLeads() fails closed with ForbiddenError rather than
+  // an empty list in that case, so it needs the same permission gate as
+  // contacts/companies below.
   const canViewLeads =
     hasPermission(ctx, "leads.view.own") ||
     hasPermission(ctx, "leads.view.all");

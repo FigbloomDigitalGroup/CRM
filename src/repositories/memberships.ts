@@ -8,17 +8,14 @@ export interface AddMembershipInput {
 }
 
 /**
- * Adding a member to an organization is performed by an authorized
- * organization administrator or an approved management process (FIG-437
- * section 13). It runs against the admin client because it is the act of
- * *establishing* a membership, i.e. establishing the tenant boundary for
- * that user, which cannot itself depend on that membership already
- * existing.
+ * Runs against the admin client, not `withOrgContext` -- this call
+ * establishes the tenant boundary for the user, so it can't depend on a
+ * membership already existing. Requires an org admin or approved process
+ * to call it (FIG-437).
  *
- * Cross-tenant safety here is enforced the same way ownership references
- * are enforced everywhere else: the created row's (organizationId, id) is
- * what every other org-scoped table's composite FK checks against, so a
- * membership can never silently apply to the wrong organization.
+ * Cross-tenant safety comes from the same place as everywhere else: every
+ * org-scoped table's composite FK checks against this row's
+ * (organizationId, id), so a membership can't silently apply to the wrong org.
  */
 export async function addMembership(input: AddMembershipInput) {
   const role = await adminDb.role.findUniqueOrThrow({
@@ -44,11 +41,10 @@ export async function deactivateMembership(membershipId: string) {
 }
 
 /**
- * Resolves whether `userId` has an active membership in `organizationId`
- * and, if so, their role key + permission keys. This is the lookup every
- * protected request must perform before any business data is touched
- * (FIG-437 section 7) — callers must treat an undefined/inactive result as
- * "deny", never fall back to broader access.
+ * Resolves whether `userId` has an active membership in `organizationId`,
+ * and their role/permission keys if so. Every protected request must check
+ * this before touching business data (FIG-437) -- treat a null result as
+ * deny, never fall back to broader access.
  */
 export async function resolveActiveMembership(
   userId: string,

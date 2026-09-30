@@ -37,8 +37,8 @@ async function resolveAssignee(ctx: AuthContext, requested?: string) {
     return target.id;
   }
 
-  // tasks.assign.own means "assign to self" -- a client-supplied assignee
-  // is never trusted here, same discipline as leadService.assignLead.
+  // tasks.assign.own means "assign to self" -- never trust a
+  // client-supplied assignee here, same as leadService.assignLead.
   requirePermission(ctx, "tasks.assign.own");
   return ctx.membershipId;
 }
@@ -100,14 +100,11 @@ export async function listTasks(
 }
 
 /**
- * There is no dedicated `tasks.edit` permission in the FIG-437 catalog
- * (only create/assign/view) -- the permission matrix is explicitly
- * provisional (see IMPLEMENTATION_NOTES.md). The judgment call made here:
- * a task may be updated (status changed, marked complete, edited) by its
- * assignee, its creator, or anyone holding `tasks.assign.any` (the same
- * "can touch anyone's tasks" breadth Management already has for
- * assignment). This still requires the caller to be able to *view* the
- * task at all, checked first.
+ * There's no dedicated `tasks.edit` permission (only create/assign/view;
+ * the permission matrix is still provisional, see
+ * IMPLEMENTATION_NOTES.md), so a task can be updated by its assignee, its
+ * creator, or anyone holding `tasks.assign.any`. Still requires the
+ * caller to be able to *view* the task at all, checked first.
  */
 function canManageTask(
   ctx: AuthContext,

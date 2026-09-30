@@ -1,8 +1,13 @@
 import Image from "next/image";
+import { notFound } from "next/navigation";
 import { adminDb } from "@/db/adminClient";
 import { DevLoginForm } from "./DevLoginForm";
 
 export default async function DevLoginPage() {
+  if (process.env.NODE_ENV === "production") {
+    notFound();
+  }
+
   const devUsers = await adminDb.user.findMany({
     where: { email: { endsWith: "@figbloom.local" } },
     include: { memberships: { include: { role: true } } },
@@ -26,11 +31,9 @@ export default async function DevLoginPage() {
         </div>
         <h1 style={{ fontSize: 19 }}>Dev login</h1>
         <p className="warning">
-          Placeholder login for local development (FIG-439) -- picks a seeded
-          dev user with no password check. Real authentication is separate,
-          not-yet-scheduled work (FIG-437 leaves the auth provider choice
-          open). Do not build on this beyond exercising permission logic
-          locally.
+          Placeholder login for local development -- picks a seeded dev user
+          with no password check. Unavailable outside local development; use{" "}
+          <a href="/login">/login</a> to sign in with real credentials.
         </p>
         <DevLoginForm options={options} />
       </div>

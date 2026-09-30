@@ -1,15 +1,10 @@
 # FigBloom CRM
 
-Core CRM foundation for FigBloom Digital Group: the database/tenant model
-from **FIG-438**, lead/contact/company management from **FIG-439**,
-deals/pipeline/lead-conversion from **FIG-440**,
-activities/tasks/audit history from **FIG-441**, and role-specific
-dashboards/reporting from **FIG-443**, implementing the architecture and
-access-control baseline from **FIG-436** (V1 Architecture & Tenant Model)
-and **FIG-437** (Authentication, Organizations, Roles & Tenant Isolation),
-scoped by **FIG-300** (MVP Scope) and **FIG-299** (Core CRM Data Model).
+FigBloom Digital Group's internal CRM: leads, contacts, companies, deals
+and pipeline, activities/tasks, audit history, role-specific dashboards and
+reporting, and a public website lead-capture API.
 
-See `documents/` for the full planning trail (research, stakeholder
+See `documents/` for the planning trail (research, stakeholder
 requirements, MVP scope, data model, architecture) and
 `IMPLEMENTATION_NOTES.md` for the specific decisions made while turning
 those documents into a running application.
@@ -20,13 +15,7 @@ those documents into a running application.
 - **PostgreSQL** with **Prisma** (schema + migrations + client)
 - **Row-level security (RLS)** as a database-enforced, defense-in-depth
   tenant boundary, on top of application-level `organizationId` scoping
-- **Vitest** for the automated test suite (migrations, seed data,
-  relationships, tenant isolation, authorization foundation, service-layer
-  permission enforcement)
-
-FIG-442 (website lead capture API) is the one remaining ticket in this
-chain, still open pending an auth-mechanism decision for its public,
-unauthenticated endpoint (see IMPLEMENTATION_NOTES.md).
+- **Vitest** for the automated test suite
 
 ## Local setup
 
@@ -56,12 +45,13 @@ npm test
 Run the app itself:
 
 ```bash
-npm run dev   # http://localhost:3000, then visit /dev-login
+npm run dev   # http://localhost:3000, then visit /login
 ```
 
-`/dev-login` is a placeholder, no-password login — pick one of the five
-seeded dev users (one per V1 role) to explore the app as that role. See
-"Dev login" below before treating this as real authentication.
+Sign in with any seeded dev user's email and the shared local-dev password
+`figbloom-dev-local` (set in `prisma/seed.ts`). `/dev-login` also still
+works in local development for quickly switching between roles without
+typing a password each time — see "Authentication" below.
 
 Other scripts: `npm run typecheck`, `npm run lint`, `npm run format`,
 `npm run migrate:dev` (interactive, for authoring new migrations),
@@ -85,17 +75,17 @@ variable — **never** from a value committed to source control. See
 ## Tenant isolation, in three layers
 
 1. **Composite tenant-integrity foreign keys.** Every organization-scoped
-   parent table has a `UNIQUE (organization_id, id)` constraint. Every
+   parent table has a `UNIQUE (organization_id, id)` constraint, and every
    child reference to it gets an *additional* foreign key on
    `(organization_id, parent_id) -> parent(organization_id, id)`, so the
    database itself rejects any attempt to link a record to a parent in a
-   different organization — this cannot be bypassed by an application bug.
+   different organization.
 2. **Row-level security.** Every organization-scoped table has RLS enabled
    and forced, with a policy restricting rows to
    `organization_id = current_setting('app.current_organization_id')`.
    `src/db/orgScopedClient.ts` (`withOrgContext`) sets that session variable
-   inside a transaction before running any query, and fails closed
-   (returns/affects zero rows) if it's ever missing.
+   inside a transaction before running any query, and fails closed if it's
+   ever missing.
 3. **Application-level scoping.** Every repository function in
    `src/repositories/*` still takes and filters by `organizationId`
    explicitly. Layers 1–2 are the backstop for when this is missing, not a
@@ -104,86 +94,75 @@ variable — **never** from a value committed to source control. See
 ## Application layers
 
 `src/repositories/*` -> `src/services/*` -> `src/app/api/**/route.ts` /
-`src/app/**/page.tsx`, matching FIG-436 section 10's request flow:
+`src/app/**/page.tsx`:
 
 - **Repositories** (`src/repositories/*`) are thin, org-scoped data access
   — always take `organizationId` explicitly, always run through
   `withOrgContext`. No permission checks here.
-- **Services** (`src/services/*`) are where FIG-437's RBAC is actually
-  enforced: every function takes an `AuthContext` (a resolved active
-  membership + its permission keys) and calls `requirePermission` /
+- **Services** (`src/services/*`) are where RBAC is actually enforced:
+  every function takes an `AuthContext` (a resolved active membership +
+  its permission keys) and calls `requirePermission` /
   `requireOwnedRecordPermission` before touching data. Route handlers and
   pages call services, never repositories directly.
 - **Routes/pages** (`src/app/**`) resolve the `AuthContext` via
   `resolveRequestContext(orgSlug)` and delegate. `NotFoundError` means the
-  record doesn't exist in the caller's organization at all; `ForbiddenError`
-  means it exists but the caller's role/ownership doesn't permit the action
-  (existence isn't treated as secret between colleagues in the same org —
-  see `src/services/leadService.ts`).
+  record doesn't exist in the caller's organization at all;
+  `ForbiddenError` means it exists but the caller's role/ownership doesn't
+  permit the action.
 
-Coverage is representative, not exhaustive: Companies, Contacts, and Leads
-(including lead ownership/assignment — FIG-439's scope) have full CRUD +
-search + duplicate detection + a UI. Deals also have full CRUD, a pipeline
-board grouped by stage, lead-to-deal conversion, and won/lost-outcome
-recording (FIG-440's scope) — see "Deal outcomes are driven by pipeline
-stage" below. Proposal References have a minimal create/list/status-update
-slice scoped to a single deal, deliberately not a full proposal-generation
-subsystem (FIG-438 section 11). Activities and Tasks (FIG-441's scope) have
-full CRUD + a timeline/list UI, linked to any of Company/Contact/Lead/Deal;
-see "Activities and Tasks share one ownership check" below. Audit history
-is recorded for lead/deal/company/contact ownership changes and deal
-outcome changes, and surfaced read-only on Lead and Deal detail pages for
-`audit.view` holders. Communications have full schema/constraint coverage
-but no service/API/UI layer — see "What FIG-441 explicitly does not
-include" in `IMPLEMENTATION_NOTES.md`. A `/reports` page (FIG-443) gives
-every role with any reporting permission a personal "actionable work"
-view, and gives `reporting.view.all` holders organization-wide metrics
-with owner/source/stage/service/date-range filters — see "Reports" below.
-FIG-442 adds one route that intentionally does *not* follow this layering:
-`/api/public/orgs/[orgSlug]/leads` has no `AuthContext` at all (there is no
+One route intentionally doesn't follow this layering:
+`/api/public/orgs/[orgSlug]/leads` has no `AuthContext` at all (there's no
 session to resolve) and is authenticated by an API key instead — see
 "Website lead capture" below.
 
+Coverage: Companies, Contacts, and Leads have full CRUD + search +
+duplicate detection + a UI, including lead ownership/assignment. Deals have
+full CRUD, a pipeline board grouped by stage, lead-to-deal conversion, and
+won/lost-outcome recording — see "Deal outcomes" below. Proposal
+References are a minimal create/list/status-update slice scoped to a
+single deal, not a full proposal-generation subsystem. Activities and
+Tasks have full CRUD + a timeline/list UI, linked to any of
+Company/Contact/Lead/Deal — see "Activities and Tasks" below. Audit
+history is recorded for ownership changes and deal outcome changes, and
+surfaced read-only on Lead and Deal detail pages for `audit.view` holders.
+Communications have full schema/permission coverage but no service/API/UI
+layer yet — the Activity type enum already covers every channel in scope,
+so a separate Communications UI hasn't been built. `/reports` gives every
+role with a reporting permission a personal "actionable work" view, and
+gives `reporting.view.all` holders organization-wide metrics with
+owner/source/stage/service/date-range filters — see "Reports" below.
+
 ## Deal outcomes are driven by pipeline stage, not set directly
 
-`Deal.outcome`/`wonAt`/`lostAt`/`lostReasonId` can only change as a side
-effect of moving a deal onto a different `PipelineStage` (see
-`src/services/dealService.ts#resolveOutcomeFields`): a stage flagged
+`Deal.outcome`/`wonAt`/`lostAt`/`lostReasonId` only change as a side effect
+of moving a deal onto a different `PipelineStage`
+(`src/services/dealService.ts#resolveOutcomeFields`): a stage flagged
 `isWon` records WON, a stage flagged `isLost` requires a `lostReasonId` and
-records LOST, and any other stage reopens the deal. The API/service layer
-never accepts `outcome` as a raw client-supplied field, so a deal can't be
-marked won or lost without actually moving it through a won/lost-flagged
-stage — the stage is the single source of truth, avoiding two
-independently-settable fields (a status flag and a stage) going out of
-sync.
+records LOST, and any other stage reopens the deal. The service layer never
+accepts `outcome` as a raw client-supplied field — a deal can't be marked
+won or lost without actually moving it through a won/lost-flagged stage.
 
 ## Deal value visibility
 
-FIG-297 Q56 ("Sales cannot see cost/margin figures") and Q57 ("deal values
-are Management + Finance only") are reconciled the same way FIG-438 does:
-the owner of a deal can always see the value they themselves quoted
-(`deals.view.own`/`deals.edit.own`), but seeing another member's deal value
+The owner of a deal can always see the value they themselves quoted
+(`deals.view.own`/`deals.edit.own`); seeing another member's deal value
 requires the dedicated `deals.view.value` permission. A caller with
-`deals.view.all` but not `deals.view.value` (Delivery, in the FIG-438 seed)
-still sees every deal, just with `value` masked to `null` and a
-`valueMasked: true` flag on the response rather than the record being
-withheld outright.
+`deals.view.all` but not `deals.view.value` still sees every deal, just
+with `value` masked to `null` (`valueMasked: true` on the response) rather
+than the record being withheld outright.
 
 ## Activities and Tasks share one ownership check
 
 Both link to an arbitrary subset of Company/Contact/Lead/Deal, and both
-have their own flat permission (`activities.*`/`tasks.*`) that says
-nothing about *which* records the caller may touch. Rather than inventing
-a parallel ownership model for each,
-`src/services/recordAccess.ts#assertCanAccessLinkedRecords` reuses each
-parent's own service-layer view check (`companyService.getCompany`,
-`leadService.getLead`, etc.) — the same place lead/deal ownership scoping
-already lives — so a Sales rep can't read or write an activity/task
-against a colleague's lead just because they hold the flat permission.
-Tasks have no dedicated `tasks.edit` permission in the FIG-437 catalog
-(only create/assign/view); a task may be updated by its assignee, its
-creator, or anyone holding `tasks.assign.any` — see
-`src/services/taskService.ts#canManageTask` for the reasoning.
+have their own flat permission that says nothing about *which* records the
+caller may touch. `src/services/recordAccess.ts#assertCanAccessLinkedRecords`
+re-runs each linked parent's own service-layer view check
+(`companyService.getCompany`, `leadService.getLead`, etc.) rather than
+inventing a parallel ownership model, so holding the flat permission alone
+isn't enough to read or write against a record you can't otherwise see.
+Tasks have no dedicated `tasks.edit` permission — a task can be updated by
+its assignee, its creator, or anyone holding `tasks.assign.any` (see
+`src/services/taskService.ts#canManageTask`).
 
 ## Reports
 
@@ -191,46 +170,58 @@ creator, or anyone holding `tasks.assign.any` — see
 gated independently:
 
 - **Your actionable work** — due-today follow-ups, overdue tasks, new
-  leads, and stalled deals (open, past their expected close date). Shown
-  to anyone holding `reporting.view.own` *or* `.all`, but each sub-section
-  reuses the existing `leadService`/`dealService`/`taskService` own/all
-  scoping and value masking rather than re-deriving it, so it degrades
-  per-role automatically (e.g. Finance, which has no `tasks.*`/`leads.*`
-  permission at all, simply sees those sections empty).
+  leads, and stalled deals. Shown to anyone holding `reporting.view.own`
+  or `.all`; each sub-section reuses the existing
+  `leadService`/`dealService`/`taskService` own/all scoping and value
+  masking rather than re-deriving it, so it degrades per-role
+  automatically (a role with no `tasks.*`/`leads.*` permission simply sees
+  those sections empty).
 - **Organization metrics** — lead volume by source, conversion rate,
   won/lost deals, pipeline value by stage, sales by service, and
   follow-up performance, filterable by owner/source/stage/service/date
-  range. Gated by `reporting.view.all` (Management-only in the FIG-438
-  seed); value-bearing aggregates are nulled out (not the whole metric
-  withheld) for a caller without `deals.view.value`, the same masking
-  discipline as individual deals. Metric definitions are documented
-  in-page (a "Metric definitions" panel) as well as in
-  `IMPLEMENTATION_NOTES.md`.
+  range. Gated by `reporting.view.all` (Management only); value-bearing
+  aggregates are nulled out (not the whole metric withheld) for a caller
+  without `deals.view.value`. Metric definitions are documented in-page.
 
-## Website lead capture (FIG-442)
+## Website lead capture
 
 `POST /api/public/orgs/[orgSlug]/leads` lets FigBloom's public website send
 form submissions straight into the CRM as leads, with no CRM session
-involved — a deliberately separate, differently-authenticated namespace
-from every other route under `/api/orgs/[orgSlug]/**`. Authenticated by a
-static per-organization API key (`x-figbloom-api-key` header), generated
-and rotated from `/o/[orgSlug]/settings` (Management-only, `configuration.
-manage`) — see that page for the exact request shape. Only `name` and one
-of `email`/`phone` are required; everything else (company, service
-interest, message, UTM params) is best-effort and never blocks the
-submission. See `IMPLEMENTATION_NOTES.md`'s FIG-442 section for why a
-static key was chosen over a signed webhook, and for the round-robin
-assignment + acknowledgement-task workflow every accepted submission
-triggers.
+involved — a separate, differently-authenticated namespace from every
+other route under `/api/orgs/[orgSlug]/**`. Authenticated by a static
+per-organization API key (`x-figbloom-api-key` header), generated and
+rotated from `/o/[orgSlug]/settings` (Management only) — see that page for
+the exact request shape. Only `name` and one of `email`/`phone` are
+required; everything else (company, service interest, message, UTM
+params) is best-effort and never blocks the submission. Accepted
+submissions are round-robin assigned to an active rep and get an
+auto-created follow-up task. See `IMPLEMENTATION_NOTES.md` for why a
+static key was chosen over a signed webhook.
 
-## Dev login (not real authentication)
+## Authentication
 
-`src/auth/devSession.ts` is a signed-cookie placeholder with **no password
-check** — it exists only so FIG-439's permission/ownership logic can be
-exercised through real HTTP requests and real screens before FIG-437's
-actual auth provider (OAuth/SSO/etc., still an open decision) is chosen and
-built. Visit `/dev-login`, pick a seeded user, done. It must be replaced
-wholesale, not extended, when real auth lands — nothing downstream depends
-on its internals, only on the `userId: string | null` it produces
-(`getCurrentUserId()` / `resolveRequestContext()` in
-`src/auth/requestContext.ts`).
+`/login` is real: email + password, checked against a bcrypt hash
+(`src/auth/password.ts`), backed by a revocable, DB-stored session
+(`src/auth/session.ts`) — not a stateless token, so a password reset or a
+manual revoke actually invalidates it immediately. `/forgot-password` and
+`/reset-password` cover account recovery (and doubles as how a user with no
+password yet sets their first one). `/signup` creates the account and signs
+the caller in, but grants no organization access on its own — actual
+Membership creation (seed/admin scripts today) is still the admin/approved-
+process step FIG-437 describes, so a fresh signup lands on a clear "no
+access yet" message rather than the `figbloom` dashboard. Password-reset
+emails send over real SMTP once `SMTP_HOST` is set (`.env.example`); with
+nothing configured, the reset link is logged server-side instead, which is
+what local dev and the test suite run against today. See
+`IMPLEMENTATION_NOTES.md` — "Real authentication (FIG-592)" — for the
+provider decision and everything else.
+
+`/dev-login` (`src/auth/devSession.ts`) is a separate, no-password
+placeholder that still exists purely for quickly switching between the
+seeded dev users while developing locally. It's hard-disabled outside
+`NODE_ENV=development` — the page 404s and the API route rejects requests,
+both checked at request time, and the page is additionally baked into a
+static 404 at production build time. Nothing outside `src/auth/` depends on
+which login path was used, only on the `userId: string | null` that
+`getCurrentUserId()` / `resolveRequestContext()`
+(`src/auth/requestContext.ts`) produce.

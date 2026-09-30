@@ -34,9 +34,8 @@ describe("dealService", () => {
   it("accepts a plain 'YYYY-MM-DD' expectedCloseDate string without throwing", async () => {
     // Regression: createDeal used to pass the client's raw date string
     // straight through to Prisma, which throws (rather than coercing) for
-    // a DateTime field given a date-only string -- found via FIG-443's
-    // manual walkthrough, but live since FIG-440 (CreateDealForm has
-    // always sent a plain date string from an <input type="date">).
+    // a DateTime field given a date-only string -- CreateDealForm sends
+    // exactly that from an <input type="date">.
     const org = await createTestOrganization();
     const ctx = await createTestContext(org.id, "SALES");
 

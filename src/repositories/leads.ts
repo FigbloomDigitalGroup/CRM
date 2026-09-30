@@ -34,10 +34,8 @@ export async function createLead(input: CreateLeadInput) {
 }
 
 /**
- * Lead -> Deal conversion (FIG-440) lives in
- * `src/repositories/deals.ts#convertLeadToDeal` — it's a Deal-creating
- * operation, so the Deal repository is its home even though it starts from
- * a Lead id.
+ * Lead -> Deal conversion lives in `deals.ts#convertLeadToDeal` (FIG-440) --
+ * it creates a Deal, so that's its home even though it starts from a Lead id.
  */
 
 export interface UpdateLeadInput {
@@ -67,10 +65,9 @@ export async function updateLead(
 }
 
 /**
- * Reassigning ownership is a distinct operation from a general edit
- * (FIG-437 section 9 "leads.assign" is its own permission, separate from
- * leads.edit.*) — kept as its own repository function so the service layer
- * can gate it independently.
+ * Kept separate from a general edit because "leads.assign" is its own
+ * permission (FIG-437), distinct from leads.edit.* -- lets the service
+ * layer gate it independently.
  */
 export async function reassignLeadOwner(
   organizationId: string,

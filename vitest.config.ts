@@ -9,8 +9,8 @@ export default defineConfig({
     hookTimeout: 30000,
     // Database tests share one Postgres instance; running files in parallel
     // workers is fine (each test uses uniquely-slugged organizations), but
-    // keep it single-threaded for FIG-438 to avoid connection-pool exhaustion
-    // against the small local dev Postgres container.
+    // keep it single-threaded to avoid connection-pool exhaustion against
+    // the small local dev Postgres container.
     fileParallelism: false,
   },
 });

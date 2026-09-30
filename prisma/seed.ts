@@ -1,11 +1,13 @@
 import "dotenv/config";
+import { DEV_FIXTURE_PASSWORD } from "../src/auth/devAccounts";
+import { hashPassword } from "../src/auth/password";
 import { adminDb } from "../src/db/adminClient";
 import { seedOrganizationDefaults } from "../src/services/organizationDefaults";
 import { PERMISSIONS, ROLE_PERMISSIONS, ROLES } from "./seedData";
 
 /**
- * FIG-438 deterministic V1 seed. Every write is an upsert keyed on a stable
- * natural key, so this script is safe to run repeatedly (section 15).
+ * Deterministic V1 seed. Every write is an upsert keyed on a stable
+ * natural key, so this script is safe to run repeatedly.
  */
 async function seedRolesAndPermissions() {
   for (const role of ROLES) {
@@ -51,9 +53,9 @@ async function seedRolesAndPermissions() {
  * Creates FigBloom's own internal organization for local development, plus
  * one membership per V1 role for exercising the app locally. These are
  * clearly-synthetic internal *user* fixtures (dev.sales@figbloom.local,
- * etc.) -- not fabricated customer/business data, which this seed
- * deliberately does not create (section 15: "Do not create fake business
- * data that could be mistaken for real customer data").
+ * etc.) -- not fabricated customer/business data. No Companies/Contacts/
+ * Leads/Deals are seeded here on purpose, so nothing looks like real
+ * customer data.
  */
 async function seedDevFigBloomOrganization() {
   const organization = await adminDb.organization.upsert({
@@ -88,11 +90,17 @@ async function seedDevFigBloomOrganization() {
     },
   ];
 
+  const devPasswordHash = await hashPassword(DEV_FIXTURE_PASSWORD);
+
   for (const devUser of devUsers) {
     const user = await adminDb.user.upsert({
       where: { email: devUser.email },
-      update: { name: devUser.name },
-      create: { email: devUser.email, name: devUser.name },
+      update: { name: devUser.name, passwordHash: devPasswordHash },
+      create: {
+        email: devUser.email,
+        name: devUser.name,
+        passwordHash: devPasswordHash,
+      },
     });
 
     const role = await adminDb.role.findUniqueOrThrow({

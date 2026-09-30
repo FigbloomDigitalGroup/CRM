@@ -63,13 +63,11 @@ async function loadOwnedLead(ctx: AuthContext, leadId: string) {
 }
 
 /**
- * NotFoundError vs ForbiddenError is applied consistently across every
- * lead-service function: NotFoundError means the lead genuinely does not
- * exist in the caller's organization (wrong id, or it belongs to a
- * different tenant -- see tests/tenant-isolation.test.ts); ForbiddenError
- * means it exists but the caller's role/ownership does not permit the
- * requested action. Existence is not treated as a secret between
- * colleagues in the same organization.
+ * NotFoundError means the lead doesn't exist in the caller's org at all
+ * (wrong id, or a different tenant -- see tests/tenant-isolation.test.ts);
+ * ForbiddenError means it exists but the caller's role/ownership doesn't
+ * permit the action. Existence isn't treated as a secret between
+ * colleagues in the same org.
  */
 export async function getLead(ctx: AuthContext, leadId: string) {
   const lead = await loadOwnedLead(ctx, leadId);
@@ -98,12 +96,10 @@ export async function updateLead(
 }
 
 /**
- * Listing always applies an ownership boundary server-side: a caller with
- * only `leads.view.own` cannot see other people's leads no matter what
- * `filters.ownerMembershipId` they pass in -- it is forced to their own
- * membership, never trusted from the caller (FIG-437 section 10, "Frontend
- * hiding or disabling controls is not a security boundary" applies equally
- * to a client-supplied filter value).
+ * Ownership boundary is enforced server-side: a caller with only
+ * `leads.view.own` cannot see other people's leads no matter what
+ * `filters.ownerMembershipId` they pass -- it's forced to their own
+ * membership, never trusted from the client.
  */
 export async function listLeads(
   ctx: AuthContext,
@@ -120,10 +116,8 @@ export async function listLeads(
 }
 
 /**
- * Reassignment is gated by `leads.assign` specifically (distinct from
- * edit), per FIG-437 section 9 and the FIG-438 seed (Management has it,
- * Sales does not) -- this directly implements FIG-439's "Leads can be
- * assigned and reassigned according to permissions."
+ * Reassignment is gated by `leads.assign` specifically, distinct from
+ * edit -- Management has it, Sales does not.
  */
 export async function assignLead(
   ctx: AuthContext,
@@ -133,15 +127,11 @@ export async function assignLead(
   requirePermission(ctx, "leads.assign");
   const lead = await loadOwnedLead(ctx, leadId);
 
-  // A missing/empty id must fail loudly, not silently: Prisma treats an
-  // `undefined` filter value as "omit this condition" (so `id: undefined`
-  // would match *any* membership) and an `undefined` update value as "leave
-  // this field unchanged" (so the write below would silently no-op instead
-  // of erroring). Both behaviors are correct Prisma semantics for
-  // intentionally-partial input, but wrong here -- the caller must always
-  // supply a real target, so we validate it ourselves before either one
-  // can apply. Never trust a client-supplied id without this check
-  // (FIG-437 section 16, "Fail Closed").
+  // Prisma treats an `undefined` filter as "omit this condition" (id:
+  // undefined would match *any* membership) and an `undefined` update
+  // value as "leave unchanged" (the write below would silently no-op).
+  // Both are correct Prisma semantics but wrong here, so validate the id
+  // ourselves before either can apply.
   if (
     typeof newOwnerMembershipId !== "string" ||
     newOwnerMembershipId.length === 0
@@ -196,12 +186,9 @@ export interface ConvertLeadServiceInput {
 }
 
 /**
- * Conversion is gated the same way an edit would be (ownership via
- * leads.edit.own/all) *and* requires the dedicated `leads.convert`
- * permission -- both are true for Management and Sales in the FIG-438
- * seed, but they're deliberately separate checks: converting mutates the
- * lead (stamps convertedAt) so ownership applies, while `leads.convert`
- * is what actually gates the ability to create a Deal from it at all.
+ * Conversion requires both ownership (via leads.edit.own/all, since
+ * converting mutates the lead) and the dedicated `leads.convert`
+ * permission, which is what actually gates creating a Deal from it.
  */
 export async function convertLead(
   ctx: AuthContext,

@@ -1,17 +1,15 @@
-// FigBloom CRM — Core Data Model (FIG-438)
+// FigBloom CRM — core data model.
 //
-// Implements the business/data-model baseline established in FIG-299 (Core
-// CRM Data Model), scoped by FIG-300 (MVP Scope), and constrained by the
-// access-control architecture in FIG-436/FIG-437 (Organization = Tenant,
-// User != Membership, server-side RBAC, strict organization scoping).
+// Organization is the tenant boundary; User is a separate global identity
+// (a user can belong to more than one organization via Membership); access
+// control is server-side RBAC scoped strictly per organization.
 //
 // This file defines the ORM-level shape (single-column FKs, for ergonomic
-// querying). Tenant-safety is enforced in the database beyond what this file
-// expresses: see migrations/*_tenant_integrity_constraints and
-// *_row_level_security, which add composite (organization_id, parent_id)
-// foreign keys and Postgres RLS policies so that no organization-scoped
-// child row can ever reference a parent row in a different organization,
-// and so isolation holds even if an application-layer filter is missed.
+// querying). Tenant safety goes further than what's expressed here — see
+// migrations/*_tenant_integrity_and_rls, which adds composite
+// (organization_id, parent_id) foreign keys and Postgres RLS policies so a
+// child row can never reference a parent in a different organization, even
+// if an application-layer filter is missed.
 
 generator client {
   provider = "prisma-client-js"
@@ -67,11 +65,11 @@ enum UserStatus {
   INACTIVE
 }
 
-/// A User is the global authenticated identity. It is intentionally NOT the
-/// tenant boundary — see FIG-437 section 5.1. Exact auth-provider integration
-/// (password hashing scheme, SSO, etc.) is an open implementation decision
-/// per FIG-437 section 18; passwordHash is nullable so external-IdP users can
-/// exist without a local credential.
+/// The global authenticated identity — intentionally not the tenant
+/// boundary (see Membership). passwordHash is nullable so a user can exist
+/// (provisioned via Membership creation) before a password is ever set --
+/// the same password-reset-token flow that handles "forgot password"
+/// (FIG-592) also handles setting the first password.
 model User {
   id           String     @id @default(uuid())
   email        String     @unique
@@ -82,18 +80,56 @@ model User {
   createdAt    DateTime   @default(now()) @map("created_at")
   updatedAt    DateTime   @updatedAt @map("updated_at")
 
-  memberships Membership[]
-  auditEvents AuditEvent[] @relation("AuditActorUser")
+  memberships         Membership[]
+  auditEvents         AuditEvent[]         @relation("AuditActorUser")
+  sessions            Session[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
 }
 
-/// Global, fixed V1 role catalog (Management, Sales, Delivery, Finance,
-/// Restricted Technical — FIG-436 section 5, FIG-437 section 8). Roles are an
-/// application/security rule, not organization-configurable data (FIG-436
-/// section 8 explicitly lists RBAC as a security rule, distinct from the
-/// configurable business values in the same table), so this is a global
-/// catalog rather than an organization-scoped table.
+/// A real, revocable, server-tracked login session (FIG-592) -- the
+/// production replacement for src/auth/devSession.ts's stateless signed
+/// cookie. Only `tokenHash` is stored (see src/auth/session.ts, same
+/// generate-random/hash-and-compare pattern as WebsiteApiKey below); the
+/// plaintext token exists only in the client's cookie. Not organization-
+/// scoped -- a session belongs to a User, same tier as Membership.
+model Session {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  tokenHash  String    @unique @map("token_hash")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  expiresAt  DateTime  @map("expires_at")
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
+  revokedAt  DateTime? @map("revoked_at")
+  userAgent  String?   @map("user_agent")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// Single-use, short-lived token backing both "forgot password" and
+/// "set your first password" (FIG-592) -- see the User model's doc comment
+/// for why one flow covers both. Only `tokenHash` is stored.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+/// Fixed V1 role catalog (Management, Sales, Delivery, Finance, Restricted
+/// Technical). RBAC is a security rule, not organization-configurable
+/// business data, so this is global rather than per-organization.
 model Role {
   id          String   @id @default(uuid())
   key         String   @unique
@@ -109,10 +145,8 @@ model Role {
   @@map("roles")
 }
 
-/// Permission catalog backing the role/permission mapping required by
-/// FIG-437 section 9. The exact final permission matrix is an explicitly
-/// open decision (FIG-437 section 18); this seed is the smallest reasonable
-/// interpretation needed to unblock FIG-438 — see IMPLEMENTATION_NOTES.md.
+/// Permission catalog backing the role/permission mapping. The final
+/// matrix is still provisional — see IMPLEMENTATION_NOTES.md.
 model Permission {
   id          String   @id @default(uuid())
   key         String   @unique
@@ -141,17 +175,14 @@ enum MembershipStatus {
   INACTIVE
 }
 
-/// A Membership is the user's relationship to one Organization — the tenant
-/// boundary itself (FIG-437 section 5.2). It is deliberately a separate
-/// concept from User so a user may hold memberships in multiple
-/// organizations in the future without changing their global identity.
+/// A user's relationship to one Organization — the actual tenant boundary.
+/// Kept separate from User so a user can hold memberships in more than one
+/// organization without that affecting their global identity.
 ///
-/// Ownership of CRM records is modeled as a reference to a Membership (not
-/// directly to a User) precisely so that "record owner" is automatically
-/// organization-scoped: a membership belongs to exactly one organization, so
-/// any FK to a membership carries an implicit, DB-checkable organization
-/// binding once the tenant-integrity migration adds the composite FK
-/// (organization_id, owner_membership_id) -> memberships(organization_id, id).
+/// CRM records reference their owner via Membership, not User directly:
+/// since a membership belongs to exactly one organization, any FK to a
+/// membership carries an implicit, DB-checkable organization binding (see
+/// the composite FK added in the tenant-integrity migration).
 model Membership {
   id             String           @id @default(uuid())
   organizationId String           @map("organization_id")
@@ -190,10 +221,9 @@ model Membership {
   @@map("memberships")
 }
 
-/// Generic organization-scoped configuration bucket for values that do not
-/// warrant a dedicated table in V1 (e.g. lead-assignment rules) — FIG-436
-/// section 8 lists "Assignment rules" and "Organization CRM settings" as
-/// configurable organization data without further structure.
+/// Generic organization-scoped key/value bucket for settings that don't
+/// warrant a dedicated table yet (e.g. the website lead-capture
+/// round-robin cursor).
 model OrganizationSetting {
   id             String   @id @default(uuid())
   organizationId String   @map("organization_id")
@@ -208,13 +238,11 @@ model OrganizationSetting {
   @@map("organization_settings")
 }
 
-/// Static per-organization credential authenticating the public, session-less
-/// website lead-capture endpoint (FIG-442) -- see IMPLEMENTATION_NOTES.md
-/// "FIG-442: choosing the website integration's authentication mechanism"
-/// for why this shape was chosen over a signed webhook. Only the SHA-256
-/// hash is ever stored; the plaintext key is shown to the caller exactly
-/// once, at generation time. One active key per organization -- rotating
-/// replaces it outright (no overlap window).
+/// Static per-organization credential for the public, session-less website
+/// lead-capture endpoint — see IMPLEMENTATION_NOTES.md for why this was
+/// chosen over a signed webhook. Only the SHA-256 hash is stored; the
+/// plaintext key is shown once, at generation time. One active key per
+/// organization — rotating replaces it outright, no overlap window.
 model WebsiteApiKey {
   id                    String    @id @default(uuid())
   organizationId        String    @unique @map("organization_id")
@@ -232,7 +260,7 @@ model WebsiteApiKey {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Controlled reference data (organization-scoped, per FIG-436 section 8)
+// 2. Controlled reference data (organization-scoped)
 // ---------------------------------------------------------------------------
 
 model LeadSource {
@@ -255,9 +283,8 @@ model LeadSource {
   @@map("lead_sources")
 }
 
-/// Lead Status is deliberately separate from Lead Temperature (a fixed
-/// HOT/WARM/COLD classification kept as a native enum, FIG-299 section 5.1)
-/// and from Deal Pipeline Stage / Customer Lifecycle State (AC3).
+/// Kept separate from Lead Temperature (a fixed HOT/WARM/COLD enum) and
+/// from Deal Pipeline Stage / Customer Lifecycle State.
 model LeadStatus {
   id             String   @id @default(uuid())
   organizationId String   @map("organization_id")
@@ -278,11 +305,11 @@ model LeadStatus {
   @@map("lead_statuses")
 }
 
-/// Deal Pipeline Stage. Kept strictly separate from Lead Status and Customer
-/// Lifecycle State (AC3) — a Deal only exists once a Lead has qualified, so
-/// the stage catalog covers the deal-side portion of the FIG-299 workflow
-/// (Qualifying -> ... -> Closed Won/Lost). See IMPLEMENTATION_NOTES.md for
-/// the reasoning behind the specific seeded stage split.
+/// Deal pipeline stage — kept strictly separate from Lead Status and
+/// Customer Lifecycle State. A Deal only exists once a Lead has qualified,
+/// so this catalog covers the deal side of the funnel (Solution Presented
+/// -> ... -> Closed Won/Lost). See IMPLEMENTATION_NOTES.md for where the
+/// lead/deal split happens.
 model PipelineStage {
   id             String   @id @default(uuid())
   organizationId String   @map("organization_id")
@@ -306,10 +333,9 @@ model PipelineStage {
   @@map("pipeline_stages")
 }
 
-/// Customer Lifecycle State applies at the Company (account) level — FIG-438
-/// task section 4 explicitly forbids a separate generic `customers` entity;
-/// Company remains the canonical account identity, and lifecycle is one of
-/// its attributes (FIG-299 section 7).
+/// Lifecycle state applies at the Company (account) level — Company is the
+/// canonical account identity, not a separate `customers` table; lifecycle
+/// is just one of its attributes.
 model CustomerLifecycleState {
   id             String   @id @default(uuid())
   organizationId String   @map("organization_id")
@@ -330,8 +356,8 @@ model CustomerLifecycleState {
   @@map("customer_lifecycle_states")
 }
 
-/// Shared catalog of lost/disqualification reasons, referenced by both Lead
-/// and Deal (FIG-297 Q16 lists reasons that apply to either).
+/// Shared catalog of lost/disqualification reasons, referenced by both
+/// Lead and Deal.
 model LostReason {
   id             String   @id @default(uuid())
   organizationId String   @map("organization_id")
@@ -354,7 +380,7 @@ model LostReason {
 }
 
 /// FigBloom's own service/product catalog (Web Dev, Branding, CCTV,
-/// Starlink/Internet, HR automation, etc. — FIG-297 section 2.2).
+/// Starlink/Internet, HR automation, etc).
 model Service {
   id             String   @id @default(uuid())
   organizationId String   @map("organization_id")
@@ -381,10 +407,10 @@ model Service {
 // 3. Core CRM records
 // ---------------------------------------------------------------------------
 
-/// Company is the CRM's canonical business/account entity (FIG-438 section
-/// 4). Duplicate company names are legitimate (section 9) so no uniqueness
-/// is enforced on name — duplicate detection is an application-level
-/// concern informed by name/email/phone indexes.
+/// The CRM's canonical business/account entity. Duplicate company names
+/// are legitimate, so no uniqueness is enforced on name — duplicate
+/// detection is an application-level concern informed by the
+/// name/email/phone indexes below.
 model Company {
   id                    String   @id @default(uuid())
   organizationId        String   @map("organization_id")
@@ -424,9 +450,8 @@ model Company {
   @@map("companies")
 }
 
-/// Contact represents a person, distinct from Company. A contact without a
-/// company is supported (FIG-438 section 4 "Where the approved requirements
-/// allow a contact without a company, support that appropriately").
+/// A person, distinct from Company. A contact with no company is
+/// supported (e.g. an individual lead with no business behind them yet).
 model Contact {
   id                    String   @id @default(uuid())
   organizationId        String   @map("organization_id")
@@ -470,12 +495,10 @@ enum LeadTemperature {
   COLD
 }
 
-/// Lead represents a prospect before/during qualification (FIG-438 section
-/// 4). Lead Status, Lead Temperature and Lead Source are all controlled,
-/// independent classifications (AC3/AC4). qualificationData holds the
-/// service-specific qualification questions identified in FIG-297 section 6
-/// (e.g. property/internet-specific questions) without requiring a bespoke
-/// custom-fields subsystem in V1.
+/// A prospect before/during qualification. Lead Status, Temperature, and
+/// Source are independent classifications. `qualificationData` holds
+/// service-specific qualification questions (e.g. property/internet
+/// details) without needing a full custom-fields subsystem.
 model Lead {
   id                    String          @id @default(uuid())
   organizationId        String          @map("organization_id")
@@ -527,12 +550,11 @@ enum DealOutcome {
   LOST
 }
 
-/// Deal represents a sales opportunity with its own Pipeline Stage, kept
-/// strictly separate from Lead Status and Customer Lifecycle State (AC3).
-/// The unique (organizationId, leadId) constraint prevents a single Lead
-/// from being converted into more than one Deal (FIG-436 section 12,
-/// "Duplicate conversion is prevented"), while still allowing many Deals
-/// with no originating Lead (leadId null, e.g. an existing-customer upsell).
+/// A sales opportunity with its own Pipeline Stage, kept strictly separate
+/// from Lead Status and Customer Lifecycle State. The unique
+/// (organizationId, leadId) constraint stops a single Lead from being
+/// converted into more than one Deal, while still allowing many Deals with
+/// no originating Lead (leadId null — e.g. an existing-customer upsell).
 model Deal {
   id                    String      @id @default(uuid())
   organizationId        String      @map("organization_id")
@@ -593,10 +615,10 @@ enum ActivityType {
   OTHER
 }
 
-/// Activity is the CRM timeline/interaction log (FIG-438 section 10). Every
-/// activity must relate to at least one of Company/Contact/Lead/Deal — this
-/// is enforced both here (application layer) and by a CHECK constraint added
-/// in the tenant-integrity migration.
+/// The CRM's timeline/interaction log. Every activity must relate to at
+/// least one of Company/Contact/Lead/Deal — enforced both at the
+/// application layer and by a CHECK constraint in the tenant-integrity
+/// migration.
 model Activity {
   id                 String       @id @default(uuid())
   organizationId     String       @map("organization_id")
@@ -644,11 +666,9 @@ enum TaskStatus {
   CANCELLED
 }
 
-/// Task represents actionable follow-up work (FIG-438 section 10). "Overdue"
-/// is a derived state (dueAt in the past AND status not in
-/// COMPLETED/CANCELLED) rather than a stored column, per FIG-436 section 13
-/// ("Overdue state is derived and represented consistently") — the
-/// [organizationId, status, dueAt] index exists to make that derivation
+/// Actionable follow-up work. "Overdue" is a derived state (dueAt in the
+/// past AND status not COMPLETED/CANCELLED), not a stored column — the
+/// (organizationId, status, dueAt) index exists to make that derivation
 /// cheap at query time.
 model Task {
   id                    String       @id @default(uuid())
@@ -699,9 +719,9 @@ enum CommunicationDirection {
   OUTBOUND
 }
 
-/// Communication captures channel-specific interaction detail (FIG-438
-/// section 10). It may optionally point at the Activity timeline entry it
-/// corresponds to, avoiding duplicate parallel histories.
+/// Channel-specific interaction detail. May optionally point at the
+/// Activity timeline entry it corresponds to, avoiding duplicate parallel
+/// histories.
 model Communication {
   id                 String                 @id @default(uuid())
   organizationId     String                 @map("organization_id")
@@ -744,8 +764,8 @@ enum ProposalStatus {
   EXPIRED
 }
 
-/// Proposal/quotation *reference* only — FIG-438 section 11 explicitly
-/// excludes a full proposal-generation subsystem from V1.
+/// Proposal/quotation *reference* only — no document generation or
+/// e-signature flow.
 model ProposalReference {
   id                String         @id @default(uuid())
   organizationId    String         @map("organization_id")
@@ -779,9 +799,9 @@ enum CompanyServiceStatus {
   CANCELLED
 }
 
-/// Tracks which services a Company has/had, independent of any single Deal —
-/// supports "multiple services per customer" (FIG-297 section 8.4) and the
-/// future renewal/retainer reporting called out in FIG-297 section 11.
+/// Tracks which services a Company has/had, independent of any single
+/// Deal — supports a customer holding multiple services at once, and
+/// future renewal/retainer reporting.
 model CompanyService {
   id             String               @id @default(uuid())
   organizationId String               @map("organization_id")
@@ -808,13 +828,12 @@ model CompanyService {
 // 5. Governance
 // ---------------------------------------------------------------------------
 
-/// Audit events are append-only (FIG-436 section 13, FIG-437 section 14).
-/// organizationId is nullable to allow platform-level events (e.g.
-/// organization provisioning) that precede any organization-scoped action;
-/// ordinary business-record events always carry it. Immutability (no
-/// UPDATE/DELETE for the application role) is enforced in
-/// migrations/*_row_level_security via a REVOKE, not just by omitting an
-/// updatedAt column here.
+/// Append-only. organizationId is nullable to allow platform-level events
+/// (e.g. organization provisioning) that precede any organization-scoped
+/// action; ordinary business-record events always carry it. Immutability
+/// (no UPDATE/DELETE for the application role) is enforced via a REVOKE in
+/// the tenant-integrity migration, not just by omitting an updatedAt
+/// column here.
 model AuditEvent {
   id                String   @id @default(uuid())
   organizationId    String?  @map("organization_id")

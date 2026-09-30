@@ -10,8 +10,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "CRM | Figbloom",
-  description:
-    "FigBloom Digital Group CRM (FIG-439 -- leads, contacts, companies)",
+  description: "FigBloom Digital Group's internal CRM",
 };
 
 export default function RootLayout({

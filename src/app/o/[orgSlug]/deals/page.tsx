@@ -16,9 +16,8 @@ export default async function DealsPage({
   const ctx = await resolveRequestContext(orgSlug);
 
   // Delivery/Finance/Restricted Technical have deals.view.all/none per the
-  // FIG-438 seed; only Restricted Technical has neither view permission at
-  // all, in which case listDeals() fails closed rather than returning an
-  // empty list -- same pattern as the Leads page.
+  // FIG-438 seed; Restricted Technical has neither, so listDeals() fails
+  // closed rather than returning an empty list -- same as the Leads page.
   let deals;
   try {
     deals = await listDeals(ctx);

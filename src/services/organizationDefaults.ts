@@ -3,21 +3,16 @@ import { WEBSITE_LEAD_ASSIGNMENT_CURSOR_KEY } from "../repositories/leadIngestio
 
 /**
  * Default controlled-value catalog applied to every new organization.
- * FIG-436 section 8 lists these as organization-configurable business
- * data (as opposed to security/application rules), so each organization
- * gets its own editable copy rather than sharing one global row — this
- * seed only establishes sensible V1 starting values.
+ * These are organization-configurable business data (FIG-436), so each
+ * org gets its own editable copy rather than sharing one global row --
+ * this seed just establishes sensible V1 starting values.
  *
- * Sources:
- *  - Lead sources: FIG-297 Q6
- *  - Lead statuses: FIG-299 section 5.2 (kept separate from temperature,
- *    which is a fixed native enum, and from deal pipeline stage — AC3)
- *  - Pipeline stages: FIG-299 section 6, split at the lead/deal boundary
- *    (a lead converts once qualified; deal stages pick up from
- *    "Solution Presented" onward) — see IMPLEMENTATION_NOTES.md
- *  - Customer lifecycle states: FIG-299 section 7
- *  - Lost reasons: FIG-297 Q16
- *  - Services: FIG-297 section 2.2 (FigBloom's own service lines)
+ * Sources: lead sources and services (FIG-297); lead statuses (FIG-299,
+ * kept separate from temperature -- a fixed native enum -- and from deal
+ * pipeline stage); pipeline stages (FIG-299, split at the lead/deal
+ * boundary: a lead converts once qualified, deal stages pick up from
+ * "Solution Presented" onward -- see IMPLEMENTATION_NOTES.md); customer
+ * lifecycle states and lost reasons (FIG-297/FIG-299).
  */
 
 const LEAD_SOURCES = [
@@ -122,10 +117,9 @@ function toTitle(key: string): string {
 }
 
 /**
- * Idempotent: safe to call repeatedly (e.g. on every deploy, or whenever a
- * new organization is provisioned) — every row is an upsert keyed on
- * (organizationId, key), per FIG-438 section 15 ("Seeds must be safe to run
- * repeatedly").
+ * Idempotent: safe to call repeatedly (every deploy, or whenever a new
+ * organization is provisioned) -- every row is an upsert keyed on
+ * (organizationId, key).
  */
 export async function seedOrganizationDefaults(
   organizationId: string,

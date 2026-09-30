@@ -7,8 +7,8 @@ export function LogoutButton({ withLabel = false }: { withLabel?: boolean }) {
   const router = useRouter();
 
   async function handleLogout() {
-    await fetch("/api/dev-session", { method: "DELETE" });
-    router.push("/dev-login");
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
     router.refresh();
   }
 

@@ -37,10 +37,10 @@ export async function getLeadVolumeBySource(
 }
 
 /**
- * Conversion is defined as: of the leads *created* in the window, what
- * fraction have `convertedAt` set as of now (regardless of when the
- * conversion itself happened) -- see IMPLEMENTATION_NOTES.md for why this
- * definition was chosen over gating on `convertedAt` falling in the window.
+ * Conversion = of leads created in the window, what fraction have
+ * `convertedAt` set as of now, regardless of when conversion happened --
+ * see IMPLEMENTATION_NOTES.md for why this beats gating on `convertedAt`
+ * falling in the window.
  */
 export async function getLeadConversionSummary(
   organizationId: string,
@@ -131,9 +131,9 @@ export async function getSalesByService(
         organizationId,
         outcome: "WON",
         ownerMembershipId: filters.ownerMembershipId,
-        // Regression: this was missing despite grouping by serviceId --
-        // found via FIG-443's manual walkthrough, where filtering by a
-        // (nonexistent) serviceId silently returned unfiltered rows.
+        // Regression: this filter was missing despite grouping by
+        // serviceId, so filtering by a bogus serviceId silently returned
+        // unfiltered rows.
         serviceId: filters.serviceId,
         wonAt: dateRange(filters),
       },
@@ -144,12 +144,9 @@ export async function getSalesByService(
 }
 
 /**
- * Follow-up performance (AC): tasks whose `dueAt` fell in the window,
- * grouped by their current status. "Overdue" (still open, past due,
- * regardless of window) is reported separately since it's inherently a
- * live/current question, not a historical one -- see
- * `repositories/tasks.ts`'s `overdueOnly` filter, reused as-is rather than
- * duplicated here.
+ * Tasks whose `dueAt` fell in the window, grouped by status. "Overdue" is
+ * reported separately (see tasks.ts's `overdueOnly` filter) since it's a
+ * live question, not one tied to a date range.
  */
 export async function getFollowUpStatusBreakdown(
   organizationId: string,

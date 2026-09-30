@@ -7,12 +7,10 @@ import {
 } from "../repositories/leadIngestion";
 
 /**
- * FIG-442's public entry point: the only service function in this codebase
- * that does not take an `AuthContext`, because there is none to take -- a
- * marketing-site contact form has no CRM session (FIG-436 section 3,
- * "External integrations use dedicated APIs/webhooks rather than
- * unrestricted database access"). Authorization here is the API key, not a
- * permission check; see `src/auth/websiteApiKey.ts`.
+ * Public entry point: the only service function that doesn't take an
+ * `AuthContext`, because there is none -- a marketing-site contact form
+ * has no CRM session. Authorization here is the API key, not a permission
+ * check; see `src/auth/websiteApiKey.ts`.
  */
 export async function submitWebsiteLead(
   orgSlug: string,
@@ -34,14 +32,13 @@ function asOptionalString(value: unknown): string | undefined {
 }
 
 /**
- * Deliberately forgiving: fields the website can't have gotten right (an
- * unrecognized service label, missing UTM params) are best-effort resolved
- * downstream rather than rejected here -- a public lead-capture form has no
- * human on the other end to fix a validation error, and the source
- * documents are explicit that losing a lead to a strict form is the failure
- * mode being eliminated (Q47: "auto-create, auto-stamp... unconditionally").
- * Only `name` and "at least one of email/phone" are required, because
- * that's the minimum needed to ever contact this person back.
+ * Forgiving on purpose: fields the website can't have gotten right (an
+ * unrecognized service label, missing UTM params) get resolved downstream
+ * rather than rejected here -- a public lead-capture form has no human on
+ * the other end to fix a validation error, and a strict form here just
+ * means losing the lead. Only `name` and "at least one of email/phone"
+ * are required -- that's the minimum needed to ever contact this person
+ * back.
  */
 function validateWebsiteLeadInput(rawBody: unknown): WebsiteLeadInput {
   if (typeof rawBody !== "object" || rawBody === null) {

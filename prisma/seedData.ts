@@ -1,22 +1,18 @@
 /**
  * Global role/permission catalog for CRM V1.
  *
- * The five roles come directly from FIG-436 section 5 / FIG-437 section 8.
- * The permission list and role->permission mapping are this implementer's
- * best-effort, smallest-reasonable reading of FIG-437 section 9 combined
- * with the role descriptions in FIG-297 Q56 -- FIG-437 section 18
- * explicitly leaves "Final permission matrix" as an open decision pending
- * confirmation by Michael/the project lead. Treat this as a seeded starting
- * point to unblock FIG-438/FIG-439, not as an approved matrix. See
+ * The five roles and the permission list/role mapping are a reasonable
+ * starting point, not a signed-off matrix -- flag anything that looks
+ * wrong to Michael/the project lead and it's a one-line change. See
  * IMPLEMENTATION_NOTES.md.
  *
- * One deliberate reconciliation: FIG-297 Q56 says Sales "cannot see cost or
- * margin figures" while Q57 says "deal values ... Management + Finance
- * only." FIG-299 does not model margin/cost as CRM fields at all, so the
- * practical resolution here is that Sales can view/edit the *value* field
- * on deals they own (they are the ones quoting it) via deals.view.own /
- * deals.edit.own, but do not get deals.view.value, which represents
- * organization-wide value visibility used for aggregate reporting.
+ * One reconciliation worth knowing about: stakeholder answers say Sales
+ * can't see cost/margin figures, but deal values are Management + Finance
+ * only elsewhere. There's no separate margin/cost field in this model, so
+ * the resolution taken is that Sales can view/edit the *value* field on
+ * deals they own (deals.view.own / deals.edit.own -- they're the ones
+ * quoting it), but doesn't get deals.view.value, which is org-wide value
+ * visibility used for aggregate reporting.
  */
 
 export const ROLES = [

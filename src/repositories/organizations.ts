@@ -6,10 +6,9 @@ export interface CreateOrganizationInput {
 }
 
 /**
- * Organization provisioning is a controlled platform/administrative
- * operation (FIG-437 section 13), not something an ordinary organization
- * member does — so this intentionally uses the admin client rather than
- * `withOrgContext` (there is no organization context yet).
+ * Provisioning is a platform/admin operation, not something an ordinary
+ * member does, so it uses the admin client -- there's no org context yet
+ * for `withOrgContext` to run against.
  */
 export async function createOrganization(input: CreateOrganizationInput) {
   return adminDb.organization.create({

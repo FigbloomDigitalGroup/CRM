@@ -19,11 +19,10 @@ export type CreateCompanyServiceInput = Omit<
 >;
 
 /**
- * Service layer = FIG-436's "Application/API Boundary" (section 10):
- * resolve organization + permission before touching data, apply business
- * rules (here: duplicate-detection warnings), then delegate to the
- * org-scoped repository. Route handlers should call these, never the
- * repositories directly.
+ * Service layer (FIG-436): resolve organization + permission before
+ * touching data, apply business rules (duplicate-detection warnings
+ * here), then delegate to the org-scoped repository. Route handlers
+ * should call these, never the repositories directly.
  */
 export async function createCompany(
   ctx: AuthContext,

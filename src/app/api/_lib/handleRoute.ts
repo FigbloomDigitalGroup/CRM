@@ -9,10 +9,9 @@ import {
 
 /**
  * Every API route delegates its actual work to this wrapper so error
- * mapping (typed service/auth errors -> HTTP status) is applied
- * consistently in exactly one place, per FIG-436 section 10's request flow:
- * Client -> Auth context -> API/Application service -> Org+permission
- * check -> Validation/business rules -> Data access -> Response.
+ * mapping (typed service/auth errors -> HTTP status) happens in exactly one
+ * place, matching the standard request flow: Client -> Auth context ->
+ * Service -> Org+permission check -> Validation -> Data access -> Response.
  */
 export async function handleRoute(
   fn: () => Promise<unknown>,

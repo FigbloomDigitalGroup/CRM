@@ -3,11 +3,10 @@ import { ForbiddenError } from "./errors";
 
 /**
  * The authorization context every service-layer function receives: an
- * already-resolved, active organization membership (FIG-437 section 7,
- * "Active Organization Context"). Never construct this from raw
- * client-supplied values — it must come from
- * `src/auth/requestContext.ts#resolveRequestContext`, which looks it up via
- * `resolveActiveMembership` against the authenticated user's session.
+ * already-resolved, active organization membership. Never construct this
+ * from raw client-supplied values -- it must come from
+ * `resolveRequestContext`, which resolves it via `resolveActiveMembership`
+ * against the authenticated user's session.
  */
 export type AuthContext = ActiveMembership;
 
@@ -29,10 +28,9 @@ export function requirePermission(
 }
 
 /**
- * Common "own vs all" permission pattern used across Leads/Deals (FIG-437
- * section 9): the caller may act on any record with the "*.all"-style
- * permission, or only on records they own with the "*.own"-style
- * permission plus matching ownership.
+ * "Own vs all" permission pattern shared by Leads and Deals: the caller may
+ * act on any record with the "*.all" permission, or only on records they
+ * own with the "*.own" permission plus matching ownership.
  */
 export function canActOnOwnedRecord(
   ctx: AuthContext,

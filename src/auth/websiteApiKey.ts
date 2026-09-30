@@ -41,20 +41,16 @@ export function hashWebsiteApiKey(plaintext: string): string {
 /**
  * Resolves which organization a public website submission belongs to,
  * verifying the caller-supplied API key against that organization's stored
- * hash. This is the one deliberate exception to "ordinary CRM access goes
- * through withOrgContext" (see src/db/adminClient.ts's doc comment): there
- * is no organization context to set yet -- resolving it *is* the job of
- * this function, exactly like `resolveRequestContext` looking up the
- * Organization row by slug before any membership/session exists.
+ * hash. This is the exception to "ordinary CRM access goes through
+ * withOrgContext" (see src/db/adminClient.ts) -- there's no org context to
+ * set yet, so resolving it is this function's job, much like
+ * `resolveRequestContext` looking up the Organization row by slug before any
+ * membership/session exists.
  *
- * Every failure mode (unknown org slug, no key configured, wrong key,
- * inactive organization) throws the identical generic message, on purpose:
- * a public, internet-facing endpoint must not let a prober distinguish "this
- * org slug doesn't exist" from "this org exists but the key is wrong" --
- * that would leak which organization slugs are valid to an unauthenticated
- * caller, a stricter boundary than existence-checks *within* an
- * organization (see leadService.ts's NotFoundError/ForbiddenError note,
- * which is about colleagues, not the public internet).
+ * Every failure mode (unknown slug, no key configured, wrong key, inactive
+ * org) throws the same generic message so a prober can't distinguish a
+ * missing org from a wrong key -- that would leak which org slugs are valid
+ * to an unauthenticated caller.
  */
 export async function resolveWebsitePublicContext(
   orgSlug: string,

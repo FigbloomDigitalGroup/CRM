@@ -6,12 +6,16 @@ import {
 import { adminDb } from "@/db/adminClient";
 
 /**
- * Dev-only placeholder login (see src/auth/devSession.ts for why this is
- * not the FIG-437 authentication implementation). Body: { "email": "..." }.
- * No password check -- this only exists so FIG-439's permission/ownership
- * logic can be exercised through real requests before real auth exists.
+ * Dev-only placeholder login (see src/auth/devSession.ts for why this isn't
+ * real auth). Body: { "email": "..." }. No password check -- exists only so
+ * permission/ownership logic can be exercised through real requests. Hard-
+ * disabled in production (FIG-592) so it can never become a real bypass.
  */
 export async function POST(request: Request) {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
   const body = (await request.json()) as { email?: string };
   if (!body.email) {
     return NextResponse.json({ error: "email is required." }, { status: 400 });
@@ -40,6 +44,10 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
   const response = NextResponse.json({ ok: true });
   response.cookies.delete(DEV_SESSION_COOKIE_NAME);
   return response;
