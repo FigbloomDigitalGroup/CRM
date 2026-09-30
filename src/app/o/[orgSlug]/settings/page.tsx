@@ -1,11 +1,16 @@
 import { hasPermission } from "@/auth/context";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { adminDb } from "@/db/adminClient";
-import { getWebsiteIntegrationStatus } from "@/services/integrationService";
+import {
+  getWebsiteIntegrationStatus,
+  listRecentWebsiteActivity,
+} from "@/services/integrationService";
 import { listMemberships } from "@/services/membershipService";
 import { InviteMemberForm } from "./InviteMemberForm";
 import { MembersTable } from "./MembersTable";
 import { RegenerateWebsiteKeyButton } from "./RegenerateWebsiteKeyButton";
+import { RevokeWebsiteKeyButton } from "./RevokeWebsiteKeyButton";
+import { WebsiteSecuritySettingsForm } from "./WebsiteSecuritySettingsForm";
 
 export default async function SettingsPage({
   params,
@@ -96,7 +101,10 @@ async function WebsiteIntegrationSection({
   orgSlug: string;
   ctx: Awaited<ReturnType<typeof resolveRequestContext>>;
 }) {
-  const status = await getWebsiteIntegrationStatus(ctx);
+  const [status, recentActivity] = await Promise.all([
+    getWebsiteIntegrationStatus(ctx),
+    listRecentWebsiteActivity(ctx),
+  ]);
 
   return (
     <div className="card">
@@ -111,6 +119,7 @@ async function WebsiteIntegrationSection({
       {status.configured ? (
         <p>
           Key configured: <code>{status.keyPrefix}&hellip;</code>
+          {status.revoked && <span className="error"> (revoked)</span>}
           <br />
           Generated {new Date(status.createdAt).toLocaleString()}
           {status.lastUsedAt && (
@@ -126,10 +135,62 @@ async function WebsiteIntegrationSection({
         <p className="who">No key generated yet -- the endpoint below will reject every request until one exists.</p>
       )}
 
-      <RegenerateWebsiteKeyButton
-        orgSlug={orgSlug}
-        alreadyConfigured={status.configured}
-      />
+      <div style={{ display: "flex", gap: 8 }}>
+        <RegenerateWebsiteKeyButton
+          orgSlug={orgSlug}
+          alreadyConfigured={status.configured}
+        />
+        {status.configured && !status.revoked && (
+          <RevokeWebsiteKeyButton orgSlug={orgSlug} />
+        )}
+      </div>
+
+      {status.configured && (
+        <>
+          <h2>Abuse protection</h2>
+          <p className="who">
+            Rate limiting and payload/field size limits always apply.
+            Allowed origins, the honeypot field, and captcha are each
+            optional and off unless configured here.
+          </p>
+          <WebsiteSecuritySettingsForm
+            orgSlug={orgSlug}
+            allowedOrigins={status.allowedOrigins}
+            honeypotFieldName={status.honeypotFieldName}
+            captchaConfigured={status.captchaConfigured}
+          />
+
+          <h2>Recent activity</h2>
+          <p className="who">
+            Last {recentActivity.length} requests to the public endpoint,
+            accepted or rejected.
+          </p>
+          {recentActivity.length === 0 ? (
+            <p className="who">No requests yet.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Outcome</th>
+                  <th>IP</th>
+                  <th>Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentActivity.map((row) => (
+                  <tr key={row.id}>
+                    <td>{row.createdAt.toLocaleString()}</td>
+                    <td>{row.outcome}</td>
+                    <td>{row.ipAddress ?? "—"}</td>
+                    <td>{row.reason ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </>
+      )}
 
       <h2>Integration reference</h2>
       <p className="who">

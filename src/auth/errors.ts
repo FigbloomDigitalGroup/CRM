@@ -37,3 +37,11 @@ export class ValidationError extends Error {
     this.name = "ValidationError";
   }
 }
+
+/** Maps to 429 (see handleRoute.ts) -- rate/abuse limiting (FIG-594). */
+export class RateLimitedError extends Error {
+  constructor(message = "Too many requests. Please try again later.") {
+    super(message);
+    this.name = "RateLimitedError";
+  }
+}

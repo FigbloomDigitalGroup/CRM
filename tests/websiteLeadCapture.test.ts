@@ -169,9 +169,8 @@ describe("website lead capture: API key authentication", () => {
     await expect(
       resolveWebsitePublicContext(org.slug, firstKey),
     ).rejects.toThrow(UnauthorizedError);
-    await expect(
-      resolveWebsitePublicContext(org.slug, secondKey),
-    ).resolves.toEqual({ organizationId: org.id });
+    const resolved = await resolveWebsitePublicContext(org.slug, secondKey);
+    expect(resolved.organizationId).toBe(org.id);
   });
 
   it("records lastUsedAt only after a successful authentication", async () => {
@@ -206,23 +205,40 @@ describe("website lead capture: integrationService permissions", () => {
   });
 });
 
+const NO_META = { ipAddress: null, origin: null };
+
 describe("website lead capture: submitWebsiteLead (public service entry point)", () => {
   it("validates required fields before touching the database", async () => {
     const org = await createTestOrganization();
     const { apiKey } = await generateAndSetKey(org.id);
 
     await expect(
-      submitWebsiteLead(org.slug, apiKey, { email: "no-name@example.test" }),
+      submitWebsiteLead(
+        org.slug,
+        apiKey,
+        JSON.stringify({ email: "no-name@example.test" }),
+        NO_META,
+      ),
     ).rejects.toThrow(ValidationError);
     await expect(
-      submitWebsiteLead(org.slug, apiKey, { name: "No Contact Info" }),
+      submitWebsiteLead(
+        org.slug,
+        apiKey,
+        JSON.stringify({ name: "No Contact Info" }),
+        NO_META,
+      ),
     ).rejects.toThrow(ValidationError);
   });
 
   it("checks the API key before validating the body", async () => {
     const org = await createTestOrganization();
     await expect(
-      submitWebsiteLead(org.slug, "wlk_live_bad", { name: "Whoever" }),
+      submitWebsiteLead(
+        org.slug,
+        "wlk_live_bad",
+        JSON.stringify({ name: "Whoever" }),
+        NO_META,
+      ),
     ).rejects.toThrow(UnauthorizedError);
   });
 
@@ -230,15 +246,21 @@ describe("website lead capture: submitWebsiteLead (public service entry point)",
     const org = await createTestOrganization();
     const { apiKey } = await generateAndSetKey(org.id);
 
-    const result = await submitWebsiteLead(org.slug, apiKey, {
-      name: "UTM Test",
-      email: "utm@example.test",
-      utm: { utmSource: "google", utmCampaign: "spring-promo" },
-      referrer: "https://figbloom.example/contact",
-    });
+    const result = await submitWebsiteLead(
+      org.slug,
+      apiKey,
+      JSON.stringify({
+        name: "UTM Test",
+        email: "utm@example.test",
+        utm: { utmSource: "google", utmCampaign: "spring-promo" },
+        referrer: "https://figbloom.example/contact",
+      }),
+      NO_META,
+    );
+    expect(result).not.toBeNull();
 
     const lead = await adminDb.lead.findUniqueOrThrow({
-      where: { id: result.leadId },
+      where: { id: result!.leadId },
     });
     const qualification = lead.qualificationData as { utm?: Record<string, string> };
     expect(qualification.utm?.utmSource).toBe("google");

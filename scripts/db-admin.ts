@@ -103,11 +103,18 @@ async function grantRole(): Promise<void> {
     await client.query(
       `REVOKE UPDATE, DELETE ON "audit_events" FROM ${ident(APP_ROLE)}`,
     );
+    // FIG-594: this role only ever reads website_lead_request_log (the
+    // public lead-capture endpoint writes it via the schema-owner adminDb
+    // connection, before any RLS context exists) -- revoke write access
+    // outright rather than leaving it merely unused.
+    await client.query(
+      `REVOKE INSERT, UPDATE, DELETE ON "website_lead_request_log" FROM ${ident(APP_ROLE)}`,
+    );
     await client.query(
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${ident(APP_ROLE)}`,
     );
     console.log(
-      `Granted table privileges to "${APP_ROLE}" (audit_events remains append-only).`,
+      `Granted table privileges to "${APP_ROLE}" (audit_events remains append-only; website_lead_request_log is read-only).`,
     );
   } finally {
     await client.end();

@@ -3,6 +3,7 @@ import {
   ForbiddenError,
   NoActiveMembershipError,
   NotFoundError,
+  RateLimitedError,
   UnauthorizedError,
   ValidationError,
 } from "@/auth/errors";
@@ -34,6 +35,9 @@ export async function handleRoute(
     }
     if (err instanceof ValidationError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    if (err instanceof RateLimitedError) {
+      return NextResponse.json({ error: err.message }, { status: 429 });
     }
 
     console.error(err);

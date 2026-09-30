@@ -198,6 +198,15 @@ submissions are round-robin assigned to an active rep and get an
 auto-created follow-up task. See `IMPLEMENTATION_NOTES.md` for why a
 static key was chosen over a signed webhook.
 
+Abuse protection (FIG-594) always applies: per-key and per-IP rate
+limiting (429, tunable via `WEBSITE_LEAD_RATE_LIMIT_*` in `.env.example`),
+a request-body size cap, and field length limits. Allowed origins, a
+honeypot field, and Cloudflare Turnstile captcha are each optional,
+configured per key from the same settings page, and off unless you turn
+them on. Every attempt -- accepted or rejected -- shows up in that page's
+"Recent activity" table. A key can be rotated (replaced immediately) or
+revoked outright (disabled, no replacement) from there too.
+
 ## Authentication
 
 `/login` is real: email + password, checked against a bcrypt hash

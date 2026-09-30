@@ -40,6 +40,7 @@ model Organization {
   memberships             Membership[]
   settings                OrganizationSetting[]
   websiteApiKey           WebsiteApiKey?
+  websiteLeadRequestLogs  WebsiteLeadRequestLog[]
   companies               Company[]
   contacts                Contact[]
   leads                   Lead[]
@@ -253,6 +254,11 @@ model OrganizationSetting {
 /// chosen over a signed webhook. Only the SHA-256 hash is stored; the
 /// plaintext key is shown once, at generation time. One active key per
 /// organization — rotating replaces it outright, no overlap window.
+///
+/// The abuse-protection fields below (FIG-594) are all optional/off by
+/// default, so existing integrations that predate this ticket keep working
+/// unchanged: `allowedOrigins` empty means no origin restriction,
+/// `honeypotFieldName`/`captchaSecret` null means neither check runs.
 model WebsiteApiKey {
   id                    String    @id @default(uuid())
   organizationId        String    @unique @map("organization_id")
@@ -260,6 +266,21 @@ model WebsiteApiKey {
   keyPrefix             String    @map("key_prefix")
   createdByMembershipId String?   @map("created_by_membership_id")
   lastUsedAt            DateTime? @map("last_used_at")
+  /// Explicit revoke without rotating (FIG-594) -- disables the
+  /// integration entirely; distinct from rotation, which replaces the key
+  /// with a new working one instead of leaving it disabled.
+  revokedAt             DateTime? @map("revoked_at")
+  /// Empty = no restriction. Checked against the request's Origin header
+  /// (falling back to Referer's origin) only when non-empty, since the
+  /// documented integration pattern is a server-to-server call that may
+  /// send neither header at all.
+  allowedOrigins        String[]  @default([]) @map("allowed_origins")
+  /// Name of a body field real submitters must leave empty; a bot that
+  /// fills it in is silently discarded (logged, but told it "succeeded").
+  honeypotFieldName     String?   @map("honeypot_field_name")
+  /// Cloudflare Turnstile secret key, if this organization's website form
+  /// uses Turnstile. Server-side only, never sent to any client.
+  captchaSecret         String?   @map("captcha_secret")
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
@@ -267,6 +288,36 @@ model WebsiteApiKey {
   createdBy    Membership?  @relation("WebsiteApiKeyCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: SetNull)
 
   @@map("website_api_keys")
+}
+
+/// Every request to the public lead-capture endpoint, accepted or rejected
+/// (FIG-594) -- this is both the audit trail for "rejected/blocked
+/// submissions are logged and visible for monitoring" and the data source
+/// rate limiting counts against, so there's one mechanism instead of two.
+/// `organizationId` is nullable because an unresolvable org slug never
+/// gets that far. `keyHash` is the full SHA-256 hash of whatever key the
+/// caller submitted (valid or not) -- not the short display `keyPrefix`
+/// shown in the settings UI, which only has a few characters of real
+/// entropy and would let unrelated keys share a rate-limit bucket by
+/// chance; it's nullable because a request with no key at all still gets
+/// logged (and still counts toward per-IP rate limiting).
+model WebsiteLeadRequestLog {
+  id             String   @id @default(uuid())
+  organizationId String?  @map("organization_id")
+  keyHash        String?  @map("key_hash")
+  ipAddress      String?  @map("ip_address")
+  origin         String?
+  outcome        String
+  reason         String?
+  leadId         String?  @map("lead_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([keyHash, createdAt])
+  @@index([ipAddress, createdAt])
+  @@map("website_lead_request_log")
 }
 
 // ---------------------------------------------------------------------------

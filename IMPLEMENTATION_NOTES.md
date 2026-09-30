@@ -301,6 +301,67 @@ last active Management member is blocked
 requires `joinedAt` to already be set (they accepted once before) --
 someone who never accepted should be re-invited instead, not reactivated.
 
+## Abuse protection on the public website endpoint (FIG-594)
+
+The API key alone (FIG-442) only answers "is this caller allowed at all,"
+not "is this caller behaving reasonably" -- FIG-594 adds the second half,
+all inside `submitWebsiteLead` (`src/services/websiteLeadService.ts`), with
+one log table doing double duty as both the audit trail and the data rate
+limiting counts against, rather than standing up a separate in-memory or
+Redis-backed counter this project has nowhere durable to keep otherwise
+(see the "Basic brute-force throttling" note under "Real authentication,"
+above, for the same reasoning applied to login).
+
+Every attempt is written to `WebsiteLeadRequestLog` in a `finally` block
+-- exactly one row per request, whatever the outcome -- via the schema-
+owner `adminDb` connection, the same exception already used for the
+Organization/WebsiteApiKey lookups that happen alongside it (no RLS
+context exists yet at this point in the request). `figbloom_app` (the
+role the authenticated monitoring view in `/o/[orgSlug]/settings` reads
+through) has INSERT/UPDATE/DELETE revoked on this table outright, not just
+UPDATE/DELETE like `audit_events` -- it never writes here at all, only
+reads. That revoke is repeated in `scripts/db-admin.ts#grantRole`, which
+otherwise re-grants full privileges on every table each time it runs; this
+was caught before it shipped by noticing `audit_events` already needed the
+same treatment there.
+
+Rate limiting counts by `keyHash` (the full SHA-256 hash of whatever key
+was submitted, valid or not), not the short `keyPrefix` shown in the
+settings UI -- the prefix only has a few random characters of real entropy
+and could group unrelated keys into the same bucket by chance. The
+per-key and per-IP limits are read live from the environment
+(`WEBSITE_LEAD_RATE_LIMIT_*`, `.env.example`) rather than frozen
+constants, defaulting to 20/IP and 60/key per 60-second window -- mainly so
+tests can set a tiny window/limit instead of firing dozens of real
+requests, but it also means ops can retune them without a code change.
+
+A wrong/missing key is still logged against the *organization the request
+targeted* (resolved by slug independently of the key check, purely for
+logging), not left with a null organization -- otherwise every bad-key
+attempt against a real org's slug would be invisible in that org's own
+monitoring view, which defeats the point of "visible for monitoring." This
+doesn't change what an unauthenticated caller sees back: the external
+error is exactly as generic either way, only the org's own RLS-scoped
+internal view gets more complete.
+
+The honeypot check (optional per key, `WebsiteApiKey.honeypotFieldName`)
+returns the endpoint's normal `{"status": "created"}` shape with no lead
+created, rather than an error -- a honeypot only works if whatever filled
+it in believes it succeeded. Captcha (optional, `WebsiteApiKey.captchaSecret`)
+calls Cloudflare Turnstile's real `siteverify` endpoint
+(`src/auth/captcha.ts`); a network failure talking to Turnstile fails
+closed (rejects the submission) rather than treating captcha as
+unconfigured. Allowed origins (optional, `WebsiteApiKey.allowedOrigins`)
+checks the Origin header, falling back to Referer's origin, only when the
+list is non-empty -- the documented integration pattern is server-to-
+server and may send neither header at all, so an unconfigured key must
+keep accepting requests with no origin, not start rejecting them.
+
+Key revocation (`WebsiteApiKey.revokedAt`) is new and distinct from
+rotation: rotating always leaves a new working key behind, revoking leaves
+none. Regenerating after a revoke clears it -- generating a new key is an
+unambiguous request for a working integration again.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit

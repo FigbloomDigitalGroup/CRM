@@ -38,24 +38,33 @@ export function hashWebsiteApiKey(plaintext: string): string {
   return createHash("sha256").update(plaintext).digest("hex");
 }
 
+export interface WebsitePublicContext {
+  organizationId: string;
+  allowedOrigins: string[];
+  honeypotFieldName: string | null;
+  captchaSecret: string | null;
+}
+
 /**
  * Resolves which organization a public website submission belongs to,
  * verifying the caller-supplied API key against that organization's stored
- * hash. This is the exception to "ordinary CRM access goes through
- * withOrgContext" (see src/db/adminClient.ts) -- there's no org context to
- * set yet, so resolving it is this function's job, much like
- * `resolveRequestContext` looking up the Organization row by slug before any
- * membership/session exists.
+ * hash, and returns its optional abuse-protection settings (FIG-594) so
+ * the caller doesn't need a second query for them. This is the exception
+ * to "ordinary CRM access goes through withOrgContext" (see
+ * src/db/adminClient.ts) -- there's no org context to set yet, so
+ * resolving it is this function's job, much like `resolveRequestContext`
+ * looking up the Organization row by slug before any membership/session
+ * exists.
  *
- * Every failure mode (unknown slug, no key configured, wrong key, inactive
- * org) throws the same generic message so a prober can't distinguish a
- * missing org from a wrong key -- that would leak which org slugs are valid
- * to an unauthenticated caller.
+ * Every failure mode (unknown slug, no key configured, revoked key, wrong
+ * key, inactive org) throws the same generic message so a prober can't
+ * distinguish a missing org from a wrong key -- that would leak which org
+ * slugs are valid to an unauthenticated caller.
  */
 export async function resolveWebsitePublicContext(
   orgSlug: string,
   providedKey: string | null,
-): Promise<{ organizationId: string }> {
+): Promise<WebsitePublicContext> {
   const invalid = () =>
     new UnauthorizedError("Invalid or missing API key.");
 
@@ -71,7 +80,8 @@ export async function resolveWebsitePublicContext(
   if (
     !organization ||
     organization.status !== "ACTIVE" ||
-    !organization.websiteApiKey
+    !organization.websiteApiKey ||
+    organization.websiteApiKey.revokedAt
   ) {
     throw invalid();
   }
@@ -90,7 +100,12 @@ export async function resolveWebsitePublicContext(
     data: { lastUsedAt: new Date() },
   });
 
-  return { organizationId: organization.id };
+  return {
+    organizationId: organization.id,
+    allowedOrigins: organization.websiteApiKey.allowedOrigins,
+    honeypotFieldName: organization.websiteApiKey.honeypotFieldName,
+    captchaSecret: organization.websiteApiKey.captchaSecret,
+  };
 }
 
 export { HEADER_NAME as WEBSITE_API_KEY_HEADER };
