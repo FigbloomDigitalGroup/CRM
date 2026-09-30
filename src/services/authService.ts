@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { sendPasswordResetEmail } from "../auth/email";
+import { hashInviteToken } from "../auth/membershipInvite";
 import {
   hashPassword,
   isPasswordStrongEnough,
@@ -19,6 +20,10 @@ import {
 import { UnauthorizedError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import {
+  activateMembershipByInviteToken,
+  findMembershipByInviteToken,
+} from "../repositories/memberships";
 
 /**
  * Real authentication (FIG-592) -- the production replacement for the
@@ -181,4 +186,80 @@ export async function resetPassword(
   await adminDb.user.update({ where: { id: userId }, data: { passwordHash } });
   await revokeAllSessionsForUser(userId);
   await recordAuthAuditEvent(userId, "auth.password_reset");
+}
+
+/**
+ * Read-only lookup for the /accept-invite page (FIG-593) -- does not
+ * consume the token, so the page can decide whether to show a password
+ * field (a brand-new invitee has no password yet) without spending the
+ * single-use token just by loading the page.
+ */
+export async function getInviteInfo(
+  token: string,
+): Promise<{ email: string; requiresPassword: boolean }> {
+  const membership = await findMembershipByInviteToken(hashInviteToken(token));
+  if (!membership) {
+    throw new ValidationError("Invalid or expired invite link.");
+  }
+  return {
+    email: membership.user.email,
+    requiresPassword: !membership.user.passwordHash,
+  };
+}
+
+/**
+ * Consumes the invite token, activates the membership, sets a password if
+ * the invitee didn't have one yet, and signs them straight in. An existing
+ * user (already has a password) accepting a second org's invite doesn't
+ * need or use `password` at all.
+ */
+export async function acceptMembershipInvite(
+  token: string,
+  password: string | undefined,
+  userAgent?: string | null,
+): Promise<{ token: string; expiresAt: Date; userId: string }> {
+  const tokenHash = hashInviteToken(token);
+
+  // Validate the password *before* consuming the single-use token -- doing
+  // it after would leave the membership activated but the account
+  // permanently unreachable (no password, and the now-burned link can't be
+  // retried) if validation failed.
+  const preview = await findMembershipByInviteToken(tokenHash);
+  if (!preview) {
+    throw new ValidationError("Invalid or expired invite link.");
+  }
+  if (!preview.user.passwordHash) {
+    if (!password || !isPasswordStrongEnough(password)) {
+      throw new ValidationError(
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+      );
+    }
+  }
+
+  const activated = await activateMembershipByInviteToken(tokenHash);
+  if (!activated) {
+    throw new ValidationError("Invalid or expired invite link.");
+  }
+  const { membership, user } = activated;
+
+  if (!user.passwordHash) {
+    // `password` was already validated above against this same branch.
+    const passwordHash = await hashPassword(password as string);
+    await adminDb.user.update({ where: { id: user.id }, data: { passwordHash } });
+  }
+
+  await recordAuditEvent({
+    organizationId: membership.organizationId,
+    actorMembershipId: membership.id,
+    actorUserId: user.id,
+    action: "membership.invite_accepted",
+    entityType: "Membership",
+    entityId: membership.id,
+  });
+
+  const { token: sessionToken, expiresAt } = await createSession(
+    user.id,
+    userAgent,
+  );
+  return { token: sessionToken, expiresAt, userId: user.id };
 }

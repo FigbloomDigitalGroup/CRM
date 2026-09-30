@@ -207,14 +207,27 @@ manual revoke actually invalidates it immediately. `/forgot-password` and
 `/reset-password` cover account recovery (and doubles as how a user with no
 password yet sets their first one). `/signup` creates the account and signs
 the caller in, but grants no organization access on its own — actual
-Membership creation (seed/admin scripts today) is still the admin/approved-
-process step FIG-437 describes, so a fresh signup lands on a clear "no
-access yet" message rather than the `figbloom` dashboard. Password-reset
-emails send over real SMTP once `SMTP_HOST` is set (`.env.example`); with
-nothing configured, the reset link is logged server-side instead, which is
-what local dev and the test suite run against today. See
-`IMPLEMENTATION_NOTES.md` — "Real authentication (FIG-592)" — for the
-provider decision and everything else.
+Membership creation is still the admin/approved-process step FIG-437
+describes (see "Member administration," below), so a fresh signup lands on
+a clear "no access yet" message rather than the `figbloom` dashboard.
+Password-reset emails send over real SMTP once `SMTP_HOST` is set
+(`.env.example`); with nothing configured, the reset link is logged
+server-side instead, which is what local dev and the test suite run
+against today. See `IMPLEMENTATION_NOTES.md` — "Real authentication
+(FIG-592)" — for the provider decision and everything else.
+
+## Member administration
+
+`/o/[orgSlug]/settings` (Members section, `membership.view`/`.manage` +
+`role.assign`) is the real add/invite/deactivate/role-change path — the
+one-off `scripts/manual-add-second-sales-user.ts` is now only a shortcut
+for local dev, not the only way in. Inviting someone creates a `PENDING`
+membership and emails (or, with no SMTP configured, logs) an
+`/accept-invite` link; nothing in `resolveActiveMembership` matches
+`PENDING`, so the invite grants zero access until accepted. The
+organization's last active Management member can't be deactivated or
+reassigned away from Management — see `IMPLEMENTATION_NOTES.md` —
+"Member/role administration (FIG-593)" — for the rest.
 
 `/dev-login` (`src/auth/devSession.ts`) is a separate, no-password
 placeholder that still exists purely for quickly switching between the

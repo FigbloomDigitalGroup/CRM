@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sendPasswordResetEmail, type MailTransport } from "../src/auth/email";
+import {
+  sendMembershipInviteEmail,
+  sendPasswordResetEmail,
+  type MailTransport,
+} from "../src/auth/email";
 
 /**
  * A fake `MailTransport` proves the message we *compose* is correct
@@ -55,6 +59,36 @@ describe("sendPasswordResetEmail", () => {
     delete process.env.SMTP_HOST;
     await expect(
       sendPasswordResetEmail("x@example.test", "https://example.test/reset"),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe("sendMembershipInviteEmail", () => {
+  it("sends a message containing the accept-invite link", async () => {
+    const transport = fakeTransport();
+
+    await sendMembershipInviteEmail(
+      "invitee@example.test",
+      "https://crm.example.test/accept-invite?token=xyz789",
+      transport,
+    );
+
+    expect(transport.sendMail).toHaveBeenCalledTimes(1);
+    const message = transport.sendMail.mock.calls[0][0];
+    expect(message.to).toBe("invitee@example.test");
+    expect(message.subject).toMatch(/invited/i);
+    expect(message.text).toContain(
+      "https://crm.example.test/accept-invite?token=xyz789",
+    );
+    expect(message.html).toContain(
+      "https://crm.example.test/accept-invite?token=xyz789",
+    );
+  });
+
+  it("does not throw when no SMTP is configured", async () => {
+    delete process.env.SMTP_HOST;
+    await expect(
+      sendMembershipInviteEmail("x@example.test", "https://example.test/accept-invite"),
     ).resolves.toBeUndefined();
   });
 });

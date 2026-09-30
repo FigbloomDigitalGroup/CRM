@@ -173,6 +173,10 @@ model RolePermission {
 enum MembershipStatus {
   ACTIVE
   INACTIVE
+  /// Invited but not yet accepted (FIG-593) -- carries no permissions at
+  /// all; `resolveActiveMembership` only ever matches ACTIVE, so a pending
+  /// invite grants zero access until accepted.
+  PENDING
 }
 
 /// A user's relationship to one Organization — the actual tenant boundary.
@@ -184,15 +188,21 @@ enum MembershipStatus {
 /// membership carries an implicit, DB-checkable organization binding (see
 /// the composite FK added in the tenant-integrity migration).
 model Membership {
-  id             String           @id @default(uuid())
-  organizationId String           @map("organization_id")
-  userId         String           @map("user_id")
-  roleId         String           @map("role_id")
-  status         MembershipStatus @default(ACTIVE)
-  invitedAt      DateTime?        @map("invited_at")
-  joinedAt       DateTime?        @map("joined_at")
-  createdAt      DateTime         @default(now()) @map("created_at")
-  updatedAt      DateTime         @updatedAt @map("updated_at")
+  id                   String           @id @default(uuid())
+  organizationId       String           @map("organization_id")
+  userId               String           @map("user_id")
+  roleId               String           @map("role_id")
+  status               MembershipStatus @default(ACTIVE)
+  invitedAt            DateTime?        @map("invited_at")
+  joinedAt             DateTime?        @map("joined_at")
+  /// Set only while status is PENDING (FIG-593) -- only the hash is
+  /// stored, same generate-random/hash-and-compare pattern as sessions and
+  /// the website API key. Cleared (both columns) the moment the invite is
+  /// accepted, enforcing single use.
+  inviteTokenHash      String?          @unique @map("invite_token_hash")
+  inviteTokenExpiresAt DateTime?        @map("invite_token_expires_at")
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)

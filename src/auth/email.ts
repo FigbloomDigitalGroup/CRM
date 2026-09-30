@@ -1,13 +1,13 @@
 import nodemailer from "nodemailer";
 
 /**
- * Password-reset email delivery (FIG-592). Sends real SMTP mail once
- * `SMTP_HOST` is configured (see .env.example); until then, falls back to
- * logging the link server-side so the flow stays exercisable in any
- * environment without credentials. `transportOverride` exists only for
- * tests -- it lets `tests/authEmail.test.ts` verify the composed message
- * without a real SMTP server, the same way `resolveRequestContext`'s tests
- * inject a fake cookie reader instead of a real Next.js request.
+ * Outbound auth email (FIG-592 password reset, FIG-593 membership invites).
+ * Sends real SMTP mail once `SMTP_HOST` is configured (see .env.example);
+ * until then, falls back to logging the message server-side so both flows
+ * stay exercisable without credentials. `transportOverride` exists only
+ * for tests -- it lets `tests/authEmail.test.ts` verify the composed
+ * message without a real SMTP server, the same way `resolveRequestContext`
+ * injects a fake cookie reader instead of a real Next.js request.
  */
 export interface MailTransport {
   sendMail(message: {
@@ -34,14 +34,14 @@ function createRealTransport(): MailTransport {
   });
 }
 
-export async function sendPasswordResetEmail(
-  email: string,
-  resetUrl: string,
+async function deliverOrLog(
+  logLabel: string,
+  message: { to: string; subject: string; text: string; html: string },
   transportOverride?: MailTransport,
 ): Promise<void> {
   if (!transportOverride && !isSmtpConfigured()) {
     console.log(
-      `[password-reset] No email provider configured -- link for ${email}: ${resetUrl}`,
+      `[${logLabel}] No email provider configured -- would send to ${message.to}:\n${message.text}`,
     );
     return;
   }
@@ -49,9 +49,40 @@ export async function sendPasswordResetEmail(
   const transport = transportOverride ?? createRealTransport();
   await transport.sendMail({
     from: process.env.SMTP_FROM ?? "FigBloom CRM <no-reply@figbloom.local>",
-    to: email,
-    subject: "Reset your FigBloom CRM password",
-    text: `Use this link to reset your password. It expires in 1 hour and can only be used once.\n\n${resetUrl}`,
-    html: `<p>Use this link to reset your password. It expires in 1 hour and can only be used once.</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+    ...message,
   });
+}
+
+export async function sendPasswordResetEmail(
+  email: string,
+  resetUrl: string,
+  transportOverride?: MailTransport,
+): Promise<void> {
+  await deliverOrLog(
+    "password-reset",
+    {
+      to: email,
+      subject: "Reset your FigBloom CRM password",
+      text: `Use this link to reset your password. It expires in 1 hour and can only be used once.\n\n${resetUrl}`,
+      html: `<p>Use this link to reset your password. It expires in 1 hour and can only be used once.</p><p><a href="${resetUrl}">${resetUrl}</a></p>`,
+    },
+    transportOverride,
+  );
+}
+
+export async function sendMembershipInviteEmail(
+  email: string,
+  acceptUrl: string,
+  transportOverride?: MailTransport,
+): Promise<void> {
+  await deliverOrLog(
+    "membership-invite",
+    {
+      to: email,
+      subject: "You've been invited to FigBloom CRM",
+      text: `You've been invited to join FigBloom's CRM. This link expires in 7 days and can only be used once.\n\n${acceptUrl}`,
+      html: `<p>You've been invited to join FigBloom's CRM. This link expires in 7 days and can only be used once.</p><p><a href="${acceptUrl}">Accept your invite</a></p>`,
+    },
+    transportOverride,
+  );
 }

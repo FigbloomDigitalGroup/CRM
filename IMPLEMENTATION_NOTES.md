@@ -261,6 +261,46 @@ session, an unknown org slug, no membership in that org, and the
 dev-session fallback being honored outside production but never inside it.
 No route or page passes this override; production behavior is unchanged.
 
+## Member/role administration (FIG-593)
+
+`membership.manage` and `role.assign` existed as permission keys with
+nothing enforcing them -- the only way to add a second user was
+`scripts/manual-add-second-sales-user.ts`, a one-off script. `/o/[orgSlug]/
+settings`'s new "Members" section and `src/services/membershipService.ts`
+close that: invite, change role, deactivate, reactivate, all
+permission-checked and audited (`membership.invited`/`reinvited`/
+`invite_accepted`/`role_changed`/`deactivated`/`reactivated`).
+
+Invites go through a real acceptance step rather than granting access
+immediately, using `Membership.status = PENDING` (a third state alongside
+ACTIVE/INACTIVE) plus an invite token directly on the `Membership` row
+(`inviteTokenHash`/`inviteTokenExpiresAt`) -- same generate-random/hash-
+and-compare pattern as sessions and the website API key, one row per
+membership rather than a separate token table, since an invite only ever
+activates the exact membership it was issued for. `resolveActiveMembership`
+only ever matches ACTIVE, so a pending invite grants zero access on its
+own, closing the loop with FIG-437's "missing or invalid context fails
+closed" rule.
+
+One acceptance endpoint (`authService.ts#acceptMembershipInvite`) handles
+both a brand-new invitee (no password yet -- one is required and set) and
+an existing user being invited to a second organization (already has a
+password -- none is required or touched). The password is validated
+*before* the single-use token is consumed: doing it the other way around
+would leave the membership activated but the account permanently
+unreachable if validation failed, since the link can't be retried once
+burned. `getInviteInfo` is a separate, non-consuming read used only to
+decide whether `/accept-invite` shows a password field, so loading the
+page never spends the token.
+
+Re-inviting an email with a still-pending invite regenerates and resends
+the token rather than erroring -- a real conflict (already an active
+member) still does. Deactivating/changing the role of the organization's
+last active Management member is blocked
+(`membershipService.ts#assertNotLastActiveManagement`); reactivating
+requires `joinedAt` to already be set (they accepted once before) --
+someone who never accepted should be re-invited instead, not reactivated.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit
