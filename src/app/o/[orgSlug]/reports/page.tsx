@@ -83,6 +83,24 @@ export default async function ReportsPage({
 
       {canViewAll && orgMetrics && (
         <>
+          {hasPermission(ctx, "export.bulk") && (
+            <p>
+              <a
+                href={`/api/orgs/${orgSlug}/reports/export${
+                  Object.values(filters).some(Boolean)
+                    ? `?${new URLSearchParams(
+                        Object.fromEntries(
+                          Object.entries(filters).filter(([, v]) => v),
+                        ) as Record<string, string>,
+                      ).toString()}`
+                    : ""
+                }`}
+              >
+                Export CSV
+              </a>
+            </p>
+          )}
+
           <form className="filters" method="GET">
             <select name="ownerMembershipId" defaultValue={filters.ownerMembershipId ?? ""}>
               <option value="">Any owner</option>

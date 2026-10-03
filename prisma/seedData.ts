@@ -107,6 +107,11 @@ export const PERMISSIONS: { key: string; area: string; description: string }[] =
       description: "Convert a lead into a deal.",
     },
     { key: "leads.export", area: "Leads", description: "Export lead records." },
+    {
+      key: "leads.import",
+      area: "Leads",
+      description: "Bulk-import lead records from CSV.",
+    },
 
     {
       key: "contacts.view",
@@ -129,6 +134,11 @@ export const PERMISSIONS: { key: string; area: string; description: string }[] =
       description: "Export contact records.",
     },
     {
+      key: "contacts.import",
+      area: "Contacts & Companies",
+      description: "Bulk-import contact records from CSV.",
+    },
+    {
       key: "companies.view",
       area: "Contacts & Companies",
       description: "View companies.",
@@ -147,6 +157,11 @@ export const PERMISSIONS: { key: string; area: string; description: string }[] =
       key: "companies.export",
       area: "Contacts & Companies",
       description: "Export company records.",
+    },
+    {
+      key: "companies.import",
+      area: "Contacts & Companies",
+      description: "Bulk-import company records from CSV.",
     },
 
     {
@@ -286,14 +301,17 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "leads.assign",
     "leads.convert",
     "leads.export",
+    "leads.import",
     "contacts.view",
     "contacts.create",
     "contacts.edit",
     "contacts.export",
+    "contacts.import",
     "companies.view",
     "companies.create",
     "companies.edit",
     "companies.export",
+    "companies.import",
     "deals.view.all",
     "deals.create",
     "deals.edit.all",

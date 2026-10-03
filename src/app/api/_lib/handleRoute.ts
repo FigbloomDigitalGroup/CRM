@@ -9,6 +9,28 @@ import {
 } from "@/auth/errors";
 import { logger } from "@/lib/logger";
 
+/** Typed service/auth errors -> HTTP error response, shared by `handleRoute` and `handleCsvRoute` below. */
+function mapErrorToResponse(err: unknown): NextResponse {
+  if (err instanceof UnauthorizedError) {
+    return NextResponse.json({ error: err.message }, { status: 401 });
+  }
+  if (err instanceof ForbiddenError || err instanceof NoActiveMembershipError) {
+    return NextResponse.json({ error: err.message }, { status: 403 });
+  }
+  if (err instanceof NotFoundError) {
+    return NextResponse.json({ error: err.message }, { status: 404 });
+  }
+  if (err instanceof ValidationError) {
+    return NextResponse.json({ error: err.message }, { status: 400 });
+  }
+  if (err instanceof RateLimitedError) {
+    return NextResponse.json({ error: err.message }, { status: 429 });
+  }
+
+  logger.error({ err }, "Unhandled route error");
+  return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+}
+
 /**
  * Every API route delegates its actual work to this wrapper so error
  * mapping (typed service/auth errors -> HTTP status) happens in exactly one
@@ -22,29 +44,21 @@ export async function handleRoute(
     const result = await fn();
     return NextResponse.json(result ?? {});
   } catch (err) {
-    if (err instanceof UnauthorizedError) {
-      return NextResponse.json({ error: err.message }, { status: 401 });
-    }
-    if (
-      err instanceof ForbiddenError ||
-      err instanceof NoActiveMembershipError
-    ) {
-      return NextResponse.json({ error: err.message }, { status: 403 });
-    }
-    if (err instanceof NotFoundError) {
-      return NextResponse.json({ error: err.message }, { status: 404 });
-    }
-    if (err instanceof ValidationError) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
-    }
-    if (err instanceof RateLimitedError) {
-      return NextResponse.json({ error: err.message }, { status: 429 });
-    }
+    return mapErrorToResponse(err);
+  }
+}
 
-    logger.error({ err }, "Unhandled route error");
-    return NextResponse.json(
-      { error: "Internal server error." },
-      { status: 500 },
-    );
+/**
+ * Same error-mapping contract as `handleRoute`, but for routes that stream a
+ * non-JSON body on success (CSV exports, FIG-596) -- `fn` builds and returns
+ * its own `Response` instead of a plain value.
+ */
+export async function handleCsvRoute(
+  fn: () => Promise<Response>,
+): Promise<Response> {
+  try {
+    return await fn();
+  } catch (err) {
+    return mapErrorToResponse(err);
   }
 }

@@ -207,6 +207,36 @@ them on. Every attempt -- accepted or rejected -- shows up in that page's
 "Recent activity" table. A key can be rotated (replaced immediately) or
 revoked outright (disabled, no replacement) from there too.
 
+## Data import/export (CSV)
+
+Companies, Contacts, and Leads each have a CSV import on their list page
+(Management only, `companies.import`/`contacts.import`/`leads.import`):
+pick a file, map its columns to CRM fields (pre-filled with a best-effort
+guess from the file's own header names), choose what to do with a likely
+duplicate (skip it, or create anyway), and import. References by name
+(company, lead status/source, service interest, lifecycle state) and by
+email (owner) are resolved against this organization's own data — an
+unresolvable reference fails just that row, with a reason, rather than the
+whole file; the row-level error report is downloadable as its own CSV.
+Every import run is audited as one event with its outcome counts, not one
+event per row.
+
+Companies, Contacts, Leads, and Deals each have a CSV export on their list
+page; Reports has one on `/o/[orgSlug]/reports` (`export.bulk`, in addition
+to `reporting.view.all`). Export reuses each entity's existing service-layer
+`list*` function, so permission scoping (own vs. all) and deal value
+masking apply to an export exactly as they do to the UI — exporting never
+reveals a value the exporter couldn't already see on screen. The response
+streams as it's generated rather than building the whole file in memory
+first.
+
+There's no job queue in this project, so very large imports/exports are
+handled directly rather than handed off to a background worker: import
+streams the uploaded file row-by-row (memory never scales with file size)
+up to a configurable row ceiling (`IMPORT_MAX_ROWS`, default 20,000); export
+streams its response as it serializes. See `IMPLEMENTATION_NOTES.md` --
+"Data import/export (FIG-596)" -- for the full reasoning.
+
 ## Authentication
 
 `/login` is real: email + password, checked against a bcrypt hash

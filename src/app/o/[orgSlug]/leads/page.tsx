@@ -5,8 +5,21 @@ import { listCompanies } from "@/services/companyService";
 import { listContacts } from "@/services/contactService";
 import { listLeads } from "@/services/leadService";
 import { getFormReferenceData } from "@/services/referenceDataService";
+import { ImportCsvForm } from "@/components/ImportCsvForm";
 import { CreateLeadForm } from "./CreateLeadForm";
 import { AssignLeadControl } from "./AssignLeadControl";
+
+const IMPORT_FIELDS = [
+  { key: "leadStatus", label: "Lead status (by name)", required: true },
+  { key: "company", label: "Company (by exact name)" },
+  { key: "contactEmail", label: "Contact email" },
+  { key: "contactPhone", label: "Contact phone" },
+  { key: "leadSource", label: "Lead source (by name)" },
+  { key: "temperature", label: "Temperature (HOT/WARM/COLD)" },
+  { key: "serviceInterest", label: "Service interest (by name)" },
+  { key: "ownerEmail", label: "Owner (by email)" },
+  { key: "notes", label: "Notes" },
+];
 
 export default async function LeadsPage({
   params,
@@ -55,6 +68,24 @@ export default async function LeadsPage({
   return (
     <div>
       <h1>Leads</h1>
+
+      {hasPermission(ctx, "leads.export") && (
+        <p>
+          <a
+            href={`/api/orgs/${orgSlug}/leads/export${
+              q || leadStatusId
+                ? `?${new URLSearchParams({
+                    ...(q ? { q } : {}),
+                    ...(leadStatusId ? { leadStatusId } : {}),
+                  }).toString()}`
+                : ""
+            }`}
+          >
+            Export CSV
+          </a>
+        </p>
+      )}
+
       <p className="who">
         {hasPermission(ctx, "leads.view.all")
           ? "Showing all organization leads (leads.view.all)."
@@ -157,6 +188,18 @@ export default async function LeadsPage({
                 id: c.id,
                 name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
               }))}
+            />
+          </div>
+        </>
+      )}
+
+      {hasPermission(ctx, "leads.import") && (
+        <>
+          <h2>Import leads from CSV</h2>
+          <div className="card">
+            <ImportCsvForm
+              importUrl={`/api/orgs/${orgSlug}/leads/import`}
+              fields={IMPORT_FIELDS}
             />
           </div>
         </>
