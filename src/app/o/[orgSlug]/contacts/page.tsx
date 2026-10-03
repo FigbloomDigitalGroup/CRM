@@ -3,7 +3,20 @@ import { ForbiddenError } from "@/auth/errors";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { listCompanies } from "@/services/companyService";
 import { listContacts } from "@/services/contactService";
+import { ImportCsvForm } from "@/components/ImportCsvForm";
 import { CreateContactForm } from "./CreateContactForm";
+
+const IMPORT_FIELDS = [
+  { key: "firstName", label: "First name", required: true },
+  { key: "lastName", label: "Last name" },
+  { key: "company", label: "Company (by exact name)" },
+  { key: "phone", label: "Phone" },
+  { key: "email", label: "Email" },
+  { key: "jobTitle", label: "Job title" },
+  { key: "department", label: "Department" },
+  { key: "notes", label: "Notes" },
+  { key: "ownerEmail", label: "Owner (by email)" },
+];
 
 export default async function ContactsPage({
   params,
@@ -35,6 +48,14 @@ export default async function ContactsPage({
   return (
     <div>
       <h1>Contacts</h1>
+
+      {hasPermission(ctx, "contacts.export") && (
+        <p>
+          <a href={`/api/orgs/${orgSlug}/contacts/export${q ? `?q=${encodeURIComponent(q)}` : ""}`}>
+            Export CSV
+          </a>
+        </p>
+      )}
 
       <form className="filters" method="GET">
         <input
@@ -89,6 +110,18 @@ export default async function ContactsPage({
             <CreateContactForm
               orgSlug={orgSlug}
               companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+            />
+          </div>
+        </>
+      )}
+
+      {hasPermission(ctx, "contacts.import") && (
+        <>
+          <h2>Import contacts from CSV</h2>
+          <div className="card">
+            <ImportCsvForm
+              importUrl={`/api/orgs/${orgSlug}/contacts/import`}
+              fields={IMPORT_FIELDS}
             />
           </div>
         </>

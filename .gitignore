@@ -3,10 +3,9 @@ dist/
 .next/
 next-env.d.ts
 tsconfig.tsbuildinfo
-.env
-.env.local
 *.log
 coverage/
 .DS_Store
 Thumbs.db
 .claude/
+config.bat

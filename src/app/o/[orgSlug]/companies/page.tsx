@@ -2,7 +2,20 @@ import { resolveRequestContext } from "@/auth/requestContext";
 import { hasPermission } from "@/auth/context";
 import { ForbiddenError } from "@/auth/errors";
 import { listCompanies } from "@/services/companyService";
+import { ImportCsvForm } from "@/components/ImportCsvForm";
 import { CreateCompanyForm } from "./CreateCompanyForm";
+
+const IMPORT_FIELDS = [
+  { key: "name", label: "Name", required: true },
+  { key: "industry", label: "Industry" },
+  { key: "website", label: "Website" },
+  { key: "location", label: "Location" },
+  { key: "phone", label: "Phone" },
+  { key: "email", label: "Email" },
+  { key: "notes", label: "Notes" },
+  { key: "lifecycleState", label: "Lifecycle state (by name)" },
+  { key: "ownerEmail", label: "Owner (by email)" },
+];
 
 export default async function CompaniesPage({
   params,
@@ -30,6 +43,14 @@ export default async function CompaniesPage({
   return (
     <div>
       <h1>Companies</h1>
+
+      {hasPermission(ctx, "companies.export") && (
+        <p>
+          <a href={`/api/orgs/${orgSlug}/companies/export${q ? `?q=${encodeURIComponent(q)}` : ""}`}>
+            Export CSV
+          </a>
+        </p>
+      )}
 
       <form className="filters" method="GET">
         <input
@@ -86,6 +107,18 @@ export default async function CompaniesPage({
           <h2>New company</h2>
           <div className="card">
             <CreateCompanyForm orgSlug={orgSlug} />
+          </div>
+        </>
+      )}
+
+      {hasPermission(ctx, "companies.import") && (
+        <>
+          <h2>Import companies from CSV</h2>
+          <div className="card">
+            <ImportCsvForm
+              importUrl={`/api/orgs/${orgSlug}/companies/import`}
+              fields={IMPORT_FIELDS}
+            />
           </div>
         </>
       )}

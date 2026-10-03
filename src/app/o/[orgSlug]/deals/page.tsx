@@ -56,6 +56,13 @@ export default async function DealsPage({
   return (
     <div>
       <h1>Deals</h1>
+
+      {hasPermission(ctx, "deals.export") && (
+        <p>
+          <a href={`/api/orgs/${orgSlug}/deals/export`}>Export CSV</a>
+        </p>
+      )}
+
       <p className="who">
         {hasPermission(ctx, "deals.view.all")
           ? "Showing all organization deals (deals.view.all)."

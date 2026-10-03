@@ -414,6 +414,85 @@ this codebase. Fixed here by mocking `fetch` in the permanent suite
 SMTP send in FIG-592: prove it live once during development, keep only a
 mocked version in the suite that actually gates every PR).
 
+## Data import/export (FIG-596)
+
+`*.export` permission keys (`leads.export`, `contacts.export`,
+`companies.export`, `deals.export`, `export.bulk`) already existed in the
+seed data with no code behind them. The matching `*.import` keys
+(`companies.import`, `contacts.import`, `leads.import`) didn't exist at all
+and were added here, deliberately Management-only like their export
+counterparts: bulk-importing is an org-wide write (not scoped to "my own
+records" the way `leads.create` is), and the ticket itself frames it as a
+one-off data-migration task, not day-to-day rep activity. Deals were left
+out of import on purpose — the acceptance criteria only lists companies,
+contacts, and leads for import, and a Deal already has enough
+cross-references (company, pipeline stage, owner, and optionally a
+converting Lead) that force-fitting it through the same generic CSV-row
+engine would have meant reimplementing `convertLeadToDeal`'s rules rather
+than reusing them.
+
+No CSV library existed in this project; added `csv-parse` and
+`csv-stringify` (same maintainer, same conventions, both support a
+streaming Node API). No job-queue infrastructure exists either (no Redis,
+no background worker — the same constraint noted for rate limiting in
+FIG-594), which shaped both ends of this ticket:
+
+- **Import** streams the uploaded file row-by-row through `csv-parse`
+  (`src/lib/csv.ts#parseCsvRows`) and writes in small concurrent batches
+  (`src/lib/asyncBatch.ts`), so memory never scales with file size. The
+  actual backstop against a runaway request is a row-count ceiling
+  (`IMPORT_MAX_ROWS`, default 20,000 — see `.env.example`), not a timeout:
+  there's nowhere to hand a bigger job off to, so the honest answer is a
+  documented limit rather than a queue this project doesn't have.
+- **Export** streams its HTTP response via `csv-stringify`
+  (`src/lib/csv.ts#csvResponseStream`), so the response starts flowing
+  before serialization finishes. The underlying DB query itself is still
+  one bulk fetch (reusing each entity's existing `list*` service function,
+  so scoping/masking/permission rules are inherited for free rather than
+  re-derived) — genuinely cursor-paginated reads from the database are a
+  real next step if an organization's record count ever grows far past
+  what a single query comfortably returns, but that's not this project's
+  scale today. The **Reports** export is the one exception that isn't
+  streamed at all: it's a handful of small aggregate tables, not a
+  per-record dataset, so building the whole CSV in memory
+  (`src/services/exportService.ts#exportReportsCsv`) isn't the kind of
+  "large file" this ticket is about.
+
+Column mapping happens client-side without a second upload: the browser
+reads only the file's first ~64KB to extract header names
+(`src/components/csvHeaderPreview.ts`), the user maps CRM fields to those
+headers (pre-filled with a best-effort name match), and the real file is
+then posted once, mapping included, as `multipart/form-data`.
+
+Duplicate handling reuses the existing `findPossibleDuplicate*` repository
+functions (Companies, Contacts, Leads) that duplicate-detection already
+added — the default is to skip a row that matches, with an explicit
+`duplicateStrategy: "create"` override per import run (not per row; a
+mixed per-row choice wasn't asked for and would have meant a second UI
+pass per ambiguous row).
+
+A row-level problem (missing required field, an unresolvable lookup like a
+company/lead-status/owner name or email that doesn't match anything in
+this organization, an invalid temperature value) never aborts the whole
+file — it's collected into an error report (row number + reason) returned
+alongside the summary counts, capped at 500 reported rows so a
+systematically-broken file doesn't blow up the response. The whole-job
+outcome (counts, not the row-level error list) is what's audited —
+`companies.imported`/`contacts.imported`/`leads.imported`, one event per
+import call — rather than one audit row per imported record, which
+would have made a large import's own audit trail the thing that scales
+badly.
+
+Export gating is deliberately layered, not substitutive: `exportDealsCsv`
+still calls `dealService.listDeals`, so a caller needs both the `.export`
+permission *and* whatever `.view.*` the underlying service already
+requires, and still gets `maskValue`'s existing value-masking applied per
+row for free. Every seeded role that currently has `.export` also already
+has full `.view.all` (Management only), so this layering doesn't change
+today's behavior — it just means the masking rule still holds correctly
+if a future role is ever given export without full value visibility,
+instead of silently leaking values the UI would have hidden.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit
