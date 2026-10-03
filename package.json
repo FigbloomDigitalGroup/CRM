@@ -16,6 +16,7 @@
     "db:bootstrap-role": "tsx scripts/db-admin.ts bootstrap-role",
     "db:grant-role": "tsx scripts/db-admin.ts grant-role",
     "db:setup": "npm run migrate:deploy && npm run db:bootstrap-role && npm run db:grant-role && npm run seed",
+    "notifications:sweep": "tsx scripts/notifications-sweep.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",

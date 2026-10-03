@@ -12,6 +12,7 @@ import {
   LeadMissingCompanyError,
 } from "../repositories/deals";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import { notifyLeadAssigned } from "./notificationService";
 import {
   createLead as createLeadRecord,
   findPossibleDuplicateLeads,
@@ -170,6 +171,13 @@ export async function assignLead(
     entityId: leadId,
     previousValue: { ownerMembershipId: lead.ownerMembershipId },
     newValue: { ownerMembershipId: targetMembership.id },
+  });
+
+  // Best-effort (FIG-597): a notification failure must never undo or fail
+  // an otherwise-successful reassignment.
+  await notifyLeadAssigned(ctx.organizationId, targetMembership.id, {
+    id: leadId,
+    label: lead.company?.name ?? lead.contact?.firstName ?? "a lead",
   });
 
   return reassigned;

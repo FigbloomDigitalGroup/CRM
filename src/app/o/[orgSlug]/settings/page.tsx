@@ -6,10 +6,16 @@ import {
   listRecentWebsiteActivity,
 } from "@/services/integrationService";
 import { listMemberships } from "@/services/membershipService";
+import {
+  getMyNotificationPreferences,
+  getWebsiteAcknowledgementSetting,
+} from "@/services/notificationService";
 import { InviteMemberForm } from "./InviteMemberForm";
 import { MembersTable } from "./MembersTable";
+import { NotificationPreferencesForm } from "./NotificationPreferencesForm";
 import { RegenerateWebsiteKeyButton } from "./RegenerateWebsiteKeyButton";
 import { RevokeWebsiteKeyButton } from "./RevokeWebsiteKeyButton";
+import { WebsiteAcknowledgementToggle } from "./WebsiteAcknowledgementToggle";
 import { WebsiteSecuritySettingsForm } from "./WebsiteSecuritySettingsForm";
 
 export default async function SettingsPage({
@@ -25,13 +31,11 @@ export default async function SettingsPage({
   const canManageMembers = hasPermission(ctx, "membership.manage");
   const canAssignRole = hasPermission(ctx, "role.assign");
 
-  if (!canManageIntegration && !canViewMembers) {
-    return <p className="error">Your role does not have access to Settings.</p>;
-  }
-
   return (
     <div>
       <h1>Settings</h1>
+
+      <NotificationPreferencesSection ctx={ctx} orgSlug={orgSlug} />
 
       {canViewMembers && (
         <MembersSection
@@ -43,6 +47,36 @@ export default async function SettingsPage({
       )}
 
       {canManageIntegration && <WebsiteIntegrationSection orgSlug={orgSlug} ctx={ctx} />}
+    </div>
+  );
+}
+
+/**
+ * Self-service (FIG-597) -- every active member manages their own
+ * notification preferences regardless of role, so this section is
+ * deliberately not gated behind any permission check, unlike every other
+ * section on this page.
+ */
+async function NotificationPreferencesSection({
+  ctx,
+  orgSlug,
+}: {
+  ctx: Awaited<ReturnType<typeof resolveRequestContext>>;
+  orgSlug: string;
+}) {
+  const preferences = await getMyNotificationPreferences(ctx);
+  const rows = (Object.keys(preferences) as (keyof typeof preferences)[]).map((type) => ({
+    type,
+    ...preferences[type],
+  }));
+
+  return (
+    <div className="card">
+      <strong>Notification preferences</strong>
+      <p className="who">
+        Choose how you want to hear about things that need your attention.
+      </p>
+      <NotificationPreferencesForm orgSlug={orgSlug} preferences={rows} />
     </div>
   );
 }
@@ -101,9 +135,12 @@ async function WebsiteIntegrationSection({
   orgSlug: string;
   ctx: Awaited<ReturnType<typeof resolveRequestContext>>;
 }) {
-  const [status, recentActivity] = await Promise.all([
+  const [status, recentActivity, acknowledgement] = await Promise.all([
     getWebsiteIntegrationStatus(ctx),
     listRecentWebsiteActivity(ctx),
+    hasPermission(ctx, "organization.manage_settings")
+      ? getWebsiteAcknowledgementSetting(ctx)
+      : Promise.resolve(null),
   ]);
 
   return (
@@ -159,6 +196,22 @@ async function WebsiteIntegrationSection({
             honeypotFieldName={status.honeypotFieldName}
             captchaConfigured={status.captchaConfigured}
           />
+
+          {acknowledgement && (
+            <>
+              <h2>Enquirer acknowledgement</h2>
+              <p className="who">
+                Off by default. When enabled, anyone who submits the public
+                form and gave an email address gets an automatic
+                acknowledgement -- never a promise of a specific response
+                time, just confirmation their message was received.
+              </p>
+              <WebsiteAcknowledgementToggle
+                orgSlug={orgSlug}
+                enabled={acknowledgement.enabled}
+              />
+            </>
+          )}
 
           <h2>Recent activity</h2>
           <p className="who">

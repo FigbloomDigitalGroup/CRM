@@ -94,6 +94,9 @@ by whether an environment needs it:
 | `DEV_SESSION_SECRET` | Required | **Omit** | Signs the `/dev-login` placeholder cookie, which is hard-disabled by `NODE_ENV === "production"` regardless -- see `IMPLEMENTATION_NOTES.md`, "Real authentication (FIG-592)". |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Optional (unset = logs the link) | **Required for real use** | Without these, password-reset/invite emails only ever reach the server log, not a real inbox -- acceptable for dev, not for real users. |
 | `WEBSITE_LEAD_RATE_LIMIT_*` | Optional | Optional | Sane defaults apply; tune only if the defaults are wrong for real traffic. |
+| `IMPORT_MAX_ROWS` | Optional | Optional | Per-call CSV import row ceiling (FIG-596); defaults to 20000. |
+| `APP_BASE_URL` | Optional (defaults to `http://localhost:3000`) | **Required for correct links** | Builds the deep links inside notification emails (FIG-597) -- set to this environment's real public URL. |
+| `SMS_PROVIDER_API_KEY` | Not needed | Optional | No real SMS provider is wired up yet (FIG-597) -- see `src/notifications/sms.ts`. Setting this alone does nothing. |
 | `LOG_LEVEL` | Optional (defaults to `info`) | Optional | `pino` level -- see "Logging," below. |
 | `NODE_ENV` | Set by tooling (`next dev`/`test`) | `production` | Set automatically by `next build`/`next start`; the Dockerfile also sets it explicitly in the runner stage. |
 
@@ -124,6 +127,25 @@ Returns `{"status": "ok"}` / 200 when healthy, `{"status": "error"}` / 503
 otherwise. The Dockerfile's own `HEALTHCHECK` instruction already polls
 this every 30s; wire your platform's health/readiness check to the same
 path.
+
+## Scheduled jobs
+
+`npm run notifications:sweep` (`scripts/notifications-sweep.ts`, FIG-597)
+generates "task due today"/"task overdue" notifications and retries any
+failed email delivery whose backoff has elapsed. This project's deployment
+is a single Docker image with no scheduler/queue sidecar (see "The image,"
+above), so nothing runs this automatically -- wire it to whatever
+recurring-task mechanism your chosen host provides:
+
+- A cron entry on a VPS: `*/15 * * * * docker exec <container> npm run notifications:sweep`
+- A platform-native scheduled job (Render Cron Jobs, Railway Cron, Fly
+  Machines on a schedule, a Kubernetes CronJob, ...)
+
+Every 15-30 minutes is reasonable. It's safe to run more often or to miss a
+run entirely: generated notifications are deduplicated (a task is only
+ever flagged "due" or "overdue" once, see `notifications`' partial unique
+index), and a skipped run just means the next one catches up on whatever's
+now due/overdue or newly eligible for retry.
 
 ## Logging / error monitoring
 

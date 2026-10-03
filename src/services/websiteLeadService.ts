@@ -11,6 +11,10 @@ import {
   type WebsiteLeadResult,
 } from "../repositories/leadIngestion";
 import {
+  notifyLeadAssigned,
+  sendWebsiteLeadAcknowledgement,
+} from "./notificationService";
+import {
   countRequestsByIp,
   countRequestsByKeyHash,
   recordWebsiteLeadRequest,
@@ -180,6 +184,23 @@ export async function submitWebsiteLead(
     const result = await ingestWebsiteLead(organizationId, input);
     leadId = result.leadId;
     outcome = "ACCEPTED";
+
+    // Both best-effort and post-commit (FIG-597): the lead/task above is
+    // already durably saved, so a notification/acknowledgement delivery
+    // failure here must never turn an otherwise-successful public
+    // submission into an error response.
+    if (result.ownerMembershipId) {
+      await notifyLeadAssigned(organizationId, result.ownerMembershipId, {
+        id: result.leadId,
+        label: input.company ?? input.name,
+      });
+    }
+    await sendWebsiteLeadAcknowledgement(organizationId, {
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+    });
+
     return result;
   } finally {
     await recordWebsiteLeadRequest({

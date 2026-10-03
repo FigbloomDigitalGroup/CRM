@@ -41,6 +41,9 @@ model Organization {
   settings                OrganizationSetting[]
   websiteApiKey           WebsiteApiKey?
   websiteLeadRequestLogs  WebsiteLeadRequestLog[]
+  notifications           Notification[]
+  notificationDeliveries  NotificationDelivery[]
+  notificationPreferences NotificationPreference[]
   companies               Company[]
   contacts                Contact[]
   leads                   Lead[]
@@ -224,6 +227,8 @@ model Membership {
   ownedProposals         ProposalReference[] @relation("ProposalOwner")
   auditEvents            AuditEvent[]        @relation("AuditActorMembership")
   createdWebsiteApiKeys  WebsiteApiKey[]     @relation("WebsiteApiKeyCreatedBy")
+  notifications          Notification[]
+  notificationPreferences NotificationPreference[]
 
   @@unique([organizationId, userId])
   @@unique([organizationId, id])
@@ -318,6 +323,123 @@ model WebsiteLeadRequestLog {
   @@index([keyHash, createdAt])
   @@index([ipAddress, createdAt])
   @@map("website_lead_request_log")
+}
+
+/// What a Notification is "about" (FIG-597). Each type is deduplicated to
+/// at most one Notification per entity (see Notification's unique index
+/// below) -- a lead is only ever announced once, and a task crosses into
+/// "due" or "overdue" once, even though the generator script that creates
+/// these runs repeatedly.
+enum NotificationType {
+  LEAD_ASSIGNED
+  TASK_DUE
+  TASK_OVERDUE
+}
+
+/// In-app notification feed entry for one membership (FIG-597). Always has
+/// an internal recipient -- the public website-enquirer acknowledgement
+/// has no membership to notify, so it only ever produces a
+/// NotificationDelivery with `notificationId: null`, never a row here.
+model Notification {
+  id             String           @id @default(uuid())
+  organizationId String           @map("organization_id")
+  membershipId   String           @map("membership_id")
+  type           NotificationType
+  title          String
+  body           String
+  entityType     String?          @map("entity_type")
+  entityId       String?          @map("entity_id")
+  link           String?
+  readAt         DateTime?        @map("read_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  membership   Membership             @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  deliveries   NotificationDelivery[]
+
+  // Idempotency for the due/overdue generator script lives in the
+  // migration as a PARTIAL unique index (TASK_DUE/TASK_OVERDUE only) --
+  // Prisma's schema DSL can't express a WHERE clause on an index, so it's
+  // invisible here, same as the hand-written composite tenant-integrity
+  // FKs (see tenant_integrity_and_rls's header comment). A blanket
+  // (organization_id, membership_id, type, entity_type, entity_id) unique
+  // index would be wrong for LEAD_ASSIGNED: reassigning a lead back to its
+  // original owner is a second, real event for the *same* entity+type+
+  // membership triple, and must still notify.
+  @@index([organizationId, membershipId, readAt])
+  @@map("notifications")
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  EXHAUSTED
+}
+
+/// One retryable outbound send (FIG-597) -- either the email/SMS side of an
+/// internal Notification above (`notificationId` set), or a standalone send
+/// with no internal recipient at all, like the website-enquirer
+/// acknowledgement (`notificationId: null`, `recipientEmail`/`recipientPhone`
+/// is the enquirer's own contact info, not a membership's).
+///
+/// `payload` carries whatever the template function needs to re-render the
+/// message on retry without re-deriving it from (possibly since-changed)
+/// business records. Retried by `scripts/notifications-sweep.ts` -- see
+/// that file and docs/DEPLOYMENT.md for why this project has no job queue
+/// to hand retries to instead.
+model NotificationDelivery {
+  id              String                     @id @default(uuid())
+  organizationId  String                     @map("organization_id")
+  notificationId  String?                    @map("notification_id")
+  channel         NotificationChannel
+  recipientEmail  String?                    @map("recipient_email")
+  recipientPhone  String?                    @map("recipient_phone")
+  templateKey     String                     @map("template_key")
+  payload         Json?
+  status          NotificationDeliveryStatus @default(PENDING)
+  attempts        Int                        @default(0)
+  maxAttempts     Int                        @default(5) @map("max_attempts")
+  lastError       String?                    @map("last_error")
+  nextAttemptAt   DateTime                   @default(now()) @map("next_attempt_at")
+  sentAt          DateTime?                  @map("sent_at")
+  createdAt       DateTime                   @default(now()) @map("created_at")
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  notification Notification? @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([organizationId, createdAt])
+  @@map("notification_deliveries")
+}
+
+/// Per-membership override of the default notification behavior (FIG-597).
+/// Absence of a row for a given (membership, type) means "both channels on"
+/// -- the default -- so existing memberships need no backfill when this
+/// table is introduced; a row only ever exists once someone actually changes
+/// a default, the same "off unless configured" shape as WebsiteApiKey's
+/// abuse-protection fields.
+model NotificationPreference {
+  id             String           @id @default(uuid())
+  organizationId String           @map("organization_id")
+  membershipId   String           @map("membership_id")
+  type           NotificationType
+  emailEnabled   Boolean          @default(true) @map("email_enabled")
+  inAppEnabled   Boolean          @default(true) @map("in_app_enabled")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  membership   Membership   @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, membershipId, type])
+  @@map("notification_preferences")
 }
 
 // ---------------------------------------------------------------------------

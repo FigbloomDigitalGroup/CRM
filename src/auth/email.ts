@@ -34,7 +34,12 @@ function createRealTransport(): MailTransport {
   });
 }
 
-async function deliverOrLog(
+/**
+ * Exported so other notification senders (FIG-597,
+ * `src/notifications/email.ts`) can reuse the exact same SMTP-or-log
+ * fallback and transport-override test seam, instead of duplicating it.
+ */
+export async function deliverOrLog(
   logLabel: string,
   message: { to: string; subject: string; text: string; html: string },
   transportOverride?: MailTransport,

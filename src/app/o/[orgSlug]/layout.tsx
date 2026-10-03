@@ -6,7 +6,8 @@ import { adminDb } from "@/db/adminClient";
 import { LogoutButton } from "./LogoutButton";
 import { Sidebar } from "./_shared/Sidebar";
 import { ThemeToggle } from "./_shared/ThemeToggle";
-import { IconBell, IconChevronDown } from "./_shared/icons";
+import { NotificationBell } from "./_shared/NotificationBell";
+import { IconChevronDown } from "./_shared/icons";
 
 export default async function OrgLayout({
   children,
@@ -96,9 +97,7 @@ export default async function OrgLayout({
             <p className="topbar-datetime">{datetime}</p>
           </div>
           <div className="topbar-right">
-            <button type="button" className="icon-button" title="Notifications" aria-label="Notifications">
-              <IconBell />
-            </button>
+            <NotificationBell orgSlug={orgSlug} />
             <ThemeToggle />
             <details className="account-menu">
               <summary>
