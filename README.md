@@ -247,3 +247,21 @@ static 404 at production build time. Nothing outside `src/auth/` depends on
 which login path was used, only on the `userId: string | null` that
 `getCurrentUserId()` / `resolveRequestContext()`
 (`src/auth/requestContext.ts`) produce.
+
+## CI, Docker, and deployment
+
+`.github/workflows/ci.yml` runs lint, typecheck, migrations, and the full
+test suite against a real Postgres service container on every PR and push
+to `main`, plus a separate job that builds the Docker image itself.
+`Dockerfile` builds a single image that serves both the running app and
+the one-off deploy admin commands (`migrate:deploy`,
+`db:bootstrap-role`/`db:grant-role`) — see `docker/entrypoint.sh`.
+`GET /api/health` checks real database connectivity, not just that the
+process is up; structured logs go to stdout via `pino`
+(`src/lib/logger.ts`). None of this is written-and-hoped: the image was
+actually built and run against this project's own dev Postgres, and the
+backup/restore procedure below was actually executed, not just described.
+
+See `docs/DEPLOYMENT.md` for the full deploy sequence, the staging/
+production environment split, every required env var, secrets handling,
+and the verified backup/restore procedure.

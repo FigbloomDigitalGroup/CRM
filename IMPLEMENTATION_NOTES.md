@@ -362,6 +362,58 @@ rotation: rotating always leaves a new working key behind, revoking leaves
 none. Regenerating after a revoke clears it -- generating a new key is an
 unambiguous request for a working integration again.
 
+## CI, Dockerfile, and deployment (FIG-595)
+
+Chosen: a platform-agnostic Docker image (`Dockerfile`) plus GitHub
+Actions CI (`.github/workflows/ci.yml`), rather than committing to a
+specific hosting vendor this project has never used before -- see
+`docs/DEPLOYMENT.md` for the full reasoning and the deploy sequence
+itself. GitHub Actions specifically because this repo already lives on
+GitHub (`git remote -v`); that part wasn't a real decision.
+
+One image serves both the running server and the one-off deploy admin
+commands (`migrate:deploy`, `db:bootstrap-role`, `db:grant-role`), gated
+behind a `RUN_MIGRATIONS_ON_START` flag in `docker/entrypoint.sh` so a
+multi-replica deploy doesn't race every replica into running migrations
+concurrently on startup. This meant NOT using Next's `output: "standalone"`
+trimming, which would have dropped the Prisma CLI and `tsx` those admin
+commands need -- a deliberate tradeoff of image size for a single,
+simpler image that can do both jobs.
+
+CI runs a real Postgres service container, not a stub -- RLS and the
+composite tenant-integrity FKs are the point of this schema, so a fake
+database would test nothing that actually matters here. GitHub Actions
+service containers don't support the docker-compose-style init-script
+volume mount local dev uses for the second (test) database
+(`docker/init-test-db.sql`); CI creates it with an explicit `psql`
+step instead.
+
+Structured logging (`src/lib/logger.ts`, `pino`) replaced every bare
+`console.error` in a route's unhandled-error fallback. A real
+error-tracking service (Sentry or similar) needs a real account/DSN this
+project doesn't have -- the same documented-gap pattern as SMTP (FIG-592)
+and captcha (FIG-594) -- so it's left as a clear next step (it would hook
+in at the same `logger.error` call sites), not faked.
+
+Everything in this ticket that could be verified for real, was, rather
+than written and assumed correct: the Docker image was actually built and
+run against this project's own dev Postgres (migrations applied, the role
+was bootstrapped/granted, the server answered `/api/health`, served
+`/login`, and completed a real login, all from inside the container), and
+the backup/restore procedure in `docs/DEPLOYMENT.md` is the exact `pg_dump`/
+`pg_restore` sequence that was run, with row counts and the RLS flag
+checked on the restored database.
+
+The live Cloudflare Turnstile network calls proving captcha verification
+really works (FIG-594) were originally left inside the permanent test
+suite (`tests/websiteAbuseProtection.test.ts`) -- directly in tension with
+this ticket's own "reliable CI on every PR" goal, since a third-party
+network hiccup would then fail CI for a reason having nothing to do with
+this codebase. Fixed here by mocking `fetch` in the permanent suite
+(matching the pattern `tests/authEmail.test.ts` already used for the real
+SMTP send in FIG-592: prove it live once during development, keep only a
+mocked version in the suite that actually gates every PR).
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit

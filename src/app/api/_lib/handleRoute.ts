@@ -7,6 +7,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from "@/auth/errors";
+import { logger } from "@/lib/logger";
 
 /**
  * Every API route delegates its actual work to this wrapper so error
@@ -40,7 +41,7 @@ export async function handleRoute(
       return NextResponse.json({ error: err.message }, { status: 429 });
     }
 
-    console.error(err);
+    logger.error({ err }, "Unhandled route error");
     return NextResponse.json(
       { error: "Internal server error." },
       { status: 500 },

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ValidationError } from "@/auth/errors";
 import { SESSION_COOKIE_NAME } from "@/auth/session";
+import { logger } from "@/lib/logger";
 import { acceptMembershipInvite } from "@/services/authService";
 
 export async function POST(request: Request) {
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
     if (err instanceof ValidationError) {
       return NextResponse.json({ error: err.message }, { status: 400 });
     }
-    console.error(err);
+    logger.error({ err }, "Unhandled error accepting membership invite");
     return NextResponse.json(
       { error: "Internal server error." },
       { status: 500 },

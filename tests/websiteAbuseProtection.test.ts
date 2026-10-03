@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ForbiddenError, RateLimitedError, UnauthorizedError, ValidationError } from "../src/auth/errors";
 import { resolveWebsitePublicContext } from "../src/auth/websiteApiKey";
 import { adminDb } from "../src/db/adminClient";
@@ -239,60 +239,73 @@ describe("websiteLeadService: allowed origins", () => {
   });
 });
 
-describe("websiteLeadService: captcha (live Cloudflare Turnstile test secrets)", () => {
-  // Cloudflare publishes these dummy sitekey/secret pairs specifically for
-  // automated testing -- https://developers.cloudflare.com/turnstile/troubleshooting/testing/
-  // They are not tied to any real account and are safe to call for real.
-  const ALWAYS_PASSES_SECRET = "1x0000000000000000000000000000000AA";
-  const ALWAYS_FAILS_SECRET = "2x0000000000000000000000000000000AA";
+describe("websiteLeadService: captcha", () => {
+  // `global.fetch` is mocked here rather than actually calling Cloudflare,
+  // so this suite (part of FIG-595's "reliable CI on every PR") never
+  // depends on a live third-party network call to pass -- the real
+  // integration (verifyCaptchaToken calling Turnstile's real siteverify
+  // endpoint) was separately proven working end-to-end during development
+  // using Cloudflare's publicly-documented always-pass/always-fail dummy
+  // test secrets (https://developers.cloudflare.com/turnstile/troubleshooting/testing/),
+  // the same one-off-manual-proof-then-mock-in-CI pattern used for the
+  // real SMTP send in tests/authEmail.test.ts (FIG-592).
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-  it(
-    "accepts a submission when the real Turnstile verify call passes",
-    async () => {
-      const org = await createTestOrganization();
-      const { ctx, apiKey } = await generateAndSetKey(org.id);
-      await integrationService.updateWebsiteApiKeySettings(ctx, {
-        captchaSecret: ALWAYS_PASSES_SECRET,
-      });
+  function stubTurnstile(success: boolean) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success }),
+      }),
+    );
+  }
 
-      const result = await submitWebsiteLead(
-        org.slug,
-        apiKey,
-        leadBody({ captchaToken: "any-token-works-for-this-test-secret" }),
-        { ipAddress: uniqueIp(), origin: null },
-      );
-      expect(result).not.toBeNull();
-    },
-    15000,
-  );
-
-  it(
-    "rejects a submission when the real Turnstile verify call fails",
-    async () => {
-      const org = await createTestOrganization();
-      const { ctx, apiKey } = await generateAndSetKey(org.id);
-      await integrationService.updateWebsiteApiKeySettings(ctx, {
-        captchaSecret: ALWAYS_FAILS_SECRET,
-      });
-
-      await expect(
-        submitWebsiteLead(
-          org.slug,
-          apiKey,
-          leadBody({ captchaToken: "irrelevant-this-secret-always-fails" }),
-          { ipAddress: uniqueIp(), origin: null },
-        ),
-      ).rejects.toThrow(ValidationError);
-    },
-    15000,
-  );
-
-  it("rejects a submission with a captcha configured but no token provided", async () => {
+  it("accepts a submission when captcha verification passes", async () => {
     const org = await createTestOrganization();
     const { ctx, apiKey } = await generateAndSetKey(org.id);
     await integrationService.updateWebsiteApiKeySettings(ctx, {
-      captchaSecret: ALWAYS_PASSES_SECRET,
+      captchaSecret: "test-secret",
     });
+    stubTurnstile(true);
+
+    const result = await submitWebsiteLead(
+      org.slug,
+      apiKey,
+      leadBody({ captchaToken: "some-token" }),
+      { ipAddress: uniqueIp(), origin: null },
+    );
+    expect(result).not.toBeNull();
+  });
+
+  it("rejects a submission when captcha verification fails", async () => {
+    const org = await createTestOrganization();
+    const { ctx, apiKey } = await generateAndSetKey(org.id);
+    await integrationService.updateWebsiteApiKeySettings(ctx, {
+      captchaSecret: "test-secret",
+    });
+    stubTurnstile(false);
+
+    await expect(
+      submitWebsiteLead(
+        org.slug,
+        apiKey,
+        leadBody({ captchaToken: "some-token" }),
+        { ipAddress: uniqueIp(), origin: null },
+      ),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it("rejects a submission with a captcha configured but no token provided (never calls the verify endpoint)", async () => {
+    const org = await createTestOrganization();
+    const { ctx, apiKey } = await generateAndSetKey(org.id);
+    await integrationService.updateWebsiteApiKeySettings(ctx, {
+      captchaSecret: "test-secret",
+    });
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
 
     await expect(
       submitWebsiteLead(org.slug, apiKey, leadBody(), {
@@ -300,6 +313,7 @@ describe("websiteLeadService: captcha (live Cloudflare Turnstile test secrets)",
         origin: null,
       }),
     ).rejects.toThrow(ValidationError);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 

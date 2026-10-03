@@ -1,0 +1,87 @@
+# FIG-595: runs on every PR (and every push to main) against a real
+# Postgres service container -- not mocked, since tenant isolation (RLS,
+# composite FKs) and the least-privilege figbloom_app role are the whole
+# point of this schema and can't be meaningfully checked against a stub.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: Lint, typecheck, migrate, test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: figbloom
+          POSTGRES_PASSWORD: figbloom
+          POSTGRES_DB: figbloom_crm_dev
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U figbloom"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://figbloom:figbloom@localhost:55432/figbloom_crm_dev?schema=public
+      TEST_DATABASE_URL: postgresql://figbloom:figbloom@localhost:55432/figbloom_crm_test?schema=public
+      # Local-only, throwaway values -- never the real staging/production
+      # secrets, which live in this repo's Actions secrets (or the deploy
+      # platform's own secret store) and are never this CI job's concern.
+      APP_DB_PASSWORD: figbloom_app_ci_only
+      APP_DATABASE_URL: postgresql://figbloom_app:figbloom_app_ci_only@localhost:55432/figbloom_crm_dev?schema=public
+      TEST_APP_DATABASE_URL: postgresql://figbloom_app:figbloom_app_ci_only@localhost:55432/figbloom_crm_test?schema=public
+      DEV_SESSION_SECRET: figbloom_ci_dev_session_secret
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # GitHub Actions' `services` don't support the docker-compose-style
+      # init-script volume mount (docker/init-test-db.sql) that local dev
+      # uses -- creating the second database explicitly here is the direct
+      # equivalent.
+      - name: Create the isolated test database
+        run: PGPASSWORD=figbloom psql -h localhost -p 55432 -U figbloom -d figbloom_crm_dev -c "CREATE DATABASE figbloom_crm_test;"
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - name: Apply migrations
+        run: npm run migrate:deploy
+
+      - name: Provision the figbloom_app least-privilege role
+        run: npm run db:bootstrap-role && npm run db:grant-role
+
+      # Runs the same migrate-deploy/bootstrap-role/grant-role sequence
+      # again itself (tests/globalSetup.ts) -- redundant with the explicit
+      # steps above, which is intentional: those steps give a clearly
+      # labeled, individually-failing CI signal for "migrations" as its
+      # own acceptance criterion, not just a side effect buried inside the
+      # test run.
+      - run: npm test
+
+      - name: Verify the production build succeeds
+        run: npm run build
+
+  docker:
+    name: Docker image builds and runs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker build -t figbloom-crm:ci .
