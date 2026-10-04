@@ -5,10 +5,14 @@ import { ForbiddenError, NotFoundError } from "@/auth/errors";
 import { listActivitiesForCompany } from "@/services/activityService";
 import { listAuditHistory } from "@/services/auditService";
 import { getCompany } from "@/services/companyService";
+import { listCommunicationsForCompany } from "@/services/communicationService";
+import { listCompanyServices } from "@/services/companyServiceLinkService";
 import { listContacts } from "@/services/contactService";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { ActivityTimeline } from "../../_shared/ActivityTimeline";
 import { AuditHistory } from "../../_shared/AuditHistory";
+import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
+import { CompanyServicesSection } from "../CompanyServicesSection";
 import { EditCompanyForm } from "./EditCompanyForm";
 
 export default async function CompanyDetailPage({
@@ -52,6 +56,20 @@ export default async function CompanyDetailPage({
     if (!(err instanceof ForbiddenError)) throw err;
   }
 
+  let companyServices: Awaited<ReturnType<typeof listCompanyServices>> = [];
+  try {
+    companyServices = await listCompanyServices(ctx, companyId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
+  let communications: Awaited<ReturnType<typeof listCommunicationsForCompany>> = [];
+  try {
+    communications = await listCommunicationsForCompany(ctx, companyId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
   return (
     <div>
       <p>
@@ -69,6 +87,24 @@ export default async function CompanyDetailPage({
 
       {hasPermission(ctx, "companies.edit") && (
         <EditCompanyForm orgSlug={orgSlug} company={company} />
+      )}
+
+      {hasPermission(ctx, "company_services.view") && (
+        <CompanyServicesSection
+          orgSlug={orgSlug}
+          companyId={company.id}
+          services={companyServices.map((s) => ({
+            id: s.id,
+            serviceId: s.serviceId,
+            serviceName: s.service.name,
+            status: s.status,
+            startDate: s.startDate?.toISOString() ?? null,
+            endDate: s.endDate?.toISOString() ?? null,
+            notes: s.notes,
+          }))}
+          catalog={referenceData.services}
+          canManage={hasPermission(ctx, "company_services.manage")}
+        />
       )}
 
       {hasPermission(ctx, "contacts.view") && (
@@ -117,6 +153,21 @@ export default async function CompanyDetailPage({
           }))}
           members={referenceData.members}
           canCreate={hasPermission(ctx, "activities.create")}
+        />
+      )}
+
+      {hasPermission(ctx, "communications.view") && (
+        <CommunicationTimeline
+          orgSlug={orgSlug}
+          parentField="companyId"
+          parentId={company.id}
+          communications={communications.map((c) => ({
+            ...c,
+            occurredAt: c.occurredAt.toISOString(),
+          }))}
+          members={referenceData.members}
+          canCreate={hasPermission(ctx, "communications.create")}
+          defaultToEmail={company.email}
         />
       )}
 

@@ -4,6 +4,7 @@ import { ForbiddenError, NotFoundError } from "@/auth/errors";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { listActivitiesForDeal } from "@/services/activityService";
 import { listAuditHistory } from "@/services/auditService";
+import { listCommunicationsForDeal } from "@/services/communicationService";
 import { listContacts } from "@/services/contactService";
 import { getDeal } from "@/services/dealService";
 import { listProposalReferences } from "@/services/proposalService";
@@ -11,6 +12,7 @@ import { getFormReferenceData } from "@/services/referenceDataService";
 import { listTasks } from "@/services/taskService";
 import { ActivityTimeline } from "../../_shared/ActivityTimeline";
 import { AuditHistory } from "../../_shared/AuditHistory";
+import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
 import { TaskSection } from "../../_shared/TaskSection";
 import { EditDealForm } from "./EditDealForm";
 import { ProposalReferences } from "./ProposalReferences";
@@ -77,6 +79,13 @@ export default async function DealDetailPage({
   let auditEvents: Awaited<ReturnType<typeof listAuditHistory>> = [];
   try {
     auditEvents = await listAuditHistory(ctx, "Deal", dealId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
+  let communications: Awaited<ReturnType<typeof listCommunicationsForDeal>> = [];
+  try {
+    communications = await listCommunicationsForDeal(ctx, dealId);
   } catch (err) {
     if (!(err instanceof ForbiddenError)) throw err;
   }
@@ -210,6 +219,21 @@ export default async function DealDetailPage({
           members={referenceData.members}
           canCreate={hasPermission(ctx, "tasks.create")}
           canAssignAny={hasPermission(ctx, "tasks.assign.any")}
+        />
+      )}
+
+      {hasPermission(ctx, "communications.view") && (
+        <CommunicationTimeline
+          orgSlug={orgSlug}
+          parentField="dealId"
+          parentId={deal.id}
+          communications={communications.map((c) => ({
+            ...c,
+            occurredAt: c.occurredAt.toISOString(),
+          }))}
+          members={referenceData.members}
+          canCreate={hasPermission(ctx, "communications.create")}
+          defaultToEmail={deal.primaryContact?.email ?? null}
         />
       )}
 

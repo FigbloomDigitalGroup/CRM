@@ -3,6 +3,9 @@ import { hasPermission } from "@/auth/context";
 import { ForbiddenError, NotFoundError } from "@/auth/errors";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { getContact } from "@/services/contactService";
+import { listCommunicationsForContact } from "@/services/communicationService";
+import { getFormReferenceData } from "@/services/referenceDataService";
+import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
 import { EditContactForm } from "./EditContactForm";
 
 export default async function ContactDetailPage({
@@ -26,6 +29,15 @@ export default async function ContactDetailPage({
     throw err;
   }
 
+  const referenceData = await getFormReferenceData(ctx);
+
+  let communications: Awaited<ReturnType<typeof listCommunicationsForContact>> = [];
+  try {
+    communications = await listCommunicationsForContact(ctx, contactId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
   return (
     <div>
       <p>
@@ -46,6 +58,21 @@ export default async function ContactDetailPage({
 
       {hasPermission(ctx, "contacts.edit") && (
         <EditContactForm orgSlug={orgSlug} contact={contact} />
+      )}
+
+      {hasPermission(ctx, "communications.view") && (
+        <CommunicationTimeline
+          orgSlug={orgSlug}
+          parentField="contactId"
+          parentId={contact.id}
+          communications={communications.map((c) => ({
+            ...c,
+            occurredAt: c.occurredAt.toISOString(),
+          }))}
+          members={referenceData.members}
+          canCreate={hasPermission(ctx, "communications.create")}
+          defaultToEmail={contact.email}
+        />
       )}
     </div>
   );

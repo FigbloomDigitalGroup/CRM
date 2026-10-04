@@ -5,11 +5,13 @@ import { resolveRequestContext } from "@/auth/requestContext";
 import { listActivitiesForLead } from "@/services/activityService";
 import { listAuditHistory } from "@/services/auditService";
 import { listCompanies } from "@/services/companyService";
+import { listCommunicationsForLead } from "@/services/communicationService";
 import { getLead } from "@/services/leadService";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { listTasks } from "@/services/taskService";
 import { ActivityTimeline } from "../../_shared/ActivityTimeline";
 import { AuditHistory } from "../../_shared/AuditHistory";
+import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
 import { TaskSection } from "../../_shared/TaskSection";
 import { EditLeadForm } from "./EditLeadForm";
 import { AssignLeadControl } from "../AssignLeadControl";
@@ -69,6 +71,13 @@ export default async function LeadDetailPage({
   let auditEvents: Awaited<ReturnType<typeof listAuditHistory>> = [];
   try {
     auditEvents = await listAuditHistory(ctx, "Lead", leadId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
+  let communications: Awaited<ReturnType<typeof listCommunicationsForLead>> = [];
+  try {
+    communications = await listCommunicationsForLead(ctx, leadId);
   } catch (err) {
     if (!(err instanceof ForbiddenError)) throw err;
   }
@@ -189,6 +198,21 @@ export default async function LeadDetailPage({
           members={referenceData.members}
           canCreate={hasPermission(ctx, "tasks.create")}
           canAssignAny={hasPermission(ctx, "tasks.assign.any")}
+        />
+      )}
+
+      {hasPermission(ctx, "communications.view") && (
+        <CommunicationTimeline
+          orgSlug={orgSlug}
+          parentField="leadId"
+          parentId={lead.id}
+          communications={communications.map((c) => ({
+            ...c,
+            occurredAt: c.occurredAt.toISOString(),
+          }))}
+          members={referenceData.members}
+          canCreate={hasPermission(ctx, "communications.create")}
+          defaultToEmail={lead.contact?.email ?? null}
         />
       )}
 

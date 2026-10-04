@@ -574,6 +574,94 @@ the ticket's own acceptance criteria wording ("in-app and email"); only the
 website acknowledgement actually exercises the SMS path (when the enquirer
 gave a phone but no email).
 
+## Communications and CompanyService (FIG-598)
+
+Communication and CompanyService existed in the schema with zero code
+behind them -- this ticket built the full service/repository/route/UI
+layer for both, directly templated on Activity (the closest existing
+analog: same optional Company/Contact/Lead/Deal linkage,
+`assertCanAccessLinkedRecords` reused as-is) rather than inventing new
+patterns.
+
+**"Permission-gated and audited" put a real audit event on a bare create,
+which had no precedent.** Every other `recordAuditEvent` call site in this
+codebase is on a mutation with a meaningful before/after (ownership
+reassignment, deal outcome change) -- Activity creation itself has never
+been audited. Communication's AC explicitly asked for audit on create, so
+`communicationService.createCommunication`/`sendAndLogEmail` both call
+`recordAuditEvent` with `action: "communication.logged"` and a `newValue`
+snapshot (channel, direction, subject, linked ids), no `previousValue` --
+the create itself is the event. This is new ground, not a pattern this
+ticket could copy.
+
+**"Send and log emails from a lead/contact/deal" reuses FIG-592/597's
+SMTP-or-log transport, not a new one.** `src/notifications/email.ts` grew
+one more function, `sendComposedEmail`, that -- unlike every other function
+in that file -- takes caller-authored subject/body instead of a fixed
+template, since this is a human composing a real message, not a system
+notification. `communicationService.sendAndLogEmail` treats a thrown send
+as fatal: no Communication is logged for an email that didn't actually go
+out, which would be a false record, worse than no record. (A "logged"
+send includes the no-SMTP-configured console-log fallback, same as every
+other email in this project -- that's a legitimate, intentional dev-mode
+"send," not a failure.)
+
+**"Mailbox sync or BCC-to-CRM" -- chose BCC-to-CRM, and built the real
+parts of it that don't require a third-party account.** Full mailbox
+OAuth sync (Gmail API / Microsoft Graph) needs a registered OAuth app,
+real user consent flows, and token-refresh infrastructure this project has
+nothing of. BCC-to-CRM (receiving mail via a real inbound-email provider's
+webhook -- Postmark/Mailgun/SendGrid inbound parse) is the lighter-weight
+of the two and was built for real: `src/auth/inboundEmailKey.ts` (a
+second, separate credential from `WebsiteApiKey` -- different trust
+boundary, same generate/hash/compare/revoke shape),
+`src/services/inboundEmailService.ts`, and a genuinely working webhook
+route that matches the sender against an existing Contact and logs an
+inbound Communication. What's missing is the one piece that needs a real
+account: an actual inbound-email provider configured with real DNS/MX
+records to call this webhook. Same documented-gap pattern as Sentry
+(FIG-595), the SMS provider (FIG-597), and captcha before a secret exists
+(FIG-594) -- this is wired end-to-end and was tested with a synthetic
+payload shaped like what a real provider sends, not faked.
+
+**`Communication.authorMembershipId` became optional mid-ticket.** The
+schema had it as a required field, copied from Activity's own
+`authorMembershipId`. Building the inbound webhook surfaced the problem:
+an email logged by the webhook has no CRM user to attribute it to at all
+-- there was no reasonable value to put there (a designated "system"
+membership would misattribute authorship to a human who didn't do
+anything). Fixed with a migration making the column nullable
+(`communications` only; Activity's stays required, since every Activity
+create path has a real acting user). Every other create path (manual log,
+"send and log email") still always stamps the caller's own membership --
+only the inbound path leaves it null, and the UI already renders that as
+"(inbound)" rather than a blank.
+
+**A new `company_services.view`/`.manage` permission pair, not reused
+`companies.view`/`.edit`.** Delivery and Finance both already have
+`companies.view` but not `.edit`, and both plausibly want to see which
+services a customer holds (delivery for handoff context, finance for
+billing/renewals) without gaining company-edit rights. Giving
+CompanyService its own permission area matches this project's existing
+granularity (Activities & Tasks, Proposals, Finance, Communications
+already each got their own) rather than overloading Company's.
+
+**CompanyService has no delete, only status transitions** (ACTIVE ->
+COMPLETED/CANCELLED, with `endDate` stamped automatically when leaving
+ACTIVE) -- same reasoning as Deal outcomes: a service a company once held
+is still true history, not something to erase. `companyId`/`serviceId`
+are immutable once linked; re-pointing a record at a different
+company/service would be "end this one, start another," not an edit.
+
+**The inbound-email token is delivered via a `token` query param, not a
+header.** Every other per-organization credential in this project
+(website API key, now inbound email) is sent as a request header -- but a
+header only works if the caller can set one, and most inbound-email-parse
+providers let you configure an arbitrary destination URL for their
+webhook, not always custom headers. The query param works with the
+lowest common denominator; `x-figbloom-inbound-key` is still accepted too,
+for a provider that does support custom headers.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit

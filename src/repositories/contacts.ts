@@ -135,3 +135,12 @@ export async function findPossibleDuplicateContacts(
     }),
   );
 }
+
+/** Exact email match, scoped to the organization -- used to auto-link an inbound email to an existing Contact (FIG-598). */
+export async function findContactByEmail(organizationId: string, email: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.contact.findFirst({
+      where: { organizationId, email: { equals: email, mode: "insensitive" } },
+    }),
+  );
+}

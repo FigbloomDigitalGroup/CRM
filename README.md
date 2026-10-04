@@ -125,9 +125,13 @@ Tasks have full CRUD + a timeline/list UI, linked to any of
 Company/Contact/Lead/Deal — see "Activities and Tasks" below. Audit
 history is recorded for ownership changes and deal outcome changes, and
 surfaced read-only on Lead and Deal detail pages for `audit.view` holders.
-Communications have full schema/permission coverage but no service/API/UI
-layer yet — the Activity type enum already covers every channel in scope,
-so a separate Communications UI hasn't been built. `/reports` gives every
+Communications (FIG-598) have full CRUD + a timeline UI on Company,
+Contact, Lead, and Deal detail pages, plus a "send and log email" action
+that sends real mail through the same SMTP infrastructure as every other
+outbound email in this project — see "Communications" below.
+CompanyService has full CRUD + UI on the Company detail page ("Services"),
+gated by its own `company_services.view`/`.manage` permissions.
+`/reports` gives every
 role with a reporting permission a personal "actionable work" view, and
 gives `reporting.view.all` holders organization-wide metrics with
 owner/source/stage/service/date-range filters — see "Reports" below.
@@ -269,6 +273,33 @@ streams the uploaded file row-by-row (memory never scales with file size)
 up to a configurable row ceiling (`IMPORT_MAX_ROWS`, default 20,000); export
 streams its response as it serializes. See `IMPLEMENTATION_NOTES.md` --
 "Data import/export (FIG-596)" -- for the full reasoning.
+
+## Communications
+
+Every Company, Contact, Lead, and Deal detail page has a Communications
+section (`communications.view`/`.create`), alongside Activities: logging a
+communication never sends anything (a record of a call, a meeting, or an
+email that happened outside the CRM), while "Send email" actually sends
+real mail -- through the same SMTP-or-log infrastructure as password-reset
+and notification emails -- and logs the result as a side effect. A send
+that genuinely fails (SMTP configured but the attempt errors) is never
+logged, so there's no false record of mail that didn't go out.
+
+Inbound email -- someone replying to a contact outside the CRM -- is
+BCC-to-CRM style: a per-organization token
+(`/o/[orgSlug]/settings`, "Inbound email") authenticates a webhook
+(`POST /api/public/orgs/[orgSlug]/communications/inbound`) that a real
+inbound-email provider (Postmark/Mailgun/SendGrid inbound parse) would be
+configured to call. It matches the sender's email against an existing
+Contact and logs it there (and on that contact's company, if any); a
+sender matching no contact is simply not logged, not an error. No real
+inbound-email provider account exists for this project -- see
+`docs/DEPLOYMENT.md` -- so nothing calls this webhook yet, but it's a real,
+tested endpoint ready to be wired to one.
+
+CompanyService (`company_services.view`/`.manage`) tracks which of
+FigBloom's services a company holds, independent of any single deal, on
+the Company detail page's "Services" section.
 
 ## Authentication
 

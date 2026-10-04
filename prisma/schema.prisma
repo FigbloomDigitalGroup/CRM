@@ -41,6 +41,7 @@ model Organization {
   settings                OrganizationSetting[]
   websiteApiKey           WebsiteApiKey?
   websiteLeadRequestLogs  WebsiteLeadRequestLog[]
+  inboundEmailKey         InboundEmailKey?
   notifications           Notification[]
   notificationDeliveries  NotificationDelivery[]
   notificationPreferences NotificationPreference[]
@@ -227,6 +228,7 @@ model Membership {
   ownedProposals         ProposalReference[] @relation("ProposalOwner")
   auditEvents            AuditEvent[]        @relation("AuditActorMembership")
   createdWebsiteApiKeys  WebsiteApiKey[]     @relation("WebsiteApiKeyCreatedBy")
+  createdInboundEmailKeys InboundEmailKey[]  @relation("InboundEmailKeyCreatedBy")
   notifications          Notification[]
   notificationPreferences NotificationPreference[]
 
@@ -293,6 +295,33 @@ model WebsiteApiKey {
   createdBy    Membership?  @relation("WebsiteApiKeyCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: SetNull)
 
   @@map("website_api_keys")
+}
+
+/// Static per-organization credential for the inbound-email webhook
+/// (FIG-598) -- a separate credential from WebsiteApiKey above because it's
+/// a different trust boundary (a real inbound-email provider's webhook
+/// call, e.g. Postmark/Mailgun inbound parse, not the public website lead
+/// form), not because the generate/hash/revoke shape differs. Same
+/// generate-random/hash-and-compare pattern, only the SHA-256 hash is
+/// stored, one active key per organization. No account with a real inbound-
+/// email provider exists for this project -- see
+/// `src/services/inboundEmailService.ts` and IMPLEMENTATION_NOTES.md for
+/// what that means in practice.
+model InboundEmailKey {
+  id                    String    @id @default(uuid())
+  organizationId        String    @unique @map("organization_id")
+  keyHash               String    @map("key_hash")
+  keyPrefix             String    @map("key_prefix")
+  createdByMembershipId String?   @map("created_by_membership_id")
+  lastUsedAt            DateTime? @map("last_used_at")
+  revokedAt             DateTime? @map("revoked_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    Membership?  @relation("InboundEmailKeyCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: SetNull)
+
+  @@map("inbound_email_keys")
 }
 
 /// Every request to the public lead-capture endpoint, accepted or rejected
@@ -914,7 +943,11 @@ model Communication {
   subject            String?
   summary            String
   externalReference  String?                @map("external_reference")
-  authorMembershipId String                 @map("author_membership_id")
+  /// Null for an inbound communication logged by the webhook in
+  /// `src/services/inboundEmailService.ts` (FIG-598) -- there is no CRM
+  /// user to attribute it to. Every other create path (manual log, "send
+  /// and log email") always stamps the caller's own membership.
+  authorMembershipId String?                @map("author_membership_id")
   activityId         String?                @map("activity_id")
   companyId          String?                @map("company_id")
   contactId          String?                @map("contact_id")
@@ -923,7 +956,7 @@ model Communication {
   createdAt          DateTime               @default(now()) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  author       Membership   @relation("CommunicationAuthor", fields: [authorMembershipId], references: [id], onDelete: Restrict)
+  author       Membership?  @relation("CommunicationAuthor", fields: [authorMembershipId], references: [id], onDelete: SetNull)
   activity     Activity?    @relation(fields: [activityId], references: [id], onDelete: SetNull)
   company      Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
   contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
@@ -932,6 +965,7 @@ model Communication {
 
   @@index([organizationId])
   @@index([organizationId, companyId, occurredAt])
+  @@index([organizationId, contactId, occurredAt])
   @@index([organizationId, leadId, occurredAt])
   @@index([organizationId, dealId, occurredAt])
   @@index([organizationId, channel])

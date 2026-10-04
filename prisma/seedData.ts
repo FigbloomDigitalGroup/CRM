@@ -163,6 +163,16 @@ export const PERMISSIONS: { key: string; area: string; description: string }[] =
       area: "Contacts & Companies",
       description: "Bulk-import company records from CSV.",
     },
+    {
+      key: "company_services.view",
+      area: "Contacts & Companies",
+      description: "View which services a company holds.",
+    },
+    {
+      key: "company_services.manage",
+      area: "Contacts & Companies",
+      description: "Add, update, or end a company's service record.",
+    },
 
     {
       key: "deals.view.own",
@@ -312,6 +322,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "companies.edit",
     "companies.export",
     "companies.import",
+    "company_services.view",
+    "company_services.manage",
     "deals.view.all",
     "deals.create",
     "deals.edit.all",
@@ -343,6 +355,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "companies.view",
     "companies.create",
     "companies.edit",
+    "company_services.view",
+    "company_services.manage",
     "deals.view.own",
     "deals.create",
     "deals.edit.own",
@@ -360,6 +374,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
   DELIVERY: [
     "contacts.view",
     "companies.view",
+    "company_services.view",
     "deals.view.all",
     "activities.create",
     "activities.view",
@@ -373,6 +388,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
   FINANCE: [
     "contacts.view",
     "companies.view",
+    "company_services.view",
     "deals.view.all",
     "deals.view.value",
     "finance.view.payments",

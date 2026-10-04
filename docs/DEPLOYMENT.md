@@ -162,6 +162,19 @@ have, the same kind of infrastructure-dependent gap as SMTP (FIG-592) and
 captcha (FIG-594). It would hook in at the same `logger.error` call sites
 already in place.
 
+## Inbound email provider
+
+`POST /api/public/orgs/[orgSlug]/communications/inbound` (FIG-598) logs an
+externally-sent email onto the matching contact's timeline -- "BCC-to-CRM"
+style. The endpoint itself is real and tested, authenticated by a
+per-organization token generated from `/o/[orgSlug]/settings`, but nothing
+calls it yet: that requires a real inbound-email-parsing provider account
+(Postmark, Mailgun, SendGrid inbound parse, or similar) plus the DNS/MX
+changes it needs, none of which exist for this project -- the same kind of
+gap as SMTP/Sentry/SMS above. Once you have one, configure its webhook to
+POST here with the token in the URL (see the settings page for the exact
+request shape).
+
 ## Backup and restore
 
 Verified for real against this project's own Postgres during FIG-595 --

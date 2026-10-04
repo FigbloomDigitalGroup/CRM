@@ -65,6 +65,38 @@ export async function sendTaskOverdueEmail(
  * off by default -- see `src/services/notificationService.ts`'s
  * `getWebsiteAcknowledgementSetting`/`setWebsiteAcknowledgementSetting`.
  */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * FIG-598: "send and log emails from a lead/contact/deal." Unlike every
+ * other function in this file, the subject/body is user-authored content,
+ * not a fixed template -- `src/services/communicationService.ts#sendAndLogEmail`
+ * is the only caller, and it already validates `to`/`subject` are non-empty
+ * before this is reached.
+ */
+export async function sendComposedEmail(
+  to: string,
+  args: { subject: string; body: string },
+  transportOverride?: MailTransport,
+): Promise<void> {
+  await deliverOrLog(
+    "communication-email",
+    {
+      to,
+      subject: args.subject,
+      text: args.body,
+      html: `<p>${escapeHtml(args.body).replace(/\n/g, "<br>")}</p>`,
+    },
+    transportOverride,
+  );
+}
+
 export async function sendWebsiteLeadAcknowledgementEmail(
   to: string,
   args: { organizationName: string; enquirerName: string },

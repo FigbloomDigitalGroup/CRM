@@ -2,6 +2,7 @@ import { hasPermission } from "@/auth/context";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { adminDb } from "@/db/adminClient";
 import {
+  getInboundEmailIntegrationStatus,
   getWebsiteIntegrationStatus,
   listRecentWebsiteActivity,
 } from "@/services/integrationService";
@@ -13,7 +14,9 @@ import {
 import { InviteMemberForm } from "./InviteMemberForm";
 import { MembersTable } from "./MembersTable";
 import { NotificationPreferencesForm } from "./NotificationPreferencesForm";
+import { RegenerateInboundEmailKeyButton } from "./RegenerateInboundEmailKeyButton";
 import { RegenerateWebsiteKeyButton } from "./RegenerateWebsiteKeyButton";
+import { RevokeInboundEmailKeyButton } from "./RevokeInboundEmailKeyButton";
 import { RevokeWebsiteKeyButton } from "./RevokeWebsiteKeyButton";
 import { WebsiteAcknowledgementToggle } from "./WebsiteAcknowledgementToggle";
 import { WebsiteSecuritySettingsForm } from "./WebsiteSecuritySettingsForm";
@@ -47,6 +50,7 @@ export default async function SettingsPage({
       )}
 
       {canManageIntegration && <WebsiteIntegrationSection orgSlug={orgSlug} ctx={ctx} />}
+      {canManageIntegration && <InboundEmailSection orgSlug={orgSlug} ctx={ctx} />}
     </div>
   );
 }
@@ -265,6 +269,85 @@ Content-Type: application/json
   "message": "Interested in a 4-camera install for our office.",
   "utm": { "utmSource": "google", "utmCampaign": "spring-promo" },
   "referrer": "https://figbloom.com/contact"
+}`}
+      </pre>
+    </div>
+  );
+}
+
+/**
+ * The "BCC-to-CRM" half of FIG-598's "mailbox sync or BCC-to-CRM" --
+ * provisions the per-organization token a real inbound-email provider
+ * (Postmark/Mailgun/SendGrid inbound parse) would be configured to send to.
+ * No such provider account exists for this project -- see
+ * `docs/DEPLOYMENT.md` -- so this section always shows the integration
+ * reference even with nothing configured yet.
+ */
+async function InboundEmailSection({
+  orgSlug,
+  ctx,
+}: {
+  orgSlug: string;
+  ctx: Awaited<ReturnType<typeof resolveRequestContext>>;
+}) {
+  const status = await getInboundEmailIntegrationStatus(ctx);
+
+  return (
+    <div className="card">
+      <strong>Inbound email (log emails sent outside the CRM)</strong>
+      <p className="who">
+        Lets a real inbound-email provider notify the CRM when someone
+        emails a contact back -- "BCC-to-CRM" rather than a full mailbox
+        sync. Matched to an existing contact by sender email and logged on
+        their timeline; a sender with no matching contact is simply not
+        logged.
+      </p>
+
+      {status.configured ? (
+        <p>
+          Token configured: <code>{status.keyPrefix}&hellip;</code>
+          {status.revoked && <span className="error"> (revoked)</span>}
+          <br />
+          Generated {new Date(status.createdAt).toLocaleString()}
+          {status.lastUsedAt && (
+            <>
+              {" "}
+              &middot; last used {new Date(status.lastUsedAt).toLocaleString()}
+            </>
+          )}
+          {!status.lastUsedAt && <> &middot; not used yet</>}
+        </p>
+      ) : (
+        <p className="who">No token generated yet.</p>
+      )}
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <RegenerateInboundEmailKeyButton
+          orgSlug={orgSlug}
+          alreadyConfigured={status.configured}
+        />
+        {status.configured && !status.revoked && (
+          <RevokeInboundEmailKeyButton orgSlug={orgSlug} />
+        )}
+      </div>
+
+      <h2>Integration reference</h2>
+      <p className="who">
+        Configure your inbound-email provider&apos;s webhook to POST here,
+        with the token in the URL. No provider account exists for this
+        project yet -- wiring one up (Postmark/Mailgun/SendGrid inbound
+        parse, plus the DNS/MX changes it requires) is a deliberate next
+        step, not built here.
+      </p>
+      <pre style={{ background: "var(--bg-page)", padding: 12, borderRadius: 8, fontSize: 12.5, overflowX: "auto" }}>
+{`POST /api/public/orgs/${orgSlug}/communications/inbound?token=<the generated token>
+Content-Type: application/json
+
+{
+  "from": "jane@example.com",   // required -- matched against an existing contact's email
+  "subject": "Re: your proposal",
+  "text": "Thanks, this looks great.",
+  "messageId": "<provider-specific message id>"
 }`}
       </pre>
     </div>

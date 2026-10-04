@@ -1,8 +1,14 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
+import { generateInboundEmailKey } from "../auth/inboundEmailKey";
 import { generateWebsiteApiKey } from "../auth/websiteApiKey";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import {
+  getInboundEmailKeyRecord,
+  revokeInboundEmailKey as revokeInboundEmailKeyRow,
+  setInboundEmailKey,
+} from "../repositories/inboundEmailKeys";
 import {
   getWebsiteApiKeyRecord,
   revokeWebsiteApiKey as revokeWebsiteApiKeyRow,
@@ -135,4 +141,67 @@ export async function updateWebsiteApiKeySettings(
 export async function listRecentWebsiteActivity(ctx: AuthContext, limit = 25) {
   requirePermission(ctx, PERMISSION);
   return listRecentWebsiteLeadRequests(ctx.organizationId, limit);
+}
+
+// ---------------------------------------------------------------------------
+// Inbound email webhook (FIG-598) -- same generate/revoke shape as the
+// website key above, a separate credential/trust boundary (see
+// src/auth/inboundEmailKey.ts's header comment).
+// ---------------------------------------------------------------------------
+
+export async function getInboundEmailIntegrationStatus(ctx: AuthContext) {
+  requirePermission(ctx, PERMISSION);
+  const record = await getInboundEmailKeyRecord(ctx.organizationId);
+  if (!record) {
+    return { configured: false as const };
+  }
+  return {
+    configured: true as const,
+    keyPrefix: record.keyPrefix,
+    createdAt: record.createdAt,
+    lastUsedAt: record.lastUsedAt,
+    revoked: record.revokedAt !== null,
+  };
+}
+
+export async function regenerateInboundEmailKey(ctx: AuthContext) {
+  requirePermission(ctx, PERMISSION);
+
+  const { plaintext, keyHash, keyPrefix } = generateInboundEmailKey();
+  await setInboundEmailKey(ctx.organizationId, {
+    keyHash,
+    keyPrefix,
+    createdByMembershipId: ctx.membershipId,
+  });
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "inbound_email_key.regenerated",
+    entityType: "InboundEmailKey",
+    entityId: ctx.organizationId,
+    metadata: { keyPrefix },
+  });
+
+  return { token: plaintext, keyPrefix };
+}
+
+export async function revokeInboundEmailKey(ctx: AuthContext) {
+  requirePermission(ctx, PERMISSION);
+
+  const record = await getInboundEmailKeyRecord(ctx.organizationId);
+  if (!record) {
+    throw new ValidationError("No inbound email token exists to revoke.");
+  }
+
+  await revokeInboundEmailKeyRow(ctx.organizationId);
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "inbound_email_key.revoked",
+    entityType: "InboundEmailKey",
+    entityId: ctx.organizationId,
+    metadata: { keyPrefix: record.keyPrefix },
+  });
 }
