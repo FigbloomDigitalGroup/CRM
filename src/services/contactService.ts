@@ -1,12 +1,15 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
-import { NotFoundError } from "../auth/errors";
+import { NotFoundError, ValidationError } from "../auth/errors";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
+  archiveContact as archiveContactRecord,
   createContact as createContactRecord,
   findPossibleDuplicateContacts,
   getContactById,
   listContacts as listContactsRecords,
+  mergeContacts as mergeContactsRecord,
+  restoreContact as restoreContactRecord,
   updateContact as updateContactRecord,
   type CreateContactInput,
   type ListContactsFilters,
@@ -114,4 +117,99 @@ export async function checkDuplicateContacts(
 ) {
   requirePermission(ctx, "contacts.create");
   return findPossibleDuplicateContacts(ctx.organizationId, candidate);
+}
+
+/** Soft-delete (FIG-601) -- the row and everything linked to it stays intact, just hidden from default lists. */
+export async function archiveContact(ctx: AuthContext, contactId: string) {
+  requirePermission(ctx, "contacts.archive");
+  const contact = await getContact(ctx, contactId);
+  if (contact.archivedAt) {
+    throw new ValidationError("This contact is already archived.");
+  }
+
+  const archived = await archiveContactRecord(ctx.organizationId, contactId);
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "contact.archived",
+    entityType: "Contact",
+    entityId: contactId,
+  });
+
+  return archived;
+}
+
+/**
+ * Restoring a contact that was the *loser* of a merge only un-hides the
+ * now-empty shell record -- see `companyService.restoreCompany`'s doc
+ * comment for the same caveat on the Contact side.
+ */
+export async function restoreContact(ctx: AuthContext, contactId: string) {
+  requirePermission(ctx, "contacts.archive");
+  const contact = await getContact(ctx, contactId);
+  if (!contact.archivedAt) {
+    throw new ValidationError("This contact is not archived.");
+  }
+
+  const restored = await restoreContactRecord(ctx.organizationId, contactId);
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "contact.restored",
+    entityType: "Contact",
+    entityId: contactId,
+  });
+
+  return restored;
+}
+
+/**
+ * Merges `loserId` into `winnerId` (FIG-601 AC) -- every Lead/Deal(-as-
+ * primary-contact)/Activity/Task/Communication currently pointing at the
+ * loser gets re-pointed at the winner in one transaction, then the loser
+ * is archived with `mergedIntoId` set. See `companyService.mergeCompanies`
+ * for the equivalent on the Company side.
+ */
+export async function mergeContacts(
+  ctx: AuthContext,
+  loserId: string,
+  winnerId: string,
+) {
+  requirePermission(ctx, "contacts.merge");
+  if (loserId === winnerId) {
+    throw new ValidationError("Cannot merge a contact into itself.");
+  }
+
+  const loser = await getContact(ctx, loserId);
+  const winner = await getContact(ctx, winnerId);
+  if (loser.archivedAt) {
+    throw new ValidationError("This contact is already archived -- it may already have been merged.");
+  }
+  if (winner.archivedAt) {
+    throw new ValidationError("Cannot merge into an archived contact.");
+  }
+
+  const merged = await mergeContactsRecord(ctx.organizationId, loserId, winnerId);
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "contact.merged",
+    entityType: "Contact",
+    entityId: loserId,
+    newValue: { mergedIntoId: winnerId },
+    metadata: { winnerName: `${winner.firstName} ${winner.lastName ?? ""}`.trim() },
+  });
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "contact.merged_from",
+    entityType: "Contact",
+    entityId: winnerId,
+    metadata: { loserId, loserName: `${loser.firstName} ${loser.lastName ?? ""}`.trim() },
+  });
+
+  return merged;
 }

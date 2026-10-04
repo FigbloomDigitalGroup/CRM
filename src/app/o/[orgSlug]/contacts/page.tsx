@@ -23,15 +23,18 @@ export default async function ContactsPage({
   searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; includeArchived?: string }>;
 }) {
   const { orgSlug } = await params;
-  const { q } = await searchParams;
+  const { q, includeArchived } = await searchParams;
   const ctx = await resolveRequestContext(orgSlug);
 
   let contacts;
   try {
-    contacts = await listContacts(ctx, { query: q });
+    contacts = await listContacts(ctx, {
+      query: q,
+      includeArchived: includeArchived === "true",
+    });
   } catch (err) {
     if (err instanceof ForbiddenError) {
       return (
@@ -64,6 +67,15 @@ export default async function ContactsPage({
           defaultValue={q ?? ""}
           placeholder="Search name, email, phone"
         />
+        <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <input
+            type="checkbox"
+            name="includeArchived"
+            value="true"
+            defaultChecked={includeArchived === "true"}
+          />
+          Show archived
+        </label>
         <button type="submit" className="secondary">
           Search
         </button>
@@ -87,6 +99,7 @@ export default async function ContactsPage({
                   <a href={`/o/${orgSlug}/contacts/${c.id}`}>
                     {c.firstName} {c.lastName ?? ""}
                   </a>
+                  {c.archivedAt && <span className="badge"> Archived</span>}
                 </td>
                 <td>{c.company?.name ?? "--"}</td>
                 <td>{c.jobTitle ?? "--"}</td>

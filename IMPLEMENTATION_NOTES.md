@@ -817,6 +817,119 @@ fires when the outcome itself flips, not on every deal edit).
   qualification/lifecycle/ownership signal the rest of this audit trail
   already tracks.
 
+## Archive/restore, merge, inline conversion, and data deletion (FIG-601)
+
+**Soft-delete reused the existing `archivedAt`-style pattern, not a new
+status enum.** `Lead`/`Contact`/`Company`/`Deal` each got one nullable
+`archivedAt DateTime?` column -- the same shape `Service.isActive`
+established in FIG-436, just a timestamp instead of a boolean so "when"
+is free. Every list query (`listCompanies`/`listContacts`/`listLeads`/
+`listDeals`) and both duplicate-detection functions
+(`findPossibleDuplicateCompanies`/`findPossibleDuplicateContacts`) got an
+`archivedAt: null` filter by default, with an explicit `includeArchived`
+opt-in on the list side. No hard-delete path was added anywhere in the
+product -- this ticket's "delete" is entirely soft.
+
+**Archive/restore permissions mirror each entity's existing granularity,
+not a single new blanket permission.** Lead and Deal already have an
+own/all split for view/edit (`leads.edit.own`/`.all`,
+`deals.edit.own`/`.all`) because an individual rep can act on their own
+record without Management; archiving a dead lead/deal you own is the same
+shape of action, so `leads.archive.own`/`.all` and
+`deals.archive.own`/`.all` mirror that split exactly
+(`requireOwnedRecordPermission`, same helper `updateLead`/`updateDeal`
+already use). Contact and Company have never had an own/all split for
+anything (`contacts.edit`/`companies.edit` are flat), so
+`contacts.archive`/`companies.archive` stayed flat too, rather than
+inventing ownership semantics these two models have never had.
+
+**Merge is a single repository transaction per entity
+(`mergeCompanies`/`mergeContacts`), not a generic "reassign any FK"
+utility.** Company and Contact each have a different, fixed set of child
+tables to reassign (Company: Contact/Lead/Deal/Activity/Task/
+Communication/CompanyService; Contact: Lead/Deal(as `primaryContactId`)/
+Activity/Task/Communication) -- different enough field names
+(`companyId` vs. `contactId` vs. `primaryContactId`) that a shared generic
+version would need almost as much per-entity special-casing as just
+writing both out, the same call made for the reference-catalog dispatcher
+in FIG-599 not applying here. Both follow the identical shape: reassign
+every child with `updateMany`, then archive the loser with
+`mergedIntoId` set, all in one `withOrgContext` transaction so a failure
+partway through leaves nothing half-reassigned. Lead and Deal have no
+merge action -- the AC only asked for "merge duplicate contacts/
+companies," and a duplicate Lead/Deal is just archived instead (there's
+no obvious "child record" story for merging two Leads the way there is
+for a Company's Contacts/Deals).
+
+**Restoring a merged record does not undo the merge.** `restoreCompany`/
+`restoreContact` just clear `archivedAt`/`mergedIntoId` -- the Contacts/
+Leads/Deals/etc. that were reassigned during the merge stay with whatever
+they were merged into. Un-reassigning them back would need to record
+*which specific rows* moved and when (a merge log), which the AC's
+"preserving activities, tasks, and history" didn't ask for -- it asked
+for the history to survive the merge, not for the merge to be perfectly
+reversible. Restoring a merged record un-hides an now-empty shell, that's
+all; documented as such on both services' doc comments.
+
+**Lead-to-deal conversion's inline company/contact creation lives inside
+`convertLeadToDeal`'s existing transaction, not as a separate
+`createCompany`/`createContact` call beforehand.** Calling the existing
+`companyService.createCompany`/`contactService.createContact` first and
+then passing the resulting id through would work, but splits one logical
+operation ("convert this lead, creating whatever's missing along the
+way") across two transactions -- a failure in the deal-creation half would
+leave an orphaned Company/Contact nobody asked for. Creating them with
+`tx.company.create`/`tx.contact.create` directly inside
+`convertLeadToDeal`'s existing `withOrgContext` block keeps "convert" one
+atomic unit, at the cost of bypassing `createCompany`'s/`createContact`'s
+own duplicate-detection warnings -- acceptable here since the caller is
+explicitly asserting "there is no existing record," not asking "is there
+maybe one already."
+
+**Inline-created company/contact backfill the Lead itself, not just the
+Deal.** Without this, a Lead converted via `newCompany`/`newContact`
+would end up permanently showing "(no company/contact)" everywhere else
+in the product (its own detail page, any report grouping by company)
+even though its Deal clearly has one -- confusing and inconsistent. The
+final `tx.lead.update` that stamps `convertedAt` also sets
+`companyId`/`contactId` when they were newly created (never overwriting
+one the Lead already had).
+
+**GDPR/Kenya DPA erasure is a standalone admin script
+(`scripts/erase-data-subject.ts`), never a web route or product
+button.** This is a deliberate scope decision, not a shortcut: a real
+erasure request needs identity verification and a legal-basis check that
+happen entirely outside this codebase (who is this person, are they who
+they say, is there a reason to retain some of their data anyway) -- see
+`docs/DATA_DELETION_REQUESTS.md` for that process. A self-service "Erase"
+button would make it too easy to skip straight past that judgment, the
+same reasoning that kept `scripts/notifications-sweep.ts` and
+`scripts/db-admin.ts` as scripts rather than routes, just for a much
+higher-stakes action. The script itself still runs through the normal
+`withOrgContext`-scoped, RLS-enforced connection, not the schema-owner
+one -- its only privilege over a logged-in request is that nobody is
+logged in.
+
+**Erasure is scoped to Contact only -- Company is explicitly out of
+scope, and this is a legal distinction, not a technical limitation.**
+GDPR/the DPA protect natural persons' personal data; a Company is a
+business entity. Deleting one also hits a real database constraint
+either way: `Deal.companyId` is required with `ON DELETE RESTRICT`, so
+Postgres itself refuses to delete a Company that still has any Deal --
+exactly right, since Deal/financial records usually need to survive for
+a different legal reason (tax/accounting) than the one that justifies
+erasing a person's contact details. Building Company erasure later would
+mean deciding what happens to those Deals first, not a mechanical copy of
+the Contact path.
+
+**The erasure audit event is written *before* the delete, not after.**
+`AuditEvent.entityType`/`entityId` are plain strings with no FK (so a
+row pointing at a since-deleted Contact is valid and expected -- this is
+also why `audit_events` is append-only at the database level, see
+`prisma/migrations/*_tenant_integrity_and_rls`), but the event still
+needs the Contact's own fields (name/email/phone) to be a useful
+processing record, and those are only available before the row is gone.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit
@@ -835,6 +948,12 @@ fires when the outcome itself flips, not on every deal edit).
 
 ## Deliberately not built
 
+- A self-service "Erase my data" button/route, or Company erasure --
+  FIG-601's GDPR/DPA path is a standalone admin script scoped to Contact
+  only; see that section above for why both are deliberate.
+- Undoing a Company/Contact merge -- restoring a merged record un-hides
+  the shell, it doesn't pull back the Contacts/Leads/Deals/etc. that were
+  reassigned (FIG-601).
 - A full website-lead-assignment rules engine (by source, territory,
   service, etc.) — FIG-599 built a single round-robin/unassigned switch,
   not this; still tracked as FIG-436.

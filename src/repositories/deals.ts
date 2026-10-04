@@ -107,6 +107,8 @@ export interface ListDealsFilters {
    * today.
    */
   stalledOnly?: boolean;
+  /** Archived deals are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
+  includeArchived?: boolean;
 }
 
 export async function listDeals(
@@ -122,6 +124,7 @@ export async function listDeals(
         outcome: filters.outcome,
         companyId: filters.companyId,
         serviceId: filters.serviceId,
+        ...(filters.includeArchived ? {} : { archivedAt: null }),
         ...(filters.stalledOnly
           ? { outcome: "OPEN", expectedCloseDate: { lt: new Date() } }
           : {}),
@@ -144,6 +147,27 @@ export async function listDeals(
   );
 }
 
+/** Sets `archivedAt` (FIG-601) -- never a hard delete; see the model's doc comment. */
+export async function archiveDeal(organizationId: string, dealId: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.deal.update({
+      where: { id: dealId, organizationId },
+      data: { archivedAt: new Date() },
+      include: DEAL_INCLUDE,
+    }),
+  );
+}
+
+export async function restoreDeal(organizationId: string, dealId: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.deal.update({
+      where: { id: dealId, organizationId },
+      data: { archivedAt: null },
+      include: DEAL_INCLUDE,
+    }),
+  );
+}
+
 export class LeadAlreadyConvertedError extends Error {
   constructor(leadId: string) {
     super(`Lead ${leadId} has already been converted to a deal.`);
@@ -161,10 +185,33 @@ export class LeadMissingCompanyError extends Error {
   }
 }
 
+/** Inline-create payload for a company that doesn't exist yet (FIG-601) -- only reached when the Lead has no companyId and none was supplied. */
+export interface NewCompanyDuringConversion {
+  name: string;
+  industry?: string;
+  website?: string;
+  location?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+}
+
+/** Inline-create payload for a contact that doesn't exist yet (FIG-601) -- only reached when the Lead has no contactId. */
+export interface NewContactDuringConversion {
+  firstName: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  jobTitle?: string;
+  department?: string;
+}
+
 export interface ConvertLeadToDealInput {
   organizationId: string;
   leadId: string;
   companyId?: string;
+  newCompany?: NewCompanyDuringConversion;
+  newContact?: NewContactDuringConversion;
   ownerMembershipId?: string;
   pipelineStageId?: string;
   serviceId?: string;
@@ -178,6 +225,13 @@ export interface ConvertLeadToDealInput {
  * forward, applies a configured initial pipeline stage, resolves a company
  * for leads captured without one, and relies on the unique
  * (organizationId, leadId) constraint on Deal to prevent double conversion.
+ *
+ * FIG-601: a Lead captured with no company/contact at all (e.g. a phone
+ * enquiry) no longer has to be patched up with an existing record first --
+ * `newCompany`/`newContact` create them inline, in the same transaction,
+ * and backfill the Lead itself so it's consistent with the Deal it just
+ * produced (both rows know about the same new company/contact, not just
+ * the Deal).
  */
 export async function convertLeadToDeal(input: ConvertLeadToDealInput) {
   return withOrgContext(input.organizationId, async (tx) => {
@@ -194,9 +248,47 @@ export async function convertLeadToDeal(input: ConvertLeadToDealInput) {
       throw new LeadAlreadyConvertedError(lead.id);
     }
 
-    const companyId = lead.companyId ?? input.companyId;
+    let companyId = lead.companyId ?? input.companyId;
+    let createdCompanyId: string | undefined;
+    if (!companyId && input.newCompany) {
+      const createdCompany = await tx.company.create({
+        data: {
+          organizationId: input.organizationId,
+          name: input.newCompany.name,
+          industry: input.newCompany.industry,
+          website: input.newCompany.website,
+          location: input.newCompany.location,
+          phone: input.newCompany.phone,
+          email: input.newCompany.email,
+          notes: input.newCompany.notes,
+          createdByMembershipId: lead.createdByMembershipId,
+        },
+      });
+      companyId = createdCompany.id;
+      createdCompanyId = createdCompany.id;
+    }
     if (!companyId) {
       throw new LeadMissingCompanyError(lead.id);
+    }
+
+    let primaryContactId = lead.contactId ?? undefined;
+    let createdContactId: string | undefined;
+    if (!primaryContactId && input.newContact) {
+      const createdContact = await tx.contact.create({
+        data: {
+          organizationId: input.organizationId,
+          firstName: input.newContact.firstName,
+          lastName: input.newContact.lastName,
+          companyId,
+          phone: input.newContact.phone,
+          email: input.newContact.email,
+          jobTitle: input.newContact.jobTitle,
+          department: input.newContact.department,
+          createdByMembershipId: lead.createdByMembershipId,
+        },
+      });
+      primaryContactId = createdContact.id;
+      createdContactId = createdContact.id;
     }
 
     const ownerMembershipId = input.ownerMembershipId ?? lead.ownerMembershipId;
@@ -231,7 +323,7 @@ export async function convertLeadToDeal(input: ConvertLeadToDealInput) {
         data: {
           organizationId: input.organizationId,
           companyId,
-          primaryContactId: lead.contactId,
+          primaryContactId,
           leadId: lead.id,
           serviceId: input.serviceId ?? lead.serviceInterestId,
           ownerMembershipId,
@@ -246,7 +338,11 @@ export async function convertLeadToDeal(input: ConvertLeadToDealInput) {
 
       await tx.lead.update({
         where: { id: lead.id },
-        data: { convertedAt: new Date() },
+        data: {
+          convertedAt: new Date(),
+          ...(createdCompanyId ? { companyId: createdCompanyId } : {}),
+          ...(createdContactId ? { contactId: createdContactId } : {}),
+        },
       });
 
       return deal;

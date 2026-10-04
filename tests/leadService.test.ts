@@ -282,5 +282,61 @@ describe("leadService", () => {
         leadService.convertLead(deliveryCtx, lead.id),
       ).rejects.toThrow(ForbiddenError);
     });
+
+    it("creates a new company inline when the lead has none, and backfills the lead itself (FIG-601)", async () => {
+      const org = await createTestOrganization();
+      const ctx = await createTestContext(org.id, "SALES");
+      const leadStatusId = await getLeadStatusId(org.id);
+      const { lead } = await leadService.createLead(ctx, { leadStatusId });
+
+      const deal = await leadService.convertLead(ctx, lead.id, {
+        newCompany: { name: "Inline Co" },
+      });
+      expect(deal.company.name).toBe("Inline Co");
+
+      const converted = await leadService.getLead(ctx, lead.id);
+      expect(converted.companyId).toBe(deal.companyId);
+    });
+
+    it("creates a new contact inline alongside a new company, and backfills the lead", async () => {
+      const org = await createTestOrganization();
+      const ctx = await createTestContext(org.id, "SALES");
+      const leadStatusId = await getLeadStatusId(org.id);
+      const { lead } = await leadService.createLead(ctx, { leadStatusId });
+
+      const deal = await leadService.convertLead(ctx, lead.id, {
+        newCompany: { name: "Inline Co Two" },
+        newContact: { firstName: "Jamie", lastName: "Inline" },
+      });
+      expect(deal.primaryContact?.firstName).toBe("Jamie");
+
+      const converted = await leadService.getLead(ctx, lead.id);
+      expect(converted.contactId).toBe(deal.primaryContactId);
+    });
+
+    it("rejects an inline company with a blank name", async () => {
+      const org = await createTestOrganization();
+      const ctx = await createTestContext(org.id, "SALES");
+      const leadStatusId = await getLeadStatusId(org.id);
+      const { lead } = await leadService.createLead(ctx, { leadStatusId });
+
+      await expect(
+        leadService.convertLead(ctx, lead.id, { newCompany: { name: "   " } }),
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("prefers an existing companyId over newCompany when both are given", async () => {
+      const org = await createTestOrganization();
+      const ctx = await createTestContext(org.id, "SALES");
+      const leadStatusId = await getLeadStatusId(org.id);
+      const { company } = await createCompany(ctx, { name: "Existing Wins Co" });
+      const { lead } = await leadService.createLead(ctx, { leadStatusId });
+
+      const deal = await leadService.convertLead(ctx, lead.id, {
+        companyId: company.id,
+        newCompany: { name: "Should Not Be Created" },
+      });
+      expect(deal.companyId).toBe(company.id);
+    });
   });
 });

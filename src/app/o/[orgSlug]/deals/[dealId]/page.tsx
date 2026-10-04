@@ -11,6 +11,7 @@ import { listProposalReferences } from "@/services/proposalService";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { listTasks } from "@/services/taskService";
 import { ActivityTimeline } from "../../_shared/ActivityTimeline";
+import { ArchiveControl } from "../../_shared/ArchiveControl";
 import { AuditHistory } from "../../_shared/AuditHistory";
 import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
 import { TaskSection } from "../../_shared/TaskSection";
@@ -107,7 +108,10 @@ export default async function DealDetailPage({
       <p>
         <a href={`/o/${orgSlug}/deals`}>&larr; Deals</a>
       </p>
-      <h1>{deal.company.name}</h1>
+      <h1>
+        {deal.company.name}
+        {deal.archivedAt && <span className="badge"> Archived</span>}
+      </h1>
 
       <div className="card">
         <p>
@@ -246,6 +250,17 @@ export default async function DealDetailPage({
           members={referenceData.members}
         />
       )}
+
+      <ArchiveControl
+        orgSlug={orgSlug}
+        basePath={`deals/${deal.id}`}
+        archivedAt={deal.archivedAt?.toISOString() ?? null}
+        canArchive={
+          hasPermission(ctx, "deals.archive.all") ||
+          (hasPermission(ctx, "deals.archive.own") &&
+            deal.ownerMembershipId === ctx.membershipId)
+        }
+      />
     </div>
   );
 }

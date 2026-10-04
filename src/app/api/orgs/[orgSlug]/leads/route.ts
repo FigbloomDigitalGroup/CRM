@@ -18,6 +18,7 @@ export async function GET(
       temperature:
         (searchParams.get("temperature") as "HOT" | "WARM" | "COLD" | null) ??
         undefined,
+      includeArchived: searchParams.get("includeArchived") === "true",
     });
   });
 }

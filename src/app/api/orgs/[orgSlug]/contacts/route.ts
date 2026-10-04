@@ -14,6 +14,7 @@ export async function GET(
       query: searchParams.get("q") ?? undefined,
       companyId: searchParams.get("companyId") ?? undefined,
       ownerMembershipId: searchParams.get("ownerMembershipId") ?? undefined,
+      includeArchived: searchParams.get("includeArchived") === "true",
     });
   });
 }

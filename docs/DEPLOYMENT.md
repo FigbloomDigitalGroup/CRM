@@ -222,6 +222,13 @@ database, and confirm row-level security is still enabled
 (`SELECT relrowsecurity FROM pg_class WHERE relname = 'organizations';`
 should return `t`) -- both checks were run for real here and matched.
 
+## Data deletion requests (GDPR / Kenya DPA)
+
+See `docs/DATA_DELETION_REQUESTS.md` for the full request-handling
+process. The actual erasure step is `scripts/erase-data-subject.ts`
+(FIG-601) -- a standalone admin script, not a web route, run by hand
+after the verification/legal-basis steps the doc describes.
+
 ## CI
 
 `.github/workflows/ci.yml` runs on every PR and every push to `main`:

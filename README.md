@@ -116,9 +116,14 @@ session to resolve) and is authenticated by an API key instead — see
 "Website lead capture" below.
 
 Coverage: Companies, Contacts, and Leads have full CRUD + search +
-duplicate detection + a UI, including lead ownership/assignment. Deals have
-full CRUD, a pipeline board grouped by stage, lead-to-deal conversion, and
-won/lost-outcome recording — see "Deal outcomes" below. Proposal
+duplicate detection + a UI, including lead ownership/assignment. Leads,
+Contacts, Companies, and Deals also all have soft-delete archive/restore,
+and Contacts/Companies can be merged when they turn out to be duplicates
+(FIG-601) — see "Archive, restore, and merge" below. Deals have
+full CRUD, a pipeline board grouped by stage, lead-to-deal conversion
+(which can create its company/contact inline rather than requiring one to
+already exist — FIG-601), and won/lost-outcome recording — see "Deal
+outcomes" below. Proposal
 References are a minimal create/list/status-update slice scoped to a
 single deal, not a full proposal-generation subsystem. Activities and
 Tasks have full CRUD + a timeline/list UI, linked to any of
@@ -189,6 +194,50 @@ colleague's lead's activity log that the Lead's own detail page would
 403 you for directly. Tasks on Company/Contact pages are not aggregated
 this way — only tasks directly linked to that Company/Contact, matching
 the AC's narrower "created and viewed from contact and company pages."
+
+## Archive, restore, and merge (FIG-601)
+
+Lead, Contact, Company, and Deal all support soft-delete:
+`archivedAt`/`archive`/`restore` on each, gated by its own permission
+(`leads.archive.own`/`.all`, `deals.archive.own`/`.all` -- same own/all
+split as edit, since an owner can retire their own dead lead/deal without
+Management; `contacts.archive`/`companies.archive` -- flat, matching
+those two entities' existing single-tier permissions). Archiving only
+sets a timestamp and hides the record from default lists/duplicate
+detection -- nothing is deleted, unlinked, or otherwise touched, and
+restoring is the exact reverse. There is no hard-delete route anywhere in
+the product; the one place a record is ever truly removed is the
+GDPR/Kenya DPA erasure script, which is a different thing entirely -- see
+"Data deletion requests," below.
+
+Contacts and Companies can additionally be **merged** when they turn out
+to be the same company/person entered twice (`contacts.merge`/
+`companies.merge`): every Activity/Task/Communication/Lead/Deal (and, for
+companies, Contact and CompanyService) pointing at the "loser" gets
+re-pointed at the "winner" in one transaction, then the loser is archived
+with `mergedIntoId` set so its old page can show where its history went.
+The loser's own fields (name, email, phone, ...) are left untouched --
+only its *relationships* move. Lead and Deal have no merge action of
+their own; a duplicate Lead/Deal is just archived.
+
+Lead-to-deal conversion (`leadService.convertLead`) no longer requires an
+existing Company -- `newCompany`/`newContact` create one (and optionally
+a Contact) inline, in the same transaction as the Deal, backfilling the
+Lead itself so both records agree on the new company/contact. Gated by
+`companies.create`/`contacts.create` in addition to the existing
+`leads.convert` + edit check, so conversion can't become a side door
+around those permissions.
+
+## Data deletion requests (GDPR / Kenya DPA)
+
+See `docs/DATA_DELETION_REQUESTS.md` for the full request-handling
+process and `scripts/erase-data-subject.ts` (FIG-601) for the actual
+erasure step -- a standalone admin script (dry-run by default), not a web
+route, scoped to Contact only (a Company is a business entity, not a
+GDPR/DPA data subject). This is a different thing from archiving above:
+archiving hides a record and is fully reversible; erasure actually deletes
+the Contact row and its directly-linked Activities/Tasks/Communications,
+and is not.
 
 ## Reports
 

@@ -13,6 +13,7 @@ export async function GET(
     return listCompanies(ctx, {
       query: searchParams.get("q") ?? undefined,
       ownerMembershipId: searchParams.get("ownerMembershipId") ?? undefined,
+      includeArchived: searchParams.get("includeArchived") === "true",
     });
   });
 }

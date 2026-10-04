@@ -9,10 +9,13 @@ import { CreateDealForm } from "./CreateDealForm";
 
 export default async function DealsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
+  searchParams: Promise<{ includeArchived?: string }>;
 }) {
   const { orgSlug } = await params;
+  const { includeArchived } = await searchParams;
   const ctx = await resolveRequestContext(orgSlug);
 
   // Delivery/Finance/Restricted Technical have deals.view.all/none per the
@@ -20,7 +23,7 @@ export default async function DealsPage({
   // closed rather than returning an empty list -- same as the Leads page.
   let deals;
   try {
-    deals = await listDeals(ctx);
+    deals = await listDeals(ctx, { includeArchived: includeArchived === "true" });
   } catch (err) {
     if (err instanceof ForbiddenError) {
       return <p className="error">Your role does not have access to Deals.</p>;
@@ -63,6 +66,12 @@ export default async function DealsPage({
         </p>
       )}
 
+      <p>
+        <a href={`/o/${orgSlug}/deals${includeArchived === "true" ? "" : "?includeArchived=true"}`}>
+          {includeArchived === "true" ? "Hide archived deals" : "Show archived deals"}
+        </a>
+      </p>
+
       <p className="who">
         {hasPermission(ctx, "deals.view.all")
           ? "Showing all organization deals (deals.view.all)."
@@ -83,7 +92,10 @@ export default async function DealsPage({
                   className="deal-card"
                   href={`/o/${orgSlug}/deals/${deal.id}`}
                 >
-                  <div>{deal.company.name}</div>
+                  <div>
+                    {deal.company.name}
+                    {deal.archivedAt && <span className="badge"> Archived</span>}
+                  </div>
                   <div className="value">
                     {currencyFormat(deal.value, deal.currency, deal.valueMasked)}
                   </div>

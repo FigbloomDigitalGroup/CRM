@@ -31,6 +31,8 @@ export interface ListCompaniesFilters {
   query?: string;
   ownerMembershipId?: string;
   lifecycleStateId?: string;
+  /** Archived companies are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
+  includeArchived?: boolean;
 }
 
 /**
@@ -98,6 +100,7 @@ export async function listCompanies(
         organizationId,
         ownerMembershipId: filters.ownerMembershipId,
         lifecycleStateId: filters.lifecycleStateId,
+        ...(filters.includeArchived ? {} : { archivedAt: null }),
         ...(filters.query
           ? {
               OR: [
@@ -111,6 +114,75 @@ export async function listCompanies(
       orderBy: { createdAt: "desc" },
     }),
   );
+}
+
+/** Sets `archivedAt` (FIG-601) -- never a hard delete; see the model's doc comment. */
+export async function archiveCompany(organizationId: string, companyId: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.company.update({
+      where: { id: companyId, organizationId },
+      data: { archivedAt: new Date() },
+    }),
+  );
+}
+
+export async function restoreCompany(organizationId: string, companyId: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.company.update({
+      where: { id: companyId, organizationId },
+      data: { archivedAt: null, mergedIntoId: null },
+    }),
+  );
+}
+
+/**
+ * Reassigns every Contact/Lead/Deal/Activity/Task/Communication/
+ * CompanyService linked to `loserId` onto `winnerId`, then archives the
+ * loser and records where it went (FIG-601). One transaction so a failure
+ * partway through leaves nothing half-reassigned. The service layer
+ * (`companyService.ts`) checks permissions and that both ids resolve to
+ * real, distinct, not-already-archived companies before calling this.
+ */
+export async function mergeCompanies(
+  organizationId: string,
+  loserId: string,
+  winnerId: string,
+) {
+  return withOrgContext(organizationId, async (tx) => {
+    await tx.contact.updateMany({
+      where: { organizationId, companyId: loserId },
+      data: { companyId: winnerId },
+    });
+    await tx.lead.updateMany({
+      where: { organizationId, companyId: loserId },
+      data: { companyId: winnerId },
+    });
+    await tx.deal.updateMany({
+      where: { organizationId, companyId: loserId },
+      data: { companyId: winnerId },
+    });
+    await tx.activity.updateMany({
+      where: { organizationId, companyId: loserId },
+      data: { companyId: winnerId },
+    });
+    await tx.task.updateMany({
+      where: { organizationId, companyId: loserId },
+      data: { companyId: winnerId },
+    });
+    await tx.communication.updateMany({
+      where: { organizationId, companyId: loserId },
+      data: { companyId: winnerId },
+    });
+    await tx.companyService.updateMany({
+      where: { organizationId, companyId: loserId },
+      data: { companyId: winnerId },
+    });
+
+    return tx.company.update({
+      where: { id: loserId, organizationId },
+      data: { archivedAt: new Date(), mergedIntoId: winnerId },
+    });
+  });
 }
 
 /**
@@ -131,7 +203,7 @@ export async function findPossibleDuplicateCompanies(
 
   return withOrgContext(organizationId, (tx) =>
     tx.company.findMany({
-      where: { organizationId, OR: clauses },
+      where: { organizationId, archivedAt: null, OR: clauses },
       take: 5,
     }),
   );

@@ -105,6 +105,8 @@ export interface ListLeadsFilters {
   temperature?: "HOT" | "WARM" | "COLD";
   createdAfter?: Date;
   createdBefore?: Date;
+  /** Archived leads are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
+  includeArchived?: boolean;
 }
 
 export async function listLeads(
@@ -119,6 +121,7 @@ export async function listLeads(
         leadStatusId: filters.leadStatusId,
         leadSourceId: filters.leadSourceId,
         temperature: filters.temperature,
+        ...(filters.includeArchived ? {} : { archivedAt: null }),
         ...(filters.createdAfter || filters.createdBefore
           ? {
               createdAt: {
@@ -185,9 +188,28 @@ export async function findPossibleDuplicateLeads(
 
   return withOrgContext(organizationId, (tx) =>
     tx.lead.findMany({
-      where: { organizationId, convertedAt: null, OR: clauses },
+      where: { organizationId, convertedAt: null, archivedAt: null, OR: clauses },
       include: { company: true, contact: true },
       take: 5,
+    }),
+  );
+}
+
+/** Sets `archivedAt` (FIG-601) -- never a hard delete; see the model's doc comment. */
+export async function archiveLead(organizationId: string, leadId: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.lead.update({
+      where: { id: leadId, organizationId },
+      data: { archivedAt: new Date() },
+    }),
+  );
+}
+
+export async function restoreLead(organizationId: string, leadId: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.lead.update({
+      where: { id: leadId, organizationId },
+      data: { archivedAt: null },
     }),
   );
 }

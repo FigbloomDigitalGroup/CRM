@@ -213,23 +213,23 @@ model Membership {
   user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
   role         Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
-  ownedCompanies         Company[]           @relation("CompanyOwner")
-  createdCompanies       Company[]           @relation("CompanyCreatedBy")
-  ownedContacts          Contact[]           @relation("ContactOwner")
-  createdContacts        Contact[]           @relation("ContactCreatedBy")
-  ownedLeads             Lead[]              @relation("LeadOwner")
-  createdLeads           Lead[]              @relation("LeadCreatedBy")
-  ownedDeals             Deal[]              @relation("DealOwner")
-  createdDeals           Deal[]              @relation("DealCreatedBy")
-  authoredActivities     Activity[]          @relation("ActivityAuthor")
-  assignedTasks          Task[]              @relation("TaskAssignee")
-  createdTasks           Task[]              @relation("TaskCreatedBy")
-  authoredCommunications Communication[]     @relation("CommunicationAuthor")
-  ownedProposals         ProposalReference[] @relation("ProposalOwner")
-  auditEvents            AuditEvent[]        @relation("AuditActorMembership")
-  createdWebsiteApiKeys  WebsiteApiKey[]     @relation("WebsiteApiKeyCreatedBy")
-  createdInboundEmailKeys InboundEmailKey[]  @relation("InboundEmailKeyCreatedBy")
-  notifications          Notification[]
+  ownedCompanies          Company[]                @relation("CompanyOwner")
+  createdCompanies        Company[]                @relation("CompanyCreatedBy")
+  ownedContacts           Contact[]                @relation("ContactOwner")
+  createdContacts         Contact[]                @relation("ContactCreatedBy")
+  ownedLeads              Lead[]                   @relation("LeadOwner")
+  createdLeads            Lead[]                   @relation("LeadCreatedBy")
+  ownedDeals              Deal[]                   @relation("DealOwner")
+  createdDeals            Deal[]                   @relation("DealCreatedBy")
+  authoredActivities      Activity[]               @relation("ActivityAuthor")
+  assignedTasks           Task[]                   @relation("TaskAssignee")
+  createdTasks            Task[]                   @relation("TaskCreatedBy")
+  authoredCommunications  Communication[]          @relation("CommunicationAuthor")
+  ownedProposals          ProposalReference[]      @relation("ProposalOwner")
+  auditEvents             AuditEvent[]             @relation("AuditActorMembership")
+  createdWebsiteApiKeys   WebsiteApiKey[]          @relation("WebsiteApiKeyCreatedBy")
+  createdInboundEmailKeys InboundEmailKey[]        @relation("InboundEmailKeyCreatedBy")
+  notifications           Notification[]
   notificationPreferences NotificationPreference[]
 
   @@unique([organizationId, userId])
@@ -424,21 +424,21 @@ enum NotificationDeliveryStatus {
 /// that file and docs/DEPLOYMENT.md for why this project has no job queue
 /// to hand retries to instead.
 model NotificationDelivery {
-  id              String                     @id @default(uuid())
-  organizationId  String                     @map("organization_id")
-  notificationId  String?                    @map("notification_id")
-  channel         NotificationChannel
-  recipientEmail  String?                    @map("recipient_email")
-  recipientPhone  String?                    @map("recipient_phone")
-  templateKey     String                     @map("template_key")
-  payload         Json?
-  status          NotificationDeliveryStatus @default(PENDING)
-  attempts        Int                        @default(0)
-  maxAttempts     Int                        @default(5) @map("max_attempts")
-  lastError       String?                    @map("last_error")
-  nextAttemptAt   DateTime                   @default(now()) @map("next_attempt_at")
-  sentAt          DateTime?                  @map("sent_at")
-  createdAt       DateTime                   @default(now()) @map("created_at")
+  id             String                     @id @default(uuid())
+  organizationId String                     @map("organization_id")
+  notificationId String?                    @map("notification_id")
+  channel        NotificationChannel
+  recipientEmail String?                    @map("recipient_email")
+  recipientPhone String?                    @map("recipient_phone")
+  templateKey    String                     @map("template_key")
+  payload        Json?
+  status         NotificationDeliveryStatus @default(PENDING)
+  attempts       Int                        @default(0)
+  maxAttempts    Int                        @default(5) @map("max_attempts")
+  lastError      String?                    @map("last_error")
+  nextAttemptAt  DateTime                   @default(now()) @map("next_attempt_at")
+  sentAt         DateTime?                  @map("sent_at")
+  createdAt      DateTime                   @default(now()) @map("created_at")
 
   organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   notification Notification? @relation(fields: [notificationId], references: [id], onDelete: Cascade)
@@ -625,8 +625,8 @@ model Service {
 /// detection is an application-level concern informed by the
 /// name/email/phone indexes below.
 model Company {
-  id                    String   @id @default(uuid())
-  organizationId        String   @map("organization_id")
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
   name                  String
   industry              String?
   website               String?
@@ -634,16 +634,27 @@ model Company {
   phone                 String?
   email                 String?
   notes                 String?
-  lifecycleStateId      String?  @map("lifecycle_state_id")
-  ownerMembershipId     String?  @map("owner_membership_id")
-  createdByMembershipId String?  @map("created_by_membership_id")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  lifecycleStateId      String?   @map("lifecycle_state_id")
+  ownerMembershipId     String?   @map("owner_membership_id")
+  createdByMembershipId String?   @map("created_by_membership_id")
+  /// Soft-delete (FIG-601) -- excluded from default list/duplicate queries
+  /// when set, but never physically removed; see `companyService.ts`'s
+  /// archive/restore functions and IMPLEMENTATION_NOTES.md.
+  archivedAt            DateTime? @map("archived_at")
+  /// Set when this row was the "loser" of a merge (FIG-601) -- always
+  /// archived at the same time. Points at the surviving Company so a
+  /// visitor landing on the old record's page can be redirected/shown
+  /// where its history went.
+  mergedIntoId          String?   @map("merged_into_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   lifecycleState CustomerLifecycleState? @relation(fields: [lifecycleStateId], references: [id], onDelete: SetNull)
   owner          Membership?             @relation("CompanyOwner", fields: [ownerMembershipId], references: [id], onDelete: SetNull)
   createdBy      Membership?             @relation("CompanyCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: SetNull)
+  mergedInto     Company?                @relation("CompanyMergedInto", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom     Company[]               @relation("CompanyMergedInto")
 
   contacts        Contact[]
   leads           Lead[]
@@ -660,32 +671,40 @@ model Company {
   @@index([organizationId, name])
   @@index([organizationId, email])
   @@index([organizationId, phone])
+  @@index([organizationId, archivedAt])
   @@map("companies")
 }
 
 /// A person, distinct from Company. A contact with no company is
 /// supported (e.g. an individual lead with no business behind them yet).
 model Contact {
-  id                    String   @id @default(uuid())
-  organizationId        String   @map("organization_id")
-  companyId             String?  @map("company_id")
-  firstName             String   @map("first_name")
-  lastName              String?  @map("last_name")
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  companyId             String?   @map("company_id")
+  firstName             String    @map("first_name")
+  lastName              String?   @map("last_name")
   phone                 String?
   email                 String?
-  jobTitle              String?  @map("job_title")
+  jobTitle              String?   @map("job_title")
   department            String?
-  socialProfiles        Json?    @map("social_profiles")
+  socialProfiles        Json?     @map("social_profiles")
   notes                 String?
-  ownerMembershipId     String?  @map("owner_membership_id")
-  createdByMembershipId String?  @map("created_by_membership_id")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  ownerMembershipId     String?   @map("owner_membership_id")
+  createdByMembershipId String?   @map("created_by_membership_id")
+  /// Soft-delete (FIG-601) -- see Company.archivedAt's doc comment.
+  archivedAt            DateTime? @map("archived_at")
+  /// Set when this row was the "loser" of a merge (FIG-601) -- see
+  /// Company.mergedIntoId's doc comment.
+  mergedIntoId          String?   @map("merged_into_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   company      Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
   owner        Membership?  @relation("ContactOwner", fields: [ownerMembershipId], references: [id], onDelete: SetNull)
   createdBy    Membership?  @relation("ContactCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: SetNull)
+  mergedInto   Contact?     @relation("ContactMergedInto", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom   Contact[]    @relation("ContactMergedInto")
 
   leads          Lead[]
   dealsAsPrimary Deal[]          @relation("DealPrimaryContact")
@@ -699,6 +718,7 @@ model Contact {
   @@index([organizationId, ownerMembershipId])
   @@index([organizationId, email])
   @@index([organizationId, phone])
+  @@index([organizationId, archivedAt])
   @@map("contacts")
 }
 
@@ -728,6 +748,8 @@ model Lead {
   convertedAt           DateTime?       @map("converted_at")
   notes                 String?
   createdByMembershipId String?         @map("created_by_membership_id")
+  /// Soft-delete (FIG-601) -- see Company.archivedAt's doc comment.
+  archivedAt            DateTime?       @map("archived_at")
   createdAt             DateTime        @default(now()) @map("created_at")
   updatedAt             DateTime        @updatedAt @map("updated_at")
 
@@ -754,6 +776,7 @@ model Lead {
   @@index([organizationId, ownerMembershipId])
   @@index([organizationId, companyId])
   @@index([organizationId, nextFollowUpAt])
+  @@index([organizationId, archivedAt])
   @@map("leads")
 }
 
@@ -786,6 +809,8 @@ model Deal {
   lostAt                DateTime?   @map("lost_at")
   notes                 String?
   createdByMembershipId String?     @map("created_by_membership_id")
+  /// Soft-delete (FIG-601) -- see Company.archivedAt's doc comment.
+  archivedAt            DateTime?   @map("archived_at")
   createdAt             DateTime    @default(now()) @map("created_at")
   updatedAt             DateTime    @updatedAt @map("updated_at")
 
@@ -812,6 +837,7 @@ model Deal {
   @@index([organizationId, companyId])
   @@index([organizationId, outcome])
   @@index([organizationId, expectedCloseDate])
+  @@index([organizationId, archivedAt])
   @@map("deals")
 }
 

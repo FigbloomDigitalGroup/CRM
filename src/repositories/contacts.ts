@@ -31,6 +31,8 @@ export interface ListContactsFilters {
   query?: string;
   companyId?: string;
   ownerMembershipId?: string;
+  /** Archived contacts are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
+  includeArchived?: boolean;
 }
 
 export async function createContact(input: CreateContactInput) {
@@ -101,6 +103,7 @@ export async function listContacts(
         organizationId,
         companyId: filters.companyId,
         ownerMembershipId: filters.ownerMembershipId,
+        ...(filters.includeArchived ? {} : { archivedAt: null }),
         ...(filters.query
           ? {
               OR: [
@@ -118,6 +121,66 @@ export async function listContacts(
   );
 }
 
+/** Sets `archivedAt` (FIG-601) -- never a hard delete; see the model's doc comment. */
+export async function archiveContact(organizationId: string, contactId: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.contact.update({
+      where: { id: contactId, organizationId },
+      data: { archivedAt: new Date() },
+    }),
+  );
+}
+
+export async function restoreContact(organizationId: string, contactId: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.contact.update({
+      where: { id: contactId, organizationId },
+      data: { archivedAt: null, mergedIntoId: null },
+    }),
+  );
+}
+
+/**
+ * Reassigns every Lead/Deal(-as-primary-contact)/Activity/Task/
+ * Communication linked to `loserId` onto `winnerId`, then archives the
+ * loser and records where it went (FIG-601). Doesn't touch either
+ * contact's own `companyId` -- merging two Contact *records* believed to
+ * be the same person is independent of which Company they're filed under.
+ */
+export async function mergeContacts(
+  organizationId: string,
+  loserId: string,
+  winnerId: string,
+) {
+  return withOrgContext(organizationId, async (tx) => {
+    await tx.lead.updateMany({
+      where: { organizationId, contactId: loserId },
+      data: { contactId: winnerId },
+    });
+    await tx.deal.updateMany({
+      where: { organizationId, primaryContactId: loserId },
+      data: { primaryContactId: winnerId },
+    });
+    await tx.activity.updateMany({
+      where: { organizationId, contactId: loserId },
+      data: { contactId: winnerId },
+    });
+    await tx.task.updateMany({
+      where: { organizationId, contactId: loserId },
+      data: { contactId: winnerId },
+    });
+    await tx.communication.updateMany({
+      where: { organizationId, contactId: loserId },
+      data: { contactId: winnerId },
+    });
+
+    return tx.contact.update({
+      where: { id: loserId, organizationId },
+      data: { archivedAt: new Date(), mergedIntoId: winnerId },
+    });
+  });
+}
+
 /** Duplicate detection by email/phone (a shared work phone across contacts is legitimate — FIG-438 section 9 — so this surfaces candidates, it does not block). */
 export async function findPossibleDuplicateContacts(
   organizationId: string,
@@ -130,7 +193,7 @@ export async function findPossibleDuplicateContacts(
 
   return withOrgContext(organizationId, (tx) =>
     tx.contact.findMany({
-      where: { organizationId, OR: clauses },
+      where: { organizationId, archivedAt: null, OR: clauses },
       take: 5,
     }),
   );

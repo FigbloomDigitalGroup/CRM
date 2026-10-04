@@ -4,15 +4,17 @@ import { hasPermission } from "@/auth/context";
 import { ForbiddenError, NotFoundError } from "@/auth/errors";
 import { listActivitiesForCompany } from "@/services/activityService";
 import { listAuditHistory } from "@/services/auditService";
-import { getCompany } from "@/services/companyService";
+import { getCompany, listCompanies } from "@/services/companyService";
 import { listCommunicationsForCompany } from "@/services/communicationService";
 import { listCompanyServices } from "@/services/companyServiceLinkService";
 import { listContacts } from "@/services/contactService";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { listTasks } from "@/services/taskService";
 import { ActivityTimeline } from "../../_shared/ActivityTimeline";
+import { ArchiveControl } from "../../_shared/ArchiveControl";
 import { AuditHistory } from "../../_shared/AuditHistory";
 import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
+import { MergeControl } from "../../_shared/MergeControl";
 import { TaskSection } from "../../_shared/TaskSection";
 import { CompanyServicesSection } from "../CompanyServicesSection";
 import { EditCompanyForm } from "./EditCompanyForm";
@@ -79,12 +81,22 @@ export default async function CompanyDetailPage({
     if (!(err instanceof ForbiddenError)) throw err;
   }
 
+  const canMerge = hasPermission(ctx, "companies.merge") && !company.archivedAt;
+  const mergeOptions = canMerge
+    ? (await listCompanies(ctx))
+        .filter((c) => c.id !== company.id && !c.archivedAt)
+        .map((c) => ({ id: c.id, label: c.name }))
+    : [];
+
   return (
     <div>
       <p>
         <a href={`/o/${orgSlug}/companies`}>&larr; Companies</a>
       </p>
-      <h1>{company.name}</h1>
+      <h1>
+        {company.name}
+        {company.archivedAt && <span className="badge"> Archived</span>}
+      </h1>
 
       <div className="card">
         <p>Industry: {company.industry ?? "--"}</p>
@@ -204,6 +216,21 @@ export default async function CompanyDetailPage({
           members={referenceData.members}
         />
       )}
+
+      <MergeControl
+        orgSlug={orgSlug}
+        basePath={`companies/${company.id}`}
+        bodyKey="intoCompanyId"
+        options={mergeOptions}
+        canMerge={canMerge}
+      />
+
+      <ArchiveControl
+        orgSlug={orgSlug}
+        basePath={`companies/${company.id}`}
+        archivedAt={company.archivedAt?.toISOString() ?? null}
+        canArchive={hasPermission(ctx, "companies.archive")}
+      />
     </div>
   );
 }

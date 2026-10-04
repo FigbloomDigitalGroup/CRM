@@ -10,6 +10,7 @@ import { getLead } from "@/services/leadService";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { listTasks } from "@/services/taskService";
 import { ActivityTimeline } from "../../_shared/ActivityTimeline";
+import { ArchiveControl } from "../../_shared/ArchiveControl";
 import { AuditHistory } from "../../_shared/AuditHistory";
 import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
 import { TaskSection } from "../../_shared/TaskSection";
@@ -89,6 +90,7 @@ export default async function LeadDetailPage({
       </p>
       <h1>
         {lead.company?.name ?? `${lead.contact?.firstName ?? "Untitled"} lead`}
+        {lead.archivedAt && <span className="badge"> Archived</span>}
       </h1>
 
       <div className="card">
@@ -148,6 +150,7 @@ export default async function LeadDetailPage({
             orgSlug={orgSlug}
             leadId={lead.id}
             hasCompany={Boolean(lead.companyId)}
+            hasContact={Boolean(lead.contactId)}
             companies={companies.map((c) => ({ id: c.id, name: c.name }))}
           />
         </div>
@@ -225,6 +228,17 @@ export default async function LeadDetailPage({
           members={referenceData.members}
         />
       )}
+
+      <ArchiveControl
+        orgSlug={orgSlug}
+        basePath={`leads/${lead.id}`}
+        archivedAt={lead.archivedAt?.toISOString() ?? null}
+        canArchive={
+          hasPermission(ctx, "leads.archive.all") ||
+          (hasPermission(ctx, "leads.archive.own") &&
+            lead.ownerMembershipId === ctx.membershipId)
+        }
+      />
     </div>
   );
 }

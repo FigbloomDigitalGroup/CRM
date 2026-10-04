@@ -6,12 +6,27 @@ import {
 } from "../auth/context";
 import { NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
+import { recordAuditEvent } from "../repositories/auditEvents";
 import {
   convertLeadToDeal,
   LeadAlreadyConvertedError,
   LeadMissingCompanyError,
+  type NewCompanyDuringConversion,
+  type NewContactDuringConversion,
 } from "../repositories/deals";
-import { recordAuditEvent } from "../repositories/auditEvents";
+import {
+  archiveLead as archiveLeadRecord,
+  createLead as createLeadRecord,
+  findPossibleDuplicateLeads,
+  getLeadById,
+  listLeads as listLeadsRecords,
+  reassignLeadOwner,
+  restoreLead as restoreLeadRecord,
+  updateLead as updateLeadRecord,
+  type CreateLeadInput,
+  type ListLeadsFilters,
+  type UpdateLeadInput,
+} from "../repositories/leads";
 import { diffAuditedFields } from "./auditDiff";
 import { notifyLeadAssigned } from "./notificationService";
 
@@ -24,17 +39,6 @@ const AUDITED_LEAD_FIELDS = [
   "companyId",
   "contactId",
 ] as const;
-import {
-  createLead as createLeadRecord,
-  findPossibleDuplicateLeads,
-  getLeadById,
-  listLeads as listLeadsRecords,
-  reassignLeadOwner,
-  updateLead as updateLeadRecord,
-  type CreateLeadInput,
-  type ListLeadsFilters,
-  type UpdateLeadInput,
-} from "../repositories/leads";
 
 export type CreateLeadServiceInput = Omit<
   CreateLeadInput,
@@ -215,6 +219,10 @@ export async function assignLead(
 
 export interface ConvertLeadServiceInput {
   companyId?: string;
+  /** Inline-create a company instead (FIG-601) -- only used when the lead has no companyId and none was supplied above. */
+  newCompany?: NewCompanyDuringConversion;
+  /** Inline-create a contact instead (FIG-601) -- only used when the lead has no contactId. */
+  newContact?: NewContactDuringConversion;
   ownerMembershipId?: string;
   pipelineStageId?: string;
   serviceId?: string;
@@ -227,6 +235,10 @@ export interface ConvertLeadServiceInput {
  * Conversion requires both ownership (via leads.edit.own/all, since
  * converting mutates the lead) and the dedicated `leads.convert`
  * permission, which is what actually gates creating a Deal from it.
+ * Inline-creating a company/contact during conversion (FIG-601) is
+ * additionally gated by `companies.create`/`contacts.create` -- the same
+ * authority `companyService.createCompany`/`contactService.createContact`
+ * already require, so conversion can't become a backdoor around them.
  */
 export async function convertLead(
   ctx: AuthContext,
@@ -247,11 +259,24 @@ export async function convertLead(
       "This lead has already been converted to a deal.",
     );
   }
-  if (!lead.companyId && !input.companyId) {
+  if (!lead.companyId && !input.companyId && !input.newCompany) {
     throw new ValidationError(
       "A company is required to convert this lead -- attach an existing " +
-        "company to the lead first, or pass companyId.",
+        "company to the lead first, pass companyId, or pass newCompany to " +
+        "create one inline.",
     );
+  }
+  if (input.newCompany) {
+    requirePermission(ctx, "companies.create");
+    if (!input.newCompany.name?.trim()) {
+      throw new ValidationError("newCompany.name is required.");
+    }
+  }
+  if (input.newContact) {
+    requirePermission(ctx, "contacts.create");
+    if (!input.newContact.firstName?.trim()) {
+      throw new ValidationError("newContact.firstName is required.");
+    }
   }
 
   try {
@@ -259,6 +284,8 @@ export async function convertLead(
       organizationId: ctx.organizationId,
       leadId,
       companyId: input.companyId,
+      newCompany: input.newCompany,
+      newContact: input.newContact,
       ownerMembershipId: input.ownerMembershipId,
       pipelineStageId: input.pipelineStageId,
       serviceId: input.serviceId,
@@ -277,6 +304,57 @@ export async function convertLead(
     }
     throw err;
   }
+}
+
+/** Soft-delete (FIG-601) -- own/all split, same tier as `leads.edit.own/.all`. */
+export async function archiveLead(ctx: AuthContext, leadId: string) {
+  const lead = await loadOwnedLead(ctx, leadId);
+  requireOwnedRecordPermission(
+    ctx,
+    "leads.archive.own",
+    "leads.archive.all",
+    lead.ownerMembershipId,
+  );
+  if (lead.archivedAt) {
+    throw new ValidationError("This lead is already archived.");
+  }
+
+  const archived = await archiveLeadRecord(ctx.organizationId, leadId);
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "lead.archived",
+    entityType: "Lead",
+    entityId: leadId,
+  });
+
+  return archived;
+}
+
+export async function restoreLead(ctx: AuthContext, leadId: string) {
+  const lead = await loadOwnedLead(ctx, leadId);
+  requireOwnedRecordPermission(
+    ctx,
+    "leads.archive.own",
+    "leads.archive.all",
+    lead.ownerMembershipId,
+  );
+  if (!lead.archivedAt) {
+    throw new ValidationError("This lead is not archived.");
+  }
+
+  const restored = await restoreLeadRecord(ctx.organizationId, leadId);
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "lead.restored",
+    entityType: "Lead",
+    entityId: leadId,
+  });
+
+  return restored;
 }
 
 export async function checkDuplicateLeads(

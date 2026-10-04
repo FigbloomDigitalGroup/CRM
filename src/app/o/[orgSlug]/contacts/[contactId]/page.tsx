@@ -4,13 +4,15 @@ import { ForbiddenError, NotFoundError } from "@/auth/errors";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { listActivitiesForContact } from "@/services/activityService";
 import { listAuditHistory } from "@/services/auditService";
-import { getContact } from "@/services/contactService";
+import { getContact, listContacts } from "@/services/contactService";
 import { listCommunicationsForContact } from "@/services/communicationService";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { listTasks } from "@/services/taskService";
 import { ActivityTimeline } from "../../_shared/ActivityTimeline";
+import { ArchiveControl } from "../../_shared/ArchiveControl";
 import { AuditHistory } from "../../_shared/AuditHistory";
 import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
+import { MergeControl } from "../../_shared/MergeControl";
 import { TaskSection } from "../../_shared/TaskSection";
 import { EditContactForm } from "./EditContactForm";
 
@@ -65,6 +67,13 @@ export default async function ContactDetailPage({
     if (!(err instanceof ForbiddenError)) throw err;
   }
 
+  const canMerge = hasPermission(ctx, "contacts.merge") && !contact.archivedAt;
+  const mergeOptions = canMerge
+    ? (await listContacts(ctx))
+        .filter((c) => c.id !== contact.id && !c.archivedAt)
+        .map((c) => ({ id: c.id, label: `${c.firstName} ${c.lastName ?? ""}`.trim() }))
+    : [];
+
   return (
     <div>
       <p>
@@ -72,6 +81,7 @@ export default async function ContactDetailPage({
       </p>
       <h1>
         {contact.firstName} {contact.lastName ?? ""}
+        {contact.archivedAt && <span className="badge"> Archived</span>}
       </h1>
 
       <div className="card">
@@ -140,6 +150,21 @@ export default async function ContactDetailPage({
           members={referenceData.members}
         />
       )}
+
+      <MergeControl
+        orgSlug={orgSlug}
+        basePath={`contacts/${contact.id}`}
+        bodyKey="intoContactId"
+        options={mergeOptions}
+        canMerge={canMerge}
+      />
+
+      <ArchiveControl
+        orgSlug={orgSlug}
+        basePath={`contacts/${contact.id}`}
+        archivedAt={contact.archivedAt?.toISOString() ?? null}
+        canArchive={hasPermission(ctx, "contacts.archive")}
+      />
     </div>
   );
 }

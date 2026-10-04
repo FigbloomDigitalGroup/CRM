@@ -30,10 +30,11 @@ export default async function LeadsPage({
     q?: string;
     leadStatusId?: string;
     temperature?: string;
+    includeArchived?: string;
   }>;
 }) {
   const { orgSlug } = await params;
-  const { q, leadStatusId, temperature } = await searchParams;
+  const { q, leadStatusId, temperature, includeArchived } = await searchParams;
   const ctx = await resolveRequestContext(orgSlug);
 
   // Delivery, Finance, and Restricted Technical have no leads.view.* at all,
@@ -45,6 +46,7 @@ export default async function LeadsPage({
       query: q,
       leadStatusId,
       temperature: temperature as "HOT" | "WARM" | "COLD" | undefined,
+      includeArchived: includeArchived === "true",
     });
   } catch (err) {
     if (err instanceof ForbiddenError) {
@@ -113,6 +115,15 @@ export default async function LeadsPage({
           <option value="WARM">Warm</option>
           <option value="COLD">Cold</option>
         </select>
+        <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <input
+            type="checkbox"
+            name="includeArchived"
+            value="true"
+            defaultChecked={includeArchived === "true"}
+          />
+          Show archived
+        </label>
         <button type="submit" className="secondary">
           Filter
         </button>
@@ -139,6 +150,7 @@ export default async function LeadsPage({
                       lead.contact?.firstName ??
                       "(no company/contact)"}
                   </a>
+                  {lead.archivedAt && <span className="badge"> Archived</span>}
                 </td>
                 <td>{lead.leadStatus.name}</td>
                 <td>

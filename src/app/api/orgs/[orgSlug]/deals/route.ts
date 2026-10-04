@@ -18,6 +18,7 @@ export async function GET(
         (searchParams.get("outcome") as "OPEN" | "WON" | "LOST" | null) ??
         undefined,
       companyId: searchParams.get("companyId") ?? undefined,
+      includeArchived: searchParams.get("includeArchived") === "true",
     });
   });
 }

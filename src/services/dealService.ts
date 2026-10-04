@@ -8,9 +8,11 @@ import { NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
+  archiveDeal as archiveDealRecord,
   createDeal as createDealRecord,
   getDealById,
   listDeals as listDealsRecords,
+  restoreDeal as restoreDealRecord,
   updateDeal as updateDealRecord,
   type CreateDealInput,
   type ListDealsFilters,
@@ -259,4 +261,55 @@ export async function updateDeal(
   }
 
   return maskValue(ctx, updated);
+}
+
+/** Soft-delete (FIG-601) -- own/all split, same tier as `deals.edit.own/.all`. */
+export async function archiveDeal(ctx: AuthContext, dealId: string) {
+  const deal = await loadOwnedDeal(ctx, dealId);
+  requireOwnedRecordPermission(
+    ctx,
+    "deals.archive.own",
+    "deals.archive.all",
+    deal.ownerMembershipId,
+  );
+  if (deal.archivedAt) {
+    throw new ValidationError("This deal is already archived.");
+  }
+
+  const archived = await archiveDealRecord(ctx.organizationId, dealId);
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "deal.archived",
+    entityType: "Deal",
+    entityId: dealId,
+  });
+
+  return maskValue(ctx, archived);
+}
+
+export async function restoreDeal(ctx: AuthContext, dealId: string) {
+  const deal = await loadOwnedDeal(ctx, dealId);
+  requireOwnedRecordPermission(
+    ctx,
+    "deals.archive.own",
+    "deals.archive.all",
+    deal.ownerMembershipId,
+  );
+  if (!deal.archivedAt) {
+    throw new ValidationError("This deal is not archived.");
+  }
+
+  const restored = await restoreDealRecord(ctx.organizationId, dealId);
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "deal.restored",
+    entityType: "Deal",
+    entityId: dealId,
+  });
+
+  return maskValue(ctx, restored);
 }
