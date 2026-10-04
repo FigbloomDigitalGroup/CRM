@@ -10,6 +10,34 @@ import { type OrgScopedClient, withOrgContext } from "../db/orgScopedClient";
 export const WEBSITE_LEAD_ASSIGNMENT_CURSOR_KEY =
   "website_lead_assignment_cursor";
 
+/**
+ * Org-configurable on/off switch for the round-robin assignment below
+ * (FIG-599). Stored the same way as the acknowledgement toggle
+ * (`WEBSITE_ACKNOWLEDGEMENT_SETTING_KEY` in notificationService.ts) --
+ * `OrganizationSetting` JSON value, missing row = default. Unset defaults to
+ * `"ROUND_ROBIN"` so every already-provisioned organization keeps its
+ * current behavior unchanged.
+ */
+export const WEBSITE_LEAD_ASSIGNMENT_MODE_SETTING_KEY = "website_lead_assignment_mode";
+
+export type WebsiteLeadAssignmentMode = "ROUND_ROBIN" | "UNASSIGNED";
+
+async function getWebsiteLeadAssignmentMode(
+  tx: OrgScopedClient,
+  organizationId: string,
+): Promise<WebsiteLeadAssignmentMode> {
+  const setting = await tx.organizationSetting.findUnique({
+    where: {
+      organizationId_key: {
+        organizationId,
+        key: WEBSITE_LEAD_ASSIGNMENT_MODE_SETTING_KEY,
+      },
+    },
+  });
+  const mode = (setting?.value as { mode?: string } | null)?.mode;
+  return mode === "UNASSIGNED" ? "UNASSIGNED" : "ROUND_ROBIN";
+}
+
 export interface WebsiteLeadInput {
   name: string;
   email?: string;
@@ -214,7 +242,11 @@ export async function ingestWebsiteLead(
       serviceInterestId = service?.id;
     }
 
-    const ownerMembershipId = await pickNextAssignmentOwner(tx, organizationId);
+    const assignmentMode = await getWebsiteLeadAssignmentMode(tx, organizationId);
+    const ownerMembershipId =
+      assignmentMode === "ROUND_ROBIN"
+        ? await pickNextAssignmentOwner(tx, organizationId)
+        : null;
 
     const lead = await tx.lead.create({
       data: {

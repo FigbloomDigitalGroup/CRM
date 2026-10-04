@@ -75,7 +75,7 @@ const LOST_REASONS = [
   "OTHER",
 ].map((key, i) => ({ key, name: toTitle(key), sequence: i + 1 }));
 
-const SERVICES: { key: string; name: string; category: string }[] = [
+const SERVICES: { key: string; name: string; category: string; sequence: number }[] = [
   { key: "ACCOUNTING", name: "Accounting", category: "Software" },
   { key: "HR", name: "HR", category: "Software" },
   { key: "CRM", name: "CRM", category: "Software" },
@@ -106,7 +106,7 @@ const SERVICES: { key: string; name: string; category: string }[] = [
     category: "Automation",
   },
   { key: "CONSULTING_OTHER", name: "Consulting / Other", category: "Services" },
-];
+].map((s, i) => ({ ...s, sequence: i + 1 }));
 
 function toTitle(key: string): string {
   return key
@@ -190,7 +190,7 @@ export async function seedOrganizationDefaults(
     SERVICES.map((s) =>
       adminDb.service.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: { name: s.name, category: s.category },
+        update: { name: s.name, category: s.category, sequence: s.sequence },
         create: { organizationId, ...s },
       }),
     ),

@@ -132,6 +132,23 @@ describe("website lead capture: ingestion", () => {
     const task = await adminDb.task.findFirst({ where: { leadId: result.leadId } });
     expect(task).toBeNull();
   });
+
+  it("leaves every new lead unowned when the assignment mode is set to UNASSIGNED, even with active Sales reps (FIG-599)", async () => {
+    const org = await createTestOrganization();
+    const managementCtx = await createTestContext(org.id, "MANAGEMENT");
+    await createTestContext(org.id, "SALES", "s1");
+
+    await integrationService.setWebsiteAssignmentSetting(managementCtx, "UNASSIGNED");
+
+    const result = await ingestWebsiteLead(org.id, {
+      name: "Manual Triage Lead",
+      phone: "+254700000098",
+    });
+
+    expect(result.ownerMembershipId).toBeNull();
+    const task = await adminDb.task.findFirst({ where: { leadId: result.leadId } });
+    expect(task).toBeNull();
+  });
 });
 
 describe("website lead capture: API key authentication", () => {

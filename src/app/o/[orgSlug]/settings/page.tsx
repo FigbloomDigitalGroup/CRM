@@ -3,6 +3,7 @@ import { resolveRequestContext } from "@/auth/requestContext";
 import { adminDb } from "@/db/adminClient";
 import {
   getInboundEmailIntegrationStatus,
+  getWebsiteAssignmentSetting,
   getWebsiteIntegrationStatus,
   listRecentWebsiteActivity,
 } from "@/services/integrationService";
@@ -11,6 +12,8 @@ import {
   getMyNotificationPreferences,
   getWebsiteAcknowledgementSetting,
 } from "@/services/notificationService";
+import { listCatalog } from "@/services/referenceCatalogService";
+import { CatalogEditor } from "./CatalogEditor";
 import { InviteMemberForm } from "./InviteMemberForm";
 import { MembersTable } from "./MembersTable";
 import { NotificationPreferencesForm } from "./NotificationPreferencesForm";
@@ -19,6 +22,7 @@ import { RegenerateWebsiteKeyButton } from "./RegenerateWebsiteKeyButton";
 import { RevokeInboundEmailKeyButton } from "./RevokeInboundEmailKeyButton";
 import { RevokeWebsiteKeyButton } from "./RevokeWebsiteKeyButton";
 import { WebsiteAcknowledgementToggle } from "./WebsiteAcknowledgementToggle";
+import { WebsiteAssignmentModeToggle } from "./WebsiteAssignmentModeToggle";
 import { WebsiteSecuritySettingsForm } from "./WebsiteSecuritySettingsForm";
 
 export default async function SettingsPage({
@@ -51,6 +55,73 @@ export default async function SettingsPage({
 
       {canManageIntegration && <WebsiteIntegrationSection orgSlug={orgSlug} ctx={ctx} />}
       {canManageIntegration && <InboundEmailSection orgSlug={orgSlug} ctx={ctx} />}
+      {canManageIntegration && <ReferenceDataSection orgSlug={orgSlug} ctx={ctx} />}
+    </div>
+  );
+}
+
+/**
+ * Add/rename/reorder/deactivate for the 5 organization-configurable
+ * catalogs (FIG-599). CustomerLifecycleState is the same shape but out of
+ * this ticket's scope, so it's left read-only/seed-only for now.
+ */
+async function ReferenceDataSection({
+  orgSlug,
+  ctx,
+}: {
+  orgSlug: string;
+  ctx: Awaited<ReturnType<typeof resolveRequestContext>>;
+}) {
+  const [leadSources, leadStatuses, pipelineStages, lostReasons, services] = await Promise.all([
+    listCatalog(ctx, "leadSources"),
+    listCatalog(ctx, "leadStatuses"),
+    listCatalog(ctx, "pipelineStages"),
+    listCatalog(ctx, "lostReasons"),
+    listCatalog(ctx, "services"),
+  ]);
+
+  return (
+    <div>
+      <h2>Reference data</h2>
+      <p className="who">
+        Controlled values used across leads, deals, and companies. Deactivating a value hides it
+        from new records but never touches records that already use it.
+      </p>
+      <CatalogEditor
+        orgSlug={orgSlug}
+        catalogKey="pipelineStages"
+        label="Pipeline stages"
+        entries={pipelineStages}
+        variant="pipelineStage"
+      />
+      <CatalogEditor
+        orgSlug={orgSlug}
+        catalogKey="leadSources"
+        label="Lead sources"
+        entries={leadSources}
+        variant="plain"
+      />
+      <CatalogEditor
+        orgSlug={orgSlug}
+        catalogKey="leadStatuses"
+        label="Lead statuses"
+        entries={leadStatuses}
+        variant="plain"
+      />
+      <CatalogEditor
+        orgSlug={orgSlug}
+        catalogKey="lostReasons"
+        label="Lost reasons"
+        entries={lostReasons}
+        variant="plain"
+      />
+      <CatalogEditor
+        orgSlug={orgSlug}
+        catalogKey="services"
+        label="Services"
+        entries={services}
+        variant="service"
+      />
     </div>
   );
 }
@@ -139,12 +210,13 @@ async function WebsiteIntegrationSection({
   orgSlug: string;
   ctx: Awaited<ReturnType<typeof resolveRequestContext>>;
 }) {
-  const [status, recentActivity, acknowledgement] = await Promise.all([
+  const [status, recentActivity, acknowledgement, assignment] = await Promise.all([
     getWebsiteIntegrationStatus(ctx),
     listRecentWebsiteActivity(ctx),
     hasPermission(ctx, "organization.manage_settings")
       ? getWebsiteAcknowledgementSetting(ctx)
       : Promise.resolve(null),
+    getWebsiteAssignmentSetting(ctx),
   ]);
 
   return (
@@ -188,6 +260,13 @@ async function WebsiteIntegrationSection({
 
       {status.configured && (
         <>
+          <h2>Lead assignment</h2>
+          <p className="who">
+            How a new website lead gets an owner. Round-robin cycles across active sales reps;
+            unassigned leaves every new lead for someone to pick up manually.
+          </p>
+          <WebsiteAssignmentModeToggle orgSlug={orgSlug} mode={assignment.mode} />
+
           <h2>Abuse protection</h2>
           <p className="who">
             Rate limiting and payload/field size limits always apply.

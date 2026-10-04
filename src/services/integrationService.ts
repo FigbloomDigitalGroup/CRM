@@ -3,6 +3,11 @@ import { requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
 import { generateInboundEmailKey } from "../auth/inboundEmailKey";
 import { generateWebsiteApiKey } from "../auth/websiteApiKey";
+import { adminDb } from "../db/adminClient";
+import {
+  WEBSITE_LEAD_ASSIGNMENT_MODE_SETTING_KEY,
+  type WebsiteLeadAssignmentMode,
+} from "../repositories/leadIngestion";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
   getInboundEmailKeyRecord,
@@ -204,4 +209,60 @@ export async function revokeInboundEmailKey(ctx: AuthContext) {
     entityId: ctx.organizationId,
     metadata: { keyPrefix: record.keyPrefix },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Website lead assignment rules (FIG-599) -- currently a single on/off
+// switch for the fixed round-robin in src/repositories/leadIngestion.ts, not
+// a full rules engine (still FIG-436, not built here). "Unassigned" simply
+// leaves every new website lead unowned for someone to triage manually.
+// ---------------------------------------------------------------------------
+
+export async function getWebsiteAssignmentSetting(
+  ctx: AuthContext,
+): Promise<{ mode: WebsiteLeadAssignmentMode }> {
+  requirePermission(ctx, PERMISSION);
+  const setting = await adminDb.organizationSetting.findUnique({
+    where: {
+      organizationId_key: {
+        organizationId: ctx.organizationId,
+        key: WEBSITE_LEAD_ASSIGNMENT_MODE_SETTING_KEY,
+      },
+    },
+  });
+  const mode = (setting?.value as { mode?: string } | null)?.mode;
+  return { mode: mode === "UNASSIGNED" ? "UNASSIGNED" : "ROUND_ROBIN" };
+}
+
+export async function setWebsiteAssignmentSetting(
+  ctx: AuthContext,
+  mode: WebsiteLeadAssignmentMode,
+): Promise<{ mode: WebsiteLeadAssignmentMode }> {
+  requirePermission(ctx, PERMISSION);
+
+  await adminDb.organizationSetting.upsert({
+    where: {
+      organizationId_key: {
+        organizationId: ctx.organizationId,
+        key: WEBSITE_LEAD_ASSIGNMENT_MODE_SETTING_KEY,
+      },
+    },
+    update: { value: { mode } },
+    create: {
+      organizationId: ctx.organizationId,
+      key: WEBSITE_LEAD_ASSIGNMENT_MODE_SETTING_KEY,
+      value: { mode },
+    },
+  });
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "website_lead_assignment.updated",
+    entityType: "OrganizationSetting",
+    entityId: ctx.organizationId,
+    metadata: { mode },
+  });
+
+  return { mode };
 }

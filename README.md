@@ -130,7 +130,10 @@ Contact, Lead, and Deal detail pages, plus a "send and log email" action
 that sends real mail through the same SMTP infrastructure as every other
 outbound email in this project — see "Communications" below.
 CompanyService has full CRUD + UI on the Company detail page ("Services"),
-gated by its own `company_services.view`/`.manage` permissions.
+gated by its own `company_services.view`/`.manage` permissions. The 5
+controlled reference-data catalogs (Pipeline Stages, Lead Sources, Lead
+Statuses, Lost Reasons, Services) have a management UI on the Settings page
+(FIG-599) — see "Reference data and website lead assignment" below.
 `/reports` gives every
 role with a reporting permission a personal "actionable work" view, and
 gives `reporting.view.all` holders organization-wide metrics with
@@ -202,6 +205,12 @@ submissions are round-robin assigned to an active rep and get an
 auto-created follow-up task. See `IMPLEMENTATION_NOTES.md` for why a
 static key was chosen over a signed webhook.
 
+Assignment itself is a configurable on/off switch (FIG-599, same settings
+page, "Lead assignment"): round-robin (the default) or leave every new
+lead unassigned for manual triage. This is a fixed choice between two
+modes, not a rules engine (by source/territory/etc. -- still FIG-436, not
+built here).
+
 Abuse protection (FIG-594) always applies: per-key and per-IP rate
 limiting (429, tunable via `WEBSITE_LEAD_RATE_LIMIT_*` in `.env.example`),
 a request-body size cap, and field length limits. Allowed origins, a
@@ -210,6 +219,26 @@ configured per key from the same settings page, and off unless you turn
 them on. Every attempt -- accepted or rejected -- shows up in that page's
 "Recent activity" table. A key can be rotated (replaced immediately) or
 revoked outright (disabled, no replacement) from there too.
+
+## Reference data (FIG-599)
+
+The 5 organization-configurable catalogs behind Lead/Deal/Company
+dropdowns -- Pipeline Stages, Lead Sources, Lead Statuses, Lost Reasons,
+Services -- have a management UI on `/o/[orgSlug]/settings`
+(`configuration.manage`, Management only): add, rename, reorder
+(move up/down), and deactivate/reactivate each entry; Pipeline Stages also
+edit `probability`/`isWon`/`isLost`, Services also edit `category`.
+
+Deactivating never deletes anything and can never orphan a record: every
+one of these catalogs is referenced from Lead/Deal/Company by a foreign
+key that's either `onDelete: Restrict` (the ones that are required, e.g.
+`Lead.leadStatusId`) or `onDelete: SetNull` (the optional ones) -- a true
+hard delete was never on the table. `isActive` only gates which values a
+*new* record can pick; an existing record keeps showing its value
+regardless, and the settings UI shows how many records currently use each
+entry before you deactivate it. `CustomerLifecycleState` is the same shape
+but wasn't part of this ticket's acceptance criteria, so it's still
+seed-only.
 
 ## Notifications and outbound delivery
 

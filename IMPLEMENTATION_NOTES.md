@@ -662,6 +662,80 @@ webhook, not always custom headers. The query param works with the
 lowest common denominator; `x-figbloom-inbound-key` is still accepted too,
 for a provider that does support custom headers.
 
+## Reference data and website lead assignment (FIG-599)
+
+**One generic repository/service for 5 near-identical catalogs, instead of
+5 copy-pasted files.** LeadSource, LeadStatus, PipelineStage, LostReason,
+and Service share the same shape (`id`/`organizationId`/`key`/`name`/
+`description`/`sequence`/`isActive`) plus a small set of per-catalog extras
+(PipelineStage's `probability`/`isWon`/`isLost`, Service's `category`).
+`src/repositories/referenceCatalogs.ts` dispatches to the right Prisma
+delegate through one `CatalogKey`-keyed lookup (an explicit, contained
+`as unknown as` cast at that single boundary -- every caller outside this
+file only ever sees the typed `CatalogEntry` shape), and
+`src/services/referenceCatalogService.ts` is the one place permission
+checks, key-collision handling, and audit events live for all 5. This is
+the rare case where the generic version is actually simpler than 5
+hand-written copies, not premature abstraction -- the 5 catalogs are
+identical in everything that matters for CRUD/reorder/deactivate.
+
+**`Service` didn't have a `sequence` column before this ticket** -- the
+other 4 catalogs did, Service only had `category`. The AC asks for reorder
+on all 5, so a migration added it, backfilled per-organization by existing
+`createdAt` order (not left at a meaningless `0` for every row) --
+see `prisma/migrations/20261004090000_service_sequence`.
+
+**"Deactivating a value in use is handled safely" was already true before
+this ticket, by construction -- this ticket surfaces it, not fixes it.**
+Every FK from Lead/Deal/Company into these 5 catalogs is already either
+`onDelete: Restrict` (the required ones, e.g. `Lead.leadStatusId`,
+`Deal.pipelineStageId`) or `onDelete: SetNull` (the optional ones) -- true
+hard deletion was never possible, and `isActive` already existed on every
+one of these models from their original migration. So "deactivate safely"
+reduces to: never add a hard-delete path (there isn't one, and this ticket
+doesn't add one), and show the caller how many records currently
+reference an entry before they deactivate it (`countCatalogEntryUsage` --
+informational only, never blocking; an existing record keeps its value
+regardless of the flag).
+
+**Reorder is a single up/down swap, not a drag-and-drop reindex.**
+`moveCatalogEntry` swaps `sequence` with the adjacent entry in display
+order and no-ops at either boundary. No drag-and-drop library exists
+anywhere else in this project, and a full "accept an arbitrary new order"
+endpoint would need to validate the submitted id list exactly matches the
+existing set -- solving a problem the ticket's "reorder" language doesn't
+actually require. Two buttons per row, one swap per click.
+
+**Website lead assignment became a single on/off switch, not a rules
+engine.** The code already had a comment acknowledging "assignment rules
+are meant to be org-configurable eventually (FIG-436), but no rules engine
+exists yet" (`src/repositories/leadIngestion.ts`). Building a real rules
+engine (by source, territory, service, etc.) is a materially bigger
+ticket than this one's AC asks for ("configurable in settings"), so this
+ticket adds exactly one configurable choice -- round-robin (the existing
+behavior, still the default) or leave unassigned for manual triage --
+stored the same way as FIG-597's acknowledgement toggle
+(`OrganizationSetting` JSON value, `getWebsiteAssignmentSetting`/
+`setWebsiteAssignmentSetting` in `integrationService.ts`, gated by the
+same `configuration.manage` permission as the rest of that file). A missing
+setting row defaults to `"ROUND_ROBIN"`, so every already-provisioned
+organization's behavior is unchanged until someone opts into the other
+mode.
+
+**Reused `configuration.manage` rather than adding a new permission.**
+That permission's own seed description already said "Manage controlled
+reference data (lead sources, pipeline stages, etc.)" -- it existed since
+an earlier ticket but was only ever wired to the website/inbound-email
+integration settings. This ticket is what actually connects it to the
+reference-data catalogs its description already named.
+
+**`CustomerLifecycleState` is the same shape as the 5 catalogs above but
+was left out.** It's not named in this ticket's acceptance criteria
+("pipeline stages... lead sources, lead statuses, lost reasons, and
+services"), so it stays seed-only/read-only for now -- extending
+`referenceCatalogs.ts` to cover it later is a small, mechanical addition
+if a future ticket asks for it.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit
@@ -680,16 +754,13 @@ for a provider that does support custom headers.
 
 ## Deliberately not built
 
-- A settings UI for configuring pipeline stages, lead-assignment rules, or
-  anything else the schema already supports per-organization — nothing in
-  scope has asked for one yet.
+- A full website-lead-assignment rules engine (by source, territory,
+  service, etc.) — FIG-599 built a single round-robin/unassigned switch,
+  not this; still tracked as FIG-436.
+- A management UI for `CustomerLifecycleState` — same shape as the 5
+  catalogs FIG-599 covers, but not named in that ticket's AC.
 - Full proposal generation/e-signature — `ProposalReference` is reference-
   only by design.
-- A separate Communications CRUD/UI distinct from Activities — the
-  Activity type enum already covers every channel named in scope.
-- Any outbound notification delivery (email/SMS/push) — nothing in this
-  codebase sends anything; every "reminder"/"acknowledgement" is an
-  in-app, queryable state instead.
 - Multiple simultaneously-valid website API keys, or HMAC-signed webhook
   support as an alternative — revisit if a second real integration
   consumer shows up.
