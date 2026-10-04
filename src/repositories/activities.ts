@@ -64,3 +64,40 @@ export async function listActivities(
     }),
   );
 }
+
+/**
+ * A Company's or Contact's own timeline (FIG-600 AC: "activities across
+ * their leads and deals") -- in practice almost every Activity gets logged
+ * against whichever Lead/Deal a rep is actively working, not the
+ * Company/Contact record itself, so a timeline scoped to only the direct
+ * `companyId`/`contactId` link would read as nearly empty. `leadIds`/
+ * `dealIds` are resolved by `activityService.ts` first (and already
+ * filtered to what the caller is actually allowed to see -- own vs. all --
+ * before reaching here; this function has no opinion on visibility).
+ */
+export interface TimelineActivitiesFilter {
+  companyId?: string;
+  contactId?: string;
+  leadIds?: string[];
+  dealIds?: string[];
+}
+
+export async function listActivitiesForTimeline(
+  organizationId: string,
+  filter: TimelineActivitiesFilter,
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.activity.findMany({
+      where: {
+        organizationId,
+        OR: [
+          ...(filter.companyId ? [{ companyId: filter.companyId }] : []),
+          ...(filter.contactId ? [{ contactId: filter.contactId }] : []),
+          ...(filter.leadIds?.length ? [{ leadId: { in: filter.leadIds } }] : []),
+          ...(filter.dealIds?.length ? [{ dealId: { in: filter.dealIds } }] : []),
+        ],
+      },
+      orderBy: { occurredAt: "asc" },
+    }),
+  );
+}

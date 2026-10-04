@@ -2,10 +2,16 @@ import { notFound } from "next/navigation";
 import { hasPermission } from "@/auth/context";
 import { ForbiddenError, NotFoundError } from "@/auth/errors";
 import { resolveRequestContext } from "@/auth/requestContext";
+import { listActivitiesForContact } from "@/services/activityService";
+import { listAuditHistory } from "@/services/auditService";
 import { getContact } from "@/services/contactService";
 import { listCommunicationsForContact } from "@/services/communicationService";
 import { getFormReferenceData } from "@/services/referenceDataService";
+import { listTasks } from "@/services/taskService";
+import { ActivityTimeline } from "../../_shared/ActivityTimeline";
+import { AuditHistory } from "../../_shared/AuditHistory";
 import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
+import { TaskSection } from "../../_shared/TaskSection";
 import { EditContactForm } from "./EditContactForm";
 
 export default async function ContactDetailPage({
@@ -38,6 +44,27 @@ export default async function ContactDetailPage({
     if (!(err instanceof ForbiddenError)) throw err;
   }
 
+  let activities: Awaited<ReturnType<typeof listActivitiesForContact>> = [];
+  try {
+    activities = await listActivitiesForContact(ctx, contactId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
+  let tasks: Awaited<ReturnType<typeof listTasks>> = [];
+  try {
+    tasks = await listTasks(ctx, { contactId });
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
+  let auditEvents: Awaited<ReturnType<typeof listAuditHistory>> = [];
+  try {
+    auditEvents = await listAuditHistory(ctx, "Contact", contactId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
   return (
     <div>
       <p>
@@ -60,6 +87,35 @@ export default async function ContactDetailPage({
         <EditContactForm orgSlug={orgSlug} contact={contact} />
       )}
 
+      {hasPermission(ctx, "activities.view") && (
+        <ActivityTimeline
+          orgSlug={orgSlug}
+          parentField="contactId"
+          parentId={contact.id}
+          activities={activities.map((a) => ({
+            ...a,
+            occurredAt: a.occurredAt.toISOString(),
+          }))}
+          members={referenceData.members}
+          canCreate={hasPermission(ctx, "activities.create")}
+        />
+      )}
+
+      {(hasPermission(ctx, "tasks.view.own") || hasPermission(ctx, "tasks.view.all")) && (
+        <TaskSection
+          orgSlug={orgSlug}
+          parentField="contactId"
+          parentId={contact.id}
+          tasks={tasks.map((t) => ({
+            ...t,
+            dueAt: t.dueAt ? t.dueAt.toISOString() : null,
+          }))}
+          members={referenceData.members}
+          canCreate={hasPermission(ctx, "tasks.create")}
+          canAssignAny={hasPermission(ctx, "tasks.assign.any")}
+        />
+      )}
+
       {hasPermission(ctx, "communications.view") && (
         <CommunicationTimeline
           orgSlug={orgSlug}
@@ -72,6 +128,16 @@ export default async function ContactDetailPage({
           members={referenceData.members}
           canCreate={hasPermission(ctx, "communications.create")}
           defaultToEmail={contact.email}
+        />
+      )}
+
+      {hasPermission(ctx, "audit.view") && (
+        <AuditHistory
+          events={auditEvents.map((e) => ({
+            ...e,
+            createdAt: e.createdAt.toISOString(),
+          }))}
+          members={referenceData.members}
         />
       )}
     </div>

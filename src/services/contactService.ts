@@ -12,6 +12,10 @@ import {
   type ListContactsFilters,
   type UpdateContactInput,
 } from "../repositories/contacts";
+import { diffAuditedFields } from "./auditDiff";
+
+/** Beyond ownership (audited separately, below): identity and re-parenting (FIG-600 AC). */
+const AUDITED_CONTACT_FIELDS = ["firstName", "lastName", "companyId"] as const;
 
 export type CreateContactServiceInput = Omit<
   CreateContactInput,
@@ -48,11 +52,12 @@ export async function updateContact(
 ) {
   requirePermission(ctx, "contacts.edit");
 
+  const previous = await getContactById(ctx.organizationId, contactId);
+
   // Ownership changes are auditable (FIG-441 AC) regardless of which
   // other fields this same edit also touches.
-  if (input.ownerMembershipId !== undefined) {
-    const previous = await getContactById(ctx.organizationId, contactId);
-    if (previous && previous.ownerMembershipId !== input.ownerMembershipId) {
+  if (previous && input.ownerMembershipId !== undefined) {
+    if (previous.ownerMembershipId !== input.ownerMembershipId) {
       await recordAuditEvent({
         organizationId: ctx.organizationId,
         actorMembershipId: ctx.membershipId,
@@ -61,6 +66,24 @@ export async function updateContact(
         entityId: contactId,
         previousValue: { ownerMembershipId: previous.ownerMembershipId },
         newValue: { ownerMembershipId: input.ownerMembershipId },
+      });
+    }
+  }
+
+  // Broadened beyond ownership to other important field changes (FIG-600
+  // AC) -- name edits and re-parenting to a different company, bundled
+  // into one event.
+  if (previous) {
+    const diff = diffAuditedFields(previous, input, AUDITED_CONTACT_FIELDS);
+    if (diff) {
+      await recordAuditEvent({
+        organizationId: ctx.organizationId,
+        actorMembershipId: ctx.membershipId,
+        action: "contact.updated",
+        entityType: "Contact",
+        entityId: contactId,
+        previousValue: diff.previousValue,
+        newValue: diff.newValue,
       });
     }
   }

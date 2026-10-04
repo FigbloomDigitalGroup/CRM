@@ -12,6 +12,10 @@ import {
   type ListCompaniesFilters,
   type UpdateCompanyInput,
 } from "../repositories/companies";
+import { diffAuditedFields } from "./auditDiff";
+
+/** Beyond ownership (audited separately, below): identity and lifecycle changes (FIG-600 AC). */
+const AUDITED_COMPANY_FIELDS = ["name", "lifecycleStateId"] as const;
 
 export type CreateCompanyServiceInput = Omit<
   CreateCompanyInput,
@@ -55,11 +59,12 @@ export async function updateCompany(
 ) {
   requirePermission(ctx, "companies.edit");
 
+  const previous = await getCompanyById(ctx.organizationId, companyId);
+
   // Ownership changes are auditable (FIG-441 AC) regardless of which
   // other fields this same edit also touches.
-  if (input.ownerMembershipId !== undefined) {
-    const previous = await getCompanyById(ctx.organizationId, companyId);
-    if (previous && previous.ownerMembershipId !== input.ownerMembershipId) {
+  if (previous && input.ownerMembershipId !== undefined) {
+    if (previous.ownerMembershipId !== input.ownerMembershipId) {
       await recordAuditEvent({
         organizationId: ctx.organizationId,
         actorMembershipId: ctx.membershipId,
@@ -68,6 +73,23 @@ export async function updateCompany(
         entityId: companyId,
         previousValue: { ownerMembershipId: previous.ownerMembershipId },
         newValue: { ownerMembershipId: input.ownerMembershipId },
+      });
+    }
+  }
+
+  // Broadened beyond ownership to other important field changes (FIG-600
+  // AC) -- name and lifecycle-state transitions, bundled into one event.
+  if (previous) {
+    const diff = diffAuditedFields(previous, input, AUDITED_COMPANY_FIELDS);
+    if (diff) {
+      await recordAuditEvent({
+        organizationId: ctx.organizationId,
+        actorMembershipId: ctx.membershipId,
+        action: "company.updated",
+        entityType: "Company",
+        entityId: companyId,
+        previousValue: diff.previousValue,
+        newValue: diff.newValue,
       });
     }
   }

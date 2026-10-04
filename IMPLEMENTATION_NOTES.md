@@ -736,6 +736,87 @@ services"), so it stays seed-only/read-only for now -- extending
 `referenceCatalogs.ts` to cover it later is a small, mechanical addition
 if a future ticket asks for it.
 
+## Contact/Company timelines, tasks, audit, and broader audit coverage (FIG-600)
+
+**Company's Activity timeline, Task section, and Audit history already
+existed; only Contact's and Company's Task section were actually
+missing.** Before reading the code, this looked like a 4-section gap
+across two pages. In practice Company already had `ActivityTimeline` and
+`AuditHistory` wired (from FIG-441), just a `TaskSection` short of
+complete; Contact had none of the three at all. The real gap was smaller
+than the ticket's framing suggested -- worth checking what already exists
+before assuming a ticket's acceptance criteria describe a blank slate.
+
+**"Activities across their leads and deals" required a real aggregation
+query, not just pointing the existing generic timeline at a new
+`parentField`.** `ActivityTimeline`/`TaskSection`/`AuditHistory` were
+already fully generic (their `parentField` union already included
+`"companyId" | "contactId"`), so the mechanical wiring was trivial -- but
+`activityService.listActivitiesForCompany`/`listActivitiesForContact`
+previously only returned Activities with a *direct* `companyId`/
+`contactId` link, which in practice is almost nothing: a rep logs a call
+against the Lead or Deal they're working, not against the Company/Contact
+record itself. Fixed by resolving every Lead/Deal id under the Company
+(`companyId`) or Contact (`contactId` on Lead, `primaryContactId` on
+Deal) and querying Activities with an `OR` across direct link + those
+lead/deal ids (`listActivitiesForTimeline` in
+`src/repositories/activities.ts`). Tasks were NOT given this treatment --
+the AC's wording for Tasks ("created and viewed from contact and company
+pages") is narrower than Activities' ("across their leads and deals"), so
+Task sections on Company/Contact pages only show directly-linked tasks,
+already fully supported by the existing schema/service layer with zero
+changes needed there.
+
+**The aggregation had to re-derive own-vs-all visibility itself, rather
+than reusing `listLeads`/`listDeals` directly.** `ListLeadsFilters`/
+`ListDealsFilters` don't support filtering by `companyId`/`contactId` (Lead
+has no such filter at all; Deal only has `companyId`, not a contact
+equivalent), so routing through the existing list services wasn't a
+drop-in. Instead, `activityService.ts`'s `visibleLeadAndDealIds` queries
+`adminDb.lead`/`adminDb.deal` directly (same "service layer reaches
+`adminDb` for a narrow scoped lookup outside the main repository surface"
+pattern already used by `dealService.ts`'s pipeline-stage lookup and
+`taskService.ts`'s assignee lookup), then applies the same
+`leads.view.own`/`.all` and `deals.view.own`/`.all` logic `listLeads`/
+`listDeals` already enforce. Getting this right mattered: without it, a
+Sales rep who can only view their own leads would see a colleague's
+private lead's activity log leak into a shared Company's timeline --
+exposure the Lead's own detail page would 403 them for directly. Verified
+live: a second Sales rep could not see a peer's lead activity on a shared
+company's page, while Management (which holds `leads.view.all`) could.
+
+**Broadening audit coverage used one shared diff helper
+(`src/services/auditDiff.ts`) across all four services, rather than
+reimplementing the same before/after comparison four times.**
+`diffAuditedFields(before, patch, fields)` normalizes `Date` ->
+ISO string, `Prisma.Decimal` -> number, and numeric-looking strings ->
+number before comparing, so re-submitting a deal's unchanged value in a
+different string format doesn't produce a spurious audit event. It
+returns `null` (no event) when none of the *tracked* fields actually
+changed, so an edit that only touches notes/description stays silent --
+matching the existing precedent (`deal.outcome_changed` already only
+fires when the outcome itself flips, not on every deal edit).
+
+**What got added per entity, and what didn't:**
+- `leadService.updateLead` previously recorded **zero** audit events at
+  all (only `assignLead`, a separate function, audited ownership). Now
+  also audits `leadStatusId`/`leadSourceId`/`temperature`/`lostReasonId`/
+  `companyId`/`contactId` changes as a single `lead.updated` event.
+- `dealService.updateDeal` previously only audited outcome flips. Now
+  also audits `primaryContactId`/`serviceId`/`value`/`currency` as
+  `deal.updated` -- and `pipelineStageId` too, but **only** when the move
+  didn't also flip the outcome (open -> open), so a won/lost transition
+  isn't logged twice across two different events for the same field.
+- `companyService.updateCompany`/`contactService.updateContact`
+  previously only audited `ownerMembershipId`. Now also audit `name`/
+  `lifecycleStateId` (Company) and `firstName`/`lastName`/`companyId`
+  (Contact) as `company.updated`/`contact.updated`.
+- Untouched on purpose: notes/description/phone/email/website/location on
+  every entity -- "broaden... to other *important* field changes," not
+  every field. These are cosmetic/contact-detail edits, not the kind of
+  qualification/lifecycle/ownership signal the rest of this audit trail
+  already tracks.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit

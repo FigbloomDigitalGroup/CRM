@@ -9,9 +9,11 @@ import { listCommunicationsForCompany } from "@/services/communicationService";
 import { listCompanyServices } from "@/services/companyServiceLinkService";
 import { listContacts } from "@/services/contactService";
 import { getFormReferenceData } from "@/services/referenceDataService";
+import { listTasks } from "@/services/taskService";
 import { ActivityTimeline } from "../../_shared/ActivityTimeline";
 import { AuditHistory } from "../../_shared/AuditHistory";
 import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
+import { TaskSection } from "../../_shared/TaskSection";
 import { CompanyServicesSection } from "../CompanyServicesSection";
 import { EditCompanyForm } from "./EditCompanyForm";
 
@@ -45,6 +47,13 @@ export default async function CompanyDetailPage({
   let activities: Awaited<ReturnType<typeof listActivitiesForCompany>> = [];
   try {
     activities = await listActivitiesForCompany(ctx, companyId);
+  } catch (err) {
+    if (!(err instanceof ForbiddenError)) throw err;
+  }
+
+  let tasks: Awaited<ReturnType<typeof listTasks>> = [];
+  try {
+    tasks = await listTasks(ctx, { companyId });
   } catch (err) {
     if (!(err instanceof ForbiddenError)) throw err;
   }
@@ -153,6 +162,21 @@ export default async function CompanyDetailPage({
           }))}
           members={referenceData.members}
           canCreate={hasPermission(ctx, "activities.create")}
+        />
+      )}
+
+      {(hasPermission(ctx, "tasks.view.own") || hasPermission(ctx, "tasks.view.all")) && (
+        <TaskSection
+          orgSlug={orgSlug}
+          parentField="companyId"
+          parentId={company.id}
+          tasks={tasks.map((t) => ({
+            ...t,
+            dueAt: t.dueAt ? t.dueAt.toISOString() : null,
+          }))}
+          members={referenceData.members}
+          canCreate={hasPermission(ctx, "tasks.create")}
+          canAssignAny={hasPermission(ctx, "tasks.assign.any")}
         />
       )}
 

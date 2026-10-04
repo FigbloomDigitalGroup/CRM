@@ -12,7 +12,18 @@ import {
   LeadMissingCompanyError,
 } from "../repositories/deals";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import { diffAuditedFields } from "./auditDiff";
 import { notifyLeadAssigned } from "./notificationService";
+
+/** Beyond ownership (audited separately via `assignLead`): qualification/status changes (FIG-600 AC). */
+const AUDITED_LEAD_FIELDS = [
+  "leadStatusId",
+  "leadSourceId",
+  "temperature",
+  "lostReasonId",
+  "companyId",
+  "contactId",
+] as const;
 import {
   createLead as createLeadRecord,
   findPossibleDuplicateLeads,
@@ -93,7 +104,26 @@ export async function updateLead(
     "leads.edit.all",
     lead.ownerMembershipId,
   );
-  return updateLeadRecord(ctx.organizationId, leadId, input);
+
+  const updated = await updateLeadRecord(ctx.organizationId, leadId, input);
+
+  // Ownership is audited separately via assignLead -- this covers the
+  // other important field changes updateLead never audited at all before
+  // FIG-600 (status/source/temperature/lost-reason/re-parenting).
+  const diff = diffAuditedFields(lead, input, AUDITED_LEAD_FIELDS);
+  if (diff) {
+    await recordAuditEvent({
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      action: "lead.updated",
+      entityType: "Lead",
+      entityId: leadId,
+      previousValue: diff.previousValue,
+      newValue: diff.newValue,
+    });
+  }
+
+  return updated;
 }
 
 /**

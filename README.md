@@ -122,10 +122,12 @@ won/lost-outcome recording — see "Deal outcomes" below. Proposal
 References are a minimal create/list/status-update slice scoped to a
 single deal, not a full proposal-generation subsystem. Activities and
 Tasks have full CRUD + a timeline/list UI, linked to any of
-Company/Contact/Lead/Deal — see "Activities and Tasks" below. Audit
-history is recorded for ownership changes and deal outcome changes, and
-surfaced read-only on Lead and Deal detail pages for `audit.view` holders.
-Communications (FIG-598) have full CRUD + a timeline UI on Company,
+Company/Contact/Lead/Deal, including Company's and Contact's own detail
+pages (FIG-600) — see "Activities and Tasks" below. Audit history is
+recorded for ownership changes, deal outcome changes, and (FIG-600) other
+important field changes (status/stage/lifecycle/re-parenting), surfaced
+read-only on Company, Contact, Lead, and Deal detail pages for
+`audit.view` holders. Communications (FIG-598) have full CRUD + a timeline UI on Company,
 Contact, Lead, and Deal detail pages, plus a "send and log email" action
 that sends real mail through the same SMTP infrastructure as every other
 outbound email in this project — see "Communications" below.
@@ -170,6 +172,23 @@ isn't enough to read or write against a record you can't otherwise see.
 Tasks have no dedicated `tasks.edit` permission — a task can be updated by
 its assignee, its creator, or anyone holding `tasks.assign.any` (see
 `src/services/taskService.ts#canManageTask`).
+
+## Company/Contact timelines aggregate across their leads and deals (FIG-600)
+
+A Company's or Contact's own Activity timeline isn't limited to Activities
+directly linked to that Company/Contact row — it also pulls in every
+Activity logged against any Lead or Deal that belongs to it
+(`src/services/activityService.ts#listActivitiesForCompany`/
+`listActivitiesForContact`), since in practice almost every activity gets
+logged against whichever Lead/Deal a rep is actively working, not the
+Company/Contact record itself. The lead/deal ids that feed this
+aggregation are first filtered down to what the caller is actually allowed
+to see (`leads.view.own`/`.all`, `deals.view.own`/`.all`) before the
+timeline query ever runs, so viewing a shared Company's page never leaks a
+colleague's lead's activity log that the Lead's own detail page would
+403 you for directly. Tasks on Company/Contact pages are not aggregated
+this way — only tasks directly linked to that Company/Contact, matching
+the AC's narrower "created and viewed from contact and company pages."
 
 ## Reports
 

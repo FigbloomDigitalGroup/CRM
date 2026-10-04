@@ -15,6 +15,16 @@ import {
   type CreateDealInput,
   type ListDealsFilters,
 } from "../repositories/deals";
+import { diffAuditedFields } from "./auditDiff";
+
+/**
+ * Beyond outcome (audited separately, below): other important field
+ * changes (FIG-600 AC). `pipelineStageId` is only tracked here when the
+ * move did NOT flip the outcome (open -> open) -- a won/lost-flipping move
+ * is already fully captured by `deal.outcome_changed`, so including it
+ * here too would just double-log the same transition.
+ */
+const AUDITED_DEAL_FIELDS = ["primaryContactId", "serviceId", "value", "currency"] as const;
 
 export type CreateDealServiceInput = Omit<
   CreateDealInput,
@@ -215,7 +225,8 @@ export async function updateDeal(
   // Outcome changes (won/lost/reopened) are auditable (FIG-441 AC) --
   // only recorded when the stage transition actually flipped the outcome,
   // not on every unrelated field edit.
-  if (outcomeFields && outcomeFields.outcome !== deal.outcome) {
+  const outcomeChanged = Boolean(outcomeFields && outcomeFields.outcome !== deal.outcome);
+  if (outcomeFields && outcomeChanged) {
     await recordAuditEvent({
       organizationId: ctx.organizationId,
       actorMembershipId: ctx.membershipId,
@@ -224,6 +235,26 @@ export async function updateDeal(
       entityId: dealId,
       previousValue: { outcome: deal.outcome, pipelineStageId: deal.pipelineStageId },
       newValue: { outcome: outcomeFields.outcome, pipelineStageId: input.pipelineStageId },
+    });
+  }
+
+  // Broadened beyond outcome to other important field changes (FIG-600
+  // AC) -- re-pointing the primary contact/service, value, currency, or
+  // (when it didn't also flip the outcome) moving between two open
+  // pipeline stages, bundled into one event.
+  const trackedFields = outcomeChanged
+    ? AUDITED_DEAL_FIELDS
+    : [...AUDITED_DEAL_FIELDS, "pipelineStageId"];
+  const diff = diffAuditedFields(deal, input, trackedFields);
+  if (diff) {
+    await recordAuditEvent({
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      action: "deal.updated",
+      entityType: "Deal",
+      entityId: dealId,
+      previousValue: diff.previousValue,
+      newValue: diff.newValue,
     });
   }
 
