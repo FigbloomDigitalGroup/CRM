@@ -4,7 +4,7 @@ import { resolveSessionUserId } from "../src/auth/session";
 import { UnauthorizedError, ValidationError } from "../src/auth/errors";
 import { adminDb } from "../src/db/adminClient";
 import * as authService from "../src/services/authService";
-import { createTestUser } from "./helpers/fixtures";
+import { createTestMembership, createTestOrganization, createTestUser } from "./helpers/fixtures";
 
 const PASSWORD = "correct-horse-battery";
 
@@ -22,6 +22,22 @@ describe("authService.login", () => {
     const { token, userId } = await authService.login(user.email, PASSWORD);
     expect(userId).toBe(user.id);
     expect(await resolveSessionUserId(token)).toBe(user.id);
+  });
+
+  it("returns null organizationSlug for a user with no active membership anywhere (FIG-604 regression)", async () => {
+    const user = await createUserWithPassword();
+    const { organizationSlug } = await authService.login(user.email, PASSWORD);
+    expect(organizationSlug).toBeNull();
+  });
+
+  it("returns the organization the user is actually a member of, not a hardcoded default (FIG-604 regression)", async () => {
+    const org = await createTestOrganization();
+    const { user } = await createTestMembership(org.id, "SALES");
+    const passwordHash = await hashPassword(PASSWORD);
+    await adminDb.user.update({ where: { id: user.id }, data: { passwordHash } });
+
+    const { organizationSlug } = await authService.login(user.email, PASSWORD);
+    expect(organizationSlug).toBe(org.slug);
   });
 
   it("rejects the wrong password with the same generic message as an unknown email", async () => {

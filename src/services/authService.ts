@@ -23,6 +23,7 @@ import { recordAuditEvent } from "../repositories/auditEvents";
 import {
   activateMembershipByInviteToken,
   findMembershipByInviteToken,
+  listActiveOrganizationSlugsForUser,
 } from "../repositories/memberships";
 
 /**
@@ -117,7 +118,19 @@ export async function login(
   email: string,
   password: string,
   userAgent?: string | null,
-): Promise<{ token: string; expiresAt: Date; userId: string }> {
+): Promise<{
+  token: string;
+  expiresAt: Date;
+  userId: string;
+  /**
+   * The organization to land on, or null if this user has no active
+   * membership anywhere. Login itself is organization-agnostic (a user
+   * can hold active memberships in more than one organization), but this
+   * app has no organization-switcher UI yet (FIG-604) -- the oldest
+   * resolvable membership wins rather than presenting a choice.
+   */
+  organizationSlug: string | null;
+}> {
   const user = await adminDb.user.findUnique({ where: { email } });
 
   if (!user || user.status !== "ACTIVE" || !user.passwordHash) {
@@ -132,7 +145,8 @@ export async function login(
   const { token, expiresAt } = await createSession(user.id, userAgent);
   await recordAuthAuditEvent(user.id, "auth.login");
 
-  return { token, expiresAt, userId: user.id };
+  const [organizationSlug] = await listActiveOrganizationSlugsForUser(user.id);
+  return { token, expiresAt, userId: user.id, organizationSlug: organizationSlug ?? null };
 }
 
 export async function logout(token: string): Promise<void> {
@@ -217,7 +231,12 @@ export async function acceptMembershipInvite(
   token: string,
   password: string | undefined,
   userAgent?: string | null,
-): Promise<{ token: string; expiresAt: Date; userId: string }> {
+): Promise<{
+  token: string;
+  expiresAt: Date;
+  userId: string;
+  organizationSlug: string;
+}> {
   const tokenHash = hashInviteToken(token);
 
   // Validate the password *before* consuming the single-use token -- doing
@@ -261,5 +280,14 @@ export async function acceptMembershipInvite(
     user.id,
     userAgent,
   );
-  return { token: sessionToken, expiresAt, userId: user.id };
+  const organization = await adminDb.organization.findUniqueOrThrow({
+    where: { id: membership.organizationId },
+    select: { slug: true },
+  });
+  return {
+    token: sessionToken,
+    expiresAt,
+    userId: user.id,
+    organizationSlug: organization.slug,
+  };
 }

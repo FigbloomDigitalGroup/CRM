@@ -249,6 +249,24 @@ export async function reactivateMembership(membershipId: string) {
   });
 }
 
+/**
+ * Every organization this user currently has an ACTIVE membership in,
+ * oldest first -- used right after login (FIG-604) to pick which
+ * organization to land on. A user can legitimately belong to more than
+ * one organization; this app has no organization-switcher UI yet, so for
+ * now the caller lands on the oldest one it can resolve, not a choice.
+ */
+export async function listActiveOrganizationSlugsForUser(
+  userId: string,
+): Promise<string[]> {
+  const memberships = await adminDb.membership.findMany({
+    where: { userId, status: MembershipStatus.ACTIVE },
+    include: { organization: true },
+    orderBy: { joinedAt: "asc" },
+  });
+  return memberships.map((m) => m.organization.slug);
+}
+
 /** For the "cannot remove the last Management user" guard (FIG-593). */
 export async function countActiveManagementMemberships(
   organizationId: string,

@@ -4,8 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PasswordInput } from "../_shared/PasswordInput";
 
-const DEFAULT_ORG_SLUG = "figbloom";
-
 export function AcceptInviteForm({
   token,
   requiresPassword,
@@ -28,11 +26,16 @@ export function AcceptInviteForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password: requiresPassword ? password : undefined }),
       });
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Could not accept invite.");
       }
-      router.push(`/o/${DEFAULT_ORG_SLUG}`);
+      // The invited membership can belong to any organization, not just
+      // the original dev-seeded "figbloom" -- this used to be hardcoded,
+      // which meant accepting a real invite for a newly provisioned
+      // organization (FIG-604) redirected into an org the new user had no
+      // membership in at all.
+      router.push(`/o/${body.organizationSlug}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not accept invite.");

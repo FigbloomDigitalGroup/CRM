@@ -25,13 +25,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { token, expiresAt, userId } = await login(
+    const { token, expiresAt, userId, organizationSlug } = await login(
       body.email,
       body.password,
       request.headers.get("user-agent"),
     );
 
-    const response = NextResponse.json({ userId });
+    const response = NextResponse.json({ userId, organizationSlug });
     response.cookies.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

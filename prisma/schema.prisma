@@ -37,6 +37,25 @@ model Organization {
   createdAt DateTime           @default(now()) @map("created_at")
   updatedAt DateTime           @updatedAt @map("updated_at")
 
+  /// Profile/defaults/working-hours (FIG-604). Deliberately plain typed
+  /// columns, not more `OrganizationSetting` rows -- this is a small, fixed,
+  /// validated shape (unlike `OrganizationSetting`'s open-ended JSON bag,
+  /// used for internal runtime state like the lead-assignment cursor), so a
+  /// real column per field is simpler and keeps the DB schema self-
+  /// documenting about what tenant profile data actually exists.
+  timezone          String    @default("Africa/Nairobi")
+  defaultCurrency   String    @default("KES") @map("default_currency")
+  phone             String?
+  website           String?
+  address           String?
+  /// Day keys, e.g. ["MON","TUE","WED","THU","FRI"] -- see
+  /// `src/services/organizationProfileService.ts`'s `WORKING_DAY_KEYS` for
+  /// the closed set of valid values.
+  workingDays       String[] @default(["MON", "TUE", "WED", "THU", "FRI"]) @map("working_days")
+  /// 24-hour "HH:MM" strings (e.g. "08:00"), or both null if not set.
+  workingHoursStart String?  @map("working_hours_start")
+  workingHoursEnd   String?  @map("working_hours_end")
+
   memberships             Membership[]
   settings                OrganizationSetting[]
   websiteApiKey           WebsiteApiKey?

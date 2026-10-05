@@ -12,11 +12,13 @@ import {
   getMyNotificationPreferences,
   getWebsiteAcknowledgementSetting,
 } from "@/services/notificationService";
+import { getOrganizationProfile } from "@/services/organizationProfileService";
 import { listCatalog } from "@/services/referenceCatalogService";
 import { CatalogEditor } from "./CatalogEditor";
 import { InviteMemberForm } from "./InviteMemberForm";
 import { MembersTable } from "./MembersTable";
 import { NotificationPreferencesForm } from "./NotificationPreferencesForm";
+import { OrganizationProfileForm } from "./OrganizationProfileForm";
 import { RegenerateInboundEmailKeyButton } from "./RegenerateInboundEmailKeyButton";
 import { RegenerateWebsiteKeyButton } from "./RegenerateWebsiteKeyButton";
 import { RevokeInboundEmailKeyButton } from "./RevokeInboundEmailKeyButton";
@@ -34,6 +36,7 @@ export default async function SettingsPage({
   const ctx = await resolveRequestContext(orgSlug);
 
   const canManageIntegration = hasPermission(ctx, "configuration.manage");
+  const canManageOrgSettings = hasPermission(ctx, "organization.manage_settings");
   const canViewMembers = hasPermission(ctx, "membership.view");
   const canManageMembers = hasPermission(ctx, "membership.manage");
   const canAssignRole = hasPermission(ctx, "role.assign");
@@ -41,6 +44,8 @@ export default async function SettingsPage({
   return (
     <div>
       <h1>Settings</h1>
+
+      {canManageOrgSettings && <OrganizationProfileSection orgSlug={orgSlug} ctx={ctx} />}
 
       <NotificationPreferencesSection ctx={ctx} orgSlug={orgSlug} />
 
@@ -56,6 +61,29 @@ export default async function SettingsPage({
       {canManageIntegration && <WebsiteIntegrationSection orgSlug={orgSlug} ctx={ctx} />}
       {canManageIntegration && <InboundEmailSection orgSlug={orgSlug} ctx={ctx} />}
       {canManageIntegration && <ReferenceDataSection orgSlug={orgSlug} ctx={ctx} />}
+    </div>
+  );
+}
+
+/** Profile/defaults/timezone/currency/working hours (FIG-604) -- previously the only tenant configuration this page exposed was the website API key. */
+async function OrganizationProfileSection({
+  orgSlug,
+  ctx,
+}: {
+  orgSlug: string;
+  ctx: Awaited<ReturnType<typeof resolveRequestContext>>;
+}) {
+  const profile = await getOrganizationProfile(ctx);
+  const timezones = Intl.supportedValuesOf("timeZone");
+
+  return (
+    <div className="card">
+      <strong>Organization profile</strong>
+      <p className="who">
+        Basic tenant profile, defaults, and working hours. Used for display and for anything
+        downstream that reads this organization&apos;s configured timezone/currency/hours.
+      </p>
+      <OrganizationProfileForm orgSlug={orgSlug} profile={profile} timezones={timezones} />
     </div>
   );
 }

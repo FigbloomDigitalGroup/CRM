@@ -5,8 +5,6 @@ import { useState } from "react";
 import { DEV_FIXTURE_PASSWORD } from "@/auth/devAccounts";
 import { PasswordInput } from "../_shared/PasswordInput";
 
-const DEFAULT_ORG_SLUG = "figbloom";
-
 interface DevAccount {
   email: string;
   name: string;
@@ -29,11 +27,21 @@ export function LoginForm({ devAccounts = [] }: { devAccounts?: DevAccount[] }) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       });
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Login failed.");
       }
-      router.push(`/o/${DEFAULT_ORG_SLUG}`);
+      // organizationSlug is null for an account with no active membership
+      // anywhere -- the session cookie is already set at this point, but
+      // there's nowhere to land, so say so instead of redirecting into an
+      // organization this account has no access to (this used to be
+      // hardcoded to the dev-seeded "figbloom" org regardless).
+      if (!body.organizationSlug) {
+        setError("Your account is not an active member of any organization yet.");
+        setSubmitting(false);
+        return;
+      }
+      router.push(`/o/${body.organizationSlug}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed.");

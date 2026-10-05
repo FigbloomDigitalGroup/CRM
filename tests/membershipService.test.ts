@@ -134,6 +134,10 @@ describe("authService.acceptMembershipInvite", () => {
     );
     expect(result.userId).toBeTruthy();
     expect(await resolveSessionUserId(result.token)).toBe(result.userId);
+    // Regression (FIG-604): the post-accept redirect used to be hardcoded
+    // to the dev-seeded "figbloom" org regardless of which organization
+    // the invite actually belonged to.
+    expect(result.organizationSlug).toBe(org.slug);
 
     const membership = await adminDb.membership.findUniqueOrThrow({
       where: { id: membershipId },

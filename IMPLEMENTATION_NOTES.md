@@ -1110,6 +1110,122 @@ linked from the in-page block rather than duplicating its content a third
 time alongside `IMPLEMENTATION_NOTES.md`'s own "Reporting" section above
 and `README.md`'s "Reports" section.
 
+## Organization settings and tenant provisioning admin (FIG-604)
+
+**The research actually mattered here**: before writing anything, checked
+what already existed. `seedOrganizationDefaults` (the catalog-seeding half
+of provisioning) was already organization-agnostic and already proven
+against both the real seed org and every test org via
+`tests/helpers/fixtures.ts#createTestOrganization` -- it needed zero
+changes. `createOrganization` already existed too, as a one-line repo
+wrapper with no caller except seed/tests. What was actually missing was
+the glue: a parameterized, reusable entry point chaining
+create-org -> seed-defaults -> invite-first-admin, callable for any org,
+not just the hardcoded `figbloom` one `prisma/seed.ts` demonstrates. That
+gap is exactly what `documents/FIG-444 Subscriber Readiness Plan...md` §7
+already named as a prerequisite for any external pilot, and §16/§17 flag
+as a hard no-go until built.
+
+**Core logic lives in a service, the CLI script is a thin wrapper.**
+`src/services/organizationProvisioningService.ts#provisionOrganization`
+holds all the actual logic (validation, create, seed, invite, audit);
+`scripts/provision-organization.ts` just parses argv and calls it. This
+is the opposite of `erase-data-subject.ts`/`notifications-sweep.ts`
+(logic inline in the script) -- deliberately, because AC4 requires test
+coverage, and a `main()` that calls `process.exit` isn't something Vitest
+can exercise directly, while a plain async function is.
+
+**The new admin goes through the real invite flow, not a dev-style preset
+password.** `provisionOrganization` creates a PENDING membership with an
+emailed accept-invite token -- the exact same primitive
+`membershipService.ts#inviteMember` uses for inviting anyone else, just
+called directly (no `AuthContext` exists yet for a brand-new org). There
+is deliberately no separate "platform admin" login path or preset
+credential.
+
+**Two real, pre-existing bugs found by actually running the provisioned
+flow end-to-end**, not just unit-testing the new service in isolation
+(both only show up once an organization *other than* the one hardcoded
+dev-seed org, "figbloom", exists and a real user tries to use it):
+
+- `AcceptInviteForm.tsx` redirected to `/o/figbloom` after accepting
+  *any* invite, unconditionally. A new admin accepting their real invite
+  for a newly provisioned org would land in an org they have no
+  membership in at all. Fixed by having `acceptMembershipInvite` resolve
+  and return the actual `organizationSlug` the accepted membership
+  belongs to, threaded through the API route to the client.
+- `LoginForm.tsx` had the exact same hardcoded `/o/figbloom` redirect
+  after a successful login. Fixed the same way: `authService.login` now
+  also resolves `listActiveOrganizationSlugsForUser` and returns which
+  org to land on (null if the account has no active membership anywhere,
+  which the form now surfaces as a message instead of redirecting into a
+  dead org). Login itself stays organization-agnostic by design (a user
+  can hold memberships in more than one org) -- for a user with more than
+  one active membership, this currently lands on the oldest one, since
+  there is no organization-switcher UI yet. That's a real, deliberate V1
+  limitation, not an oversight: building a switcher is a separate concern
+  from provisioning working correctly for the common (single-membership)
+  case this ticket is actually about.
+
+**Organization profile/defaults/timezone/currency/working-hours are real
+typed columns on `Organization`, not more `OrganizationSetting` rows.**
+`OrganizationSetting` is a generic `(organizationId, key) -> Json` bag
+used today for exactly one thing (an internal lead-assignment cursor) --
+a fine shape for ad hoc internal runtime state, a worse one for a small,
+fixed, validated, user-facing shape where real columns make the schema
+self-documenting and let Prisma/Postgres enforce the types. Gated behind
+`organization.manage_settings`, same permission as every other piece of
+tenant configuration on the Settings page (previously only the website
+API key).
+
+**Timezone validation uses `Intl.supportedValuesOf("timeZone")`** (Node's
+built-in IANA timezone database) rather than a hardcoded list or an extra
+dependency -- it's exactly the validation a "pick a real timezone" field
+needs, already available in every runtime this app runs in.
+
+**A real latent bug in the shared `diffAuditedFields` helper, found by
+writing this ticket's own audit test.** `normalize()` (used by every
+service's broadened-audit-coverage update path since FIG-600) coerced
+*any* string that happened to parse as a number into a JS number for
+comparison -- including a phone number like `"+254700000000"`. This was
+never exercised before because every existing audited field was either a
+genuine Decimal/id or definitely-not-numeric text; `Organization.phone`
+was the first free-text field anyone tried to audit. The coercion itself
+is load-bearing (`dealService.ts` relies on it to compare a `Deal.value`
+Decimal against a patch's plain numeric string), so it couldn't just be
+removed -- fixed by only coercing a numeric-looking string when it's
+paired against an actual number on the other side of the comparison, not
+unconditionally. Also fixed a second latent gap in the same function
+while adding `workingDays`: arrays were compared by reference, so a
+patch's freshly-constructed array would always look "changed" even when
+its contents matched the DB row exactly.
+
+**Whole-organization export is deliberately a different code path from
+the product's own CSV exports** (`exportService.ts`), not a reuse of
+them -- those are permission-gated and value-masked for a specific
+logged-in member; this is a platform/admin operation with no
+authenticated caller, meant to hand back everything unmasked. Columns are
+the raw Prisma field shape (ids, not resolved names) via a generic
+per-row serializer, rather than hand-building a column list per entity --
+a deliberate trade-off (see the script's own comment) favoring
+completeness and low maintenance over polish, since this is a data
+handoff, not a human-facing report.
+
+**Offboarding revokes access through two independent mechanisms, and the
+doc says so explicitly rather than implying one setting does everything**:
+deactivating every membership (what actually blocks login --
+`resolveActiveMembership` only ever matches `ACTIVE`) and marking the
+organization `INACTIVE` (which additionally blocks the two public,
+session-less integrations that check `organization.status` directly --
+website lead capture and inbound email). Neither alone is the whole
+story; `docs/TENANT_OFFBOARDING.md` says so rather than overclaiming.
+
+**Retention after offboarding is explicitly left undecided.** FIG-444 §12
+flags how long an offboarded tenant's data stays in the database at all
+as a contractual question, not a technical one -- nothing here implements
+an automatic deletion schedule, and the doc says that's deliberate, not
+missing.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit

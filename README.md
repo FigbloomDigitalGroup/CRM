@@ -452,6 +452,34 @@ which login path was used, only on the `userId: string | null` that
 `getCurrentUserId()` / `resolveRequestContext()`
 (`src/auth/requestContext.ts`) produce.
 
+## Organization settings and tenant provisioning (FIG-604)
+
+- **Settings → Organization profile** (`organization.manage_settings`,
+  Management only): name, phone, website, address, timezone (validated
+  against Node's IANA timezone database), default currency, working days/
+  hours. Real typed columns on `Organization`, not another
+  `OrganizationSetting` JSON row — see `IMPLEMENTATION_NOTES.md`.
+- **Provisioning a new organization** is a staff-run CLI command, not a
+  self-service or in-app flow (consistent with
+  `documents/FIG-444 Subscriber Readiness Plan...md` §13's scope):
+  ```bash
+  npx tsx scripts/provision-organization.ts \
+    --name "Acme Ltd" --slug acme-ltd \
+    --admin-email jane@acme.co.ke --admin-name "Jane Doe" \
+    [--role MANAGEMENT]
+  ```
+  Creates the organization, seeds FigBloom's default reference-data
+  catalogs (review/edit under Settings before go-live), and invites the
+  first admin through the same real accept-invite email flow as any other
+  member invite — no preset password. The core logic
+  (`src/services/organizationProvisioningService.ts#provisionOrganization`)
+  is unit-tested; the script is a thin argv-parsing wrapper around it.
+- **Offboarding and data export**: see `docs/TENANT_OFFBOARDING.md`.
+  `scripts/export-organization.ts` writes one CSV per entity type;
+  `scripts/offboard-organization.ts` deactivates every membership and
+  marks the organization `INACTIVE` (dry-run by default, `--confirm` to
+  act) — no business data is ever deleted by either script.
+
 ## CI, Docker, and deployment
 
 `.github/workflows/ci.yml` runs lint, typecheck, migrations, and the full
