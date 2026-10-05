@@ -11,7 +11,7 @@ on:
 
 jobs:
   test:
-    name: Lint, typecheck, migrate, test
+    name: Lint, typecheck, migrate, test, e2e
     runs-on: ubuntu-latest
 
     services:
@@ -72,11 +72,44 @@ jobs:
       # steps above, which is intentional: those steps give a clearly
       # labeled, individually-failing CI signal for "migrations" as its
       # own acceptance criterion, not just a side effect buried inside the
-      # test run.
-      - run: npm test
+      # test run. Coverage thresholds (vitest.config.ts) are enforced here
+      # too -- a drop below the floor fails this step the same way a
+      # failing test would (FIG-602).
+      - run: npm run test:coverage
 
-      - name: Verify the production build succeeds
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
+
+      # Seeds the dev-fixture org/users/permissions into figbloom_crm_dev
+      # (not the test database the Vitest suite above used) -- the e2e
+      # suite below logs in as a real seeded user through the real app,
+      # not a fixture it creates for itself the way the Vitest suite does.
+      - name: Seed dev data for e2e
+        run: npm run seed
+
+      # One build, reused by both the build-succeeds check and the e2e
+      # suite below (which drives a real `next start`, not `next dev`).
+      - name: Build
         run: npm run build
+
+      - name: Install Playwright's Chromium
+        run: npm run e2e:install
+
+      - name: Run Playwright e2e tests (FIG-602)
+        run: npm run e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
 
   docker:
     name: Docker image builds and runs

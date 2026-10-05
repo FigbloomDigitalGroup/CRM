@@ -25,7 +25,9 @@
     "prisma",
     "tests",
     "scripts",
+    "e2e",
     "vitest.config.ts",
+    "playwright.config.ts",
     "next-env.d.ts",
     ".next/types/**/*.ts"
   ],

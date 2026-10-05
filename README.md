@@ -15,7 +15,10 @@ those documents into a running application.
 - **PostgreSQL** with **Prisma** (schema + migrations + client)
 - **Row-level security (RLS)** as a database-enforced, defense-in-depth
   tenant boundary, on top of application-level `organizationId` scoping
-- **Vitest** for the automated test suite
+- **Vitest** for service/API integration tests (real Postgres) and
+  component tests (jsdom), with coverage reporting; **Playwright** for
+  end-to-end browser tests against a real running instance — see
+  "Testing" below
 
 ## Local setup
 
@@ -456,3 +459,64 @@ backup/restore procedure below was actually executed, not just described.
 See `docs/DEPLOYMENT.md` for the full deploy sequence, the staging/
 production environment split, every required env var, secrets handling,
 and the verified backup/restore procedure.
+
+## Testing (FIG-602)
+
+Three layers, each proving something the others can't:
+
+- **Integration tests** (`tests/*.test.ts`, Vitest, `node` environment) --
+  the original suite (14 files before this ticket, 29+ now): every
+  service/repository call against a real Postgres, because RLS and the
+  least-privilege `figbloom_app` role are the actual thing being tested,
+  not something a mock could stand in for.
+- **Component tests** (`tests/components/*.test.tsx`, Vitest, `jsdom`
+  environment via `environmentMatchGlobs`) -- render real client
+  components (`@testing-library/react`) and drive them like a user would
+  (`@testing-library/user-event`): `ArchiveControl`, `MergeControl`,
+  `TaskSection`, `CatalogEditor`. `fetch` is stubbed per test
+  (`vi.stubGlobal`) so these stay fast and don't need a server at all --
+  this layer is for "does this form call the right endpoint with the
+  right body and handle the response correctly," not "is the endpoint
+  itself correct" (the integration suite's job).
+- **End-to-end tests** (`e2e/*.spec.ts`, Playwright, real Chromium) -- a
+  real browser against a real `next build`/`next start` instance and a
+  real Postgres, logged in as a real seeded user through the real
+  `/login` form (not the `/dev-login` bypass, which is hard-disabled in
+  production builds -- see `IMPLEMENTATION_NOTES.md`). Covers: login
+  (including a wrong-password rejection), and one continuous journey
+  through create lead → assign → convert to deal (creating its company
+  inline, FIG-601) → move pipeline stage → log an activity → create and
+  complete a task. Website lead capture gets its own spec: it has no
+  literal page to click through (the public endpoint exists to be called
+  by an *external* site), so that spec generates a real website API key
+  through Settings, POSTs to the real public endpoint with it, then
+  confirms the resulting lead is visible through the real Leads UI.
+
+Run them:
+
+```bash
+npm test              # integration + component tests (fast, no coverage)
+npm run test:coverage # same, plus a coverage report + enforced thresholds
+npm run e2e:install   # once -- downloads Playwright's Chromium
+npm run build && npm run e2e   # e2e needs a built app; see playwright.config.ts
+```
+
+**Coverage** (`@vitest/coverage-v8`, configured in `vitest.config.ts`) is
+enabled with real, currently-passing thresholds (`lines`/`statements`
+35%, `functions` 55%, `branches` 65%) -- a floor to catch a real
+regression, not an aspirational number nobody hits. The split is
+intentional, not an oversight: `src/repositories`/`src/services` sit at
+~85-100% each (hammered by 270+ integration tests), while most of
+`src/app/**`'s route/page files sit at 0% in this report specifically
+*because* they're exercised through real HTTP by the e2e suite instead --
+V8 coverage is process-local to whatever ran the code, and Playwright
+runs the app in its own separate process, so this Vitest-level report
+can't see any of that. Raising the floor by excluding `src/app/**`
+outright was considered and rejected: that's most of the application, and
+hiding it from the report would make "coverage reporting" cosmetic rather
+than honest.
+
+All three layers run in CI (`.github/workflows/ci.yml`) on every PR/push
+to `main`: lint, typecheck, migrate, `test:coverage` (thresholds enforced
+-- a regression fails the build the same as a failing test), seed, build,
+then the Playwright suite against that same build.

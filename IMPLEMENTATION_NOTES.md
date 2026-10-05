@@ -930,6 +930,127 @@ also why `audit_events` is append-only at the database level, see
 needs the Contact's own fields (name/email/phone) to be a useful
 processing record, and those are only available before the row is gone.
 
+## UI component and e2e test coverage (FIG-602)
+
+**The ticket's premise -- "Playwright is installed" -- was wrong, and
+worth checking before writing a single spec.** `package-lock.json`
+listed `@playwright/test` only as an *optional peer dependency of
+Next.js itself* (its own built-in test-mode support), not an actual
+project devDependency -- `node_modules/@playwright` didn't exist.
+`npx playwright --version` appeared to work regardless, which is exactly
+the kind of false signal that would have led to writing specs against a
+tool that silently wasn't really part of this project. Installed for
+real: `@playwright/test`, plus `@vitest/coverage-v8` and
+`@testing-library/react`/`jest-dom`/`user-event`/`jsdom` for component
+tests -- all pinned to versions compatible with the already-installed
+`vitest@2.1.9`/`vite@5.4.21` (`@vitejs/plugin-react@^4`, not latest's
+`^6`, which requires `vite@^8`).
+
+**Component tests share the existing `vitest.config.ts`, not a second
+config file.** The one real wrinkle: the integration suite needs
+`environment: "node"` (no DOM, talks to real Postgres) while component
+tests need a DOM. Vitest's `environmentMatchGlobs` option assigns
+`jsdom` to `tests/components/**` specifically and leaves every other test
+file on `node`, in one config, rather than maintaining a second
+`vitest.config.ts` + a `vitest.workspace.ts` to stitch them together --
+simpler for a project with only four component test files so far.
+`tests/components/setupComponentTests.ts` (only applied there, via
+`setupFiles`) wires up `@testing-library/jest-dom`'s matchers and
+`cleanup()`s the DOM after each test; the integration suite's own
+`tests/setup.ts` stays untouched.
+
+**Four components were chosen to cover distinct *shapes* of control, not
+just "four forms picked at random": `ArchiveControl`
+(simplest -- single-purpose action button with two states),
+`MergeControl` (a two-click confirm flow -- state machine, not just a
+fetch), `TaskSection` (a list + create form + inline per-row status
+change, and a permission-conditional field), `CatalogEditor` (the most
+complex -- add form, inline edit, reorder, deactivate, all in one
+component). Each test stubs `fetch` (`vi.stubGlobal`) and mocks
+`next/navigation`'s `useRouter` rather than hitting a real server --
+component tests verify "this control calls the right endpoint with the
+right body and renders the response correctly," which is a different
+claim from "the endpoint itself behaves correctly" (already the
+integration suite's job) or "the whole page works end-to-end" (the e2e
+suite's job, below). All three layers exist because each answers a
+question the others structurally can't.
+
+**A real, pre-existing UI bug was caught while writing the e2e lead-
+conversion spec, not invented for the test to catch.**
+`ConvertLeadControl.tsx` (FIG-601) had both of its "use existing company"/
+"create new company" radio inputs nested inside one shared `<label>`.
+HTML only forwards a label's click to the *first* labelable descendant,
+so clicking the "Create a new company" text actually toggled the wrong
+radio -- harmless if you click directly on the input itself (most
+manual testing does), but broken for anything relying on
+label-click-forwarding, including Playwright's own `getByLabel(...).check()`
+and a sighted user clicking the text rather than the tiny input circle.
+Fixed by giving each radio its own `<label>` (`src/app/o/[orgSlug]/leads/[leadId]/ConvertLeadControl.tsx`).
+This is exactly the kind of bug a real browser-driving e2e test catches
+that no amount of service-layer integration testing ever could.
+
+**E2E specs use real `/login` (email + password), not `/dev-login`.**
+`/dev-login`/`/api/dev-session` are hard-disabled whenever
+`NODE_ENV === "production"` (see "Real authentication (FIG-592)," above)
+-- and the e2e suite runs against a real `next build`/`next start`, the
+same artifact `docs/DEPLOYMENT.md` describes shipping, not `next dev`.
+Every seeded dev user already has a real, shared password
+(`DEV_FIXTURE_PASSWORD` in `src/auth/devAccounts.ts`) specifically so the
+real login form can be used in automation without a secrets dance --
+`e2e/helpers.ts#loginAs` drives that form for every spec, including the
+login spec itself testing both a success and a wrong-password rejection.
+
+**The lead-lifecycle flow is one chained test, not six separate ones.**
+Login, create lead, assign, convert, move stage, log activity, and
+complete task are listed in the AC as a sequence because they *are* one
+-- splitting them into isolated tests would mean each one reconstructing
+all the prior steps' state just to reach its own starting point, for no
+real isolation benefit (Playwright already serializes specs with
+`workers: 1`). The whole chain runs as Management rather than swapping
+sessions between Sales and Management mid-test: Management alone holds
+every permission the chain touches (create/assign/convert/edit-all,
+company/contact create, activity/task create), so there's no reason to
+split the login just to prove ownership moved -- the "assign" step
+itself still reassigns to a different real member (`dev.sales@...`) and
+asserts the change persisted after a reload, not just that the `<select>`
+changed locally.
+
+**Website lead capture gets its own spec because it has no literal page
+to click through.** The public endpoint
+(`POST /api/public/orgs/[orgSlug]/leads`) exists to be called by an
+*external* website's own backend (see README.md, "Website lead
+capture") -- there's nothing in this app's own UI that submits to it.
+The spec instead drives the real boundary on both sides: generates a
+real website API key through the actual Settings UI
+(`RegenerateWebsiteKeyButton`, including handling the
+`window.confirm()` it shows when a key already exists -- Playwright
+dismisses dialogs by default, which would otherwise silently abort the
+click), POSTs to the real public endpoint with Playwright's `request`
+fixture (a real HTTP call, not a mock), then confirms the resulting Lead
+is visible through the real Leads UI. The submitted name is deliberately
+one word: the Lead list shows/searches the resulting Contact's *first*
+name only (`splitName` in `src/repositories/leadIngestion.ts` splits on
+the first space), so a multi-word name wouldn't match in either the
+search box or the rendered link text.
+
+**Coverage thresholds were measured, not guessed.** Ran
+`npm run test:coverage` once with a placeholder threshold, read the real
+numbers (35.77% lines/statements, 61.32% functions, 75.09% branches
+across `src/**`), then set the actual thresholds a few points below each
+(`vitest.config.ts`) -- comfortably passing today, but a real regression
+(someone deleting tests, or adding a large untested module) still trips
+it. The low lines/statements number is structural, not a gap to chase
+down: most of `src/app/**` (every `page.tsx`, every `route.ts`, every
+client component without its own test) reads as 0% in this report purely
+because V8 coverage is process-local to whatever ran the code, and that
+code only ever actually runs inside the e2e suite's separate Playwright-
+driven process -- which this Vitest-level report structurally cannot see,
+not because that code is untested in practice. Excluding `src/app/**`
+from the coverage `include` entirely was considered (it would make the
+percentage look much healthier) and rejected: that's most of the
+application, and hiding it from the number would make "coverage
+reporting" a cosmetic exercise rather than an honest one.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit

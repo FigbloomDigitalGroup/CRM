@@ -81,8 +81,8 @@ export function ConvertLeadControl({
     <form className="stack" onSubmit={handleConvert}>
       {!hasCompany && (
         <>
-          <label style={{ display: "flex", gap: 8 }}>
-            <span>
+          <div style={{ display: "flex", gap: 8 }}>
+            <label>
               <input
                 type="radio"
                 checked={companyMode === "existing"}
@@ -90,16 +90,16 @@ export function ConvertLeadControl({
                 onChange={() => setCompanyMode("existing")}
               />{" "}
               Use an existing company
-            </span>
-            <span>
+            </label>
+            <label>
               <input
                 type="radio"
                 checked={companyMode === "new"}
                 onChange={() => setCompanyMode("new")}
               />{" "}
               Create a new company
-            </span>
-          </label>
+            </label>
+          </div>
           {companyMode === "existing" ? (
             <label>
               Company
