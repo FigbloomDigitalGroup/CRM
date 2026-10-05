@@ -1,7 +1,12 @@
+import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
-import { ValidationError } from "@/auth/errors";
+import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { changeMemberRole } from "@/services/membershipService";
+
+const ChangeRoleSchema = z.object({
+  roleKey: requiredString("roleKey is required."),
+});
 
 export async function POST(
   request: Request,
@@ -10,10 +15,7 @@ export async function POST(
   return handleRoute(async () => {
     const { orgSlug, membershipId } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    const body = (await request.json()) as { roleKey?: string };
-    if (!body.roleKey) {
-      throw new ValidationError("roleKey is required.");
-    }
+    const body = await parseJsonBody(request, ChangeRoleSchema);
     return changeMemberRole(ctx, membershipId, body.roleKey);
   });
 }

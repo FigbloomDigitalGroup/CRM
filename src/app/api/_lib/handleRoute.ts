@@ -21,7 +21,10 @@ function mapErrorToResponse(err: unknown): NextResponse {
     return NextResponse.json({ error: err.message }, { status: 404 });
   }
   if (err instanceof ValidationError) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+    return NextResponse.json(
+      { error: err.message, ...(err.issues ? { issues: err.issues } : {}) },
+      { status: 400 },
+    );
   }
   if (err instanceof RateLimitedError) {
     return NextResponse.json({ error: err.message }, { status: 429 });
@@ -36,12 +39,19 @@ function mapErrorToResponse(err: unknown): NextResponse {
  * mapping (typed service/auth errors -> HTTP status) happens in exactly one
  * place, matching the standard request flow: Client -> Auth context ->
  * Service -> Org+permission check -> Validation -> Data access -> Response.
+ *
+ * `fn` normally returns plain data to be JSON-serialized, but a route that
+ * needs to set a cookie/header on success (the auth routes, FIG-605 --
+ * login, signup, accept-invite all set the session cookie) can instead
+ * return its own already-built `NextResponse` directly; it's passed
+ * through unchanged rather than re-wrapped.
  */
 export async function handleRoute(
   fn: () => Promise<unknown>,
 ): Promise<NextResponse> {
   try {
     const result = await fn();
+    if (result instanceof NextResponse) return result;
     return NextResponse.json(result ?? {});
   } catch (err) {
     return mapErrorToResponse(err);

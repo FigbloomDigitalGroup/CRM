@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
-import { UnauthorizedError, ValidationError } from "@/auth/errors";
+import { z } from "zod";
+import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
 import { SESSION_COOKIE_NAME } from "@/auth/session";
-import { logger } from "@/lib/logger";
 import { login } from "@/services/authService";
+
+const LoginSchema = z.object({
+  email: requiredString("Email and password are required."),
+  password: requiredString("Email and password are required."),
+});
 
 /**
  * Real sign-in (FIG-592). Body: { "email": "...", "password": "..." }.
@@ -12,19 +18,8 @@ import { login } from "@/services/authService";
  * resistant standard used elsewhere only for public internet-facing surfaces.
  */
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as {
-    email?: string;
-    password?: string;
-  };
-
-  if (!body.email || !body.password) {
-    return NextResponse.json(
-      { error: "Email and password are required." },
-      { status: 400 },
-    );
-  }
-
-  try {
+  return handleRoute(async () => {
+    const body = await parseJsonBody(request, LoginSchema);
     const { token, expiresAt, userId, organizationSlug } = await login(
       body.email,
       body.password,
@@ -40,17 +35,5 @@ export async function POST(request: Request) {
       expires: expiresAt,
     });
     return response;
-  } catch (err) {
-    if (err instanceof UnauthorizedError) {
-      return NextResponse.json({ error: err.message }, { status: 401 });
-    }
-    if (err instanceof ValidationError) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
-    }
-    logger.error({ err }, "Unhandled error during login");
-    return NextResponse.json(
-      { error: "Internal server error." },
-      { status: 500 },
-    );
-  }
+  });
 }

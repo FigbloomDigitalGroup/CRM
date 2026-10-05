@@ -1,4 +1,6 @@
+import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { ValidationError } from "@/auth/errors";
 import {
@@ -8,6 +10,20 @@ import {
   listCommunicationsForDeal,
   listCommunicationsForLead,
 } from "@/services/communicationService";
+
+const CreateCommunicationSchema = z.object({
+  channel: z.enum(["EMAIL", "PHONE", "WHATSAPP", "SMS", "MEETING", "SOCIAL", "OTHER"]),
+  direction: z.enum(["INBOUND", "OUTBOUND"]),
+  occurredAt: z.coerce.date().optional(),
+  subject: z.string().optional(),
+  summary: requiredString("summary is required."),
+  externalReference: z.string().optional(),
+  activityId: z.string().optional(),
+  companyId: z.string().optional(),
+  contactId: z.string().optional(),
+  leadId: z.string().optional(),
+  dealId: z.string().optional(),
+});
 
 /**
  * Same "exactly one parent, not combined" convention as
@@ -44,7 +60,7 @@ export async function POST(
   return handleRoute(async () => {
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    const body = await request.json();
+    const body = await parseJsonBody(request, CreateCommunicationSchema);
     return createCommunication(ctx, body);
   });
 }

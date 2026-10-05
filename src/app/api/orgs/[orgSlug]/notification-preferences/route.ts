@@ -1,11 +1,20 @@
+import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { parseJsonBody } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
-import { ValidationError } from "@/auth/errors";
 import {
   getMyNotificationPreferences,
   updateMyNotificationPreference,
 } from "@/services/notificationService";
-import { NOTIFICATION_TYPES } from "@/repositories/notificationPreferences";
+import { NOTIFICATION_TYPES, type NotificationTypeKey } from "@/repositories/notificationPreferences";
+
+const UpdateNotificationPreferenceSchema = z.object({
+  type: z.enum(NOTIFICATION_TYPES as [NotificationTypeKey, ...NotificationTypeKey[]], {
+    message: `type is required and must be one of: ${NOTIFICATION_TYPES.join(", ")}.`,
+  }),
+  emailEnabled: z.boolean().optional(),
+  inAppEnabled: z.boolean().optional(),
+});
 
 export async function GET(
   _request: Request,
@@ -26,17 +35,8 @@ export async function POST(
   return handleRoute(async () => {
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    const body = (await request.json()) as {
-      type?: string;
-      emailEnabled?: boolean;
-      inAppEnabled?: boolean;
-    };
-    if (!body.type || !NOTIFICATION_TYPES.includes(body.type as never)) {
-      throw new ValidationError(
-        `type is required and must be one of: ${NOTIFICATION_TYPES.join(", ")}.`,
-      );
-    }
-    return updateMyNotificationPreference(ctx, body.type as never, {
+    const body = await parseJsonBody(request, UpdateNotificationPreferenceSchema);
+    return updateMyNotificationPreference(ctx, body.type, {
       emailEnabled: body.emailEnabled,
       inAppEnabled: body.inAppEnabled,
     });

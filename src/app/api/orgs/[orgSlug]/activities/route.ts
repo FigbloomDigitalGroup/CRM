@@ -1,4 +1,6 @@
+import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { parseJsonBody } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { ValidationError } from "@/auth/errors";
 import {
@@ -8,6 +10,18 @@ import {
   listActivitiesForDeal,
   listActivitiesForLead,
 } from "@/services/activityService";
+
+const CreateActivitySchema = z.object({
+  type: z.enum(["CALL", "MEETING", "NOTE", "EMAIL", "WHATSAPP", "OTHER"]),
+  subject: z.string().optional(),
+  description: z.string().optional(),
+  occurredAt: z.coerce.date().optional(),
+  outcome: z.string().optional(),
+  companyId: z.string().optional(),
+  contactId: z.string().optional(),
+  leadId: z.string().optional(),
+  dealId: z.string().optional(),
+});
 
 /**
  * A timeline is always scoped to exactly one parent record -- there is no
@@ -47,7 +61,7 @@ export async function POST(
   return handleRoute(async () => {
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    const body = await request.json();
+    const body = await parseJsonBody(request, CreateActivitySchema);
     return createActivity(ctx, body);
   });
 }

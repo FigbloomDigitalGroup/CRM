@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
-import { ValidationError } from "@/auth/errors";
+import { z } from "zod";
+import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
 import { SESSION_COOKIE_NAME } from "@/auth/session";
-import { logger } from "@/lib/logger";
 import { signup } from "@/services/authService";
+
+const SignupSchema = z.object({
+  email: requiredString("Name, email and password are required."),
+  password: requiredString("Name, email and password are required."),
+  name: requiredString("Name, email and password are required."),
+});
 
 /**
  * Creates an account and signs the caller straight in -- see
@@ -10,20 +17,8 @@ import { signup } from "@/services/authService";
  * own. Body: { "email": "...", "password": "...", "name": "..." }.
  */
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as {
-    email?: string;
-    password?: string;
-    name?: string;
-  };
-
-  if (!body.email || !body.password || !body.name) {
-    return NextResponse.json(
-      { error: "Name, email and password are required." },
-      { status: 400 },
-    );
-  }
-
-  try {
+  return handleRoute(async () => {
+    const body = await parseJsonBody(request, SignupSchema);
     const { token, expiresAt, userId } = await signup(
       body.email,
       body.password,
@@ -40,14 +35,5 @@ export async function POST(request: Request) {
       expires: expiresAt,
     });
     return response;
-  } catch (err) {
-    if (err instanceof ValidationError) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
-    }
-    logger.error({ err }, "Unhandled error during signup");
-    return NextResponse.json(
-      { error: "Internal server error." },
-      { status: 500 },
-    );
-  }
+  });
 }

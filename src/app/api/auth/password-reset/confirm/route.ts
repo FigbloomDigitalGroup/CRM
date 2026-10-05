@@ -1,31 +1,17 @@
-import { NextResponse } from "next/server";
-import { ValidationError } from "@/auth/errors";
-import { logger } from "@/lib/logger";
+import { z } from "zod";
+import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
 import { resetPassword } from "@/services/authService";
 
-export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as {
-    token?: string;
-    newPassword?: string;
-  };
-  if (!body.token || !body.newPassword) {
-    return NextResponse.json(
-      { error: "Token and newPassword are required." },
-      { status: 400 },
-    );
-  }
+const ConfirmPasswordResetSchema = z.object({
+  token: requiredString("Token and newPassword are required."),
+  newPassword: requiredString("Token and newPassword are required."),
+});
 
-  try {
+export async function POST(request: Request) {
+  return handleRoute(async () => {
+    const body = await parseJsonBody(request, ConfirmPasswordResetSchema);
     await resetPassword(body.token, body.newPassword);
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    if (err instanceof ValidationError) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
-    }
-    logger.error({ err }, "Unhandled error confirming password reset");
-    return NextResponse.json(
-      { error: "Internal server error." },
-      { status: 500 },
-    );
-  }
+    return { ok: true };
+  });
 }

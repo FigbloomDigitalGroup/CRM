@@ -1,10 +1,17 @@
+import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
-import { ValidationError } from "@/auth/errors";
+import { parseJsonBody } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
 import {
   getWebsiteAssignmentSetting,
   setWebsiteAssignmentSetting,
 } from "@/services/integrationService";
+
+const SetAssignmentModeSchema = z.object({
+  mode: z.enum(["ROUND_ROBIN", "UNASSIGNED"], {
+    message: 'mode must be "ROUND_ROBIN" or "UNASSIGNED".',
+  }),
+});
 
 export async function GET(
   _request: Request,
@@ -24,10 +31,7 @@ export async function POST(
   return handleRoute(async () => {
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    const body = (await request.json()) as { mode?: string };
-    if (body.mode !== "ROUND_ROBIN" && body.mode !== "UNASSIGNED") {
-      throw new ValidationError('mode must be "ROUND_ROBIN" or "UNASSIGNED".');
-    }
+    const body = await parseJsonBody(request, SetAssignmentModeSchema);
     return setWebsiteAssignmentSetting(ctx, body.mode);
   });
 }

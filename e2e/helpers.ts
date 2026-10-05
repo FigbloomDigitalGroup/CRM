@@ -5,10 +5,11 @@ export const ORG_SLUG = "figbloom";
 /**
  * Every seeded dev user shares one password (`DEV_FIXTURE_PASSWORD` in
  * `src/auth/devAccounts.ts`) specifically so it can be used through the
- * real `/login` flow, not just `/dev-login` -- which is hard-disabled
- * whenever `NODE_ENV === "production"` (see `IMPLEMENTATION_NOTES.md`,
- * "Real authentication (FIG-592)"), the mode these e2e specs run the app
- * in (a real `next build`/`next start`, not `next dev`). Real login is
+ * real `/login` flow, not just `/dev-login` -- which only works when
+ * `NODE_ENV` is explicitly `"development"` (FIG-605; see
+ * `IMPLEMENTATION_NOTES.md`, "Real authentication (FIG-592)"), and these
+ * e2e specs run the app as a real `next build`/`next start` (not
+ * `next dev`), so it's unavailable here regardless. Real login is
  * also one of this ticket's own required flows, so every spec uses it,
  * not a shortcut around it.
  */

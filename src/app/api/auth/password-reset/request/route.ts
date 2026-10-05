@@ -1,16 +1,19 @@
-import { NextResponse } from "next/server";
+import { z } from "zod";
+import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
 import { requestPasswordReset } from "@/services/authService";
 
-export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as { email?: string };
-  if (!body.email) {
-    return NextResponse.json({ error: "Email is required." }, { status: 400 });
-  }
+const RequestPasswordResetSchema = z.object({
+  email: requiredString("Email is required."),
+});
 
-  const origin = new URL(request.url).origin;
-  const result = await requestPasswordReset(
-    body.email,
-    (token) => `${origin}/reset-password?token=${token}`,
-  );
-  return NextResponse.json(result);
+export async function POST(request: Request) {
+  return handleRoute(async () => {
+    const body = await parseJsonBody(request, RequestPasswordResetSchema);
+    const origin = new URL(request.url).origin;
+    return requestPasswordReset(
+      body.email,
+      (token) => `${origin}/reset-password?token=${token}`,
+    );
+  });
 }

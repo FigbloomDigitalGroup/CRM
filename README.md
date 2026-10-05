@@ -20,6 +20,10 @@ those documents into a running application.
   end-to-end browser tests against a real running instance — see
   "Testing" below
 - **recharts** for report charts (bar charts and donuts on the Reports page)
+- **bcryptjs** for password hashing, **nodemailer** for outbound SMTP
+  (password resets, invites), **csv-parse**/**csv-stringify** for
+  import/export, **pino** for structured logging, **zod** for request
+  validation (FIG-605, see "Request validation" below)
 
 ## Local setup
 
@@ -109,10 +113,11 @@ variable — **never** from a value committed to source control. See
   `requireOwnedRecordPermission` before touching data. Route handlers and
   pages call services, never repositories directly.
 - **Routes/pages** (`src/app/**`) resolve the `AuthContext` via
-  `resolveRequestContext(orgSlug)` and delegate. `NotFoundError` means the
-  record doesn't exist in the caller's organization at all;
-  `ForbiddenError` means it exists but the caller's role/ownership doesn't
-  permit the action.
+  `resolveRequestContext(orgSlug)`, validate the request body/query against
+  a zod schema (`src/app/api/_lib/validation.ts`, FIG-605 — see "Request
+  validation" below), and delegate. `NotFoundError` means the record
+  doesn't exist in the caller's organization at all; `ForbiddenError` means
+  it exists but the caller's role/ownership doesn't permit the action.
 
 One route intentionally doesn't follow this layering:
 `/api/public/orgs/[orgSlug]/leads` has no `AuthContext` at all (there's no
@@ -149,6 +154,32 @@ Statuses, Lost Reasons, Services) have a management UI on the Settings page
 role with a reporting permission a personal "actionable work" view, and
 gives `reporting.view.all` holders organization-wide metrics with
 owner/source/stage/service/date-range filters — see "Reports" below.
+
+## Request validation (FIG-605)
+
+Every API route that accepts a body or query filters validates it against
+a zod schema before calling its service — `parseJsonBody(request, schema)`
+/ `parseQueryParams(searchParams, schema)`
+(`src/app/api/_lib/validation.ts`), used in place of each route's own
+`request.json()` + `as {...}` cast + hand-written required-field checks.
+A rejection is always a 400 with a consistent
+`{ error: string, issues?: [{ path, message }] }` shape
+(`handleRoute.ts`'s `mapErrorToResponse`) — `issues` is only present for a
+zod-shaped rejection, and `error` alone stays exactly the shape every
+existing client already reads, so this didn't require touching 42 call
+sites that do `body.error ?? "..."`.
+
+This only covers the request's **shape** — required-ness, types, enum
+membership, basic formats. Business-rule validation (does this id exist in
+this organization, is this role transition allowed, is this record already
+archived) stays in the service layer, which `scripts/*.ts` call directly
+too, not just routes — duplicating those checks into zod would mean two
+sources of truth that could drift. The one route-level exception is the
+public website lead-capture and inbound-email endpoints
+(`/api/public/orgs/[orgSlug]/**`), which deliberately keep their existing
+hand-rolled, lenient parsing: they're third-party webhook targets where a
+stray extra field or wrong type should degrade gracefully, not 400 a
+retry-on-failure provider.
 
 ## Deal outcomes are driven by pipeline stage, not set directly
 
@@ -429,6 +460,24 @@ server-side instead, which is what local dev and the test suite run
 against today. See `IMPLEMENTATION_NOTES.md` — "Real authentication
 (FIG-592)" — for the provider decision and everything else.
 
+> **`/dev-login` is a no-password auth stub, not part of the system
+> above.** `/dev-login` and its `/api/dev-session` endpoint
+> (`src/auth/devSession.ts`) let anyone sign in as any seeded user by
+> email alone — no password, no invite, no session revocation. It exists
+> purely so permission/ownership logic can be exercised locally without
+> setting a password on every seeded user.
+>
+> It only works when `NODE_ENV` is **exactly** `"development"` — checked
+> at request time in both the page and the API route, and additionally
+> baked into a static 404 at build time (FIG-605; this used to only check
+> `NODE_ENV !== "production"`, which left it silently reachable on
+> staging, test, or any deploy that simply left `NODE_ENV` unset — see
+> `IMPLEMENTATION_NOTES.md`, "Real authentication (FIG-592)"). `npm run
+> dev` sets `NODE_ENV=development` automatically, so normal local
+> development is unaffected; anywhere else, set `NODE_ENV` to something
+> else explicitly (`production`, or anything other than `development`) to
+> keep this disabled.
+
 ## Member administration
 
 `/o/[orgSlug]/settings` (Members section, `membership.view`/`.manage` +
@@ -442,15 +491,11 @@ organization's last active Management member can't be deactivated or
 reassigned away from Management — see `IMPLEMENTATION_NOTES.md` —
 "Member/role administration (FIG-593)" — for the rest.
 
-`/dev-login` (`src/auth/devSession.ts`) is a separate, no-password
-placeholder that still exists purely for quickly switching between the
-seeded dev users while developing locally. It's hard-disabled outside
-`NODE_ENV=development` — the page 404s and the API route rejects requests,
-both checked at request time, and the page is additionally baked into a
-static 404 at production build time. Nothing outside `src/auth/` depends on
-which login path was used, only on the `userId: string | null` that
-`getCurrentUserId()` / `resolveRequestContext()`
-(`src/auth/requestContext.ts`) produce.
+`/dev-login`'s behavior and its real disable condition are covered under
+"Authentication" above, not repeated here. Nothing outside `src/auth/`
+depends on which login path was used, only on the
+`userId: string | null` that `getCurrentUserId()` /
+`resolveRequestContext()` (`src/auth/requestContext.ts`) produce.
 
 ## Organization settings and tenant provisioning (FIG-604)
 
@@ -503,15 +548,16 @@ and the verified backup/restore procedure.
 Three layers, each proving something the others can't:
 
 - **Integration tests** (`tests/*.test.ts`, Vitest, `node` environment) --
-  the original suite (14 files before this ticket, 29+ now): every
-  service/repository call against a real Postgres, because RLS and the
-  least-privilege `figbloom_app` role are the actual thing being tested,
-  not something a mock could stand in for.
+  14 files when this layer was introduced (FIG-602), 32+ as of FIG-605:
+  every service/repository call against a real Postgres, because RLS and
+  the least-privilege `figbloom_app` role are the actual thing being
+  tested, not something a mock could stand in for.
 - **Component tests** (`tests/components/*.test.tsx`, Vitest, `jsdom`
   environment via `environmentMatchGlobs`) -- render real client
   components (`@testing-library/react`) and drive them like a user would
   (`@testing-library/user-event`): `ArchiveControl`, `MergeControl`,
-  `TaskSection`, `CatalogEditor`. `fetch` is stubbed per test
+  `TaskSection`, `CatalogEditor`, plus the FIG-603 report charts. `fetch`
+  is stubbed per test
   (`vi.stubGlobal`) so these stay fast and don't need a server at all --
   this layer is for "does this form call the right endpoint with the
   right body and handle the response correctly," not "is the endpoint
@@ -519,8 +565,9 @@ Three layers, each proving something the others can't:
 - **End-to-end tests** (`e2e/*.spec.ts`, Playwright, real Chromium) -- a
   real browser against a real `next build`/`next start` instance and a
   real Postgres, logged in as a real seeded user through the real
-  `/login` form (not the `/dev-login` bypass, which is hard-disabled in
-  production builds -- see `IMPLEMENTATION_NOTES.md`). Covers: login
+  `/login` form (not the `/dev-login` bypass, which only works when
+  `NODE_ENV` is exactly `"development"` -- see "Authentication" above).
+  Covers: login
   (including a wrong-password rejection), and one continuous journey
   through create lead → assign → convert to deal (creating its company
   inline, FIG-601) → move pipeline stage → log an activity → create and
@@ -544,7 +591,7 @@ enabled with real, currently-passing thresholds (`lines`/`statements`
 35%, `functions` 55%, `branches` 65%) -- a floor to catch a real
 regression, not an aspirational number nobody hits. The split is
 intentional, not an oversight: `src/repositories`/`src/services` sit at
-~85-100% each (hammered by 270+ integration tests), while most of
+~85-100% each (hammered by 300+ integration tests), while most of
 `src/app/**`'s route/page files sit at 0% in this report specifically
 *because* they're exercised through real HTTP by the e2e suite instead --
 V8 coverage is process-local to whatever ran the code, and Playwright

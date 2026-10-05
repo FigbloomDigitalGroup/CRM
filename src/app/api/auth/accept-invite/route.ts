@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
-import { ValidationError } from "@/auth/errors";
+import { z } from "zod";
+import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
 import { SESSION_COOKIE_NAME } from "@/auth/session";
-import { logger } from "@/lib/logger";
 import { acceptMembershipInvite } from "@/services/authService";
 
-export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as {
-    token?: string;
-    password?: string;
-  };
-  if (!body.token) {
-    return NextResponse.json({ error: "token is required." }, { status: 400 });
-  }
+const AcceptInviteSchema = z.object({
+  token: requiredString("token is required."),
+  // Only required when the invitee has no password yet -- a business rule
+  // checked in authService.ts, not a shape rule enforceable here.
+  password: z.string().optional(),
+});
 
-  try {
+export async function POST(request: Request) {
+  return handleRoute(async () => {
+    const body = await parseJsonBody(request, AcceptInviteSchema);
     const { token, expiresAt, userId, organizationSlug } = await acceptMembershipInvite(
       body.token,
       body.password,
@@ -29,14 +30,5 @@ export async function POST(request: Request) {
       expires: expiresAt,
     });
     return response;
-  } catch (err) {
-    if (err instanceof ValidationError) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
-    }
-    logger.error({ err }, "Unhandled error accepting membership invite");
-    return NextResponse.json(
-      { error: "Internal server error." },
-      { status: 500 },
-    );
-  }
+  });
 }

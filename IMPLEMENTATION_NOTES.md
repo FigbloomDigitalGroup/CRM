@@ -195,10 +195,15 @@ this project has zero external-service dependencies anywhere else, the
 RBAC/tenant model it has to resolve into is already fully custom, and it's
 currently a single-organization internal tool where a vendor dependency
 buys little. `/dev-login` (`src/auth/devSession.ts`) remains only as a
-local-development convenience and is hard-disabled outside development
-(`NODE_ENV === "production"`, checked in the page, the API route, and — via
+local-development convenience and only works when `NODE_ENV` is exactly
+`"development"` (checked in the page, the API route, and — via
 `notFound()` at build time — baked into the production build itself; see
-`src/app/dev-login/page.tsx`).
+`src/app/dev-login/page.tsx`). This was originally gated on
+`NODE_ENV === "production"` instead -- i.e. disabled only in production,
+rather than enabled only in development -- which left it silently live on
+staging, test, or any deploy that simply left `NODE_ENV` unset. Tightened
+to fail closed by default as part of FIG-605, once the README was found
+describing the (intended, not actual) `"development"`-only behavior.
 
 Sessions (`src/auth/session.ts`) are DB-backed, not a signed/stateless
 token: a random 32-byte token is handed to the client, only its SHA-256 hash
@@ -1225,6 +1230,109 @@ flags how long an offboarded tenant's data stays in the database at all
 as a contractual question, not a technical one -- nothing here implements
 an automatic deletion schedule, and the doc says that's deliberate, not
 missing.
+
+## Stale README and standardized request validation (FIG-605)
+
+**The ticket's own premise was half wrong, checked before acting on it.**
+The exact text it quoted ("FIG-442 ... still open pending an
+auth-mechanism decision") doesn't exist in README.md at all -- it was
+already removed in commit d38f6ba (FIG-592). Grepping for it first (rather
+than assuming the ticket was accurate and "fixing" text that wasn't
+there) surfaced the real staleness instead: the README's one dev-login
+caveat described the WRONG disable condition
+(`NODE_ENV=development` claimed, `NODE_ENV === "production"` actually
+checked), a real and more consequential gap than a stale ticket reference.
+
+**The dev-login gap was a real, live security issue, not just a docs
+bug.** `/dev-login` and `/api/dev-session` let anyone sign in as any
+seeded user by email alone, no password -- and were only disabled for
+`NODE_ENV === "production"` specifically, meaning staging, test, or any
+deploy that simply left `NODE_ENV` unset kept it live. Confirmed by
+`tests/requestContext.test.ts` itself: its dev-session-fallback test
+explicitly ran under `NODE_ENV=test` and expected the bypass to work. Given
+this touches production auth behavior, asked the user how to handle it
+rather than silently changing security posture inside a "fix the docs"
+ticket -- confirmed: tighten the code, not just the words. Changed every
+check (`src/app/api/dev-session/route.ts`, `src/app/dev-login/page.tsx`,
+`src/auth/requestContext.ts`) from `=== "production"` to
+`!== "development"` -- fail-closed by default, since `next dev` already
+sets `NODE_ENV=development` automatically, so normal local development is
+unaffected. The caveat itself moved from a buried paragraph under "Member
+administration" to a `>` blockquote under "Authentication" in README.md,
+where someone evaluating the auth system would actually see it.
+
+**Request validation: zod schemas live in the route file that uses them,
+not a separate schemas directory.** Considered centralizing all ~40
+schemas under `src/app/api/_lib/schemas/`, and rejected it -- this
+codebase's existing convention (every route's input type is defined
+inline or imported from the one service it calls) already keeps a route
+and what it validates next to each other; a separate schemas tree would
+just be an extra file to open for every route, for no real reuse benefit
+(each schema is used by exactly one route).
+
+**The 400 response shape had to stay backward compatible with every
+existing client.** 42 client components across `src/app/**` already read
+`body.error ?? "..."` from a failed request. Rather than changing what
+a 400 body looks like, `ValidationError` gained an optional `issues`
+field (`src/auth/errors.ts`) that `handleRoute.ts` includes *alongside*
+`error`, never instead of it -- a zod rejection now carries per-field
+detail for anything that wants it, while every existing consumer that
+only reads `error` keeps working completely unchanged.
+
+**Business-rule validation deliberately stayed in the service layer, not
+moved into zod.** A schema can check "is this a string," not "does this
+pipeline stage id belong to this organization" or "is this the last
+active Management member." Moving those into route-level zod would have
+meant either duplicating them (two sources of truth that could drift) or
+removing them from services -- breaking every script
+(`scripts/provision-organization.ts`, `scripts/export-organization.ts`,
+etc.) that calls services directly, never through a route at all. zod
+only replaced the *shape* checks: required fields, types, enum
+membership, formats -- exactly the `as {...}` casts and hand-written
+`if (!x) throw new ValidationError(...)` blocks that existed per-route
+before this ticket, now consistent and impossible to forget on a new
+route.
+
+**Per-field date handling required checking each service's actual
+contract, not applying one convention everywhere.** Three different
+shapes exist in this codebase for a date-ish field reaching a route, and
+each needed the matching zod treatment:
+- `Deal.expectedCloseDate`, `Task.dueAt`: the service itself does its own
+  `new Date(input.x)` conversion (dealService.ts, taskService.ts) -- the
+  service's own input type is `string`, so the zod schema stays
+  `z.string().optional()`, not `z.coerce.date()`, which would have handed
+  the service a `Date` its own type didn't expect (and double-converted).
+- `Activity.occurredAt`, `Communication.occurredAt`: the service's input
+  type expects a real `Date` directly, with no conversion step of its
+  own -- here `z.coerce.date()` is correct, turning the client's ISO
+  string into the `Date` object the service (and, ultimately, Prisma)
+  actually wants.
+- `Lead.nextFollowUpAt`: discovered mid-rollout that
+  `repositories/leads.ts#updateLead` passes `input` straight to Prisma
+  with zero conversion, meaning this field only "worked" before this
+  ticket by relying on Prisma's own runtime leniency toward ISO
+  datetime strings for a `DateTime` column -- untyped, unverified
+  leniency, not a deliberate contract. `z.coerce.date()` here makes that
+  contract explicit and type-safe instead of implicit and hopeful.
+
+**Two routes needed a shared `validateData` escape hatch, not just
+`parseJsonBody`.** `reference-catalogs/[catalogKey]/[entryId]/route.ts`
+dispatches on the body's own raw shape (`{isActive: boolean}` alone means
+"toggle," anything else means "edit fields") -- it can't pick a schema
+until it's already looked at the body once. Factored `parseJsonBody`
+into a thin wrapper around a new `validateData(data, schema)`, so this
+one route parses generically first, decides which of two schemas
+applies, then validates a second time against the right one -- without
+reimplementing the same `ValidationError`/`issues` mapping by hand.
+
+**A real latent bug in `diffAuditedFields` doesn't excuse weakening its
+own test coverage.** While locking in the array-content-comparison fix
+from FIG-604 with a new direct `tests/auditDiff.test.ts`, also added a
+case pairing a numeric-string patch value against a `Prisma.Decimal` DB
+value (the exact `Deal.value` scenario `dealService.ts` depends on) --
+not just the phone-number non-regression case the FIG-604 bug was
+originally about. A fix without a test for the behavior it must NOT
+break is only half-verified.
 
 ## Known non-obvious fixes
 

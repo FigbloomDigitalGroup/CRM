@@ -28,9 +28,13 @@ export interface CookieReader {
 /**
  * Resolves the current request's identity: the real session cookie
  * (src/auth/session.ts) first, falling back to the dev-login placeholder
- * cookie (src/auth/devSession.ts) only outside production -- this is the
- * only place that fallback exists, so production builds never honor it
- * even if a dev cookie were somehow present.
+ * cookie (src/auth/devSession.ts) only when NODE_ENV is explicitly
+ * "development" (FIG-605) -- this is the only place that fallback exists,
+ * so anything other than a real local dev run never honors it even if a
+ * dev cookie were somehow present. Previously only disabled for
+ * NODE_ENV === "production", which left it silently reachable on staging,
+ * test, or any deploy that simply left NODE_ENV unset -- fail-closed by
+ * default now, same reasoning as src/app/api/dev-session/route.ts.
  */
 async function resolveUserId(cookieStore: CookieReader): Promise<string | null> {
   const realUserId = await resolveSessionUserId(
@@ -38,7 +42,7 @@ async function resolveUserId(cookieStore: CookieReader): Promise<string | null> 
   );
   if (realUserId) return realUserId;
 
-  if (process.env.NODE_ENV === "production") return null;
+  if (process.env.NODE_ENV !== "development") return null;
   return verifySessionCookieValue(
     cookieStore.get(DEV_SESSION_COOKIE_NAME)?.value,
   );

@@ -1,7 +1,14 @@
+import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
-import { ValidationError } from "@/auth/errors";
+import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { inviteMember, listMemberships } from "@/services/membershipService";
+
+const InviteMemberSchema = z.object({
+  email: requiredString("email, name, and roleKey are required."),
+  name: requiredString("email, name, and roleKey are required."),
+  roleKey: requiredString("email, name, and roleKey are required."),
+});
 
 export async function GET(
   request: Request,
@@ -21,19 +28,12 @@ export async function POST(
   return handleRoute(async () => {
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    const body = (await request.json()) as {
-      email?: string;
-      name?: string;
-      roleKey?: string;
-    };
-    if (!body.email || !body.name || !body.roleKey) {
-      throw new ValidationError("email, name, and roleKey are required.");
-    }
+    const body = await parseJsonBody(request, InviteMemberSchema);
 
     const origin = new URL(request.url).origin;
     return inviteMember(
       ctx,
-      { email: body.email, name: body.name, roleKey: body.roleKey },
+      body,
       (token) => `${origin}/accept-invite?token=${token}`,
     );
   });

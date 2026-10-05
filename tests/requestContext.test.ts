@@ -141,8 +141,8 @@ describe("resolveRequestContext: real session cookie", () => {
 });
 
 describe("resolveRequestContext / getCurrentUserId: dev-session fallback", () => {
-  it("falls back to the dev-session cookie outside production when no real session cookie is present", async () => {
-    setNodeEnv("test");
+  it("falls back to the dev-session cookie when NODE_ENV is development and no real session cookie is present", async () => {
+    setNodeEnv("development");
     const { user } = await createTestMembership(
       (await createTestOrganization()).id,
       "SALES",
@@ -156,23 +156,26 @@ describe("resolveRequestContext / getCurrentUserId: dev-session fallback", () =>
     expect(userId).toBe(user.id);
   });
 
-  it("does NOT honor the dev-session cookie in production, even if present", async () => {
-    setNodeEnv("production");
-    const { user } = await createTestMembership(
-      (await createTestOrganization()).id,
-      "SALES",
-    );
+  it.each(["production", "test", "staging", ""])(
+    "does NOT honor the dev-session cookie when NODE_ENV is %j (FIG-605 regression -- used to only block \"production\")",
+    async (nodeEnv) => {
+      setNodeEnv(nodeEnv);
+      const { user } = await createTestMembership(
+        (await createTestOrganization()).id,
+        "SALES",
+      );
 
-    const userId = await getCurrentUserId(
-      cookieReaderFrom({
-        [DEV_SESSION_COOKIE_NAME]: createSessionCookieValue(user.id),
-      }),
-    );
-    expect(userId).toBeNull();
-  });
+      const userId = await getCurrentUserId(
+        cookieReaderFrom({
+          [DEV_SESSION_COOKIE_NAME]: createSessionCookieValue(user.id),
+        }),
+      );
+      expect(userId).toBeNull();
+    },
+  );
 
   it("prefers a real session cookie over a dev-session cookie when both are present", async () => {
-    setNodeEnv("test");
+    setNodeEnv("development");
     const org = await createTestOrganization();
     const password = "prefers-real-session";
     const user = await createUserWithPassword(password);

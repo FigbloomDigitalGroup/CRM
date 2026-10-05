@@ -91,7 +91,7 @@ by whether an environment needs it:
 | `APP_DB_PASSWORD` | Required | Required | Password for the least-privilege `figbloom_app` role. Generate a real random value per environment; never reuse dev's. |
 | `APP_DATABASE_URL` | Required | Required | Same host/db as `DATABASE_URL`, `figbloom_app` credentials. What the running app actually queries through. |
 | `TEST_DATABASE_URL` / `TEST_APP_DATABASE_URL` | Required (tests only) | Not needed | Only exist for the automated test suite's isolated database. |
-| `DEV_SESSION_SECRET` | Required | **Omit** | Signs the `/dev-login` placeholder cookie, which is hard-disabled by `NODE_ENV === "production"` regardless -- see `IMPLEMENTATION_NOTES.md`, "Real authentication (FIG-592)". |
+| `DEV_SESSION_SECRET` | Required | **Omit** | Signs the `/dev-login` placeholder cookie, which only works when `NODE_ENV` is exactly `"development"` regardless (FIG-605) -- see `IMPLEMENTATION_NOTES.md`, "Real authentication (FIG-592)". |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Optional (unset = logs the link) | **Required for real use** | Without these, password-reset/invite emails only ever reach the server log, not a real inbox -- acceptable for dev, not for real users. |
 | `WEBSITE_LEAD_RATE_LIMIT_*` | Optional | Optional | Sane defaults apply; tune only if the defaults are wrong for real traffic. |
 | `IMPORT_MAX_ROWS` | Optional | Optional | Per-call CSV import row ceiling (FIG-596); defaults to 20000. |

@@ -31,10 +31,28 @@ export class NotFoundError extends Error {
   }
 }
 
+export interface ValidationIssue {
+  /** Dot-joined field path, e.g. "newCompany.name"; "(root)" for a whole-body-level issue. */
+  path: string;
+  message: string;
+}
+
 export class ValidationError extends Error {
-  constructor(message: string) {
+  /**
+   * Populated when this came from a zod schema rejecting the request body
+   * (FIG-605, `src/app/api/_lib/validation.ts`) -- undefined for a
+   * hand-thrown business-rule check (e.g. "already archived"), which has
+   * no natural field path. `handleRoute.ts` includes this in the response
+   * alongside the existing top-level `error` string when present, never
+   * instead of it, so every existing `body.error` consumer keeps working
+   * unchanged.
+   */
+  issues?: ValidationIssue[];
+
+  constructor(message: string, issues?: ValidationIssue[]) {
     super(message);
     this.name = "ValidationError";
+    this.issues = issues;
   }
 }
 

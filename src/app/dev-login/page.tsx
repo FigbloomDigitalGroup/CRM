@@ -4,7 +4,10 @@ import { adminDb } from "@/db/adminClient";
 import { DevLoginForm } from "./DevLoginForm";
 
 export default async function DevLoginPage() {
-  if (process.env.NODE_ENV === "production") {
+  // Enabled ONLY when NODE_ENV is explicitly "development" (FIG-605) --
+  // see src/app/api/dev-session/route.ts for why "!== production" wasn't
+  // safe enough.
+  if (process.env.NODE_ENV !== "development") {
     notFound();
   }
 
