@@ -12,6 +12,8 @@ import { listCompanies } from "./companyService";
 import { listContacts } from "./contactService";
 import { listLeads } from "./leadService";
 import { listDeals } from "./dealService";
+import { getFormReferenceData } from "./referenceDataService";
+import { buildReportNameResolvers } from "./reportingNames";
 import {
   getOrganizationMetrics,
   type OrganizationMetricsFilters,
@@ -286,7 +288,11 @@ export async function exportReportsCsv(
   filters: OrganizationMetricsFilters = {},
 ): Promise<string> {
   requirePermission(ctx, "export.bulk");
-  const metrics = await getOrganizationMetrics(ctx, filters);
+  const [metrics, referenceData] = await Promise.all([
+    getOrganizationMetrics(ctx, filters),
+    getFormReferenceData(ctx),
+  ]);
+  const { sourceName, stageName, serviceName } = buildReportNameResolvers(referenceData);
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -309,7 +315,7 @@ export async function exportReportsCsv(
   section(
     "Lead volume by source",
     metrics.leadVolumeBySource.map((r) => ({
-      leadSourceId: r.leadSourceId ?? "(none)",
+      source: sourceName(r.leadSourceId),
       count: r._count._all,
     })),
   );
@@ -324,7 +330,7 @@ export async function exportReportsCsv(
   section(
     "Pipeline value by stage",
     metrics.pipelineByStage.map((r) => ({
-      pipelineStageId: r.pipelineStageId,
+      stage: stageName(r.pipelineStageId),
       count: r._count._all,
       value: r._sum.value?.toString() ?? "",
     })),
@@ -332,7 +338,7 @@ export async function exportReportsCsv(
   section(
     "Sales by service",
     metrics.salesByService.map((r) => ({
-      serviceId: r.serviceId ?? "(none)",
+      service: serviceName(r.serviceId),
       count: r._count._all,
       value: r._sum.value?.toString() ?? "",
     })),

@@ -3,11 +3,14 @@ import { ForbiddenError } from "../src/auth/errors";
 import { adminDb } from "../src/db/adminClient";
 import * as exportService from "../src/services/exportService";
 import { createCompany } from "../src/services/companyService";
-import { createDeal } from "../src/services/dealService";
+import { createDeal, updateDeal } from "../src/services/dealService";
+import { createLead } from "../src/services/leadService";
 import {
   createTestContext,
   createTestOrganization,
+  getLeadStatusId,
   getPipelineStageId,
+  getServiceId,
 } from "./helpers/fixtures";
 
 async function collectRows(csv: exportService.CsvExport) {
@@ -126,5 +129,41 @@ describe("exportService: reports", () => {
     const csv = await exportService.exportReportsCsv(ctx);
     expect(csv).toContain("Lead volume by source");
     expect(csv).toContain("Pipeline value by stage");
+  });
+
+  it("resolves lead-source, pipeline-stage, and service names instead of raw IDs (FIG-603)", async () => {
+    const org = await createTestOrganization();
+    const ctx = await createTestContext(org.id, "MANAGEMENT");
+    const pipelineStageId = await getPipelineStageId(org.id);
+    const wonStageId = await getPipelineStageId(org.id, "CLOSED_WON");
+    const serviceId = await getServiceId(org.id);
+    const service = await adminDb.service.findUniqueOrThrow({ where: { id: serviceId } });
+    const stage = await adminDb.pipelineStage.findUniqueOrThrow({ where: { id: pipelineStageId } });
+    const leadSource = await adminDb.leadSource.findFirstOrThrow({ where: { organizationId: org.id } });
+    const leadStatusId = await getLeadStatusId(org.id);
+
+    await createLead(ctx, { leadStatusId, leadSourceId: leadSource.id });
+
+    const { company } = await createCompany(ctx, { name: "Named Co" });
+    // One deal left open (shows up in "Pipeline value by stage" by its
+    // starting stage) and one moved to CLOSED_WON (shows up in "Sales by
+    // service" by its service) -- a single deal can't exercise both
+    // sections, since winning it moves it off the open-pipeline stage.
+    await createDeal(ctx, { companyId: company.id, pipelineStageId, value: "1000" });
+    const wonDeal = await createDeal(ctx, {
+      companyId: company.id,
+      pipelineStageId,
+      serviceId,
+      value: "2500",
+    });
+    await updateDeal(ctx, wonDeal.id, { pipelineStageId: wonStageId });
+
+    const csv = await exportService.exportReportsCsv(ctx);
+    expect(csv).toContain(leadSource.name);
+    expect(csv).toContain(stage.name);
+    expect(csv).toContain(service.name);
+    expect(csv).not.toContain(pipelineStageId);
+    expect(csv).not.toContain(serviceId);
+    expect(csv).not.toContain(leadSource.id);
   });
 });

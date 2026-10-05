@@ -1051,6 +1051,65 @@ percentage look much healthier) and rejected: that's most of the
 application, and hiding it from the number would make "coverage
 reporting" a cosmetic exercise rather than an honest one.
 
+## Reporting charts, exports, and metric documentation (FIG-603)
+
+The ticket's premise ("FIG-443 reports are tables/figures only, no
+dedicated FIG-443 commit") checked out on the second half but not the
+first: `git log --all` really does have no commit mentioning FIG-443, but
+the reporting feature itself was already real and complete -- it was built
+inside the FIG-442 commit (confirmed by `git show --stat` on that commit
+and by in-code comments like `deals.ts`'s "Stalled = ... (FIG-443)"), just
+never split out or labeled separately. So this ticket extends working
+infrastructure (all five queries already existed in
+`src/repositories/reporting.ts`, already permission-gated, already
+value-masked) rather than building reporting from nothing.
+
+**Charts, not a chart library's demo defaults.** Added `recharts`
+(no charting library existed in the repo before this). Two shared client
+components, not five bespoke ones: `ReportBarChart` (category -> value,
+used for lead volume by source, pipeline by stage, and sales by service)
+and `ReportDonutChart` (share-of-a-whole, used for conversion and
+won/lost) -- the five AC chart categories reduce to exactly these two
+shapes. Each chart sits inside the same card as its existing table rather
+than in a separate grid, so the page doesn't show every metric's heading
+twice.
+
+**Value masking extends to charts, not just tables.** A caller without
+`deals.view.value` already saw `--` in the pipeline/sales-by-service
+*tables* (`getOrganizationMetrics`'s existing masking). The bar charts for
+those two metrics now fall back to plotting deal *count* instead of value
+in that case, with the card heading saying which it's showing -- an
+aggregate chart can't partially mask a bar's height any more than a table
+cell can partially mask a number.
+
+**Export already existed; it exported raw IDs.** `exportReportsCsv`
+(added in FIG-596) was already a complete, audited, multi-section CSV of
+all five metrics -- but its lead-source/pipeline-stage/service columns
+held raw UUIDs, not names, unlike the Reports page's tables, which have
+always resolved them via `getFormReferenceData`. Fixed by extracting that
+resolution into `src/services/reportingNames.ts` and using it from both
+the page and the export, instead of either leaving the export broken or
+duplicating the lookup a second time.
+
+**Indexes were a real, verifiable gap, not a defensive guess.** Checked
+every WHERE/groupBy column the five report queries touch
+(`Lead.createdAt`/`convertedAt`, `Deal.outcome`+`wonAt`/`lostAt`,
+`Deal.serviceId`, `Task.dueAt`) against the existing `@@index` list in
+`schema.prisma` -- none of those six were covered by any existing
+composite index (the closest ones existed for other query patterns, e.g.
+`[organizationId, outcome]` alone, without the date column the reporting
+queries actually range-filter on). Added six indexes
+(`20261005070422_reporting_indexes`), all `organizationId`-prefixed to
+match this schema's tenant-isolation convention.
+
+**Metric docs: a new standalone doc, not a rewrite of the in-page one.**
+The in-page `<details>` block (short, UI-facing) already existed and
+stays; added `docs/REPORTING_METRICS.md` as the longer reference (which
+query backs each number, exact date-range semantics, masking behavior),
+linked from the in-page block rather than duplicating its content a third
+time alongside `IMPLEMENTATION_NOTES.md`'s own "Reporting" section above
+and `README.md`'s "Reports" section.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit

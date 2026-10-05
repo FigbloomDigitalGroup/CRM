@@ -19,6 +19,7 @@ those documents into a running application.
   component tests (jsdom), with coverage reporting; **Playwright** for
   end-to-end browser tests against a real running instance — see
   "Testing" below
+- **recharts** for report charts (bar charts and donuts on the Reports page)
 
 ## Local setup
 
@@ -259,7 +260,16 @@ gated independently:
   follow-up performance, filterable by owner/source/stage/service/date
   range. Gated by `reporting.view.all` (Management only); value-bearing
   aggregates are nulled out (not the whole metric withheld) for a caller
-  without `deals.view.value`. Metric definitions are documented in-page.
+  without `deals.view.value`, and charts fall back to plotting counts
+  instead of value in that case. Each of the five metrics above is also a
+  chart (recharts), not just a table (FIG-603). Metric definitions are
+  documented in-page, with the full reference (queries, scoping, masking)
+  in [`docs/REPORTING_METRICS.md`](docs/REPORTING_METRICS.md).
+
+Org-wide reports can also be exported as CSV (`export.bulk` permission) —
+the same multi-section export used for the Export CSV link on the Reports
+page, resolving lead source/pipeline stage/service IDs to their names
+rather than exporting raw UUIDs.
 
 ## Website lead capture
 

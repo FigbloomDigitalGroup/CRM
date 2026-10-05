@@ -1,7 +1,10 @@
 import { hasPermission } from "@/auth/context";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { getFormReferenceData } from "@/services/referenceDataService";
+import { buildReportNameResolvers } from "@/services/reportingNames";
 import { getMyActionableWork, getOrganizationMetrics } from "@/services/reportingService";
+import { ReportBarChart } from "./charts/ReportBarChart";
+import { ReportDonutChart } from "./charts/ReportDonutChart";
 
 export default async function ReportsPage({
   params,
@@ -33,16 +36,34 @@ export default async function ReportsPage({
     ? await getOrganizationMetrics(ctx, filters)
     : null;
 
-  const sourceName = (id: string | null) =>
-    referenceData.leadSources.find((s) => s.id === id)?.name ?? "(unknown)";
-  const stageName = (id: string | null) =>
-    referenceData.pipelineStages.find((s) => s.id === id)?.name ?? "(unknown)";
-  const serviceName = (id: string | null) =>
-    referenceData.services.find((s) => s.id === id)?.name ?? "(unspecified)";
+  const { sourceName, stageName, serviceName } = buildReportNameResolvers(referenceData);
   const money = (value: unknown) =>
     value === null || value === undefined
       ? "--"
       : Number(value).toLocaleString();
+
+  const leadVolumeChartData = orgMetrics?.leadVolumeBySource.map((row) => ({
+    label: sourceName(row.leadSourceId),
+    value: row._count._all,
+  }));
+  const pipelineChartData = orgMetrics?.pipelineByStage.map((row) => ({
+    label: stageName(row.pipelineStageId),
+    value: orgMetrics.valueMasked ? row._count._all : Number(row._sum.value ?? 0),
+  }));
+  const salesByServiceChartData = orgMetrics?.salesByService.map((row) => ({
+    label: serviceName(row.serviceId),
+    value: orgMetrics.valueMasked ? row._count._all : Number(row._sum.value ?? 0),
+  }));
+  const conversionPct = orgMetrics && orgMetrics.leadConversion.total > 0
+    ? Math.round(
+        (orgMetrics.leadConversion.converted / orgMetrics.leadConversion.total) * 100,
+      )
+    : 0;
+  const wonLostTotal = (orgMetrics?.dealOutcomes.won.count ?? 0) +
+    (orgMetrics?.dealOutcomes.lost.count ?? 0);
+  const winRatePct = wonLostTotal > 0
+    ? Math.round(((orgMetrics?.dealOutcomes.won.count ?? 0) / wonLostTotal) * 100)
+    : null;
 
   return (
     <div>
@@ -196,6 +217,9 @@ export default async function ReportsPage({
           <div className="grid-2">
             <div className="card">
               <strong>Lead volume by source</strong>
+              <div style={{ marginBottom: 14 }}>
+                <ReportBarChart data={leadVolumeChartData ?? []} color="var(--info)" />
+              </div>
               <table>
                 <thead>
                   <tr>
@@ -220,7 +244,13 @@ export default async function ReportsPage({
             </div>
 
             <div className="card">
-              <strong>Pipeline value by stage (current snapshot)</strong>
+              <strong>
+                Pipeline by stage (current snapshot
+                {orgMetrics.valueMasked ? ", deal count" : ", value"})
+              </strong>
+              <div style={{ marginBottom: 14 }}>
+                <ReportBarChart data={pipelineChartData ?? []} color="var(--brand-green)" />
+              </div>
               <table>
                 <thead>
                   <tr>
@@ -247,7 +277,12 @@ export default async function ReportsPage({
             </div>
 
             <div className="card">
-              <strong>Sales by service</strong>
+              <strong>
+                Sales by service{orgMetrics.valueMasked ? " (won deals)" : " (won value)"}
+              </strong>
+              <div style={{ marginBottom: 14 }}>
+                <ReportBarChart data={salesByServiceChartData ?? []} color="var(--brand-orange)" />
+              </div>
               <table>
                 <thead>
                   <tr>
@@ -271,6 +306,34 @@ export default async function ReportsPage({
                   )}
                 </tbody>
               </table>
+            </div>
+
+            <div className="card">
+              <strong>Conversion</strong>
+              <ReportDonutChart
+                segments={[
+                  { label: "Converted", value: orgMetrics.leadConversion.converted, color: "var(--success)" },
+                  {
+                    label: "Not yet",
+                    value: orgMetrics.leadConversion.total - orgMetrics.leadConversion.converted,
+                    color: "var(--border-strong)",
+                  },
+                ]}
+                centerLabel={`${conversionPct}%`}
+                centerCaption="of leads in range"
+              />
+            </div>
+
+            <div className="card">
+              <strong>Won / Lost</strong>
+              <ReportDonutChart
+                segments={[
+                  { label: "Won", value: orgMetrics.dealOutcomes.won.count, color: "var(--success)" },
+                  { label: "Lost", value: orgMetrics.dealOutcomes.lost.count, color: "var(--danger)" },
+                ]}
+                centerLabel={winRatePct !== null ? `${winRatePct}%` : "--"}
+                centerCaption="win rate"
+              />
             </div>
 
             <div className="card">
@@ -346,9 +409,14 @@ export default async function ReportsPage({
           </li>
           <li>
             Deal-value figures are hidden (shown as &quot;--&quot;) for roles without
-            org-wide value visibility.
+            org-wide value visibility; charts fall back to showing counts instead of
+            value in that case.
           </li>
         </ul>
+        <p className="who">
+          Full metric reference, including how each figure is queried: see{" "}
+          <code>docs/REPORTING_METRICS.md</code> in the repository.
+        </p>
       </details>
     </div>
   );

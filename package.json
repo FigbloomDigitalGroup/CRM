@@ -35,7 +35,8 @@
     "nodemailer": "^10.0.13",
     "pino": "^10.3.1",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "recharts": "^3.10.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

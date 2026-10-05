@@ -777,6 +777,11 @@ model Lead {
   @@index([organizationId, companyId])
   @@index([organizationId, nextFollowUpAt])
   @@index([organizationId, archivedAt])
+  /// Lead volume/conversion reporting (FIG-603) filters leads by
+  /// organizationId + a createdAt range, and separately counts by
+  /// convertedAt IS NOT NULL -- neither was covered by an existing index.
+  @@index([organizationId, createdAt])
+  @@index([organizationId, convertedAt])
   @@map("leads")
 }
 
@@ -838,6 +843,12 @@ model Deal {
   @@index([organizationId, outcome])
   @@index([organizationId, expectedCloseDate])
   @@index([organizationId, archivedAt])
+  /// Won/lost and sales-by-service reporting (FIG-603) filter by outcome
+  /// plus a wonAt/lostAt range, and group by serviceId -- none of which
+  /// the existing indexes above cover.
+  @@index([organizationId, outcome, wonAt])
+  @@index([organizationId, outcome, lostAt])
+  @@index([organizationId, serviceId])
   @@map("deals")
 }
 
@@ -940,6 +951,9 @@ model Task {
   @@index([organizationId, status, dueAt])
   @@index([organizationId, leadId])
   @@index([organizationId, dealId])
+  /// Follow-up-performance reporting (FIG-603) scans by organizationId +
+  /// a dueAt range (owner filter is optional) before grouping by status.
+  @@index([organizationId, dueAt])
   @@map("tasks")
 }
 
