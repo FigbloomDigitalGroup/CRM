@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { BrandMark } from "@/app/_shared/BrandMark";
 import { ForgotPasswordForm } from "./ForgotPasswordForm";
 
 export default function ForgotPasswordPage() {
@@ -6,7 +6,7 @@ export default function ForgotPasswordPage() {
     <div className="auth-shell">
       <div className="auth-card">
         <div className="auth-brand">
-          <Image src="/figbloom-logo.jpg" alt="" width={40} height={40} priority />
+          <BrandMark className="brand-mark" />
           <div className="auth-brand-name">
             Figbloom<span className="accent"> CRM</span>
           </div>

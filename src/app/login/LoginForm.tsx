@@ -102,9 +102,9 @@ export function LoginForm({ devAccounts = [] }: { devAccounts?: DevAccount[] }) 
                 type="button"
                 disabled={submitting}
                 onClick={() => handleQuickLogin(account)}
-                title={account.email}
+                title={`${account.email} (${account.roleName})`}
               >
-                {account.name} -- {account.roleName}
+                {account.name}
               </button>
             ))}
           </div>

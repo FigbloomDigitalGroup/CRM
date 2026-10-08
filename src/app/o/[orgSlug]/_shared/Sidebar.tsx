@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BrandMark } from "@/app/_shared/BrandMark";
 import {
   IconChevronsLeft,
   IconCompanies,
@@ -11,6 +11,7 @@ import {
   IconDeals,
   IconLeads,
   IconReports,
+  IconSearch,
   IconSettings,
   IconTasks,
 } from "./icons";
@@ -55,6 +56,7 @@ export function Sidebar({
   const base = `/o/${orgSlug}`;
 
   const [collapsed, setCollapsed] = useState(false);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     try {
@@ -76,17 +78,23 @@ export function Sidebar({
     });
   }
 
-  const workspace: NavLink[] = [
+  const overview: NavLink[] = [
     { href: base, label: "Dashboard", icon: <IconDashboard />, visible: true, exact: true },
-    { href: `${base}/leads`, label: "Leads", icon: <IconLeads />, visible: canViewLeads },
-    { href: `${base}/deals`, label: "Deals", icon: <IconDeals />, visible: canViewDeals },
-    { href: `${base}/tasks`, label: "Tasks", icon: <IconTasks />, visible: canViewTasks },
     { href: `${base}/reports`, label: "Reports", icon: <IconReports />, visible: canViewReports },
   ];
 
-  const manage: NavLink[] = [
+  const salesWorkspace: NavLink[] = [
+    { href: `${base}/leads`, label: "Leads", icon: <IconLeads />, visible: canViewLeads },
+    { href: `${base}/deals`, label: "Deals", icon: <IconDeals />, visible: canViewDeals },
+    { href: `${base}/tasks`, label: "Tasks", icon: <IconTasks />, visible: canViewTasks },
+  ];
+
+  const customers: NavLink[] = [
     { href: `${base}/companies`, label: "Companies", icon: <IconCompanies />, visible: canViewCompanies },
     { href: `${base}/contacts`, label: "Contacts", icon: <IconContacts />, visible: canViewContacts },
+  ];
+
+  const administration: NavLink[] = [
     { href: `${base}/settings`, label: "Settings", icon: <IconSettings />, visible: canManageSettings },
   ];
 
@@ -95,10 +103,18 @@ export function Sidebar({
     return pathname === link.href || pathname?.startsWith(`${link.href}/`);
   }
 
+  const normalizedQuery = query.trim().toLowerCase();
+  function matchesSearch(link: NavLink) {
+    return link.visible && (normalizedQuery === "" || link.label.toLowerCase().includes(normalizedQuery));
+  }
+
+  const visibleOverview = overview.filter(matchesSearch);
+  const visibleSalesWorkspace = salesWorkspace.filter(matchesSearch);
+  const visibleCustomers = customers.filter(matchesSearch);
+  const visibleAdministration = administration.filter(matchesSearch);
+
   function renderLinks(links: NavLink[]) {
-    return links
-      .filter((l) => l.visible)
-      .map((l) => (
+    return links.map((l) => (
         <a
           key={l.href}
           href={l.href}
@@ -116,12 +132,11 @@ export function Sidebar({
   return (
     <aside className={`sidebar${collapsed ? " collapsed" : ""}`}>
       <div className="sidebar-brand">
-        <Image src="/figbloom-logo.jpg" alt="" width={32} height={32} priority />
+        <BrandMark className="brand-mark" />
         <div className="sidebar-brand-text">
           <div className="sidebar-brand-name">
             Figbloom<span className="accent"> CRM</span>
           </div>
-          <div className="sidebar-brand-sub">Digital Group</div>
         </div>
         <button
           type="button"
@@ -134,18 +149,53 @@ export function Sidebar({
         </button>
       </div>
 
+      <div className="sidebar-search">
+        <IconSearch />
+        <input
+          type="search"
+          placeholder="Search..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search navigation"
+        />
+      </div>
+
       <nav className="sidebar-nav">
-        <div className="sidebar-section sidebar-section-workspace">
-          <div className="sidebar-section-label">Workspace</div>
-          {renderLinks(workspace)}
-        </div>
-        {(canViewCompanies || canViewContacts || canManageSettings) && (
-          <div className="sidebar-section sidebar-section-manage">
-            <div className="sidebar-section-label">Manage</div>
-            {renderLinks(manage)}
+        {visibleOverview.length > 0 && (
+          <div className="sidebar-section sidebar-section-overview">
+            <div className="sidebar-section-label">Overview</div>
+            {renderLinks(visibleOverview)}
           </div>
         )}
+        {visibleSalesWorkspace.length > 0 && (
+          <div className="sidebar-section sidebar-section-workspace">
+            <div className="sidebar-section-label">Sales Workspace</div>
+            {renderLinks(visibleSalesWorkspace)}
+          </div>
+        )}
+        {visibleCustomers.length > 0 && (
+          <div className="sidebar-section sidebar-section-customers">
+            <div className="sidebar-section-label">Customers</div>
+            {renderLinks(visibleCustomers)}
+          </div>
+        )}
+        {normalizedQuery !== "" &&
+          visibleOverview.length === 0 &&
+          visibleSalesWorkspace.length === 0 &&
+          visibleCustomers.length === 0 &&
+          visibleAdministration.length === 0 && (
+            <p className="sidebar-search-empty">No matching pages.</p>
+          )}
       </nav>
+
+      {visibleAdministration.length > 0 && (
+        <div className="sidebar-bottom">
+          <div className="sidebar-section sidebar-section-administration">
+            <div className="sidebar-section-label">Administration</div>
+            {renderLinks(visibleAdministration)}
+          </div>
+        </div>
+      )}
 
       <div className="sidebar-footer">
         <div className="sidebar-avatar">{initial}</div>

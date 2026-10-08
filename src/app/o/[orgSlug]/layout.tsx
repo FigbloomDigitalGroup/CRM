@@ -7,7 +7,7 @@ import { LogoutButton } from "./LogoutButton";
 import { Sidebar } from "./_shared/Sidebar";
 import { ThemeToggle } from "./_shared/ThemeToggle";
 import { NotificationBell } from "./_shared/NotificationBell";
-import { IconChevronDown } from "./_shared/icons";
+import { IconChevronDown, IconSearch } from "./_shared/icons";
 
 export default async function OrgLayout({
   children,
@@ -65,16 +65,16 @@ export default async function OrgLayout({
     .join(" ");
 
   const now = new Date();
-  const datetime = now
-    .toLocaleString("en-GB", {
-      weekday: "short",
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-    .replace(",", " ·")
-    .toUpperCase();
+  // Intl doesn't reliably insert the weekday/date comma across runtimes --
+  // built explicitly so it always reads "Thursday, 8 October · 10:04".
+  const weekday = now.toLocaleDateString("en-GB", { weekday: "long" });
+  const dayMonth = now.toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+  const time = now.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const datetime = `${weekday}, ${dayMonth} · ${time}`;
 
   return (
     <div className="app-shell">
@@ -95,6 +95,12 @@ export default async function OrgLayout({
         <header className="topbar">
           <div>
             <p className="topbar-datetime">{datetime}</p>
+          </div>
+          <div className="topbar-search">
+            <div className="topbar-search-box">
+              <IconSearch />
+              <input type="search" placeholder="Search Figbloom CRM" aria-label="Search Figbloom CRM" />
+            </div>
           </div>
           <div className="topbar-right">
             <NotificationBell orgSlug={orgSlug} />

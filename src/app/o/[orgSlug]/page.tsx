@@ -5,6 +5,12 @@ import { listContacts } from "@/services/contactService";
 import { listDeals } from "@/services/dealService";
 import { listLeads } from "@/services/leadService";
 import { listTasks } from "@/services/taskService";
+import {
+  IconCompanies,
+  IconDeals,
+  IconLeads,
+  IconTasks,
+} from "./_shared/icons";
 
 export default async function OrgDashboardPage({
   params,
@@ -44,6 +50,7 @@ export default async function OrgDashboardPage({
   const stats: {
     label: string;
     dot: "red" | "orange" | "green" | "blue";
+    icon: React.ReactNode;
     value: number;
     caption: string;
     href: string;
@@ -53,6 +60,7 @@ export default async function OrgDashboardPage({
     stats.push({
       label: "Leads",
       dot: "blue",
+      icon: <IconLeads />,
       value: leads.length,
       caption: hasPermission(ctx, "leads.view.all")
         ? "visible organization-wide"
@@ -64,6 +72,7 @@ export default async function OrgDashboardPage({
     stats.push({
       label: "Deals",
       dot: "green",
+      icon: <IconDeals />,
       value: deals.length,
       caption: hasPermission(ctx, "deals.view.all")
         ? "visible organization-wide"
@@ -73,8 +82,9 @@ export default async function OrgDashboardPage({
   }
   if (canViewTasks) {
     stats.push({
-      label: "Overdue tasks",
+      label: "Overdue Tasks",
       dot: overdueTasks.length > 0 ? "red" : "green",
+      icon: <IconTasks />,
       value: overdueTasks.length,
       caption: "past due, still open",
       href: `/o/${orgSlug}/tasks?overdueOnly=true`,
@@ -84,32 +94,33 @@ export default async function OrgDashboardPage({
     stats.push({
       label: "Companies",
       dot: "orange",
+      icon: <IconCompanies />,
       value: companies.length,
       caption: `${contacts.length} contact${contacts.length === 1 ? "" : "s"} across them`,
       href: `/o/${orgSlug}/companies`,
     });
   }
 
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+
   return (
     <div>
       <h1 className="today-heading">Today</h1>
-      <p className="who">
-        Signed in as <strong>{ctx.roleKey}</strong> -- every number below already
-        reflects your role&apos;s permission boundaries.
-      </p>
+      <p className="who">{today} &middot; Your CRM at a glance</p>
 
       {stats.length > 0 && (
         <div className="stat-grid">
           {stats.map((s) => (
             <a key={s.label} href={s.href} className="stat-card" style={{ display: "block" }}>
-              <div className="stat-label">
-                <span className={`dot dot-${s.dot}`} />
-                {s.label}
+              <div className="stat-card-head">
+                <div className="stat-label-plain">{s.label}</div>
+                <div className={`stat-icon-chip chip-${s.dot}`}>{s.icon}</div>
               </div>
               <div className="stat-value">{s.value}</div>
-              <div className={`stat-bar bar-${s.dot}`}>
-                <span style={{ width: s.value > 0 ? "100%" : "8%" }} />
-              </div>
               <div className="stat-caption">{s.caption}</div>
             </a>
           ))}
@@ -120,7 +131,7 @@ export default async function OrgDashboardPage({
         <div className="card">
           <strong>Overview</strong>
           <p style={{ margin: 0, fontSize: 13.5, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-            This dashboard shows what you personally have access to -- a Sales
+            This dashboard shows what you personally have access to &mdash; a Sales
             membership only ever sees its own leads and deals here, never the
             whole organization&apos;s, and a role with no reporting permission
             at all sees a plainer view than this.

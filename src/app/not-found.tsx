@@ -1,7 +1,7 @@
 import { BrandMark } from "@/app/_shared/BrandMark";
-import { SignupForm } from "./SignupForm";
+import Link from "next/link";
 
-export default function SignupPage() {
+export default function NotFound() {
   return (
     <div className="auth-shell">
       <div className="auth-card">
@@ -11,15 +11,13 @@ export default function SignupPage() {
             Figbloom<span className="accent"> CRM</span>
           </div>
         </div>
-        <h1 style={{ fontSize: 19 }}>Sign up</h1>
-        <SignupForm />
-        <p className="warning">
-          Creating an account doesn&apos;t grant access to an organization on
-          its own -- an admin still needs to add you to one before you can
-          see any CRM data.
+        <h1 style={{ fontSize: 19 }}>Page not found</h1>
+        <p className="warning" style={{ marginTop: 8 }}>
+          The page you&apos;re looking for doesn&apos;t exist, or you may not have
+          access to it.
         </p>
         <p className="warning">
-          Already have an account? <a href="/login">Log in</a>
+          <Link href="/">Back to FigBloom CRM</Link>
         </p>
       </div>
     </div>
