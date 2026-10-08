@@ -3,8 +3,6 @@ dist/
 .next/
 next-env.d.ts
 tsconfig.tsbuildinfo
-.env
-.env.local
 *.log
 coverage/
 playwright-report/

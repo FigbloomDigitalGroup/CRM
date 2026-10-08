@@ -78,6 +78,7 @@ export default async function TasksPage({
         members={referenceData.members}
         canCreate={hasPermission(ctx, "tasks.create")}
         canAssignAny={hasPermission(ctx, "tasks.assign.any")}
+        layout="split"
       />
     </div>
   );

@@ -56,82 +56,88 @@ export default async function DealsPage({
         ? "not set"
         : `${currency} ${Number(value).toLocaleString()}`;
 
+  const canCreate = hasPermission(ctx, "deals.create");
+
   return (
     <div>
       <h1>Deals</h1>
 
-      {hasPermission(ctx, "deals.export") && (
-        <p>
-          <a href={`/api/orgs/${orgSlug}/deals/export`}>Export CSV</a>
-        </p>
-      )}
+      <div className="list-with-side">
+        <div className="list-with-side-main">
+          {hasPermission(ctx, "deals.export") && (
+            <p>
+              <a href={`/api/orgs/${orgSlug}/deals/export`}>Export CSV</a>
+            </p>
+          )}
 
-      <p>
-        <a href={`/o/${orgSlug}/deals${includeArchived === "true" ? "" : "?includeArchived=true"}`}>
-          {includeArchived === "true" ? "Hide archived deals" : "Show archived deals"}
-        </a>
-      </p>
+          <p>
+            <a href={`/o/${orgSlug}/deals${includeArchived === "true" ? "" : "?includeArchived=true"}`}>
+              {includeArchived === "true" ? "Hide archived deals" : "Show archived deals"}
+            </a>
+          </p>
 
-      <p className="who">
-        {hasPermission(ctx, "deals.view.all")
-          ? "Showing all organization deals (deals.view.all)."
-          : "Showing only deals you own (deals.view.own) -- enforced server-side."}
-        {!hasPermission(ctx, "deals.view.value") &&
-          " Deal values are hidden unless you own the deal (deals.view.value not granted)."}
-      </p>
+          <p className="who">
+            {hasPermission(ctx, "deals.view.all")
+              ? "Showing all organization deals (deals.view.all)."
+              : "Showing only deals you own (deals.view.own) -- enforced server-side."}
+            {!hasPermission(ctx, "deals.view.value") &&
+              " Deal values are hidden unless you own the deal (deals.view.value not granted)."}
+          </p>
 
-      <div className="board">
-        {referenceData.pipelineStages.map((stage) => (
-          <div className="board-column" key={stage.id}>
-            <h3>{stage.name}</h3>
-            {deals
-              .filter((d) => d.pipelineStageId === stage.id)
-              .map((deal) => (
-                <a
-                  key={deal.id}
-                  className="deal-card"
-                  href={`/o/${orgSlug}/deals/${deal.id}`}
-                >
-                  <div>
-                    {deal.company.name}
-                    {deal.archivedAt && <span className="badge"> Archived</span>}
-                  </div>
-                  <div className="value">
-                    {currencyFormat(deal.value, deal.currency, deal.valueMasked)}
-                  </div>
-                  <div>{ownerName(deal.ownerMembershipId)}</div>
-                  <div>
-                    {deal.expectedCloseDate
-                      ? new Date(deal.expectedCloseDate).toLocaleDateString()
-                      : "no close date"}
-                  </div>
-                </a>
-              ))}
-            {deals.filter((d) => d.pipelineStageId === stage.id).length ===
-              0 && <p className="who">No deals.</p>}
+          <div className="board">
+            {referenceData.pipelineStages.map((stage) => (
+              <div className="board-column" key={stage.id}>
+                <h3>{stage.name}</h3>
+                {deals
+                  .filter((d) => d.pipelineStageId === stage.id)
+                  .map((deal) => (
+                    <a
+                      key={deal.id}
+                      className="deal-card"
+                      href={`/o/${orgSlug}/deals/${deal.id}`}
+                    >
+                      <div>
+                        {deal.company.name}
+                        {deal.archivedAt && <span className="badge"> Archived</span>}
+                      </div>
+                      <div className="value">
+                        {currencyFormat(deal.value, deal.currency, deal.valueMasked)}
+                      </div>
+                      <div>{ownerName(deal.ownerMembershipId)}</div>
+                      <div>
+                        {deal.expectedCloseDate
+                          ? new Date(deal.expectedCloseDate).toLocaleDateString()
+                          : "no close date"}
+                      </div>
+                    </a>
+                  ))}
+                {deals.filter((d) => d.pipelineStageId === stage.id).length ===
+                  0 && <p className="who">No deals.</p>}
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
+
+        {canCreate && (
+          <div className="list-with-side-rail">
+            <h2>New deal</h2>
+            <div className="card">
+              <CreateDealForm
+                orgSlug={orgSlug}
+                companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+                contacts={contacts.map((c) => ({
+                  id: c.id,
+                  name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
+                }))}
+                services={referenceData.services}
+                pipelineStages={referenceData.pipelineStages.filter(
+                  (s) => !s.isWon && !s.isLost,
+                )}
+              />
+            </div>
+          </div>
+        )}
       </div>
-
-      {hasPermission(ctx, "deals.create") && (
-        <>
-          <h2>New deal</h2>
-          <div className="card">
-            <CreateDealForm
-              orgSlug={orgSlug}
-              companies={companies.map((c) => ({ id: c.id, name: c.name }))}
-              contacts={contacts.map((c) => ({
-                id: c.id,
-                name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
-              }))}
-              services={referenceData.services}
-              pipelineStages={referenceData.pipelineStages.filter(
-                (s) => !s.isWon && !s.isLost,
-              )}
-            />
-          </div>
-        </>
-      )}
     </div>
   );
 }

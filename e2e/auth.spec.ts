@@ -6,7 +6,7 @@ test.describe("login", () => {
     await page.goto("/login");
     await page.getByLabel("Email").fill("dev.management@figbloom.local");
     await page.locator('input[type="password"]').fill(DEV_PASSWORD);
-    await page.getByRole("button", { name: "Log in" }).click();
+    await page.getByRole("button", { name: "Sign in" }).click();
 
     await page.waitForURL(new RegExp(`/o/${ORG_SLUG}`));
     // exact: true -- the dashboard's own "Leads" stat-card link also
@@ -20,7 +20,7 @@ test.describe("login", () => {
     await page.goto("/login");
     await page.getByLabel("Email").fill("dev.management@figbloom.local");
     await page.locator('input[type="password"]').fill("definitely-not-the-password");
-    await page.getByRole("button", { name: "Log in" }).click();
+    await page.getByRole("button", { name: "Sign in" }).click();
 
     await expect(page.getByText(/invalid|incorrect|failed/i)).toBeVisible();
     await expect(page).toHaveURL(/\/login/);

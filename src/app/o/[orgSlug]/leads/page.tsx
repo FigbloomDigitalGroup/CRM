@@ -67,155 +67,166 @@ export default async function LeadsPage({
 
   const canAssign = hasPermission(ctx, "leads.assign");
 
+  const canCreate = hasPermission(ctx, "leads.create");
+  const canImport = hasPermission(ctx, "leads.import");
+
   return (
     <div>
       <h1>Leads</h1>
 
-      {hasPermission(ctx, "leads.export") && (
-        <p>
-          <a
-            href={`/api/orgs/${orgSlug}/leads/export${
-              q || leadStatusId
-                ? `?${new URLSearchParams({
-                    ...(q ? { q } : {}),
-                    ...(leadStatusId ? { leadStatusId } : {}),
-                  }).toString()}`
-                : ""
-            }`}
-          >
-            Export CSV
-          </a>
-        </p>
-      )}
+      <div className="list-with-side">
+        <div className="list-with-side-main">
+          {hasPermission(ctx, "leads.export") && (
+            <p>
+              <a
+                href={`/api/orgs/${orgSlug}/leads/export${
+                  q || leadStatusId
+                    ? `?${new URLSearchParams({
+                        ...(q ? { q } : {}),
+                        ...(leadStatusId ? { leadStatusId } : {}),
+                      }).toString()}`
+                    : ""
+                }`}
+              >
+                Export CSV
+              </a>
+            </p>
+          )}
 
-      <p className="who">
-        {hasPermission(ctx, "leads.view.all")
-          ? "Showing all organization leads (leads.view.all)."
-          : "Showing only leads you own (leads.view.own) -- this is enforced server-side, not just hidden in the UI."}
-      </p>
+          <p className="who">
+            {hasPermission(ctx, "leads.view.all")
+              ? "Showing all organization leads (leads.view.all)."
+              : "Showing only leads you own (leads.view.own) -- this is enforced server-side, not just hidden in the UI."}
+          </p>
 
-      <form className="filters" method="GET">
-        <input
-          type="text"
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder="Search notes, company, contact"
-        />
-        <select name="leadStatusId" defaultValue={leadStatusId ?? ""}>
-          <option value="">Any status</option>
-          {referenceData.leadStatuses.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        <select name="temperature" defaultValue={temperature ?? ""}>
-          <option value="">Any temperature</option>
-          <option value="HOT">Hot</option>
-          <option value="WARM">Warm</option>
-          <option value="COLD">Cold</option>
-        </select>
-        <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <input
-            type="checkbox"
-            name="includeArchived"
-            value="true"
-            defaultChecked={includeArchived === "true"}
-          />
-          Show archived
-        </label>
-        <button type="submit" className="secondary">
-          Filter
-        </button>
-      </form>
+          <form className="filters" method="GET">
+            <input
+              type="text"
+              name="q"
+              defaultValue={q ?? ""}
+              placeholder="Search notes, company, contact"
+            />
+            <select name="leadStatusId" defaultValue={leadStatusId ?? ""}>
+              <option value="">Any status</option>
+              {referenceData.leadStatuses.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <select name="temperature" defaultValue={temperature ?? ""}>
+              <option value="">Any temperature</option>
+              <option value="HOT">Hot</option>
+              <option value="WARM">Warm</option>
+              <option value="COLD">Cold</option>
+            </select>
+            <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <input
+                type="checkbox"
+                name="includeArchived"
+                value="true"
+                defaultChecked={includeArchived === "true"}
+              />
+              Show archived
+            </label>
+            <button type="submit" className="secondary">
+              Filter
+            </button>
+          </form>
 
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Company / Contact</th>
-              <th>Status</th>
-              <th>Temperature</th>
-              <th>Source</th>
-              <th>Owner</th>
-              {canAssign && <th>Reassign</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {leads.map((lead) => (
-              <tr key={lead.id}>
-                <td>
-                  <a href={`/o/${orgSlug}/leads/${lead.id}`}>
-                    {lead.company?.name ??
-                      lead.contact?.firstName ??
-                      "(no company/contact)"}
-                  </a>
-                  {lead.archivedAt && <span className="badge"> Archived</span>}
-                </td>
-                <td>{lead.leadStatus.name}</td>
-                <td>
-                  <span
-                    className={`badge badge-${temperatureColor(lead.temperature)}`}
-                  >
-                    {lead.temperature}
-                  </span>
-                </td>
-                <td>{lead.leadSource?.name ?? "--"}</td>
-                <td>
-                  {referenceData.members.find(
-                    (m) => m.membershipId === lead.ownerMembershipId,
-                  )?.userName ?? "--"}
-                </td>
-                {canAssign && (
-                  <td>
-                    <AssignLeadControl
-                      orgSlug={orgSlug}
-                      leadId={lead.id}
-                      currentOwnerMembershipId={lead.ownerMembershipId}
-                      members={referenceData.members}
-                    />
-                  </td>
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Company / Contact</th>
+                  <th>Status</th>
+                  <th>Temperature</th>
+                  <th>Source</th>
+                  <th>Owner</th>
+                  {canAssign && <th>Reassign</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {leads.map((lead) => (
+                  <tr key={lead.id}>
+                    <td>
+                      <a href={`/o/${orgSlug}/leads/${lead.id}`}>
+                        {lead.company?.name ??
+                          lead.contact?.firstName ??
+                          "(no company/contact)"}
+                      </a>
+                      {lead.archivedAt && <span className="badge"> Archived</span>}
+                    </td>
+                    <td>{lead.leadStatus.name}</td>
+                    <td>
+                      <span
+                        className={`badge badge-${temperatureColor(lead.temperature)}`}
+                      >
+                        {lead.temperature}
+                      </span>
+                    </td>
+                    <td>{lead.leadSource?.name ?? "--"}</td>
+                    <td>
+                      {referenceData.members.find(
+                        (m) => m.membershipId === lead.ownerMembershipId,
+                      )?.userName ?? "--"}
+                    </td>
+                    {canAssign && (
+                      <td>
+                        <AssignLeadControl
+                          orgSlug={orgSlug}
+                          leadId={lead.id}
+                          currentOwnerMembershipId={lead.ownerMembershipId}
+                          members={referenceData.members}
+                        />
+                      </td>
+                    )}
+                  </tr>
+                ))}
+                {leads.length === 0 && (
+                  <tr>
+                    <td colSpan={canAssign ? 6 : 5}>No leads visible to you yet.</td>
+                  </tr>
                 )}
-              </tr>
-            ))}
-            {leads.length === 0 && (
-              <tr>
-                <td colSpan={canAssign ? 6 : 5}>No leads visible to you yet.</td>
-              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {(canCreate || canImport) && (
+          <div className="list-with-side-rail">
+            {canCreate && (
+              <>
+                <h2>New lead</h2>
+                <div className="card">
+                  <CreateLeadForm
+                    orgSlug={orgSlug}
+                    leadStatuses={referenceData.leadStatuses}
+                    leadSources={referenceData.leadSources}
+                    companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+                    contacts={contacts.map((c) => ({
+                      id: c.id,
+                      name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
+                    }))}
+                  />
+                </div>
+              </>
             )}
-          </tbody>
-        </table>
+
+            {canImport && (
+              <>
+                <h2>Import leads from CSV</h2>
+                <div className="card">
+                  <ImportCsvForm
+                    importUrl={`/api/orgs/${orgSlug}/leads/import`}
+                    fields={IMPORT_FIELDS}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
-
-      {hasPermission(ctx, "leads.create") && (
-        <>
-          <h2>New lead</h2>
-          <div className="card">
-            <CreateLeadForm
-              orgSlug={orgSlug}
-              leadStatuses={referenceData.leadStatuses}
-              leadSources={referenceData.leadSources}
-              companies={companies.map((c) => ({ id: c.id, name: c.name }))}
-              contacts={contacts.map((c) => ({
-                id: c.id,
-                name: `${c.firstName} ${c.lastName ?? ""}`.trim(),
-              }))}
-            />
-          </div>
-        </>
-      )}
-
-      {hasPermission(ctx, "leads.import") && (
-        <>
-          <h2>Import leads from CSV</h2>
-          <div className="card">
-            <ImportCsvForm
-              importUrl={`/api/orgs/${orgSlug}/leads/import`}
-              fields={IMPORT_FIELDS}
-            />
-          </div>
-        </>
-      )}
     </div>
   );
 }
