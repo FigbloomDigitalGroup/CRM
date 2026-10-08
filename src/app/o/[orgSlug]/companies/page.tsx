@@ -43,98 +43,109 @@ export default async function CompaniesPage({
     throw err;
   }
 
+  const canCreate = hasPermission(ctx, "companies.create");
+  const canImport = hasPermission(ctx, "companies.import");
+
   return (
     <div>
       <h1>Companies</h1>
 
-      {hasPermission(ctx, "companies.export") && (
-        <p>
-          <a href={`/api/orgs/${orgSlug}/companies/export${q ? `?q=${encodeURIComponent(q)}` : ""}`}>
-            Export CSV
-          </a>
-        </p>
-      )}
+      <div className="list-with-side">
+        <div className="list-with-side-main">
+          {hasPermission(ctx, "companies.export") && (
+            <p>
+              <a href={`/api/orgs/${orgSlug}/companies/export${q ? `?q=${encodeURIComponent(q)}` : ""}`}>
+                Export CSV
+              </a>
+            </p>
+          )}
 
-      <form className="filters" method="GET">
-        <input
-          type="text"
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder="Search name, email, phone"
-        />
-        <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <input
-            type="checkbox"
-            name="includeArchived"
-            value="true"
-            defaultChecked={includeArchived === "true"}
-          />
-          Show archived
-        </label>
-        <button type="submit" className="secondary">
-          Search
-        </button>
-      </form>
-
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Industry</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Lifecycle</th>
-            </tr>
-          </thead>
-          <tbody>
-            {companies.map((c) => (
-              <tr key={c.id}>
-                <td>
-                  <a href={`/o/${orgSlug}/companies/${c.id}`}>{c.name}</a>
-                  {c.archivedAt && <span className="badge"> Archived</span>}
-                </td>
-                <td>{c.industry ?? "--"}</td>
-                <td>{c.email ?? "--"}</td>
-                <td>{c.phone ?? "--"}</td>
-                <td>
-                  {c.lifecycleStateId ? (
-                    <span className="badge badge-green">set</span>
-                  ) : (
-                    "--"
-                  )}
-                </td>
-              </tr>
-            ))}
-            {companies.length === 0 && (
-              <tr>
-                <td colSpan={5}>No companies yet.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {hasPermission(ctx, "companies.create") && (
-        <>
-          <h2>New company</h2>
-          <div className="card">
-            <CreateCompanyForm orgSlug={orgSlug} />
-          </div>
-        </>
-      )}
-
-      {hasPermission(ctx, "companies.import") && (
-        <>
-          <h2>Import companies from CSV</h2>
-          <div className="card">
-            <ImportCsvForm
-              importUrl={`/api/orgs/${orgSlug}/companies/import`}
-              fields={IMPORT_FIELDS}
+          <form className="filters" method="GET">
+            <input
+              type="text"
+              name="q"
+              defaultValue={q ?? ""}
+              placeholder="Search name, email, phone"
             />
+            <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <input
+                type="checkbox"
+                name="includeArchived"
+                value="true"
+                defaultChecked={includeArchived === "true"}
+              />
+              Show archived
+            </label>
+            <button type="submit" className="secondary">
+              Search
+            </button>
+          </form>
+
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Industry</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Lifecycle</th>
+                </tr>
+              </thead>
+              <tbody>
+                {companies.map((c) => (
+                  <tr key={c.id}>
+                    <td>
+                      <a href={`/o/${orgSlug}/companies/${c.id}`}>{c.name}</a>
+                      {c.archivedAt && <span className="badge"> Archived</span>}
+                    </td>
+                    <td>{c.industry ?? "--"}</td>
+                    <td>{c.email ?? "--"}</td>
+                    <td>{c.phone ?? "--"}</td>
+                    <td>
+                      {c.lifecycleStateId ? (
+                        <span className="badge badge-green">set</span>
+                      ) : (
+                        "--"
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {companies.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>No companies yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </>
-      )}
+        </div>
+
+        {(canCreate || canImport) && (
+          <div className="list-with-side-rail">
+            {canCreate && (
+              <>
+                <h2>New company</h2>
+                <div className="card">
+                  <CreateCompanyForm orgSlug={orgSlug} />
+                </div>
+              </>
+            )}
+
+            {canImport && (
+              <>
+                <h2>Import companies from CSV</h2>
+                <div className="card">
+                  <ImportCsvForm
+                    importUrl={`/api/orgs/${orgSlug}/companies/import`}
+                    fields={IMPORT_FIELDS}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -48,97 +48,108 @@ export default async function ContactsPage({
     ? await listCompanies(ctx)
     : [];
 
+  const canCreate = hasPermission(ctx, "contacts.create");
+  const canImport = hasPermission(ctx, "contacts.import");
+
   return (
     <div>
       <h1>Contacts</h1>
 
-      {hasPermission(ctx, "contacts.export") && (
-        <p>
-          <a href={`/api/orgs/${orgSlug}/contacts/export${q ? `?q=${encodeURIComponent(q)}` : ""}`}>
-            Export CSV
-          </a>
-        </p>
-      )}
+      <div className="list-with-side">
+        <div className="list-with-side-main">
+          {hasPermission(ctx, "contacts.export") && (
+            <p>
+              <a href={`/api/orgs/${orgSlug}/contacts/export${q ? `?q=${encodeURIComponent(q)}` : ""}`}>
+                Export CSV
+              </a>
+            </p>
+          )}
 
-      <form className="filters" method="GET">
-        <input
-          type="text"
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder="Search name, email, phone"
-        />
-        <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
-          <input
-            type="checkbox"
-            name="includeArchived"
-            value="true"
-            defaultChecked={includeArchived === "true"}
-          />
-          Show archived
-        </label>
-        <button type="submit" className="secondary">
-          Search
-        </button>
-      </form>
+          <form className="filters" method="GET">
+            <input
+              type="text"
+              name="q"
+              defaultValue={q ?? ""}
+              placeholder="Search name, email, phone"
+            />
+            <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <input
+                type="checkbox"
+                name="includeArchived"
+                value="true"
+                defaultChecked={includeArchived === "true"}
+              />
+              Show archived
+            </label>
+            <button type="submit" className="secondary">
+              Search
+            </button>
+          </form>
 
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Company</th>
-              <th>Job title</th>
-              <th>Email</th>
-              <th>Phone</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contacts.map((c) => (
-              <tr key={c.id}>
-                <td>
-                  <a href={`/o/${orgSlug}/contacts/${c.id}`}>
-                    {c.firstName} {c.lastName ?? ""}
-                  </a>
-                  {c.archivedAt && <span className="badge"> Archived</span>}
-                </td>
-                <td>{c.company?.name ?? "--"}</td>
-                <td>{c.jobTitle ?? "--"}</td>
-                <td>{c.email ?? "--"}</td>
-                <td>{c.phone ?? "--"}</td>
-              </tr>
-            ))}
-            {contacts.length === 0 && (
-              <tr>
-                <td colSpan={5}>No contacts yet.</td>
-              </tr>
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Company</th>
+                  <th>Job title</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                </tr>
+              </thead>
+              <tbody>
+                {contacts.map((c) => (
+                  <tr key={c.id}>
+                    <td>
+                      <a href={`/o/${orgSlug}/contacts/${c.id}`}>
+                        {c.firstName} {c.lastName ?? ""}
+                      </a>
+                      {c.archivedAt && <span className="badge"> Archived</span>}
+                    </td>
+                    <td>{c.company?.name ?? "--"}</td>
+                    <td>{c.jobTitle ?? "--"}</td>
+                    <td>{c.email ?? "--"}</td>
+                    <td>{c.phone ?? "--"}</td>
+                  </tr>
+                ))}
+                {contacts.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>No contacts yet.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {(canCreate || canImport) && (
+          <div className="list-with-side-rail">
+            {canCreate && (
+              <>
+                <h2>New contact</h2>
+                <div className="card">
+                  <CreateContactForm
+                    orgSlug={orgSlug}
+                    companies={companies.map((c) => ({ id: c.id, name: c.name }))}
+                  />
+                </div>
+              </>
             )}
-          </tbody>
-        </table>
+
+            {canImport && (
+              <>
+                <h2>Import contacts from CSV</h2>
+                <div className="card">
+                  <ImportCsvForm
+                    importUrl={`/api/orgs/${orgSlug}/contacts/import`}
+                    fields={IMPORT_FIELDS}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
-
-      {hasPermission(ctx, "contacts.create") && (
-        <>
-          <h2>New contact</h2>
-          <div className="card">
-            <CreateContactForm
-              orgSlug={orgSlug}
-              companies={companies.map((c) => ({ id: c.id, name: c.name }))}
-            />
-          </div>
-        </>
-      )}
-
-      {hasPermission(ctx, "contacts.import") && (
-        <>
-          <h2>Import contacts from CSV</h2>
-          <div className="card">
-            <ImportCsvForm
-              importUrl={`/api/orgs/${orgSlug}/contacts/import`}
-              fields={IMPORT_FIELDS}
-            />
-          </div>
-        </>
-      )}
     </div>
   );
 }

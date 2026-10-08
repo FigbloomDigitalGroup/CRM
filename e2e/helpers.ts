@@ -25,7 +25,7 @@ export async function loginAs(page: Page, email: string): Promise<void> {
   // matches the toggle button itself (its own name, "Show password",
   // contains "password"). A plain CSS type selector sidesteps all of that.
   await page.locator('input[type="password"]').fill(DEV_PASSWORD);
-  await page.getByRole("button", { name: "Log in" }).click();
+  await page.getByRole("button", { name: "Sign in" }).click();
   await page.waitForURL(new RegExp(`/o/${ORG_SLUG}`));
 }
 

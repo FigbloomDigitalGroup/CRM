@@ -57,59 +57,113 @@ export function LoginForm({ devAccounts = [] }: { devAccounts?: DevAccount[] }) 
   }
 
   return (
-    <>
+    <div className="lg-form">
+      <div className="lg-in lg-d1">
+        <span className="lg-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+          </svg>
+          Secure workspace sign-in
+        </span>
+      </div>
+
+      <div className="lg-in lg-d2">
+        <h2>Welcome back</h2>
+        <div className="lg-sub">
+          Sign in to pick up your leads, deals and tasks right where you left off.
+        </div>
+      </div>
+
       <form
-        className="stack"
+        className="lg-formtag"
         onSubmit={(e) => {
           e.preventDefault();
           void performLogin(email, password);
         }}
       >
-        <label>
-          Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            required
-          />
-        </label>
-        <label>
-          Password
+        <div className="lg-in lg-d3">
+          <div className="lg-label-row">
+            <label htmlFor="login-email">Email address</label>
+          </div>
+          <div className="lg-field">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="2" y="4" width="20" height="16" rx="2" />
+              <path d="m22 7-10 6L2 7" />
+            </svg>
+            <input
+              id="login-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              placeholder="name@company.com"
+              autoFocus
+              required
+            />
+          </div>
+        </div>
+
+        <div className="lg-in lg-d4">
+          <div className="lg-label-row">
+            <label htmlFor="login-password">Password</label>
+            <a href="/forgot-password">Forgot password?</a>
+          </div>
           <PasswordInput
+            id="login-password"
+            variant="pill"
+            placeholder="••••••••"
             value={password}
             onChange={setPassword}
             autoComplete="current-password"
             required
           />
-        </label>
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={submitting}>
-          {submitting ? "Logging in..." : "Log in"}
-        </button>
+        </div>
+
+        {error && (
+          <p className="lg-error" role="alert">
+            {error}
+          </p>
+        )}
+
+        <div className="lg-in lg-d5">
+          <button type="submit" className="lg-btn" disabled={submitting}>
+            {submitting ? "Signing in..." : "Sign in"}
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14" />
+              <path d="m13 6 6 6-6 6" />
+            </svg>
+          </button>
+        </div>
       </form>
 
+      <div className="lg-in lg-d6">
+        <div className="lg-or">or</div>
+        <div className="lg-new">
+          New to Figbloom CRM? <a href="/signup">Create an account</a>
+        </div>
+      </div>
+
       {devAccounts.length > 0 && (
-        <div className="warning" style={{ marginTop: 16 }}>
-          <p style={{ marginTop: 0, marginBottom: 8, fontWeight: 600 }}>
-            Dev accounts (local only)
-          </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {devAccounts.map((account) => (
-              <button
-                key={account.email}
-                type="button"
-                disabled={submitting}
-                onClick={() => handleQuickLogin(account)}
-                title={`${account.email} (${account.roleName})`}
-              >
-                {account.name}
-              </button>
-            ))}
+        <div className="lg-in lg-d7">
+          <div className="lg-dev">
+            <div className="lg-dev-h">Dev accounts &middot; local only</div>
+            <div className="lg-dev-ch">
+              {devAccounts.map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  className="lg-dev-chip"
+                  disabled={submitting}
+                  onClick={() => handleQuickLogin(account)}
+                  title={`${account.email} (${account.roleName})`}
+                >
+                  {account.name}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

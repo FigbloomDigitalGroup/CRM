@@ -1,6 +1,6 @@
-import { BrandMark } from "@/app/_shared/BrandMark";
 import { adminDb } from "@/db/adminClient";
 import { LoginForm } from "./LoginForm";
+import { LoginHero } from "./LoginHero";
 
 /**
  * Quick-login accounts are the seeded @figbloom.local fixtures (same query
@@ -35,23 +35,14 @@ export default async function LoginPage() {
   const devAccounts = await getDevAccounts();
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <BrandMark className="brand-mark" />
-          <div className="auth-brand-name">
-            Figbloom<span className="accent"> CRM</span>
-          </div>
-        </div>
-        <h1 style={{ fontSize: 19 }}>Log in</h1>
+    <div className="lg-page">
+      <LoginHero />
+      <main className="lg-right">
         <LoginForm devAccounts={devAccounts} />
-        <p className="warning">
-          <a href="/forgot-password">Forgot your password?</a>
-        </p>
-        <p className="warning">
-          No account yet? <a href="/signup">Sign up</a>
-        </p>
-      </div>
+        <div className="lg-rf">
+          Protected by role-based access &middot; Figbloom Digital Group
+        </div>
+      </main>
     </div>
   );
 }
