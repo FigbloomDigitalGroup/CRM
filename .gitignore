@@ -3,12 +3,13 @@ dist/
 .next/
 next-env.d.ts
 tsconfig.tsbuildinfo
+.env
+.env.local
 *.log
 coverage/
-playwright-report/
-test-results/
-blob-report/
 .DS_Store
 Thumbs.db
 .claude/
-config.bat
+playwright-report/
+test-results/
+blob-report/
