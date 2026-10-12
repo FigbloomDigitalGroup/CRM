@@ -8,7 +8,8 @@ export type CatalogKey =
   | "leadStatuses"
   | "pipelineStages"
   | "lostReasons"
-  | "services";
+  | "services"
+  | "customerLifecycleStates";
 
 export type CatalogVariant = "plain" | "pipelineStage" | "service";
 
