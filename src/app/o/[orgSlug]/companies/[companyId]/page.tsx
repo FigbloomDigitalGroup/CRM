@@ -8,6 +8,7 @@ import { getCompany, listCompanies } from "@/services/companyService";
 import { listCommunicationsForCompany } from "@/services/communicationService";
 import { listCompanyServices } from "@/services/companyServiceLinkService";
 import { listContacts } from "@/services/contactService";
+import { recordPageView } from "@/services/pageViewService";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { listTasks } from "@/services/taskService";
 import { ActivityTimeline } from "../../_shared/ActivityTimeline";
@@ -26,6 +27,7 @@ export default async function CompanyDetailPage({
 }) {
   const { orgSlug, companyId } = await params;
   const ctx = await resolveRequestContext(orgSlug);
+  await recordPageView(ctx, "companies_detail");
 
   let company;
   try {

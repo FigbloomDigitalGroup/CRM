@@ -13,6 +13,7 @@ import {
   getWebsiteAcknowledgementSetting,
 } from "@/services/notificationService";
 import { getOrganizationProfile } from "@/services/organizationProfileService";
+import { recordPageView } from "@/services/pageViewService";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { listCatalog } from "@/services/referenceCatalogService";
 import { listAssignmentRules } from "@/services/websiteLeadAssignmentRuleService";
@@ -37,6 +38,7 @@ export default async function SettingsPage({
 }) {
   const { orgSlug } = await params;
   const ctx = await resolveRequestContext(orgSlug);
+  await recordPageView(ctx, "settings");
 
   const canManageIntegration = hasPermission(ctx, "configuration.manage");
   const canManageOrgSettings = hasPermission(ctx, "organization.manage_settings");

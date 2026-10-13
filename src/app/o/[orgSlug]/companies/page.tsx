@@ -2,6 +2,7 @@ import { resolveRequestContext } from "@/auth/requestContext";
 import { hasPermission } from "@/auth/context";
 import { ForbiddenError } from "@/auth/errors";
 import { listCompanies } from "@/services/companyService";
+import { recordPageView } from "@/services/pageViewService";
 import { ImportCsvForm } from "@/components/ImportCsvForm";
 import { CreateCompanyForm } from "./CreateCompanyForm";
 
@@ -27,6 +28,7 @@ export default async function CompaniesPage({
   const { orgSlug } = await params;
   const { q, includeArchived } = await searchParams;
   const ctx = await resolveRequestContext(orgSlug);
+  await recordPageView(ctx, "companies");
 
   let companies;
   try {

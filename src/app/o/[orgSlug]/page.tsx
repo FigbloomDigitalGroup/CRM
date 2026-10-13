@@ -5,6 +5,7 @@ import { listContacts } from "@/services/contactService";
 import { listDeals } from "@/services/dealService";
 import { listLeads } from "@/services/leadService";
 import { listTasks } from "@/services/taskService";
+import { recordPageView } from "@/services/pageViewService";
 import {
   IconCompanies,
   IconDeals,
@@ -19,6 +20,7 @@ export default async function OrgDashboardPage({
 }) {
   const { orgSlug } = await params;
   const ctx = await resolveRequestContext(orgSlug);
+  await recordPageView(ctx, "dashboard");
 
   // Not every role has any lead visibility at all (Finance/Delivery don't
   // see the sales pipeline; Restricted Technical has no CRM-record access

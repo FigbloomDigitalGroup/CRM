@@ -6,6 +6,7 @@ import { listActivitiesForContact } from "@/services/activityService";
 import { listAuditHistory } from "@/services/auditService";
 import { getContact, listContacts } from "@/services/contactService";
 import { listCommunicationsForContact } from "@/services/communicationService";
+import { recordPageView } from "@/services/pageViewService";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { listTasks } from "@/services/taskService";
 import { ActivityTimeline } from "../../_shared/ActivityTimeline";
@@ -23,6 +24,7 @@ export default async function ContactDetailPage({
 }) {
   const { orgSlug, contactId } = await params;
   const ctx = await resolveRequestContext(orgSlug);
+  await recordPageView(ctx, "contacts_detail");
 
   let contact;
   try {

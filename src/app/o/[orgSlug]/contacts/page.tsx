@@ -3,6 +3,7 @@ import { ForbiddenError } from "@/auth/errors";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { listCompanies } from "@/services/companyService";
 import { listContacts } from "@/services/contactService";
+import { recordPageView } from "@/services/pageViewService";
 import { ImportCsvForm } from "@/components/ImportCsvForm";
 import { CreateContactForm } from "./CreateContactForm";
 
@@ -28,6 +29,7 @@ export default async function ContactsPage({
   const { orgSlug } = await params;
   const { q, includeArchived } = await searchParams;
   const ctx = await resolveRequestContext(orgSlug);
+  await recordPageView(ctx, "contacts");
 
   let contacts;
   try {

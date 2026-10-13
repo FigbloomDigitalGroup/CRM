@@ -81,6 +81,7 @@ model Organization {
   lostReasons                LostReason[]
   services                   Service[]
   websiteLeadAssignmentRules WebsiteLeadAssignmentRule[]
+  pageViews                  PageView[]
 
   @@map("organizations")
 }
@@ -252,6 +253,7 @@ model Membership {
   notifications            Notification[]
   notificationPreferences  NotificationPreference[]
   assignedWebsiteLeadRules WebsiteLeadAssignmentRule[] @relation("WebsiteLeadAssignmentRuleAssignee")
+  pageViews                PageView[]
 
   @@unique([organizationId, userId])
   @@unique([organizationId, id])
@@ -417,6 +419,28 @@ model WebsiteLeadAssignmentRule {
   @@unique([organizationId, id])
   @@index([organizationId, isActive, sequence])
   @@map("website_lead_assignment_rules")
+}
+
+/// Page-view instrumentation (FIG-752, FIG-444 metric A6) -- deliberately
+/// minimal: which page, which membership, when. Nothing about what the
+/// caller was looking at (no query params, no record id, no referrer) --
+/// enough to answer "is this page used weekly," not enough to reconstruct
+/// what anyone actually viewed. `page` is a small fixed set of labels
+/// chosen by each top-level page itself (e.g. "leads", "leads_detail"),
+/// never a raw URL -- see `recordPageView` call sites.
+model PageView {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  membershipId   String   @map("membership_id")
+  page           String
+  viewedAt       DateTime @default(now()) @map("viewed_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  membership   Membership   @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, page, viewedAt])
+  @@index([organizationId, membershipId, viewedAt])
+  @@map("page_views")
 }
 
 /// What a Notification is "about" (FIG-597). Each type is deduplicated to

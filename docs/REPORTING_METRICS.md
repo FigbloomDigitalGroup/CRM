@@ -87,6 +87,36 @@ metric's section says which it is.
 - **Definition:** tasks whose due date fell within the selected range,
   grouped by their current status.
 
+## Page usage (FIG-752)
+
+- **Scope:** fixed trailing 7-day window (`Date.now() - 7 days`) -- **not**
+  affected by the Reports page's `dateFrom`/`dateTo` filter, same treatment
+  as "Pipeline by stage"'s live-snapshot exemption.
+- **Query:** `getWeeklyPageUsage` (`src/services/pageViewService.ts`) ->
+  `getPageUsageSummary` (`src/repositories/pageViews.ts`) --
+  `PageView.groupBy({ by: ["page"] })` for visit counts, plus two
+  `distinct` row fetches (`["membershipId"]` org-wide, `["page",
+  "membershipId"]` per page) for active-user counts, since Prisma's
+  `groupBy` can't produce a distinct-count aggregate directly.
+- **Chart:** none -- a single stat (org-wide weekly active users) plus a
+  table, one row per page.
+- **Definition:** for each page label, how many page-view rows were
+  recorded in the last 7 days (visits) and how many distinct memberships
+  generated at least one of them (active users); separately, the count of
+  distinct memberships active on *any* page in that window.
+- **What's recorded, and what isn't:** `recordPageView` (called once near
+  the top of every top-level org page, right after `resolveRequestContext`
+  resolves) writes exactly `organizationId` + `membershipId` + a page
+  label + a timestamp. The page label is always a literal from the fixed
+  `PAGE_VIEW_LABELS` set in `pageViewService.ts` (e.g. `"leads"`,
+  `"leads_detail"`) -- never a raw pathname, so a specific lead/deal/
+  company/contact id is never recorded, satisfying the ticket's "don't
+  record record contents or anything beyond page + user + time."
+  Recording is best-effort: a failure is logged and swallowed, never
+  surfaced to the caller, so instrumentation can't break a page render.
+- **Permission:** `reporting.view.all` (Management only) -- same gate as
+  every other organization-wide metric on this page.
+
 ## Value masking
 
 A caller who can view reports (`reporting.view.all`) but lacks
