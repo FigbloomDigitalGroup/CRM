@@ -102,3 +102,10 @@ export async function getServiceId(organizationId: string, key = "CRM") {
   });
   return service.id;
 }
+
+export async function getLeadSourceId(organizationId: string, key = "WEBSITE") {
+  const source = await adminDb.leadSource.findFirstOrThrow({
+    where: { organizationId, key },
+  });
+  return source.id;
+}

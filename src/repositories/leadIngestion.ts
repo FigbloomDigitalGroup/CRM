@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { type OrgScopedClient, withOrgContext } from "../db/orgScopedClient";
+import { pickOwnerForRule } from "./websiteLeadAssignmentRules";
 
 /**
  * Storage key for the round-robin assignment cursor in
@@ -43,6 +44,16 @@ export interface WebsiteLeadInput {
   email?: string;
   phone?: string;
   company?: string;
+  /**
+   * Best-effort match against the LeadSource catalog (FIG-751), same
+   * resolution style as `service` below -- unrecognized or omitted falls
+   * back to the "WEBSITE" entry every org is seeded with, so existing
+   * integrations that don't send this keep behaving exactly as before.
+   * Lets a website with multiple forms/campaigns (a Facebook ad, a
+   * referral-partner page, etc.) tell the CRM which one a lead came from,
+   * which assignment rules can then match on.
+   */
+  source?: string;
   service?: string;
   message?: string;
   utm?: Record<string, string>;
@@ -141,9 +152,10 @@ async function pickNextAssignmentOwner(
 /**
  * Turns a website form submission into a CRM lead (FIG-442): resolve-or-
  * create the Company/Contact, stamp source + initial status, resolve a
- * service interest, round-robin assign an owner, and create a follow-up
- * Task as the acknowledgement (there's no outbound email/SMS
- * infrastructure yet).
+ * service interest, assign an owner (FIG-751 rules first, falling back to
+ * the org-wide round-robin/unassigned switch -- see `pickOwnerForRule`),
+ * and create a follow-up Task as the acknowledgement (there's no outbound
+ * email/SMS infrastructure yet).
  *
  * Runs in one transaction so a failure partway through (e.g. no configured
  * lead status) leaves nothing half-created.
@@ -213,9 +225,22 @@ export async function ingestWebsiteLead(
       contactId = created.id;
     }
 
-    const leadSource = await tx.leadSource.findFirst({
-      where: { organizationId, key: "WEBSITE" },
-    });
+    let leadSource = null;
+    if (input.source) {
+      const key = input.source.trim().toUpperCase().replace(/[\s/-]+/g, "_");
+      leadSource = await tx.leadSource.findFirst({
+        where: {
+          organizationId,
+          isActive: true,
+          OR: [{ key }, { name: { equals: input.source, mode: "insensitive" } }],
+        },
+      });
+    }
+    if (!leadSource) {
+      leadSource = await tx.leadSource.findFirst({
+        where: { organizationId, key: "WEBSITE" },
+      });
+    }
 
     const leadStatus = await tx.leadStatus.findFirst({
       where: { organizationId, isActive: true },
@@ -242,11 +267,25 @@ export async function ingestWebsiteLead(
       serviceInterestId = service?.id;
     }
 
-    const assignmentMode = await getWebsiteLeadAssignmentMode(tx, organizationId);
-    const ownerMembershipId =
-      assignmentMode === "ROUND_ROBIN"
-        ? await pickNextAssignmentOwner(tx, organizationId)
-        : null;
+    // FIG-751 rules are checked ahead of the global switch below -- a
+    // matching rule with an eligible assignee wins outright; no match (or a
+    // matched rule with nobody currently eligible) falls back to the
+    // existing org-wide round-robin/unassigned behavior unchanged.
+    const ruleOwnerMembershipId = await pickOwnerForRule(tx, organizationId, {
+      leadSourceId: leadSource?.id ?? null,
+      serviceId: serviceInterestId ?? null,
+    });
+
+    let ownerMembershipId: string | null;
+    if (ruleOwnerMembershipId) {
+      ownerMembershipId = ruleOwnerMembershipId;
+    } else {
+      const assignmentMode = await getWebsiteLeadAssignmentMode(tx, organizationId);
+      ownerMembershipId =
+        assignmentMode === "ROUND_ROBIN"
+          ? await pickNextAssignmentOwner(tx, organizationId)
+          : null;
+    }
 
     const lead = await tx.lead.create({
       data: {
