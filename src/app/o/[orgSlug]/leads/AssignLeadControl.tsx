@@ -2,11 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Combobox, type ComboOption } from "../_shared/Combobox";
 
 interface Member {
   membershipId: string;
   userName: string;
   roleName: string;
+}
+
+function initialsFor(name: string): string {
+  const words = name.trim().split(/\s+/);
+  if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
+  return (words[0]![0]! + words[1]![0]!).toUpperCase();
 }
 
 export function AssignLeadControl({
@@ -25,8 +32,14 @@ export function AssignLeadControl({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const newOwnerMembershipId = e.target.value;
+  const options: ComboOption[] = members.map((m) => ({
+    value: m.membershipId,
+    label: m.userName,
+    sublabel: m.roleName,
+    avatarLabel: initialsFor(m.userName),
+  }));
+
+  async function handleChange(newOwnerMembershipId: string) {
     setValue(newOwnerMembershipId);
     setSubmitting(true);
     setError(null);
@@ -49,13 +62,14 @@ export function AssignLeadControl({
 
   return (
     <div>
-      <select value={value} onChange={handleChange} disabled={submitting}>
-        {members.map((m) => (
-          <option key={m.membershipId} value={m.membershipId}>
-            {m.userName} ({m.roleName})
-          </option>
-        ))}
-      </select>
+      <Combobox
+        value={value}
+        options={options}
+        onChange={handleChange}
+        disabled={submitting}
+        width={240}
+        ariaLabel="Reassign lead"
+      />
       {error && <div className="error">{error}</div>}
     </div>
   );

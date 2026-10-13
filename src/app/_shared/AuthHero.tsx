@@ -1,7 +1,8 @@
 import { BrandMark } from "@/app/_shared/BrandMark";
 
 /**
- * Left-hand brand panel of the /login screen: animated hero (floating glass
+ * Left-hand brand panel shared by the pre-auth screens that use the
+ * redesigned `lg-*` layout (/login, /signup): animated hero (floating glass
  * cards around the Figbloom CRM mark), headline and feature row.
  *
  * Purely presentational and static -- the figures on the cards are sample
@@ -9,7 +10,7 @@ import { BrandMark } from "@/app/_shared/BrandMark";
  * CSS/SMIL and is switched off for `prefers-reduced-motion` (see globals.css,
  * "Login screen").
  */
-export function LoginHero() {
+export function AuthHero() {
   return (
     <section className="lg-hero" aria-label="Figbloom CRM">
       <div className="lg-canvas">

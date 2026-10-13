@@ -47,7 +47,7 @@
   --radius-lg: 16px;
   --shadow-card: 0 1px 2px rgba(20, 20, 15, 0.04), 0 6px 16px rgba(20, 20, 15, 0.03);
 
-  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Roboto, sans-serif;
+  --font-sans: var(--font-brand), -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 
   /* Sidebar section icon accents -- distinguishes nav groups the way the
@@ -1182,44 +1182,170 @@ tbody tr:hover {
    ------------------------------------------------------------------- */
 
 .board {
-  display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  padding-bottom: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  align-items: start;
 }
 
 .board-column {
-  flex: 0 0 230px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 12px;
+  padding: 14px;
   background: var(--bg-page);
+}
+
+.board-column-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 2px 2px 0;
 }
 
 .board-column h3 {
   font-family: var(--font-mono);
   font-size: 11px;
-  margin: 2px 4px 10px;
+  margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-tertiary);
 }
 
+.board-column.is-won h3 {
+  color: var(--success);
+}
+
+.board-column.is-lost h3 {
+  color: var(--danger);
+}
+
+.board-column-total {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
 .deal-card {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 10px 12px;
-  margin-bottom: 8px;
+  padding: 12px 14px 6px;
   font-size: 13px;
   box-shadow: var(--shadow-card);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.deal-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.deal-card-link {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.deal-card-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.deal-card-title svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.deal-card:hover .deal-card-title svg {
+  opacity: 1;
 }
 
 .deal-card .value {
   font-weight: 700;
+  font-size: 15px;
   color: var(--text-primary);
-  margin-top: 2px;
+}
+
+.deal-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.deal-card-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.deal-card-meta-row svg {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.deal-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.deal-card-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 3px 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.deal-card-action-btn:hover:not(:disabled) {
+  background: var(--bg-page);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+.deal-card-action-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.deal-card-empty {
+  margin: 0;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 16px 12px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 12.5px;
 }
 
 /* ---------------------------------------------------------------------
@@ -2213,4 +2339,487 @@ details.card ul {
   .lg-stages i.run::after {
     transform: scaleX(0.6);
   }
+}
+
+/* =====================================================================
+   Page controls revamp -- inputs, dropdowns, file picker, filter bar,
+   data tables. Scoped to `.page` (the content area) so the sidebar,
+   topbar search and login form keep their own styling.
+   ===================================================================== */
+
+.page input:where(:not([type="checkbox"]):not([type="radio"]):not([type="file"])),
+.page select,
+.page textarea {
+  min-height: 40px;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+}
+
+.page input::placeholder,
+.page textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.page input:where(:not([type="checkbox"]):not([type="radio"]):not([type="file"])):hover,
+.page select:hover:not(:disabled),
+.page textarea:hover {
+  border-color: var(--text-tertiary);
+}
+
+.page input:where(:not([type="checkbox"]):not([type="radio"]):not([type="file"])):focus,
+.page select:focus,
+.page textarea:focus {
+  border-color: var(--brand-green);
+  box-shadow: 0 0 0 3px rgba(31, 92, 58, 0.16);
+}
+
+.page textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+/* Dropdowns: native arrow replaced with a chevron that sits inside the field */
+.page select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 36px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2362655d' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+}
+
+.page select:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+:root[data-theme="dark"] .page select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a7aaa4' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.page input[type="checkbox"],
+.page input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  accent-color: var(--brand-green);
+  cursor: pointer;
+}
+
+/* File picker: a dashed drop-zone with a branded "Choose file" button */
+.page input[type="file"] {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: var(--bg-page);
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.page input[type="file"]:hover {
+  border-color: var(--brand-green);
+  background: rgba(31, 92, 58, 0.06);
+}
+
+.page input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 16px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--brand-green);
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.page input[type="file"]::file-selector-button:hover {
+  background: var(--brand-green-dark);
+}
+
+/* Buttons in page content: a touch taller, consistent with the fields */
+.page button {
+  min-height: 40px;
+  border-radius: 10px;
+}
+
+.page button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 92, 58, 0.25);
+}
+
+/* ---- Meta row (scope note + export) ---- */
+
+.list-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.list-meta .who {
+  margin: 0;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+}
+
+.btn-ghost:hover {
+  color: var(--brand-green);
+  border-color: var(--brand-green);
+  background: rgba(31, 92, 58, 0.05);
+  text-decoration: none;
+}
+
+/* ---- Filter bar ---- */
+
+.filters-bar {
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.filters-bar .filter-search {
+  flex: 1 1 160px;
+  min-width: 0;
+  padding-left: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2396988e' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 13px center;
+  background-size: 16px;
+}
+
+:root[data-theme="dark"] .filters-bar .filter-search {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23797d78' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+}
+
+.filters-bar button {
+  padding: 0 22px;
+}
+
+/* "Show archived" as a toggle pill instead of a stacked checkbox + label */
+.check-pill {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+}
+
+.check-pill:hover {
+  border-color: var(--text-tertiary);
+}
+
+.check-pill:has(input:checked) {
+  color: var(--brand-green);
+  background: var(--brand-green-soft);
+  border-color: var(--brand-green);
+}
+
+:root[data-theme="dark"] .check-pill:has(input:checked) {
+  background: rgba(85, 194, 107, 0.12);
+  color: #8fd9a0;
+  border-color: #3f8a56;
+}
+
+/* ---- Data tables ---- */
+
+.table-card {
+  padding: 0;
+  overflow-x: auto;
+  border-radius: 14px;
+}
+
+.data-table {
+  font-size: 13.5px;
+}
+
+.data-table th {
+  padding: 12px 12px;
+  background: var(--bg-page);
+  border-bottom: 1px solid var(--border-strong);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 13px 12px;
+  vertical-align: middle;
+  color: var(--text-primary);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tbody tr {
+  transition: background-color 0.12s;
+}
+
+.data-table tbody tr:hover {
+  background: rgba(31, 92, 58, 0.045);
+}
+
+.data-table td:nth-child(5) {
+  min-width: 112px;
+}
+
+.data-table .nowrap {
+  white-space: nowrap;
+}
+
+.data-table .cell-primary {
+  color: var(--brand-green);
+  text-decoration: none;
+}
+
+.data-table .cell-primary:hover {
+  text-decoration: underline;
+}
+
+:root[data-theme="dark"] .data-table .cell-primary {
+  color: #8fd9a0;
+}
+
+/* ---- Side rail forms (New lead, CSV import) ---- */
+
+.list-with-side-rail h2:first-child {
+  margin-top: 2px;
+}
+
+.list-with-side-rail .card {
+  padding: 22px;
+}
+
+.list-with-side-rail form.stack {
+  gap: 16px;
+  max-width: none;
+}
+
+.list-with-side-rail form.stack > button[type="submit"] {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.list-with-side-rail label {
+  gap: 6px;
+}
+
+/* ---------------------------------------------------------------------
+   Combobox (custom dropdown replacing native <select>)
+   ------------------------------------------------------------------- */
+
+.combo {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.filters-bar .combo {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 160px;
+}
+
+.combo-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: left;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.data-table .combo-trigger {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 13.5px;
+  border-radius: 8px;
+}
+
+.combo-trigger:hover:not(:disabled) {
+  /* Explicit background here, not just a border tweak -- without it the
+     generic `button:hover:not(:disabled)` rule (solid brand-green fill,
+     meant for CTA buttons) wins on specificity and paints the trigger
+     green on hover, which is what this overrides. */
+  background: var(--bg-card);
+  border-color: var(--text-tertiary);
+}
+
+.combo-trigger:focus-visible,
+.combo-trigger[aria-expanded="true"] {
+  outline: none;
+  border-color: var(--brand-green);
+  box-shadow: 0 0 0 3px rgba(31, 92, 58, 0.16);
+}
+
+.combo-trigger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.combo-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-chevron {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.combo-panel {
+  position: fixed;
+  z-index: 1000;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(20, 20, 15, 0.16);
+  overflow: hidden;
+}
+
+/* No scrolling at all -- every list on the Leads page (members, statuses,
+   sources, temperature) is short enough to show in full. */
+.combo-options {
+  padding: 6px;
+}
+
+.combo-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.combo-option.is-active {
+  background: var(--brand-green-soft);
+}
+
+.combo-option.is-selected {
+  font-weight: 600;
+}
+
+:root[data-theme="dark"] .combo-option.is-active {
+  background: rgba(85, 194, 107, 0.12);
+}
+
+.combo-avatar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.combo-option-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.combo-option-label {
+  font-size: 13.5px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-option-sublabel {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+
+.combo-check {
+  flex: none;
+  color: var(--brand-green);
+}
+
+:root[data-theme="dark"] .combo-check {
+  color: #8fd9a0;
+}
+
+.combo-hint {
+  display: flex;
+  gap: 14px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.combo-hint kbd {
+  display: inline-block;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 1px 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--bg-page);
+  margin-right: 4px;
 }

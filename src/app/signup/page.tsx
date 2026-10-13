@@ -1,27 +1,16 @@
-import { BrandMark } from "@/app/_shared/BrandMark";
+import { AuthHero } from "@/app/_shared/AuthHero";
 import { SignupForm } from "./SignupForm";
 
 export default function SignupPage() {
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <BrandMark className="brand-mark" />
-          <div className="auth-brand-name">
-            Figbloom<span className="accent"> CRM</span>
-          </div>
-        </div>
-        <h1 style={{ fontSize: 19 }}>Sign up</h1>
+    <div className="lg-page">
+      <AuthHero />
+      <main className="lg-right">
         <SignupForm />
-        <p className="warning">
-          Creating an account doesn&apos;t grant access to an organization on
-          its own -- an admin still needs to add you to one before you can
-          see any CRM data.
-        </p>
-        <p className="warning">
-          Already have an account? <a href="/login">Log in</a>
-        </p>
-      </div>
+        <div className="lg-rf">
+          Protected by role-based access &middot; Figbloom Digital Group
+        </div>
+      </main>
     </div>
   );
 }

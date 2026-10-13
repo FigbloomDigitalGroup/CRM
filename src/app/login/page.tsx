@@ -1,6 +1,6 @@
+import { AuthHero } from "@/app/_shared/AuthHero";
 import { adminDb } from "@/db/adminClient";
 import { LoginForm } from "./LoginForm";
-import { LoginHero } from "./LoginHero";
 
 /**
  * Quick-login accounts are the seeded @figbloom.local fixtures (same query
@@ -36,7 +36,7 @@ export default async function LoginPage() {
 
   return (
     <div className="lg-page">
-      <LoginHero />
+      <AuthHero />
       <main className="lg-right">
         <LoginForm devAccounts={devAccounts} />
         <div className="lg-rf">

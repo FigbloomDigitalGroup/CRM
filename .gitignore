@@ -5,6 +5,9 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 .env
 .env.local
+# Local-only Docker Compose port override (see its own header comment) --
+# never meant to be shared/committed, machine-specific workaround.
+docker-compose.override.yml
 *.log
 coverage/
 .DS_Store

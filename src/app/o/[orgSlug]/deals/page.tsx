@@ -5,7 +5,9 @@ import { listCompanies } from "@/services/companyService";
 import { listContacts } from "@/services/contactService";
 import { listDeals } from "@/services/dealService";
 import { getFormReferenceData } from "@/services/referenceDataService";
+import { IconCalendar, IconOpen, IconOwner } from "../_shared/icons";
 import { CreateDealForm } from "./CreateDealForm";
+import { DealCardActions } from "./DealCardActions";
 
 export default async function DealsPage({
   params,
@@ -57,6 +59,10 @@ export default async function DealsPage({
         : `${currency} ${Number(value).toLocaleString()}`;
 
   const canCreate = hasPermission(ctx, "deals.create");
+  const canArchiveAll = hasPermission(ctx, "deals.archive.all");
+  const canArchiveOwn = hasPermission(ctx, "deals.archive.own");
+  const canArchiveDeal = (ownerMembershipId: string) =>
+    canArchiveAll || (canArchiveOwn && ownerMembershipId === ctx.membershipId);
 
   return (
     <div>
@@ -85,36 +91,60 @@ export default async function DealsPage({
           </p>
 
           <div className="board">
-            {referenceData.pipelineStages.map((stage) => (
-              <div className="board-column" key={stage.id}>
-                <h3>{stage.name}</h3>
-                {deals
-                  .filter((d) => d.pipelineStageId === stage.id)
-                  .map((deal) => (
-                    <a
-                      key={deal.id}
-                      className="deal-card"
-                      href={`/o/${orgSlug}/deals/${deal.id}`}
-                    >
-                      <div>
-                        {deal.company.name}
-                        {deal.archivedAt && <span className="badge"> Archived</span>}
-                      </div>
-                      <div className="value">
-                        {currencyFormat(deal.value, deal.currency, deal.valueMasked)}
-                      </div>
-                      <div>{ownerName(deal.ownerMembershipId)}</div>
-                      <div>
-                        {deal.expectedCloseDate
-                          ? new Date(deal.expectedCloseDate).toLocaleDateString()
-                          : "no close date"}
-                      </div>
-                    </a>
+            {referenceData.pipelineStages.map((stage) => {
+              const stageDeals = deals.filter((d) => d.pipelineStageId === stage.id);
+              return (
+                <div
+                  className={`board-column${stage.isWon ? " is-won" : ""}${stage.isLost ? " is-lost" : ""}`}
+                  key={stage.id}
+                >
+                  <div className="board-column-head">
+                    <h3>{stage.name}</h3>
+                    <span className="board-column-total">{stageDeals.length}</span>
+                  </div>
+                  {stageDeals.map((deal) => (
+                    <div className="deal-card" key={deal.id}>
+                      <a
+                        className="deal-card-link"
+                        href={`/o/${orgSlug}/deals/${deal.id}`}
+                      >
+                        <div className="deal-card-title">
+                          <span>
+                            {deal.company.name}
+                            {deal.archivedAt && <span className="badge"> Archived</span>}
+                          </span>
+                          <IconOpen />
+                        </div>
+                        <div className="value">
+                          {currencyFormat(deal.value, deal.currency, deal.valueMasked)}
+                        </div>
+                        <div className="deal-card-meta">
+                          <span className="deal-card-meta-row">
+                            <IconOwner />
+                            {ownerName(deal.ownerMembershipId)}
+                          </span>
+                          <span className="deal-card-meta-row">
+                            <IconCalendar />
+                            {deal.expectedCloseDate
+                              ? new Date(deal.expectedCloseDate).toLocaleDateString()
+                              : "No close date"}
+                          </span>
+                        </div>
+                      </a>
+                      <DealCardActions
+                        orgSlug={orgSlug}
+                        dealId={deal.id}
+                        archivedAt={deal.archivedAt?.toISOString() ?? null}
+                        canArchive={canArchiveDeal(deal.ownerMembershipId)}
+                      />
+                    </div>
                   ))}
-                {deals.filter((d) => d.pipelineStageId === stage.id).length ===
-                  0 && <p className="who">No deals.</p>}
-              </div>
-            ))}
+                  {stageDeals.length === 0 && (
+                    <p className="deal-card-empty">No deals.</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 

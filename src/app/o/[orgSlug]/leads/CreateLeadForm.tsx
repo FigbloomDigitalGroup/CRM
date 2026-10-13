@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Combobox, type ComboOption } from "../_shared/Combobox";
 
 interface Option {
   id: string;
@@ -71,76 +72,53 @@ export function CreateLeadForm({
     }
   }
 
+  const leadStatusOptions: ComboOption[] = leadStatuses.map((s) => ({
+    value: s.id,
+    label: s.name,
+  }));
+  const leadSourceOptions: ComboOption[] = [
+    { value: "", label: "(unknown)" },
+    ...leadSources.map((s) => ({ value: s.id, label: s.name })),
+  ];
+  const companyOptions: ComboOption[] = [
+    { value: "", label: "(none)" },
+    ...companies.map((c) => ({ value: c.id, label: c.name })),
+  ];
+  const contactOptions: ComboOption[] = [
+    { value: "", label: "(none)" },
+    ...contacts.map((c) => ({ value: c.id, label: c.name })),
+  ];
+  const temperatureOptions: ComboOption[] = [
+    { value: "HOT", label: "Hot" },
+    { value: "WARM", label: "Warm" },
+    { value: "COLD", label: "Cold" },
+  ];
+
   return (
     <form className="stack" onSubmit={handleSubmit}>
       <label>
         Status
-        <select
-          value={leadStatusId}
-          onChange={(e) => setLeadStatusId(e.target.value)}
-          required
-        >
-          {leadStatuses.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        <Combobox value={leadStatusId} options={leadStatusOptions} onChange={setLeadStatusId} />
       </label>
       <label>
         Source
-        <select
-          value={leadSourceId}
-          onChange={(e) => setLeadSourceId(e.target.value)}
-        >
-          <option value="">(unknown)</option>
-          {leadSources.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        <Combobox value={leadSourceId} options={leadSourceOptions} onChange={setLeadSourceId} />
       </label>
       <label>
         Company
-        <select
-          value={companyId}
-          onChange={(e) => setCompanyId(e.target.value)}
-        >
-          <option value="">(none)</option>
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <Combobox value={companyId} options={companyOptions} onChange={setCompanyId} />
       </label>
       <label>
         Contact
-        <select
-          value={contactId}
-          onChange={(e) => setContactId(e.target.value)}
-        >
-          <option value="">(none)</option>
-          {contacts.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <Combobox value={contactId} options={contactOptions} onChange={setContactId} />
       </label>
       <label>
         Temperature
-        <select
+        <Combobox
           value={temperature}
-          onChange={(e) =>
-            setTemperature(e.target.value as "HOT" | "WARM" | "COLD")
-          }
-        >
-          <option value="HOT">Hot</option>
-          <option value="WARM">Warm</option>
-          <option value="COLD">Cold</option>
-        </select>
+          options={temperatureOptions}
+          onChange={(v) => setTemperature(v as "HOT" | "WARM" | "COLD")}
+        />
       </label>
       <label>
         Notes
