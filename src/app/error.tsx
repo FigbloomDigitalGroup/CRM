@@ -1,13 +1,25 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
+import { useEffect } from "react";
 import { BrandMark } from "@/app/_shared/BrandMark";
 
 export default function GlobalError({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // FIG-753: this boundary catches render errors Next.js's own
+  // instrumentation (captureRequestError, wired in instrumentation.ts)
+  // doesn't see -- client-side render/hydration failures, not data-
+  // fetching/route-handler errors. Sentry's beforeSend (instrumentation-
+  // client.ts) still scrubs whatever this reports.
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
   return (
     <div className="auth-shell">
       <div className="auth-card">

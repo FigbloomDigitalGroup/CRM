@@ -390,8 +390,24 @@ SMS/WhatsApp is architecturally supported (a `NotificationDelivery` row
 with `channel: SMS` goes through the exact same create/attempt/retry path
 as email) but not wired to a real provider -- no account exists for this
 project, so it logs instead of actually sending, the same documented gap
-as Sentry (FIG-595) and captcha before a secret is configured (FIG-594).
-See `src/notifications/sms.ts`.
+as captcha before a secret is configured (FIG-594). See
+`src/notifications/sms.ts`.
+
+## Error tracking (Sentry, FIG-753)
+
+`@sentry/nextjs` is wired into both ends: every `logger.error`/
+`logger.fatal` call (`src/lib/logger.ts`) also reports to Sentry, plus
+Next.js's own `onRequestError` hook for framework-caught rendering/
+data-fetching errors (`src/instrumentation.ts`) on the backend; client-side
+render/hydration errors via `src/app/error.tsx` and `src/app/global-error.tsx`
+(`src/instrumentation-client.ts` is the client init). No email address,
+phone number, or deal/money value is ever sent -- `src/lib/sentryScrub.ts`
+redacts known-sensitive fields outright and pattern-scrubs anything that
+looks like an email/phone embedded in free text, applied to every event
+(client, server, and the logger bridge alike). Complete no-op without
+`NEXT_PUBLIC_SENTRY_DSN` set, same documented-gap pattern as SMTP/SMS
+before a real provider is configured -- see `docs/DEPLOYMENT.md`'s
+"Error tracking" section for setup.
 
 ## Data import/export (CSV)
 

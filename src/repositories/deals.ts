@@ -69,6 +69,8 @@ export interface UpdateDealInput {
   lostReasonId?: string | null;
   wonAt?: Date | null;
   lostAt?: Date | null;
+  /** Only ever set by `dealService.assignDeal` -- never from a general edit. */
+  ownerMembershipId?: string;
 }
 
 export async function updateDeal(

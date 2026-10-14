@@ -90,7 +90,7 @@ D7 and D8 are worth calling out specifically: they are not aspirational threshol
 | Authorization | Role/permission boundaries hold under test | Automated (`tests/authorization.test.ts`) and exercised manually across all 5 roles for every ticket (`IMPLEMENTATION_NOTES.md`) — but the permission matrix itself is explicitly documented as **provisional**, pending confirmation by Michael/the project lead (`prisma/seedData.ts` header comment) |
 | Tenant isolation | Cross-organization access is impossible at every layer | Automated (`tests/tenant-isolation.test.ts`, 9 tests) — see §9 for the full verification list |
 | Critical defects | No unresolved critical/high-severity defect affecting core workflows | Per `IMPLEMENTATION_NOTES.md`, every defect found during each ticket's manual walkthrough (3 in FIG-439, 2 in FIG-443, 0 in FIG-440/441/442) was fixed with a regression test in the same ticket. No defects are recorded as open. This should be re-confirmed against the current codebase state as part of the pre-pilot gate, not assumed permanent. |
-| Monitoring/logging | Basic operational visibility (errors, request logs) | **Gap.** No logging library (no `pino`/`winston`), no error-tracking service (no Sentry or equivalent), and no APM tooling appear anywhere in `package.json` or `src/`. This is unremarkable for a pre-deployment local project, but it is a prerequisite, not a nice-to-have, once anyone outside the development team depends on the system. |
+| Monitoring/logging | Basic operational visibility (errors, request logs) | Resolved (FIG-753). Structured logging via `pino` (FIG-595) plus error tracking via `@sentry/nextjs`, wired into both the Next.js client and server (`src/instrumentation.ts`, `src/instrumentation-client.ts`), with every `logger.error`/`.fatal` call automatically reported through a single pino hook. Personal data (emails, phone numbers, deal values) is stripped from every report via a shared scrub function (`src/lib/sentryScrub.ts`) before it leaves the process. No APM tooling exists yet — out of scope for FIG-753, not required for this item. |
 
 ## 6. External Pilot Prerequisites
 
@@ -259,7 +259,7 @@ Where a measure has no existing instrumentation (availability, support volume), 
 | Subscriber's business process doesn't fit the existing workflow | Medium/High | Assessed during subscriber selection, before onboarding — the CRM's process (lead→deal split at "Solution Presented," FigBloom's own service catalog, FigBloom's own permission model) was built around FigBloom's own business (FIG-297), and may not transfer cleanly | Review — pick a first subscriber whose process resembles FigBloom's own reasonably closely |
 | Incomplete tenant configuration at go-live | Medium | Tenant readiness checklist (§18) run before access is granted, not after | **No-go** if incomplete |
 | Role/permission errors | Critical | Authorization tests (`tests/authorization.test.ts`), re-run pre-pilot | **No-go** if failing |
-| Insufficient monitoring/logging | Medium | Stand up at minimum basic error logging before pilot (§5) | Review, trending toward no-go the longer it's postponed |
+| Insufficient monitoring/logging | Medium | Stand up at minimum basic error logging before pilot (§5) | **Resolved (FIG-753)** — error tracking and structured logging are in place; no longer a pilot blocker |
 | No retention/data-deletion policy defined | Medium | Agree a specific retention period as part of pilot terms, before onboarding (§12) | Review |
 | Premature SaaS expectations from a subscriber | Medium | Explicit V1 scope communication (§13) as part of onboarding, in writing | Review |
 | Billing requirements arriving early | Medium | Handle commercially/manually outside the platform during the pilot (§13) | Review |
@@ -344,7 +344,7 @@ This document does not have a basis in existing operational data (support-staffi
 - [ ] Support owner assigned by name
 - [ ] Escalation path defined
 - [ ] Incident-handling process known to that owner
-- [ ] At minimum basic error logging/monitoring available
+- [x] At minimum basic error logging/monitoring available (FIG-753)
 
 ### Commercial/Scope
 - [ ] Billing handled outside the platform (§13)

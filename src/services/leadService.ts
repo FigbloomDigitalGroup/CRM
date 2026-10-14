@@ -4,7 +4,7 @@ import {
   requirePermission,
   requireOwnedRecordPermission,
 } from "../auth/context";
-import { NotFoundError, ValidationError } from "../auth/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
@@ -28,6 +28,12 @@ import {
   type UpdateLeadInput,
 } from "../repositories/leads";
 import { diffAuditedFields } from "./auditDiff";
+import {
+  assertEligibleLeadOwner,
+  canWorkDeals,
+  canWorkLeads,
+  loadActiveMemberWithPermissions,
+} from "./ownerEligibility";
 import { notifyLeadAssigned } from "./notificationService";
 
 /** Beyond ownership (audited separately via `assignLead`): qualification/status changes (FIG-600 AC). */
@@ -45,11 +51,52 @@ export type CreateLeadServiceInput = Omit<
   "organizationId" | "createdByMembershipId"
 >;
 
+const LEAD_LOCKED_STATUS_KEYS = { converted: "CONVERTED", lost: "LOST" } as const;
+
+/**
+ * The people a lead can be handed to: active members whose role can view
+ * and edit leads. Feeds every "Reassign" / "Owner" picker so the UI never
+ * offers a target the server would reject.
+ */
+export async function listAssignableLeadOwners(ctx: AuthContext) {
+  requirePermission(ctx, "leads.assign");
+  const memberships = await adminDb.membership.findMany({
+    where: { organizationId: ctx.organizationId, status: "ACTIVE" },
+    include: {
+      user: true,
+      role: { include: { rolePermissions: { include: { permission: true } } } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  return memberships
+    .filter((m) =>
+      canWorkLeads(m.role.rolePermissions.map((rp) => rp.permission.key)),
+    )
+    .map((m) => ({
+      membershipId: m.id,
+      userName: m.user.name,
+      roleName: m.role.name,
+    }));
+}
+
 export async function createLead(
   ctx: AuthContext,
   input: CreateLeadServiceInput,
 ) {
   requirePermission(ctx, "leads.create");
+
+  // Capturing a lead makes you its owner. Handing it to somebody else at
+  // creation is a reassignment in all but name, so it needs the same
+  // `leads.assign` permission `assignLead` does.
+  let ownerMembershipId = ctx.membershipId;
+  if (
+    input.ownerMembershipId &&
+    input.ownerMembershipId !== ctx.membershipId
+  ) {
+    requirePermission(ctx, "leads.assign");
+    await assertEligibleLeadOwner(ctx.organizationId, input.ownerMembershipId);
+    ownerMembershipId = input.ownerMembershipId;
+  }
 
   const possibleDuplicates = await findPossibleDuplicateLeads(
     ctx.organizationId,
@@ -62,10 +109,24 @@ export async function createLead(
     ...input,
     organizationId: ctx.organizationId,
     createdByMembershipId: ctx.membershipId,
-    // A rep capturing a lead is its owner by default unless someone with
-    // leads.assign explicitly hands it to someone else on creation.
-    ownerMembershipId: input.ownerMembershipId ?? ctx.membershipId,
+    ownerMembershipId,
   });
+
+  if (ownerMembershipId !== ctx.membershipId) {
+    await recordAuditEvent({
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      action: "lead.owner_reassigned",
+      entityType: "Lead",
+      entityId: lead.id,
+      previousValue: { ownerMembershipId: ctx.membershipId },
+      newValue: { ownerMembershipId },
+    });
+    await notifyLeadAssigned(ctx.organizationId, ownerMembershipId, {
+      id: lead.id,
+      label: "a new lead",
+    });
+  }
 
   return { lead, possibleDuplicates };
 }
@@ -109,12 +170,59 @@ export async function updateLead(
     lead.ownerMembershipId,
   );
 
-  const updated = await updateLeadRecord(ctx.organizationId, leadId, input);
+  if (lead.archivedAt) {
+    throw new ValidationError(
+      "This lead is archived. Restore it before making changes.",
+    );
+  }
+
+  // Ownership is deliberately not part of an edit -- it only ever changes
+  // through `assignLead` (which needs `leads.assign`). Dropping the key
+  // here means no caller can smuggle it in through a widened payload.
+  const data = { ...input } as UpdateLeadInput & {
+    ownerMembershipId?: unknown;
+  };
+  delete data.ownerMembershipId;
+
+  if (data.leadStatusId !== undefined && data.leadStatusId !== lead.leadStatusId) {
+    if (lead.convertedAt) {
+      throw new ValidationError(
+        "This lead has been converted to a deal, so its status can no longer change.",
+      );
+    }
+    const nextStatus = await adminDb.leadStatus.findFirst({
+      where: { id: data.leadStatusId, organizationId: ctx.organizationId },
+    });
+    if (!nextStatus) {
+      throw new ValidationError("Unknown lead status.");
+    }
+    if (nextStatus.key === LEAD_LOCKED_STATUS_KEYS.converted) {
+      throw new ValidationError(
+        "A lead becomes Converted by converting it to a deal, not by picking the status.",
+      );
+    }
+    if (nextStatus.key === LEAD_LOCKED_STATUS_KEYS.lost) {
+      const reason =
+        data.lostReasonId !== undefined ? data.lostReasonId : lead.lostReasonId;
+      if (!reason) {
+        throw new ValidationError("Choose a lost reason to mark a lead as Lost.");
+      }
+      data.lostReasonId = reason;
+    } else {
+      // Moving away from Lost (or to any other status) clears the reason so
+      // it can't linger on a lead that is no longer lost.
+      data.lostReasonId = null;
+    }
+  } else if (lead.convertedAt && data.lostReasonId !== undefined) {
+    data.lostReasonId = lead.lostReasonId;
+  }
+
+  const updated = await updateLeadRecord(ctx.organizationId, leadId, data);
 
   // Ownership is audited separately via assignLead -- this covers the
   // other important field changes updateLead never audited at all before
   // FIG-600 (status/source/temperature/lost-reason/re-parenting).
-  const diff = diffAuditedFields(lead, input, AUDITED_LEAD_FIELDS);
+  const diff = diffAuditedFields(lead, data, AUDITED_LEAD_FIELDS);
   if (diff) {
     await recordAuditEvent({
       organizationId: ctx.organizationId,
@@ -176,18 +284,21 @@ export async function assignLead(
     );
   }
 
-  const targetMembership = await adminDb.membership.findFirst({
-    where: {
-      id: newOwnerMembershipId,
-      organizationId: ctx.organizationId,
-      status: "ACTIVE",
-    },
-  });
-  if (!targetMembership) {
+  if (lead.archivedAt) {
     throw new ValidationError(
-      "The target owner must be an active member of this organization.",
+      "This lead is archived. Restore it before reassigning it.",
     );
   }
+  if (lead.convertedAt) {
+    throw new ValidationError(
+      "This lead has been converted -- the deal now owns the work.",
+    );
+  }
+
+  const targetMembership = await assertEligibleLeadOwner(
+    ctx.organizationId,
+    newOwnerMembershipId,
+  );
 
   const reassigned = await reassignLeadOwner(
     ctx.organizationId,
@@ -254,6 +365,11 @@ export async function convertLead(
   );
   requirePermission(ctx, "leads.convert");
 
+  if (lead.archivedAt) {
+    throw new ValidationError(
+      "This lead is archived. Restore it before converting it.",
+    );
+  }
   if (lead.convertedAt) {
     throw new ValidationError(
       "This lead has already been converted to a deal.",
@@ -266,6 +382,32 @@ export async function convertLead(
         "create one inline.",
     );
   }
+
+  // The deal inherits the lead's owner. Naming a different deal owner is a
+  // reassignment, so it needs `leads.assign` just like assignLead does.
+  let dealOwnerMembershipId = input.ownerMembershipId;
+  if (
+    dealOwnerMembershipId &&
+    dealOwnerMembershipId !== (lead.ownerMembershipId ?? ctx.membershipId)
+  ) {
+    if (!hasPermission(ctx, "leads.assign")) {
+      throw new ForbiddenError("leads.assign (to choose a different deal owner)");
+    }
+    const member = await loadActiveMemberWithPermissions(
+      ctx.organizationId,
+      dealOwnerMembershipId,
+    );
+    if (!canWorkDeals(member.permissionKeys)) {
+      throw new ValidationError(
+        `A ${member.roleName} user cannot own deals -- pick someone whose role can view and edit deals.`,
+      );
+    }
+  }
+  if (!dealOwnerMembershipId && !lead.ownerMembershipId) {
+    // An unassigned lead converted by Management: the converter owns the deal.
+    dealOwnerMembershipId = ctx.membershipId;
+  }
+
   if (input.newCompany) {
     requirePermission(ctx, "companies.create");
     if (!input.newCompany.name?.trim()) {
@@ -286,7 +428,7 @@ export async function convertLead(
       companyId: input.companyId,
       newCompany: input.newCompany,
       newContact: input.newContact,
-      ownerMembershipId: input.ownerMembershipId,
+      ownerMembershipId: dealOwnerMembershipId,
       pipelineStageId: input.pipelineStageId,
       serviceId: input.serviceId,
       value: input.value,

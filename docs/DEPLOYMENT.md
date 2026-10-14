@@ -156,11 +156,68 @@ aggregator) actually wants. Every route's unhandled-error fallback logs
 through this (`logger.error({ err }, ...)`) instead of a bare
 `console.error`.
 
-A real error-tracking service (Sentry or similar) is a deliberate next
-step, not built here -- it needs a real account/DSN this project doesn't
-have, the same kind of infrastructure-dependent gap as SMTP (FIG-592) and
-captcha (FIG-594). It would hook in at the same `logger.error` call sites
-already in place.
+### Error tracking (Sentry, FIG-753)
+
+Real error tracking is wired in via `@sentry/nextjs`, covering both ends:
+
+- **Backend**: every `logger.error`/`logger.fatal` call already in the
+  codebase also reports to Sentry (`src/lib/logger.ts`'s pino
+  `hooks.logMethod` -- no change needed at any of those call sites, and
+  none needed for ones added later either). Framework-level errors Next.js
+  itself catches during rendering/data fetching are reported via
+  `onRequestError` in `src/instrumentation.ts`.
+- **Frontend**: unhandled render/hydration errors are reported via
+  `src/app/error.tsx` (the per-route boundary) and `src/app/global-error.tsx`
+  (the one Next.js falls back to if the root layout itself throws -- a
+  plain `error.tsx` can't catch that). Client-side `Sentry.init` lives in
+  `src/instrumentation-client.ts`, the filename/location Next.js's build
+  plugin looks for automatically.
+
+**Setup:**
+
+1. Create a Sentry project (any org/plan with a free tier works for a
+   pilot-scale deployment) and copy its DSN.
+2. Set `NEXT_PUBLIC_SENTRY_DSN` in the target environment (staging,
+   production). A DSN is not a secret by Sentry's own design -- it's safe
+   in a committed example file's comment and safe to ship to the browser,
+   which is why one var covers both the client and server init rather than
+   a public/private pair.
+3. Optional, build-time only, for readable stack traces (real source
+   instead of minified build output): set `SENTRY_ORG`, `SENTRY_PROJECT`,
+   and `SENTRY_AUTH_TOKEN` (a Sentry auth token *is* a real secret -- treat
+   it the same as `APP_DB_PASSWORD`/`SMTP_PASS`). All three are read
+   directly from the environment by the underlying bundler plugin; nothing
+   in this repo needs to reference them. Omitting `SENTRY_AUTH_TOKEN`
+   (e.g. in CI, or any environment without one set up yet) just skips the
+   source-map upload step -- the build still succeeds, and the app's own
+   error reporting is completely unaffected.
+
+Leave all four unset for local dev/CI: every Sentry call in this app
+(`Sentry.init` in both instrumentation files, the logger bridge) is a
+complete no-op without a DSN, so no Sentry account is required to run or
+test this app locally. See `.env.example` for the exact variable names and
+their defaults/comments.
+
+**What's deliberately never sent (FIG-753 AC):** no email address, phone
+number, or deal/money value reaches Sentry, even inside a free-text error
+message, request body, or breadcrumb. `src/lib/sentryScrub.ts` is the one
+place this is implemented -- `scrubPII` (key-based redaction for known
+sensitive fields like `email`/`value`/`notes`, pattern-based redaction for
+anything that looks like an email or phone number embedded in a string)
+and `scrubSentryEvent` (applies it to an event's request data, extra
+context, tags, contexts, breadcrumbs, exception message, and `user` object
+-- which is reduced to just a membership id, since this app never calls
+`Sentry.setUser` with anything else). Both the client and server
+`Sentry.init` set this as `beforeSend`/`beforeSendTransaction`, and the
+logger bridge applies the same `scrubPII` to whatever context object was
+passed to `logger.error`. See `tests/sentryScrub.test.ts` for the exact
+behavior this guarantees.
+
+**Verifying it's working:** after setting `NEXT_PUBLIC_SENTRY_DSN` in a
+real environment, trigger a real error (any unhandled exception in a route
+or page) and confirm it appears in the Sentry project within a minute or
+two, with a redacted/absent `email`/`phone`/`value` wherever the
+underlying error touched one.
 
 ## Inbound email provider
 

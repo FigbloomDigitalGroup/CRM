@@ -1444,6 +1444,75 @@ every other org-wide metric there), fixed to a trailing 7-day window
 regardless of the page's own date-range filter -- see
 `docs/REPORTING_METRICS.md`'s "Page usage" section for the exact query.
 
+## Error tracking (FIG-753, FIG-444 §5)
+
+**Hooked in at the single existing choke point, not at each call site.**
+`logger.error`/`logger.fatal` already existed at 7 call sites across the
+codebase before this ticket (route-handler fallbacks, notification
+delivery failures); the ticket's own framing ("it would hook in at the
+same `logger.error` call sites") suggested touching all of them, but pino
+already has an extension point built for exactly this --
+`hooks.logMethod(args, method, level)`, which runs with the correct `this`
+binding before the real log call. `src/lib/logger.ts` reports to Sentry
+there once, so every existing call site (and every one added later) is
+covered automatically with zero per-call-site changes. A naive approach
+(spreading pino's instance into a wrapper object to override `.error`)
+would have broken pino's internal `this` binding; `hooks.logMethod` is
+pino's own documented mechanism for this, not a workaround.
+
+**Front and back end, both landing in the same place.** Backend: the
+logger bridge above, plus `onRequestError` (`src/instrumentation.ts`) for
+errors Next.js itself catches during rendering/data fetching before a
+route handler ever runs. Frontend: `src/app/error.tsx` (nested boundary)
+and `src/app/global-error.tsx` (root-layout-level fallback -- a new file;
+`error.tsx` structurally can't catch a failure in the layout it's nested
+inside). `src/instrumentation-client.ts` is the filename/location
+`@sentry/nextjs`'s build plugin looks for automatically -- no explicit
+import wires it in anywhere.
+
+**`withSentryConfig` is not on `@sentry/nextjs`'s main export -- it's
+under `@sentry/nextjs/config`.** The package's main CJS entry
+(`build/cjs/index.server.js`) is the runtime SDK; the Next.js config
+wrapper lives in a separate `./config` subpath export. Importing it from
+the main entry fails at build time with "withSentryConfig is not a
+function" -- caught by actually running `npm run build`, not just
+`tsc --noEmit` (the require happens too late/dynamically for typecheck to
+catch it either way, since `next.config.js` is plain CommonJS, outside
+the TS project).
+
+**`sendDefaultPii` doesn't exist in this SDK major version.** Older Sentry
+SDK docs/training knowledge name a top-level `sendDefaultPii: false`
+option for "don't attach IP/cookies/headers by default." In the installed
+version (`@sentry/nextjs` 11.x), that behavior is simply the default with
+no integration enabled to do otherwise (no `requestDataIntegration`/
+`httpIntegration` with PII options added here) -- there's no such field in
+`ClientOptions` at all, confirmed by `tsc` rejecting it. The real,
+active defense regardless is `beforeSend`/`beforeSendTransaction`
+(`scrubSentryEvent`), which the SDK calls on every event whether or not
+any upstream integration ever attaches PII in the first place.
+
+**PII scrubbing is one function, shared by three call sites.**
+`src/lib/sentryScrub.ts`'s `scrubPII` (generic key/pattern redaction) and
+`scrubSentryEvent` (applies it to the relevant parts of a Sentry event
+shape) are used by the client `beforeSend`, the server `beforeSend`, and
+the logger bridge's `extra` context -- one definition of "sensitive,"
+not three copies that could drift. Key-based redaction (`email`, `value`,
+`notes`, etc.) catches the ticket's explicit "deal values" case (no
+numeric pattern distinguishes a deal amount from any other number);
+pattern-based redaction (email/phone regexes applied to every string,
+recursively) catches the same data showing up somewhere unexpected -- a
+validation error message that echoes the invalid email back, for
+instance. The `user` object on an event is reduced to just an id (never
+name/email), since this app never calls `Sentry.setUser` with anything
+else.
+
+**A DSN is deliberately not a secret.** Unlike `SENTRY_AUTH_TOKEN` (which
+is), the DSN is safe to commit as an example value and safe to ship to the
+browser by Sentry's own design -- its only job is "where to send events,"
+not an authentication credential. That's why one `NEXT_PUBLIC_SENTRY_DSN`
+var covers both the client and server init, rather than a public/private
+pair like `APP_DATABASE_URL`/`DATABASE_URL`.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit

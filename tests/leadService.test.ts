@@ -4,6 +4,7 @@ import {
   NotFoundError,
   ValidationError,
 } from "../src/auth/errors";
+import { adminDb } from "../src/db/adminClient";
 import { createCompany } from "../src/services/companyService";
 import * as leadService from "../src/services/leadService";
 import {
@@ -337,6 +338,259 @@ describe("leadService", () => {
         newCompany: { name: "Should Not Be Created" },
       });
       expect(deal.companyId).toBe(company.id);
+    });
+  });
+});
+
+describe("leadService: who can change what (roles & lead states)", () => {
+  async function setup() {
+    const org = await createTestOrganization();
+    const management = await createTestContext(org.id, "MANAGEMENT", "mgmt");
+    const sales = await createTestContext(org.id, "SALES", "sales");
+    const salesTwo = await createTestContext(org.id, "SALES", "sales2");
+    const finance = await createTestContext(org.id, "FINANCE", "fin");
+    const delivery = await createTestContext(org.id, "DELIVERY", "deliv");
+    const tech = await createTestContext(org.id, "RESTRICTED_TECHNICAL", "tech");
+    const leadStatusId = await getLeadStatusId(org.id);
+    return { org, management, sales, salesTwo, finance, delivery, tech, leadStatusId };
+  }
+
+  describe("owner on creation", () => {
+    it("Sales cannot create a lead owned by someone else", async () => {
+      const { sales, salesTwo, leadStatusId } = await setup();
+      await expect(
+        leadService.createLead(sales, {
+          leadStatusId,
+          ownerMembershipId: salesTwo.membershipId,
+        }),
+      ).rejects.toThrow(ForbiddenError);
+    });
+
+    it("Sales may still name themselves as the owner", async () => {
+      const { sales, leadStatusId } = await setup();
+      const { lead } = await leadService.createLead(sales, {
+        leadStatusId,
+        ownerMembershipId: sales.membershipId,
+      });
+      expect(lead.ownerMembershipId).toBe(sales.membershipId);
+    });
+
+    it("Management can create a lead for a Sales user", async () => {
+      const { management, sales, leadStatusId } = await setup();
+      const { lead } = await leadService.createLead(management, {
+        leadStatusId,
+        ownerMembershipId: sales.membershipId,
+      });
+      expect(lead.ownerMembershipId).toBe(sales.membershipId);
+    });
+
+    it("Management cannot create a lead owned by a role that cannot work leads", async () => {
+      const { management, finance, leadStatusId } = await setup();
+      await expect(
+        leadService.createLead(management, {
+          leadStatusId,
+          ownerMembershipId: finance.membershipId,
+        }),
+      ).rejects.toThrow(ValidationError);
+    });
+  });
+
+  describe("reassigning", () => {
+    it("rejects owners whose role cannot view/edit leads (Finance, Delivery, Restricted Technical)", async () => {
+      const { management, finance, delivery, tech, leadStatusId } = await setup();
+      const { lead } = await leadService.createLead(management, { leadStatusId });
+      for (const target of [finance, delivery, tech]) {
+        await expect(
+          leadService.assignLead(management, lead.id, target.membershipId),
+        ).rejects.toThrow(ValidationError);
+      }
+    });
+
+    it("lists only people who can work leads as assignable owners", async () => {
+      const { management, sales, salesTwo, finance, delivery, tech } = await setup();
+      const owners = await leadService.listAssignableLeadOwners(management);
+      const ids = owners.map((o) => o.membershipId);
+      expect(ids).toEqual(
+        expect.arrayContaining([
+          management.membershipId,
+          sales.membershipId,
+          salesTwo.membershipId,
+        ]),
+      );
+      for (const excluded of [finance, delivery, tech]) {
+        expect(ids).not.toContain(excluded.membershipId);
+      }
+    });
+
+    it("Sales cannot list assignable owners (no leads.assign)", async () => {
+      const { sales } = await setup();
+      await expect(leadService.listAssignableLeadOwners(sales)).rejects.toThrow(
+        ForbiddenError,
+      );
+    });
+
+    it("does not reassign an archived or converted lead", async () => {
+      const { management, sales, leadStatusId } = await setup();
+      const { lead: archived } = await leadService.createLead(management, { leadStatusId });
+      await leadService.archiveLead(management, archived.id);
+      await expect(
+        leadService.assignLead(management, archived.id, sales.membershipId),
+      ).rejects.toThrow(ValidationError);
+
+      const { lead: converted } = await leadService.createLead(management, { leadStatusId });
+      await leadService.convertLead(management, converted.id, {
+        newCompany: { name: "Reassign Guard Co" },
+      });
+      await expect(
+        leadService.assignLead(management, converted.id, sales.membershipId),
+      ).rejects.toThrow(ValidationError);
+    });
+  });
+
+  describe("editing", () => {
+    it("Sales can change temperature, notes and follow-up on their own lead", async () => {
+      const { sales, leadStatusId } = await setup();
+      const { lead } = await leadService.createLead(sales, { leadStatusId });
+      const updated = await leadService.updateLead(sales, lead.id, {
+        temperature: "HOT",
+        notes: "called back",
+        nextFollowUpAt: new Date("2030-01-01T09:00:00Z"),
+      });
+      expect(updated.temperature).toBe("HOT");
+      expect(updated.notes).toBe("called back");
+    });
+
+    it("an edit can never change the owner, even if the payload tries", async () => {
+      const { management, sales, salesTwo, leadStatusId } = await setup();
+      const { lead } = await leadService.createLead(sales, { leadStatusId });
+      await leadService.updateLead(sales, lead.id, {
+        notes: "x",
+        ...({ ownerMembershipId: salesTwo.membershipId } as object),
+      });
+      const after = await leadService.getLead(management, lead.id);
+      expect(after.ownerMembershipId).toBe(sales.membershipId);
+    });
+
+    it("roles with no lead permissions cannot see or edit leads", async () => {
+      const { management, finance, delivery, tech, leadStatusId } = await setup();
+      const { lead } = await leadService.createLead(management, { leadStatusId });
+      for (const ctx of [finance, delivery, tech]) {
+        await expect(leadService.listLeads(ctx)).rejects.toThrow(ForbiddenError);
+        await expect(leadService.getLead(ctx, lead.id)).rejects.toThrow(ForbiddenError);
+        await expect(
+          leadService.updateLead(ctx, lead.id, { notes: "nope" }),
+        ).rejects.toThrow(ForbiddenError);
+      }
+    });
+
+    it("an archived lead is read-only until it is restored", async () => {
+      const { sales, leadStatusId } = await setup();
+      const { lead } = await leadService.createLead(sales, { leadStatusId });
+      await leadService.archiveLead(sales, lead.id);
+
+      await expect(
+        leadService.updateLead(sales, lead.id, { notes: "while archived" }),
+      ).rejects.toThrow(ValidationError);
+      await expect(leadService.convertLead(sales, lead.id)).rejects.toThrow(
+        ValidationError,
+      );
+
+      await leadService.restoreLead(sales, lead.id);
+      const updated = await leadService.updateLead(sales, lead.id, {
+        notes: "after restore",
+      });
+      expect(updated.notes).toBe("after restore");
+    });
+
+    it("a converted lead keeps its status locked but its notes stay editable", async () => {
+      const { sales, leadStatusId, org } = await setup();
+      const { lead } = await leadService.createLead(sales, { leadStatusId });
+      await leadService.convertLead(sales, lead.id, { newCompany: { name: "Lock Co" } });
+
+      const qualifiedId = await getLeadStatusId(org.id, "QUALIFIED");
+      await expect(
+        leadService.updateLead(sales, lead.id, { leadStatusId: qualifiedId }),
+      ).rejects.toThrow(ValidationError);
+
+      const updated = await leadService.updateLead(sales, lead.id, {
+        notes: "still editable",
+      });
+      expect(updated.notes).toBe("still editable");
+    });
+  });
+
+  describe("status rules", () => {
+    it("Converted can only be reached by converting, not by picking the status", async () => {
+      const { sales, leadStatusId, org } = await setup();
+      const { lead } = await leadService.createLead(sales, { leadStatusId });
+      const convertedId = await getLeadStatusId(org.id, "CONVERTED");
+      await expect(
+        leadService.updateLead(sales, lead.id, { leadStatusId: convertedId }),
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("Lost requires a lost reason, and moving away from Lost clears it", async () => {
+      const { sales, leadStatusId, org } = await setup();
+      const { lead } = await leadService.createLead(sales, { leadStatusId });
+      const lostId = await getLeadStatusId(org.id, "LOST");
+      const reason = await adminDb.lostReason.create({
+        data: { organizationId: org.id, key: "TEST_REASON", name: "Test reason", sequence: 1 },
+      });
+
+      await expect(
+        leadService.updateLead(sales, lead.id, { leadStatusId: lostId }),
+      ).rejects.toThrow(ValidationError);
+
+      const lost = await leadService.updateLead(sales, lead.id, {
+        leadStatusId: lostId,
+        lostReasonId: reason.id,
+      });
+      expect(lost.lostReasonId).toBe(reason.id);
+
+      const reopened = await leadService.updateLead(sales, lead.id, {
+        leadStatusId,
+      });
+      expect(reopened.lostReasonId).toBeNull();
+    });
+  });
+
+  describe("converting", () => {
+    it("Sales cannot pick a different owner for the new deal", async () => {
+      const { sales, salesTwo, leadStatusId } = await setup();
+      const { lead } = await leadService.createLead(sales, { leadStatusId });
+      await expect(
+        leadService.convertLead(sales, lead.id, {
+          newCompany: { name: "Owner Guard Co" },
+          ownerMembershipId: salesTwo.membershipId,
+        }),
+      ).rejects.toThrow(ForbiddenError);
+    });
+
+    it("Sales may leave the deal owner as themselves", async () => {
+      const { sales, leadStatusId } = await setup();
+      const { lead } = await leadService.createLead(sales, { leadStatusId });
+      const deal = await leadService.convertLead(sales, lead.id, {
+        newCompany: { name: "Self Owner Co" },
+        ownerMembershipId: sales.membershipId,
+      });
+      expect(deal.ownerMembershipId).toBe(sales.membershipId);
+    });
+
+    it("Management can choose the deal owner, but only among people who can work deals", async () => {
+      const { management, sales, tech, leadStatusId } = await setup();
+      const { lead } = await leadService.createLead(management, { leadStatusId });
+      await expect(
+        leadService.convertLead(management, lead.id, {
+          newCompany: { name: "Bad Owner Co" },
+          ownerMembershipId: tech.membershipId,
+        }),
+      ).rejects.toThrow(ValidationError);
+
+      const deal = await leadService.convertLead(management, lead.id, {
+        newCompany: { name: "Good Owner Co" },
+        ownerMembershipId: sales.membershipId,
+      });
+      expect(deal.ownerMembershipId).toBe(sales.membershipId);
     });
   });
 });

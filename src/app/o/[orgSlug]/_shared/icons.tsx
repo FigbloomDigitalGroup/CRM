@@ -17,16 +17,25 @@ import {
   CheckSquare,
   ChevronDown,
   ChevronLeft,
+  CircleArrowRight,
   Download,
+  Ellipsis,
+  Eye,
   IdCard,
   LayoutDashboard,
+  Lock,
   LogOut,
   Moon,
+  Pencil,
+  Plus,
   Search,
+  ShieldCheck,
   SlidersHorizontal,
   Sun,
   User,
+  UserCog,
   Users,
+  X,
   type LucideProps,
 } from "lucide-react";
 
@@ -121,4 +130,40 @@ export function IconDownload(props: LucideProps) {
 
 export function IconCheck(props: LucideProps) {
   return <Check {...defaults} size={15} strokeWidth={2.5} {...props} />;
+}
+
+export function IconEdit(props: LucideProps) {
+  return <Pencil {...defaults} size={15} {...props} />;
+}
+
+export function IconView(props: LucideProps) {
+  return <Eye {...defaults} size={16} {...props} />;
+}
+
+export function IconConvert(props: LucideProps) {
+  return <CircleArrowRight {...defaults} size={16} {...props} />;
+}
+
+export function IconMore(props: LucideProps) {
+  return <Ellipsis {...defaults} size={17} {...props} />;
+}
+
+export function IconLock(props: LucideProps) {
+  return <Lock {...defaults} size={14} {...props} />;
+}
+
+export function IconReassign(props: LucideProps) {
+  return <UserCog {...defaults} size={16} {...props} />;
+}
+
+export function IconClose(props: LucideProps) {
+  return <X {...defaults} size={18} {...props} />;
+}
+
+export function IconShield(props: LucideProps) {
+  return <ShieldCheck {...defaults} size={16} {...props} />;
+}
+
+export function IconPlus(props: LucideProps) {
+  return <Plus {...defaults} size={15} {...props} />;
 }
