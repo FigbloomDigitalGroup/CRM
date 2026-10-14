@@ -311,17 +311,20 @@ other route under `/api/orgs/[orgSlug]/**`. Authenticated by a static
 per-organization API key (`x-figbloom-api-key` header), generated and
 rotated from `/o/[orgSlug]/settings` (Management only) — see that page for
 the exact request shape. Only `name` and one of `email`/`phone` are
-required; everything else (company, service interest, message, UTM
-params) is best-effort and never blocks the submission. Accepted
-submissions are round-robin assigned to an active rep and get an
-auto-created follow-up task. See `IMPLEMENTATION_NOTES.md` for why a
-static key was chosen over a signed webhook.
+required; everything else (company, source, service interest, message,
+UTM params) is best-effort and never blocks the submission. Accepted
+submissions are assigned an owner and get an auto-created follow-up task.
+See `IMPLEMENTATION_NOTES.md` for why a static key was chosen over a
+signed webhook.
 
-Assignment itself is a configurable on/off switch (FIG-599, same settings
-page, "Lead assignment"): round-robin (the default) or leave every new
-lead unassigned for manual triage. This is a fixed choice between two
-modes, not a rules engine (by source/territory/etc. -- still FIG-436, not
-built here).
+Assignment checks the org's configurable rules first (FIG-751, same
+settings page, "Website lead assignment rules"): ordered rules that match
+on lead source and/or service, each assigning to either a specific rep or
+its own round-robin group. The first matching rule with a currently-
+eligible assignee wins; no match (or a matched rule with nobody eligible)
+falls back to the org-wide switch below it (FIG-599, "Lead assignment"):
+round-robin (the default) or leave every new lead unassigned for manual
+triage.
 
 Abuse protection (FIG-594) always applies: per-key and per-IP rate
 limiting (429, tunable via `WEBSITE_LEAD_RATE_LIMIT_*` in `.env.example`),

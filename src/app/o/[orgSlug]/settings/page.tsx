@@ -13,7 +13,9 @@ import {
   getWebsiteAcknowledgementSetting,
 } from "@/services/notificationService";
 import { getOrganizationProfile } from "@/services/organizationProfileService";
+import { getFormReferenceData } from "@/services/referenceDataService";
 import { listCatalog } from "@/services/referenceCatalogService";
+import { listAssignmentRules } from "@/services/websiteLeadAssignmentRuleService";
 import { CatalogEditor } from "./CatalogEditor";
 import { InviteMemberForm } from "./InviteMemberForm";
 import { MembersTable } from "./MembersTable";
@@ -25,6 +27,7 @@ import { RevokeInboundEmailKeyButton } from "./RevokeInboundEmailKeyButton";
 import { RevokeWebsiteKeyButton } from "./RevokeWebsiteKeyButton";
 import { WebsiteAcknowledgementToggle } from "./WebsiteAcknowledgementToggle";
 import { WebsiteAssignmentModeToggle } from "./WebsiteAssignmentModeToggle";
+import { WebsiteLeadAssignmentRulesEditor } from "./WebsiteLeadAssignmentRulesEditor";
 import { WebsiteSecuritySettingsForm } from "./WebsiteSecuritySettingsForm";
 
 export default async function SettingsPage({
@@ -247,14 +250,17 @@ async function WebsiteIntegrationSection({
   orgSlug: string;
   ctx: Awaited<ReturnType<typeof resolveRequestContext>>;
 }) {
-  const [status, recentActivity, acknowledgement, assignment] = await Promise.all([
-    getWebsiteIntegrationStatus(ctx),
-    listRecentWebsiteActivity(ctx),
-    hasPermission(ctx, "organization.manage_settings")
-      ? getWebsiteAcknowledgementSetting(ctx)
-      : Promise.resolve(null),
-    getWebsiteAssignmentSetting(ctx),
-  ]);
+  const [status, recentActivity, acknowledgement, assignment, rules, referenceData] =
+    await Promise.all([
+      getWebsiteIntegrationStatus(ctx),
+      listRecentWebsiteActivity(ctx),
+      hasPermission(ctx, "organization.manage_settings")
+        ? getWebsiteAcknowledgementSetting(ctx)
+        : Promise.resolve(null),
+      getWebsiteAssignmentSetting(ctx),
+      listAssignmentRules(ctx),
+      getFormReferenceData(ctx),
+    ]);
 
   return (
     <div className="card">
@@ -303,6 +309,14 @@ async function WebsiteIntegrationSection({
             unassigned leaves every new lead for someone to pick up manually.
           </p>
           <WebsiteAssignmentModeToggle orgSlug={orgSlug} mode={assignment.mode} />
+
+          <WebsiteLeadAssignmentRulesEditor
+            orgSlug={orgSlug}
+            rules={rules}
+            leadSources={referenceData.leadSources.map((s) => ({ id: s.id, name: s.name }))}
+            services={referenceData.services.map((s) => ({ id: s.id, name: s.name }))}
+            members={referenceData.members.map((m) => ({ id: m.membershipId, name: m.userName }))}
+          />
 
           <h2>Abuse protection</h2>
           <p className="who">
@@ -381,6 +395,9 @@ Content-Type: application/json
   "email": "jane@example.com",  // at least one of email/phone required
   "phone": "+254700000000",
   "company": "Example Ltd",     // optional
+  "source": "Facebook",         // optional -- matched against the lead source catalog, best-effort;
+                                 // defaults to "Website" when omitted or unmatched. Assignment
+                                 // rules below can match on this.
   "service": "CCTV",            // optional -- matched against the service catalog, best-effort
   "message": "Interested in a 4-camera install for our office.",
   "utm": { "utmSource": "google", "utmCampaign": "spring-promo" },

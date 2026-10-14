@@ -4,8 +4,15 @@ import { resolveWebsitePublicContext } from "../src/auth/websiteApiKey";
 import { adminDb } from "../src/db/adminClient";
 import { ingestWebsiteLead } from "../src/repositories/leadIngestion";
 import * as integrationService from "../src/services/integrationService";
+import { createAssignmentRule } from "../src/services/websiteLeadAssignmentRuleService";
 import { submitWebsiteLead } from "../src/services/websiteLeadService";
-import { createTestContext, createTestOrganization } from "./helpers/fixtures";
+import {
+  createTestContext,
+  createTestMembership,
+  createTestOrganization,
+  getLeadSourceId,
+  getServiceId,
+} from "./helpers/fixtures";
 
 async function generateAndSetKey(organizationId: string) {
   const { regenerateWebsiteApiKey } = integrationService;
@@ -148,6 +155,224 @@ describe("website lead capture: ingestion", () => {
     expect(result.ownerMembershipId).toBeNull();
     const task = await adminDb.task.findFirst({ where: { leadId: result.leadId } });
     expect(task).toBeNull();
+  });
+});
+
+describe("website lead capture: assignment rules (FIG-751)", () => {
+  it("resolves `source` against the lead source catalog, falling back to WEBSITE when omitted or unmatched", async () => {
+    const org = await createTestOrganization();
+
+    const matched = await ingestWebsiteLead(org.id, {
+      name: "Via Facebook",
+      phone: "+254700000200",
+      source: "facebook",
+    });
+    const lead1 = await adminDb.lead.findUniqueOrThrow({
+      where: { id: matched.leadId },
+      include: { leadSource: true },
+    });
+    expect(lead1.leadSource?.key).toBe("FACEBOOK");
+
+    const unmatched = await ingestWebsiteLead(org.id, {
+      name: "No Such Source",
+      phone: "+254700000201",
+      source: "Not A Real Channel",
+    });
+    const lead2 = await adminDb.lead.findUniqueOrThrow({
+      where: { id: unmatched.leadId },
+      include: { leadSource: true },
+    });
+    expect(lead2.leadSource?.key).toBe("WEBSITE");
+
+    const omitted = await ingestWebsiteLead(org.id, {
+      name: "No Source Given",
+      phone: "+254700000202",
+    });
+    const lead3 = await adminDb.lead.findUniqueOrThrow({
+      where: { id: omitted.leadId },
+      include: { leadSource: true },
+    });
+    expect(lead3.leadSource?.key).toBe("WEBSITE");
+  });
+
+  it("assigns to a rule's specific rep ahead of the global round-robin switch", async () => {
+    const org = await createTestOrganization();
+    const managementCtx = await createTestContext(org.id, "MANAGEMENT");
+    await createTestContext(org.id, "SALES", "pool1");
+    await createTestContext(org.id, "SALES", "pool2");
+    const specialist = await createTestContext(org.id, "SALES", "specialist");
+    const facebookSourceId = await getLeadSourceId(org.id, "FACEBOOK");
+
+    await createAssignmentRule(managementCtx, {
+      name: "Facebook leads to the specialist",
+      leadSourceId: facebookSourceId,
+      assigneeMembershipId: specialist.membershipId,
+    });
+
+    const result = await ingestWebsiteLead(org.id, {
+      name: "Facebook Lead",
+      phone: "+254700000210",
+      source: "facebook",
+    });
+    expect(result.ownerMembershipId).toBe(specialist.membershipId);
+  });
+
+  it("checks rules in sequence order and uses the first one that matches", async () => {
+    const org = await createTestOrganization();
+    const managementCtx = await createTestContext(org.id, "MANAGEMENT");
+    const generalRep = await createTestContext(org.id, "SALES", "general");
+    const cctvRep = await createTestContext(org.id, "SALES", "cctv");
+    const cctvServiceId = await getServiceId(org.id, "CCTV");
+
+    await createAssignmentRule(managementCtx, {
+      name: "Everything else",
+      leadSourceId: await getLeadSourceId(org.id, "WEBSITE"),
+      assigneeMembershipId: generalRep.membershipId,
+    });
+    await createAssignmentRule(managementCtx, {
+      name: "CCTV specialist",
+      serviceId: cctvServiceId,
+      assigneeMembershipId: cctvRep.membershipId,
+    });
+
+    const result = await ingestWebsiteLead(org.id, {
+      name: "CCTV Lead",
+      phone: "+254700000211",
+      service: "CCTV",
+    });
+    // The first rule (by sequence) matches on source alone and comes first,
+    // so it wins even though the second rule also matches on service.
+    expect(result.ownerMembershipId).toBe(generalRep.membershipId);
+  });
+
+  it("falls back to the global round-robin switch when no rule matches", async () => {
+    const org = await createTestOrganization();
+    const managementCtx = await createTestContext(org.id, "MANAGEMENT");
+    const poolRep = await createTestContext(org.id, "SALES", "pool");
+    const nicheRep = await createTestContext(org.id, "SALES", "niche");
+
+    await createAssignmentRule(managementCtx, {
+      name: "LinkedIn only",
+      leadSourceId: await getLeadSourceId(org.id, "LINKEDIN"),
+      assigneeMembershipId: nicheRep.membershipId,
+    });
+
+    const result = await ingestWebsiteLead(org.id, {
+      name: "Plain Website Lead",
+      phone: "+254700000212",
+    });
+    // No rule matches a plain WEBSITE-sourced lead, so it falls back to the
+    // global round robin -- which, with only poolRep and nicheRep active,
+    // still only ever lands on one of the two Sales memberships.
+    expect([poolRep.membershipId, nicheRep.membershipId]).toContain(
+      result.ownerMembershipId,
+    );
+  });
+
+  it("falls back to the global switch when a matching rule's specific assignee is no longer active", async () => {
+    const org = await createTestOrganization();
+    const managementCtx = await createTestContext(org.id, "MANAGEMENT");
+    const { membership: inactiveMembership } = await createTestMembership(
+      org.id,
+      "SALES",
+      "soon-inactive",
+    );
+    const fallbackRep = await createTestContext(org.id, "SALES", "fallback");
+    const facebookSourceId = await getLeadSourceId(org.id, "FACEBOOK");
+
+    await createAssignmentRule(managementCtx, {
+      name: "Facebook to departed rep",
+      leadSourceId: facebookSourceId,
+      assigneeMembershipId: inactiveMembership.id,
+    });
+    await adminDb.membership.update({
+      where: { id: inactiveMembership.id },
+      data: { status: "INACTIVE" },
+    });
+
+    const result = await ingestWebsiteLead(org.id, {
+      name: "Facebook Lead",
+      phone: "+254700000213",
+      source: "facebook",
+    });
+    expect(result.ownerMembershipId).toBe(fallbackRep.membershipId);
+  });
+
+  it("round-robins within a rule's own group, independently of the global cursor", async () => {
+    const org = await createTestOrganization();
+    const managementCtx = await createTestContext(org.id, "MANAGEMENT");
+    const outsideRep = await createTestContext(org.id, "SALES", "outside");
+    const group1 = await createTestContext(org.id, "SALES", "group1");
+    const group2 = await createTestContext(org.id, "SALES", "group2");
+    const facebookSourceId = await getLeadSourceId(org.id, "FACEBOOK");
+
+    await createAssignmentRule(managementCtx, {
+      name: "Facebook pool",
+      leadSourceId: facebookSourceId,
+      assigneeMembershipIds: [group1.membershipId, group2.membershipId],
+    });
+
+    // Burn one global round-robin slot on outsideRep first, via a lead that
+    // no rule matches, to prove the rule's own cursor is independent.
+    await ingestWebsiteLead(org.id, { name: "Unrelated", phone: "+254700000220" });
+
+    const a = await ingestWebsiteLead(org.id, {
+      name: "FB Lead A",
+      phone: "+254700000221",
+      source: "facebook",
+    });
+    const b = await ingestWebsiteLead(org.id, {
+      name: "FB Lead B",
+      phone: "+254700000222",
+      source: "facebook",
+    });
+    const c = await ingestWebsiteLead(org.id, {
+      name: "FB Lead C",
+      phone: "+254700000223",
+      source: "facebook",
+    });
+
+    expect(new Set([a.ownerMembershipId, b.ownerMembershipId])).toEqual(
+      new Set([group1.membershipId, group2.membershipId]),
+    );
+    expect(c.ownerMembershipId).toBe(a.ownerMembershipId);
+    expect([a, b, c].map((r) => r.ownerMembershipId)).not.toContain(
+      outsideRep.membershipId,
+    );
+  });
+
+  it("never double-assigns the same group member under concurrent matching submissions", async () => {
+    const org = await createTestOrganization();
+    const managementCtx = await createTestContext(org.id, "MANAGEMENT");
+    const group1 = await createTestContext(org.id, "SALES", "cgroup1");
+    const group2 = await createTestContext(org.id, "SALES", "cgroup2");
+    const facebookSourceId = await getLeadSourceId(org.id, "FACEBOOK");
+
+    await createAssignmentRule(managementCtx, {
+      name: "Facebook pool",
+      leadSourceId: facebookSourceId,
+      assigneeMembershipIds: [group1.membershipId, group2.membershipId],
+    });
+
+    const results = await Promise.all(
+      Array.from({ length: 6 }, (_, i) =>
+        ingestWebsiteLead(org.id, {
+          name: `Concurrent Lead ${i}`,
+          phone: `+2547000003${String(i).padStart(2, "0")}`,
+          source: "facebook",
+        }),
+      ),
+    );
+
+    const owners = results.map((r) => r.ownerMembershipId);
+    const group1Count = owners.filter((id) => id === group1.membershipId).length;
+    const group2Count = owners.filter((id) => id === group2.membershipId).length;
+    expect(group1Count + group2Count).toBe(6);
+    // With exactly 2 eligible members and strict alternation enforced by the
+    // row lock, 6 concurrent submissions must split evenly -- any skew would
+    // mean two submissions raced past the lock and landed on the same slot.
+    expect(group1Count).toBe(3);
+    expect(group2Count).toBe(3);
   });
 });
 

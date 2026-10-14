@@ -56,6 +56,7 @@ const MAX_NAME_LENGTH = 200;
 const MAX_EMAIL_LENGTH = 320;
 const MAX_PHONE_LENGTH = 32;
 const MAX_COMPANY_LENGTH = 200;
+const MAX_SOURCE_LENGTH = 100;
 const MAX_SERVICE_LENGTH = 100;
 const MAX_MESSAGE_LENGTH = 5000;
 const MAX_UTM_VALUE_LENGTH = 500;
@@ -264,6 +265,8 @@ function validateWebsiteLeadInput(rawBody: unknown): WebsiteLeadInput {
 
   const company = asOptionalString(body.company);
   assertMaxLength(company, MAX_COMPANY_LENGTH, "company");
+  const source = asOptionalString(body.source);
+  assertMaxLength(source, MAX_SOURCE_LENGTH, "source");
   const service = asOptionalString(body.service);
   assertMaxLength(service, MAX_SERVICE_LENGTH, "service");
   const message = asOptionalString(body.message);
@@ -292,6 +295,7 @@ function validateWebsiteLeadInput(rawBody: unknown): WebsiteLeadInput {
     email,
     phone,
     company,
+    source,
     service,
     message,
     utm: Object.keys(utm).length > 0 ? utm : undefined,

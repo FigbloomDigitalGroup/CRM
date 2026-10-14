@@ -168,9 +168,8 @@ the public internet and a distinguishable error would leak which org slugs
 exist.
 
 Lead assignment is a fixed round-robin across active memberships holding
-`leads.edit.own` (looked up by permission, not a hard-coded role name), not
-a configurable rules engine — there's no ticket asking for a settings
-screen to change the assignment strategy, so one wasn't built. The
+`leads.edit.own` (looked up by permission, not a hard-coded role name) --
+see FIG-751, below, for the rules engine that now runs ahead of it. The
 round-robin cursor is a single `OrganizationSetting` row, row-locked
 (`SELECT ... FOR UPDATE`) inside the same transaction as the lead create,
 so two submissions arriving at once can't assign the same rep twice in a
@@ -716,9 +715,10 @@ actually require. Two buttons per row, one swap per click.
 **Website lead assignment became a single on/off switch, not a rules
 engine.** The code already had a comment acknowledging "assignment rules
 are meant to be org-configurable eventually (FIG-436), but no rules engine
-exists yet" (`src/repositories/leadIngestion.ts`). Building a real rules
-engine (by source, territory, service, etc.) is a materially bigger
-ticket than this one's AC asks for ("configurable in settings"), so this
+exists yet" (`src/repositories/leadIngestion.ts`) -- FIG-751, below, is
+that rules engine. Building a real rules engine (by source, territory,
+service, etc.) was a materially bigger ticket than this one's AC asked
+for ("configurable in settings"), so this
 ticket adds exactly one configurable choice -- round-robin (the existing
 behavior, still the default) or leave unassigned for manual triage --
 stored the same way as FIG-597's acknowledgement toggle
@@ -742,6 +742,70 @@ was left out.** It's not named in this ticket's acceptance criteria
 services"), so it stays seed-only/read-only for now -- extending
 `referenceCatalogs.ts` to cover it later is a small, mechanical addition
 if a future ticket asks for it.
+
+## Website lead assignment rules (FIG-751)
+
+**The rules engine FIG-599's switch and FIG-436/FIG-442's old comment both
+deferred.** A `WebsiteLeadAssignmentRule` (`website_lead_assignment_rules`)
+is org-scoped, ordered by `sequence`, and matches on a non-null
+`leadSourceId` and/or `serviceId` -- a rule with neither is rejected at the
+service layer, since it would silently out-rank every rule after it.
+`pickOwnerForRule` (`src/repositories/websiteLeadAssignmentRules.ts`) is
+called from inside `ingestWebsiteLead`'s own transaction, ahead of the
+FIG-599 switch: the first active rule that matches AND has a currently-
+eligible assignee wins outright; a rule that matches but has nobody
+eligible (its specific rep went inactive, or every member of its group
+did) is skipped, not treated as a dead end, so the next rule in sequence
+still gets a chance. Running out of rules falls back to the existing
+global round-robin/unassigned switch completely unchanged -- an
+organization with zero rules configured behaves exactly as it did before
+this ticket.
+
+**Exactly one of a specific rep or a round-robin group, never both, never
+neither** -- validated in `websiteLeadAssignmentRuleService.ts`, not at the
+database level, since Postgres can't express an FK into individual array
+elements (`assigneeMembershipIds` is a plain `String[]`, same tradeoff
+`WebsiteApiKey.allowedOrigins` already makes). A group rule gets its own
+round-robin cursor (`lastAssignedMembershipId` on the rule row itself), row-
+locked (`SELECT ... FOR UPDATE`) the same way the global cursor is in
+`pickNextAssignmentOwner` -- but scoped to that one rule's row, so it
+advances independently of the global cursor and of every other rule's
+group.
+
+**A real concurrency bug caught by the concurrency test, not just the
+sequential ones.** The first version of the group round-robin branch
+fetched the whole rule list (including `lastAssignedMembershipId`) once,
+*before* taking the row lock, then reused that same pre-lock value after
+the lock was granted. Sequentially this looks correct; under
+`Promise.all`-concurrent submissions it isn't -- every transaction that
+blocked on the lock still computed "next" from the cursor value it read
+before blocking, not the one the previous holder had just committed, so
+concurrent submissions could pile onto the same group member instead of
+alternating. Fixed by reading `last_assigned_membership_id` back in the
+*same* raw query that takes the lock, so a transaction that waited only
+ever sees the freshly-committed value. `tests/websiteLeadCapture.test.ts`
+("never double-assigns the same group member under concurrent matching
+submissions") fires 6 concurrent `ingestWebsiteLead` calls at a 2-member
+group and asserts an exact 3/3 split -- this is the test that actually
+caught the bug during development, not one added after the fact.
+
+**`source` added to the public payload, resolved the same best-effort way
+`service` already was.** Before this ticket every website-sourced lead got
+the same hard-coded `LeadSource` ("WEBSITE") regardless of which actual
+form/campaign it came from, so a rule could never usefully match on source.
+`ingestWebsiteLead` now tries `input.source` against the LeadSource catalog
+first (derived key or case-insensitive name, same resolution style as
+`service`), falling back to "WEBSITE" when it's omitted or doesn't match
+anything -- so an existing integration that never sends `source` keeps
+behaving identically.
+
+**Settings UI reuses the exact list/add/edit/reorder/disable shape
+`CatalogEditor.tsx` established (FIG-599/FIG-750), not a new pattern.**
+`WebsiteLeadAssignmentRulesEditor.tsx` sits in the same "Lead assignment"
+block as `WebsiteAssignmentModeToggle`, gated behind the same
+`configuration.manage` permission as the reference-data catalogs. Disabling
+a rule never deletes it, same soft-disable precedent as the catalogs'
+`isActive`.
 
 ## Contact/Company timelines, tasks, audit, and broader audit coverage (FIG-600)
 

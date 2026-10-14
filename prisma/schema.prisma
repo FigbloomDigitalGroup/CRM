@@ -43,8 +43,8 @@ model Organization {
   /// used for internal runtime state like the lead-assignment cursor), so a
   /// real column per field is simpler and keeps the DB schema self-
   /// documenting about what tenant profile data actually exists.
-  timezone          String    @default("Africa/Nairobi")
-  defaultCurrency   String    @default("KES") @map("default_currency")
+  timezone          String   @default("Africa/Nairobi")
+  defaultCurrency   String   @default("KES") @map("default_currency")
   phone             String?
   website           String?
   address           String?
@@ -56,30 +56,31 @@ model Organization {
   workingHoursStart String?  @map("working_hours_start")
   workingHoursEnd   String?  @map("working_hours_end")
 
-  memberships             Membership[]
-  settings                OrganizationSetting[]
-  websiteApiKey           WebsiteApiKey?
-  websiteLeadRequestLogs  WebsiteLeadRequestLog[]
-  inboundEmailKey         InboundEmailKey?
-  notifications           Notification[]
-  notificationDeliveries  NotificationDelivery[]
-  notificationPreferences NotificationPreference[]
-  companies               Company[]
-  contacts                Contact[]
-  leads                   Lead[]
-  deals                   Deal[]
-  activities              Activity[]
-  tasks                   Task[]
-  communications          Communication[]
-  proposalReferences      ProposalReference[]
-  companyServices         CompanyService[]
-  auditEvents             AuditEvent[]
-  leadSources             LeadSource[]
-  leadStatuses            LeadStatus[]
-  pipelineStages          PipelineStage[]
-  customerLifecycleStates CustomerLifecycleState[]
-  lostReasons             LostReason[]
-  services                Service[]
+  memberships                Membership[]
+  settings                   OrganizationSetting[]
+  websiteApiKey              WebsiteApiKey?
+  websiteLeadRequestLogs     WebsiteLeadRequestLog[]
+  inboundEmailKey            InboundEmailKey?
+  notifications              Notification[]
+  notificationDeliveries     NotificationDelivery[]
+  notificationPreferences    NotificationPreference[]
+  companies                  Company[]
+  contacts                   Contact[]
+  leads                      Lead[]
+  deals                      Deal[]
+  activities                 Activity[]
+  tasks                      Task[]
+  communications             Communication[]
+  proposalReferences         ProposalReference[]
+  companyServices            CompanyService[]
+  auditEvents                AuditEvent[]
+  leadSources                LeadSource[]
+  leadStatuses               LeadStatus[]
+  pipelineStages             PipelineStage[]
+  customerLifecycleStates    CustomerLifecycleState[]
+  lostReasons                LostReason[]
+  services                   Service[]
+  websiteLeadAssignmentRules WebsiteLeadAssignmentRule[]
 
   @@map("organizations")
 }
@@ -232,24 +233,25 @@ model Membership {
   user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
   role         Role         @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
-  ownedCompanies          Company[]                @relation("CompanyOwner")
-  createdCompanies        Company[]                @relation("CompanyCreatedBy")
-  ownedContacts           Contact[]                @relation("ContactOwner")
-  createdContacts         Contact[]                @relation("ContactCreatedBy")
-  ownedLeads              Lead[]                   @relation("LeadOwner")
-  createdLeads            Lead[]                   @relation("LeadCreatedBy")
-  ownedDeals              Deal[]                   @relation("DealOwner")
-  createdDeals            Deal[]                   @relation("DealCreatedBy")
-  authoredActivities      Activity[]               @relation("ActivityAuthor")
-  assignedTasks           Task[]                   @relation("TaskAssignee")
-  createdTasks            Task[]                   @relation("TaskCreatedBy")
-  authoredCommunications  Communication[]          @relation("CommunicationAuthor")
-  ownedProposals          ProposalReference[]      @relation("ProposalOwner")
-  auditEvents             AuditEvent[]             @relation("AuditActorMembership")
-  createdWebsiteApiKeys   WebsiteApiKey[]          @relation("WebsiteApiKeyCreatedBy")
-  createdInboundEmailKeys InboundEmailKey[]        @relation("InboundEmailKeyCreatedBy")
-  notifications           Notification[]
-  notificationPreferences NotificationPreference[]
+  ownedCompanies           Company[]                   @relation("CompanyOwner")
+  createdCompanies         Company[]                   @relation("CompanyCreatedBy")
+  ownedContacts            Contact[]                   @relation("ContactOwner")
+  createdContacts          Contact[]                   @relation("ContactCreatedBy")
+  ownedLeads               Lead[]                      @relation("LeadOwner")
+  createdLeads             Lead[]                      @relation("LeadCreatedBy")
+  ownedDeals               Deal[]                      @relation("DealOwner")
+  createdDeals             Deal[]                      @relation("DealCreatedBy")
+  authoredActivities       Activity[]                  @relation("ActivityAuthor")
+  assignedTasks            Task[]                      @relation("TaskAssignee")
+  createdTasks             Task[]                      @relation("TaskCreatedBy")
+  authoredCommunications   Communication[]             @relation("CommunicationAuthor")
+  ownedProposals           ProposalReference[]         @relation("ProposalOwner")
+  auditEvents              AuditEvent[]                @relation("AuditActorMembership")
+  createdWebsiteApiKeys    WebsiteApiKey[]             @relation("WebsiteApiKeyCreatedBy")
+  createdInboundEmailKeys  InboundEmailKey[]           @relation("InboundEmailKeyCreatedBy")
+  notifications            Notification[]
+  notificationPreferences  NotificationPreference[]
+  assignedWebsiteLeadRules WebsiteLeadAssignmentRule[] @relation("WebsiteLeadAssignmentRuleAssignee")
 
   @@unique([organizationId, userId])
   @@unique([organizationId, id])
@@ -371,6 +373,50 @@ model WebsiteLeadRequestLog {
   @@index([keyHash, createdAt])
   @@index([ipAddress, createdAt])
   @@map("website_lead_request_log")
+}
+
+/// Website lead assignment rules (FIG-751) -- evaluated in `sequence` order
+/// ahead of the single round-robin/unassigned switch
+/// (`WEBSITE_LEAD_ASSIGNMENT_MODE_SETTING_KEY` in `leadIngestion.ts`, FIG-599);
+/// the first active rule whose non-null `leadSourceId`/`serviceId` both match
+/// the incoming lead wins, and a rule with neither set is rejected at the
+/// service layer as meaningless. No matching rule (or a matching rule with
+/// no currently-eligible assignee) falls back to that existing switch
+/// unchanged -- see `leadIngestion.ts`'s `pickOwnerForRule`.
+///
+/// Exactly one of `assigneeMembershipId` (a specific rep) or
+/// `assigneeMembershipIds` (a round-robin group) is set -- validated in
+/// `websiteLeadAssignmentRuleService.ts`, not at the DB level, since Postgres
+/// can't express an FK into individual array elements (the same tradeoff
+/// `WebsiteApiKey.allowedOrigins` already makes).
+model WebsiteLeadAssignmentRule {
+  id                       String   @id @default(uuid())
+  organizationId           String   @map("organization_id")
+  name                     String
+  leadSourceId             String?  @map("lead_source_id")
+  serviceId                String?  @map("service_id")
+  assigneeMembershipId     String?  @map("assignee_membership_id")
+  assigneeMembershipIds    String[] @default([]) @map("assignee_membership_ids")
+  /// This rule's own round-robin cursor when `assigneeMembershipIds` is set --
+  /// row-locked the same way the global cursor is (`SELECT ... FOR UPDATE` on
+  /// this row), so two concurrent submissions matching this rule can't land
+  /// on the same group member. Deliberately not an FK (just like the global
+  /// cursor's `lastMembershipId` inside `OrganizationSetting.value` JSON) --
+  /// it's an internal bookkeeping value, never traversed as a relation.
+  lastAssignedMembershipId String?  @map("last_assigned_membership_id")
+  sequence                 Int      @default(0)
+  isActive                 Boolean  @default(true) @map("is_active")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leadSource   LeadSource?  @relation(fields: [leadSourceId], references: [id], onDelete: SetNull)
+  service      Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  assignee     Membership?  @relation("WebsiteLeadAssignmentRuleAssignee", fields: [assigneeMembershipId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, id])
+  @@index([organizationId, isActive, sequence])
+  @@map("website_lead_assignment_rules")
 }
 
 /// What a Notification is "about" (FIG-597). Each type is deduplicated to
@@ -505,8 +551,9 @@ model LeadSource {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  leads        Lead[]
+  organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leads           Lead[]
+  assignmentRules WebsiteLeadAssignmentRule[]
 
   @@unique([organizationId, key])
   @@unique([organizationId, id])
@@ -624,10 +671,11 @@ model Service {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
-  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   leads           Lead[]
   deals           Deal[]
   companyServices CompanyService[]
+  assignmentRules WebsiteLeadAssignmentRule[]
 
   @@unique([organizationId, key])
   @@unique([organizationId, id])
