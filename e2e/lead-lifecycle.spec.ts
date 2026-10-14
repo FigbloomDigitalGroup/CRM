@@ -1,18 +1,5 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { loginAs, uniqueSuffix } from "./helpers";
-
-/** Playwright's typed `selectOption({ label })` only accepts an exact string, not a pattern -- this finds the matching <option>'s value by regex first. */
-async function findOptionValueByLabel(select: Locator, labelPattern: RegExp): Promise<string> {
-  const options = await select.locator("option").all();
-  for (const option of options) {
-    const text = await option.textContent();
-    if (text && labelPattern.test(text)) {
-      const value = await option.getAttribute("value");
-      if (value !== null) return value;
-    }
-  }
-  throw new Error(`No <option> matching ${labelPattern} found.`);
-}
 
 /**
  * One continuous journey through every CRM-record flow FIG-602 asks for
@@ -51,30 +38,27 @@ test("create lead -> assign -> convert -> move stage -> log activity -> complete
   });
 
   await test.step("assign the lead to a different member", async () => {
-    const ownerCard = page.locator(".card", { hasText: "Owner" });
-    await expect(ownerCard).toBeVisible();
-    const ownerSelect = ownerCard.locator("select");
+    // The owner picker is the custom Combobox (FIG-752 leads revamp), not a
+    // native <select>: open it, then click the option in its portaled panel.
+    const ownerTrigger = page.getByRole("button", { name: "Reassign lead" });
+    await expect(ownerTrigger).toBeVisible();
+    await ownerTrigger.click();
 
-    const targetValue = await findOptionValueByLabel(ownerSelect, /Dev Sales/);
-    // selectOption() only waits for the DOM change event, not the async
-    // fetch its onChange handler kicks off -- reloading immediately after
-    // raced the POST and reloaded before it reached the server. Wait for
-    // the actual response instead.
+    // Clicking an option only fires onChange, not the async fetch it kicks
+    // off -- reloading immediately after raced the POST and reloaded before
+    // it reached the server. Wait for the actual response instead.
     const [response] = await Promise.all([
       page.waitForResponse(
         (r) => /\/leads\/.+\/assign$/.test(r.url()) && r.request().method() === "POST",
       ),
-      ownerSelect.selectOption(targetValue),
+      page.getByRole("option", { name: /Dev Sales/ }).click(),
     ]);
     expect(response.ok()).toBe(true);
 
-    // Confirm the reassignment actually persisted, not just the <select>'s
+    // Confirm the reassignment actually persisted, not just the picker's
     // own optimistic local state.
     await page.reload();
-    const selectedLabel = await ownerCard
-      .locator("select")
-      .evaluate((el: HTMLSelectElement) => el.selectedOptions[0]?.textContent);
-    expect(selectedLabel).toMatch(/Dev Sales/);
+    await expect(page.getByRole("button", { name: "Reassign lead" })).toHaveText(/Dev Sales/);
   });
 
   let dealUrl = "";
