@@ -2,9 +2,29 @@ import { hasPermission } from "@/auth/context";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { buildReportNameResolvers } from "@/services/reportingNames";
+import { getWeeklyPageUsage, recordPageView } from "@/services/pageViewService";
 import { getMyActionableWork, getOrganizationMetrics } from "@/services/reportingService";
 import { ReportBarChart } from "./charts/ReportBarChart";
 import { ReportDonutChart } from "./charts/ReportDonutChart";
+
+const PAGE_DISPLAY_NAMES: Record<string, string> = {
+  dashboard: "Dashboard",
+  leads: "Leads",
+  leads_detail: "Lead detail",
+  deals: "Deals",
+  deals_detail: "Deal detail",
+  companies: "Companies",
+  companies_detail: "Company detail",
+  contacts: "Contacts",
+  contacts_detail: "Contact detail",
+  tasks: "Tasks",
+  reports: "Reports",
+  settings: "Settings",
+};
+
+function pageDisplayName(page: string): string {
+  return PAGE_DISPLAY_NAMES[page] ?? page.replace(/_/g, " ");
+}
 
 export default async function ReportsPage({
   params,
@@ -23,6 +43,7 @@ export default async function ReportsPage({
   const { orgSlug } = await params;
   const filters = await searchParams;
   const ctx = await resolveRequestContext(orgSlug);
+  await recordPageView(ctx, "reports");
 
   const canViewOwn = hasPermission(ctx, "reporting.view.own");
   const canViewAll = hasPermission(ctx, "reporting.view.all");
@@ -35,6 +56,7 @@ export default async function ReportsPage({
   const orgMetrics = canViewAll
     ? await getOrganizationMetrics(ctx, filters)
     : null;
+  const pageUsage = canViewAll ? await getWeeklyPageUsage(ctx) : null;
 
   const { sourceName, stageName, serviceName } = buildReportNameResolvers(referenceData);
   const money = (value: unknown) =>
@@ -364,6 +386,50 @@ export default async function ReportsPage({
         </>
       )}
 
+      {canViewAll && pageUsage && (
+        <div className="card">
+          <strong>Page usage (last 7 days)</strong>
+          <p className="who">
+            Internal adoption tracking (FIG-752) -- who&apos;s actually using which page,
+            not what they looked at. Only a page label, the viewing membership, and a
+            timestamp are ever recorded; nothing about record contents.
+          </p>
+          <div className="stat-grid">
+            <div className="stat-card">
+              <div className="stat-label">
+                <span className="dot dot-blue" />
+                Weekly active users
+              </div>
+              <div className="stat-value">{pageUsage.totalActiveUsers}</div>
+              <div className="stat-caption">distinct members, any page, last 7 days</div>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Page</th>
+                <th>Visits</th>
+                <th>Active users</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pageUsage.pages.map((row) => (
+                <tr key={row.page}>
+                  <td>{pageDisplayName(row.page)}</td>
+                  <td>{row.visits}</td>
+                  <td>{row.activeUsers}</td>
+                </tr>
+              ))}
+              {pageUsage.pages.length === 0 && (
+                <tr>
+                  <td colSpan={3}>No page views recorded in the last 7 days.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       <details className="card">
         <summary>Metric definitions</summary>
         <ul>
@@ -406,6 +472,11 @@ export default async function ReportsPage({
           <li>
             <strong>Follow-up performance</strong>: tasks whose due date fell within
             the selected range, grouped by their current status.
+          </li>
+          <li>
+            <strong>Page usage</strong>: a fixed trailing 7-day window, not affected by
+            the date range filter above -- visits and distinct active members per page,
+            plus a single org-wide weekly-active-user count.
           </li>
           <li>
             Deal-value figures are hidden (shown as &quot;--&quot;) for roles without

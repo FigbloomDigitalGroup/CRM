@@ -3,6 +3,7 @@ import { ForbiddenError } from "@/auth/errors";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { listTasks } from "@/services/taskService";
+import { recordPageView } from "@/services/pageViewService";
 import { TaskSection } from "../_shared/TaskSection";
 
 export default async function TasksPage({
@@ -15,6 +16,7 @@ export default async function TasksPage({
   const { orgSlug } = await params;
   const { overdueOnly, status } = await searchParams;
   const ctx = await resolveRequestContext(orgSlug);
+  await recordPageView(ctx, "tasks");
 
   // Finance has no tasks.* permission at all -- listTasks() fails closed
   // rather than returning [], same pattern as Leads/Deals.

@@ -57,7 +57,7 @@ FigBloom employees must use the CRM as their real, primary operational CRM befor
 | A3 | New leads captured in the CRM | 100% of website-sourced leads (already automatic via FIG-442) + ≥ 80% of manually-sourced leads entered within 24 hours | `Lead.createdAt` vs. first-contact timestamp from source |
 | A4 | Deals maintained in the CRM | ≥ 80% of open opportunities above a defined value threshold exist as a `Deal` with a current `PipelineStage` | `Deal` count vs. known sales-team activity for the same period |
 | A5 | Follow-up/task usage | ≥ 70% of active Sales/Delivery users have created or completed at least one `Task` in the last 14 days | `Task.createdByMembershipId` / `completedAt` |
-| A6 | Reporting usage | `/reports` visited by every Management user at least weekly | Not currently logged (no page-view analytics exist) — **instrumentation gap**, recorded as a pilot-readiness prerequisite in §9, not assumed measurable yet |
+| A6 | Reporting usage | `/reports` visited by every Management user at least weekly | **Instrumentation gap closed (FIG-752):** `PageView` records page + membership + timestamp per visit; a weekly-active-users-per-page view is on the Reports page itself (`reporting.view.all`). The threshold above can now actually be queried going forward — it has no historical data from before the gap closed |
 | A7 | Consistency over time | A1–A5 hold for **3 consecutive weeks**, not a single good week | Repeat the same query weekly |
 
 These thresholds are intentionally realistic for a first internal CRM rollout, not perfection targets — a first-quarter internal CRM with 100% capture of every informal channel is not a credible bar, and setting one would make the gate meaningless.
@@ -240,7 +240,7 @@ These four are structural decisions for this pilot, independent of how the under
 | Support | Support volume, recurring-issue rate, unresolved requests, FigBloom staff time spent operating the tenant | Not currently tracked anywhere — a simple log (even a shared spreadsheet) is the minimum viable instrumentation for the pilot; do not claim this is measured until that log exists |
 | Business value | Improved lead visibility, more consistent follow-up, better pipeline visibility, centralized customer information, reduced reliance on spreadsheets | Qualitative — assessed through direct subscriber feedback during pilot review, not a computed metric |
 
-Where a measure has no existing instrumentation (availability, support volume, page-view/reporting-usage in §3's A6), that is stated plainly above rather than presented as already tracked.
+Where a measure has no existing instrumentation (availability, support volume), that is stated plainly above rather than presented as already tracked. Page-view/reporting-usage (§3's A6) no longer belongs on this list as of FIG-752 — see that row for what's now recorded.
 
 ## 16. Risk Register
 
@@ -360,7 +360,7 @@ Beyond this pilot, a general commercial SaaS state would require — in roughly 
 ## 21. Acceptance Criteria Traceability
 
 **AC1 — Internal adoption and data-quality success measures are defined.**
-Satisfied by §3 (7 measurable adoption criteria, A1–A7, each with a stated threshold and computation basis) and §4 (8 measurable data-quality criteria, D1–D8, each with a stated threshold and query basis). Where a measure has no existing instrumentation (A6, reporting-usage tracking), that gap is stated explicitly rather than assumed measurable.
+Satisfied by §3 (7 measurable adoption criteria, A1–A7, each with a stated threshold and computation basis) and §4 (8 measurable data-quality criteria, D1–D8, each with a stated threshold and query basis). A6 (reporting-usage tracking) was the one measure with no existing instrumentation when this document was written; that gap is now closed (FIG-752) — see §3's A6 row.
 
 **AC2 — Requirements for a first external subscriber pilot are documented.**
 Satisfied by §6 (prerequisites), §7 (tenant provisioning — including the honest gap that no reusable provisioning tool exists today), §8 (tenant configuration boundaries, grounded in the actual `/settings` page and per-organization schema tables), §9 (the full isolation/security verification list with test evidence), §10 (support boundaries, included/excluded), §11 (migration/import approach), §12 (export/exit — including the honest gap that no export feature exists today).

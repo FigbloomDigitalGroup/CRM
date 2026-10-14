@@ -296,6 +296,12 @@ gated independently:
   chart (recharts), not just a table (FIG-603). Metric definitions are
   documented in-page, with the full reference (queries, scoping, masking)
   in [`docs/REPORTING_METRICS.md`](docs/REPORTING_METRICS.md).
+- **Page usage** (FIG-752) — weekly active users and visits per page, for
+  measuring internal adoption (e.g. "does every Management user open
+  /reports at least weekly"). Also `reporting.view.all`-gated, fixed to a
+  trailing 7 days. Every top-level page records a view (page label +
+  membership + timestamp only — never a record id or anything else) right
+  after it resolves its request context.
 
 Org-wide reports can also be exported as CSV (`export.bulk` permission) —
 the same multi-section export used for the Export CSV link on the Reports

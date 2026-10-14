@@ -5,13 +5,19 @@
  * stat-chip CSS this project already has tuned.
  */
 import {
+  Archive,
+  ArchiveRestore,
+  ArrowUpRight,
   BarChart3,
   Bell,
   Briefcase,
   Building2,
+  Calendar,
+  Check,
   CheckSquare,
   ChevronDown,
   ChevronLeft,
+  Download,
   IdCard,
   LayoutDashboard,
   LogOut,
@@ -19,6 +25,7 @@ import {
   Search,
   SlidersHorizontal,
   Sun,
+  User,
   Users,
   type LucideProps,
 } from "lucide-react";
@@ -86,4 +93,32 @@ export function IconMoon(props: LucideProps) {
 
 export function IconChevronDown(props: LucideProps) {
   return <ChevronDown {...defaults} size={13} {...props} />;
+}
+
+export function IconArchive(props: LucideProps) {
+  return <Archive {...defaults} size={14} {...props} />;
+}
+
+export function IconRestore(props: LucideProps) {
+  return <ArchiveRestore {...defaults} size={14} {...props} />;
+}
+
+export function IconOpen(props: LucideProps) {
+  return <ArrowUpRight {...defaults} size={15} {...props} />;
+}
+
+export function IconCalendar(props: LucideProps) {
+  return <Calendar {...defaults} size={13} {...props} />;
+}
+
+export function IconOwner(props: LucideProps) {
+  return <User {...defaults} size={13} {...props} />;
+}
+
+export function IconDownload(props: LucideProps) {
+  return <Download {...defaults} {...props} />;
+}
+
+export function IconCheck(props: LucideProps) {
+  return <Check {...defaults} size={15} strokeWidth={2.5} {...props} />;
 }

@@ -1400,6 +1400,50 @@ not just the phone-number non-regression case the FIG-604 bug was
 originally about. A fix without a test for the behavior it must NOT
 break is only half-verified.
 
+## Page usage tracking (FIG-752, FIG-444 metric A6)
+
+**The pilot-readiness plan's A6 metric ("do Management users open /reports
+weekly") needed instrumentation that didn't exist at all -- nothing
+recorded a page view anywhere.** `PageView` (`page_views` table) is the
+minimum that answers it: `organizationId` + `membershipId` + a page label
++ a timestamp, nothing else. No query params, no referrer, no record id --
+the ticket is explicit that recording "record contents or anything beyond
+page + user + time" is out of scope, so there's no row anywhere that could
+answer "who looked at lead X," only "who opened the Leads page."
+
+**`page` is a label from a fixed, closed set (`PAGE_VIEW_LABELS` in
+`pageViewService.ts`), never the raw pathname.** A raw `request.url`/
+`pathname` would include the dynamic segment -- `/o/figbloom/leads/<uuid>`
+-- which is exactly the "record contents" the AC rules out. Each top-level
+page passes its own literal label (`"leads"`, `"leads_detail"`, etc.)
+instead, so detail pages are distinguishable from list pages in the
+usage view without ever capturing which specific record was open.
+
+**Recorded from each page itself, not middleware.** This app has no
+`middleware.ts` anywhere, and every org page already independently calls
+`resolveRequestContext` at its own top -- that's the natural, already-
+established choke point (12 files: dashboard, leads ×2, deals ×2,
+companies ×2, contacts ×2, tasks, reports, settings), not a new
+architectural layer. `recordPageView(ctx, "<label>")` is one line added
+right after `ctx` resolves in each.
+
+**Best-effort, same principle as the website-lead acknowledgement
+email.** A failure to record a page view must never turn an otherwise-
+successful page render into a 500 -- `recordPageView` in
+`pageViewService.ts` catches and logs rather than propagating. Verified by
+a test that makes the repository write reject and asserts the service
+call still resolves (`tests/pageViewService.test.ts`).
+
+**Weekly active users and visits-per-page, not a raw log viewer.**
+`getPageUsageSummary` (`src/repositories/pageViews.ts`) groups by `page`
+for visit counts, and separately fetches `distinct: ["page",
+"membershipId"]` rows to get per-page active-user counts -- Prisma's
+`groupBy` can't produce a distinct-count aggregate in one query. Surfaced
+on the Reports page (`reporting.view.all`, i.e. Management, same gate as
+every other org-wide metric there), fixed to a trailing 7-day window
+regardless of the page's own date-range filter -- see
+`docs/REPORTING_METRICS.md`'s "Page usage" section for the exact query.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit
@@ -1424,9 +1468,6 @@ break is only half-verified.
 - Undoing a Company/Contact merge -- restoring a merged record un-hides
   the shell, it doesn't pull back the Contacts/Leads/Deals/etc. that were
   reassigned (FIG-601).
-- A full website-lead-assignment rules engine (by source, territory,
-  service, etc.) — FIG-599 built a single round-robin/unassigned switch,
-  not this; still tracked as FIG-436.
 - Full proposal generation/e-signature — `ProposalReference` is reference-
   only by design.
 - Multiple simultaneously-valid website API keys, or HMAC-signed webhook

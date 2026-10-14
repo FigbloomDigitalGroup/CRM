@@ -5,9 +5,11 @@ import { listCompanies } from "@/services/companyService";
 import { listContacts } from "@/services/contactService";
 import { listLeads } from "@/services/leadService";
 import { getFormReferenceData } from "@/services/referenceDataService";
+import { IconDownload } from "../_shared/icons";
 import { ImportCsvForm } from "@/components/ImportCsvForm";
 import { CreateLeadForm } from "./CreateLeadForm";
 import { AssignLeadControl } from "./AssignLeadControl";
+import { FilterComboField } from "./FilterComboField";
 
 const IMPORT_FIELDS = [
   { key: "leadStatus", label: "Lead status (by name)", required: true },
@@ -76,9 +78,15 @@ export default async function LeadsPage({
 
       <div className="list-with-side">
         <div className="list-with-side-main">
-          {hasPermission(ctx, "leads.export") && (
-            <p>
+          <div className="list-meta">
+            <p className="who">
+              {hasPermission(ctx, "leads.view.all")
+                ? "Showing all organization leads (leads.view.all)."
+                : "Showing only leads you own (leads.view.own) -- this is enforced server-side, not just hidden in the UI."}
+            </p>
+            {hasPermission(ctx, "leads.export") && (
               <a
+                className="btn-ghost"
                 href={`/api/orgs/${orgSlug}/leads/export${
                   q || leadStatusId
                     ? `?${new URLSearchParams({
@@ -88,39 +96,41 @@ export default async function LeadsPage({
                     : ""
                 }`}
               >
+                <IconDownload size={15} />
                 Export CSV
               </a>
-            </p>
-          )}
+            )}
+          </div>
 
-          <p className="who">
-            {hasPermission(ctx, "leads.view.all")
-              ? "Showing all organization leads (leads.view.all)."
-              : "Showing only leads you own (leads.view.own) -- this is enforced server-side, not just hidden in the UI."}
-          </p>
-
-          <form className="filters" method="GET">
+          <form className="filters filters-bar" method="GET">
             <input
+              className="filter-search"
               type="text"
               name="q"
               defaultValue={q ?? ""}
               placeholder="Search notes, company, contact"
             />
-            <select name="leadStatusId" defaultValue={leadStatusId ?? ""}>
-              <option value="">Any status</option>
-              {referenceData.leadStatuses.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <select name="temperature" defaultValue={temperature ?? ""}>
-              <option value="">Any temperature</option>
-              <option value="HOT">Hot</option>
-              <option value="WARM">Warm</option>
-              <option value="COLD">Cold</option>
-            </select>
-            <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <FilterComboField
+              name="leadStatusId"
+              defaultValue={leadStatusId ?? ""}
+              placeholder="Any status"
+              options={[
+                { value: "", label: "Any status" },
+                ...referenceData.leadStatuses.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+            />
+            <FilterComboField
+              name="temperature"
+              defaultValue={temperature ?? ""}
+              placeholder="Any temperature"
+              options={[
+                { value: "", label: "Any temperature" },
+                { value: "HOT", label: "Hot" },
+                { value: "WARM", label: "Warm" },
+                { value: "COLD", label: "Cold" },
+              ]}
+            />
+            <label className="check-pill">
               <input
                 type="checkbox"
                 name="includeArchived"
@@ -129,13 +139,13 @@ export default async function LeadsPage({
               />
               Show archived
             </label>
-            <button type="submit" className="secondary">
+            <button type="submit">
               Filter
             </button>
           </form>
 
-          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-            <table>
+          <div className="card table-card">
+            <table className="data-table">
               <thead>
                 <tr>
                   <th>Company / Contact</th>
@@ -150,22 +160,25 @@ export default async function LeadsPage({
                 {leads.map((lead) => (
                   <tr key={lead.id}>
                     <td>
-                      <a href={`/o/${orgSlug}/leads/${lead.id}`}>
+                      <a
+                        className="cell-primary"
+                        href={`/o/${orgSlug}/leads/${lead.id}`}
+                      >
                         {lead.company?.name ??
                           lead.contact?.firstName ??
                           "(no company/contact)"}
                       </a>
                       {lead.archivedAt && <span className="badge"> Archived</span>}
                     </td>
-                    <td>{lead.leadStatus.name}</td>
-                    <td>
+                    <td className="nowrap">{lead.leadStatus.name}</td>
+                    <td className="nowrap">
                       <span
                         className={`badge badge-${temperatureColor(lead.temperature)}`}
                       >
                         {lead.temperature}
                       </span>
                     </td>
-                    <td>{lead.leadSource?.name ?? "--"}</td>
+                    <td className="nowrap">{lead.leadSource?.name ?? "--"}</td>
                     <td>
                       {referenceData.members.find(
                         (m) => m.membershipId === lead.ownerMembershipId,
