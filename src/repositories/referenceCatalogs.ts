@@ -1,9 +1,9 @@
 import { type OrgScopedClient, withOrgContext } from "../db/orgScopedClient";
 
 /**
- * The 5 organization-configurable reference-data catalogs covered by
- * FIG-599 (CustomerLifecycleState is the same shape but out of this
- * ticket's scope). Keyed by the plural name used in routes/UI; `delegateFor`
+ * The 6 organization-configurable reference-data catalogs: the 5 covered by
+ * FIG-599, plus CustomerLifecycleState (FIG-750, same shape, just not named
+ * in FIG-599's AC). Keyed by the plural name used in routes/UI; `delegateFor`
  * below maps each to its actual Prisma model.
  */
 export const CATALOG_KEYS = [
@@ -12,6 +12,7 @@ export const CATALOG_KEYS = [
   "pipelineStages",
   "lostReasons",
   "services",
+  "customerLifecycleStates",
 ] as const;
 
 export type CatalogKey = (typeof CATALOG_KEYS)[number];
@@ -76,6 +77,7 @@ function delegateFor(tx: OrgScopedClient, catalogKey: CatalogKey) {
     pipelineStages: tx.pipelineStage,
     lostReasons: tx.lostReason,
     services: tx.service,
+    customerLifecycleStates: tx.customerLifecycleState,
   } as const;
   return delegates[catalogKey] as unknown as {
     findMany: (args: unknown) => Promise<CatalogEntry[]>;
@@ -238,6 +240,8 @@ export async function countCatalogEntryUsage(
         ]);
         return leads + deals + companyServices;
       }
+      case "customerLifecycleStates":
+        return tx.company.count({ where: { organizationId, lifecycleStateId: id } });
     }
   });
 }

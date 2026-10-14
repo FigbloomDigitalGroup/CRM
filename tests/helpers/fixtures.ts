@@ -102,3 +102,13 @@ export async function getServiceId(organizationId: string, key = "CRM") {
   });
   return service.id;
 }
+
+export async function getLifecycleStateId(
+  organizationId: string,
+  key = "PROSPECT",
+) {
+  const state = await adminDb.customerLifecycleState.findFirstOrThrow({
+    where: { organizationId, key },
+  });
+  return state.id;
+}
