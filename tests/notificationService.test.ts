@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { adminDb } from "../src/db/adminClient";
-import { assignLead, createLead } from "../src/services/leadService";
+import { archiveLead, assignLead, createLead, listLeads } from "../src/services/leadService";
 import * as notificationService from "../src/services/notificationService";
 import {
   createTestContext,
@@ -250,5 +250,44 @@ describe("notificationService: real trigger points", () => {
     });
     expect(notifications).toHaveLength(1);
     expect(notifications[0]!.entityId).toBe(lead.id);
+  });
+});
+
+describe("notificationService: feed matches live lead ownership", () => {
+  it("bell count equals the leads the member currently owns after reassign-away, archive and re-assign", async () => {
+    const org = await createTestOrganization();
+    const managerCtx = await createTestContext(org.id, "MANAGEMENT", "manager");
+    const salesCtx = await createTestContext(org.id, "SALES", "rep");
+    const otherCtx = await createTestContext(org.id, "SALES", "rep2");
+    const leadStatusId = await getLeadStatusId(org.id);
+
+    const { lead: kept } = await createLead(managerCtx, { leadStatusId });
+    const { lead: movedAway } = await createLead(managerCtx, { leadStatusId });
+    const { lead: archived } = await createLead(managerCtx, { leadStatusId });
+    const { lead: twice } = await createLead(managerCtx, { leadStatusId });
+
+    await assignLead(managerCtx, kept.id, salesCtx.membershipId);
+    await assignLead(managerCtx, movedAway.id, salesCtx.membershipId);
+    await assignLead(managerCtx, archived.id, salesCtx.membershipId);
+    await assignLead(managerCtx, twice.id, salesCtx.membershipId);
+    await assignLead(managerCtx, twice.id, otherCtx.membershipId);
+    await assignLead(managerCtx, twice.id, salesCtx.membershipId);
+
+    await assignLead(managerCtx, movedAway.id, otherCtx.membershipId);
+    await archiveLead(managerCtx, archived.id);
+
+    // Raw history still has every event...
+    const raw = await adminDb.notification.count({
+      where: { organizationId: org.id, membershipId: salesCtx.membershipId, type: "LEAD_ASSIGNED" },
+    });
+    expect(raw).toBe(5);
+
+    // ...but what the member sees is exactly what they still own.
+    const owned = await listLeads(salesCtx);
+    expect(owned.map((l) => l.id).sort()).toEqual([kept.id, twice.id].sort());
+
+    const feed = await notificationService.listMyNotifications(salesCtx);
+    expect(feed.map((n) => n.entityId).sort()).toEqual([kept.id, twice.id].sort());
+    expect(await notificationService.getMyUnreadNotificationCount(salesCtx)).toBe(owned.length);
   });
 });
