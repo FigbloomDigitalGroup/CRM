@@ -9,7 +9,7 @@
 # rather than Next's trimmed `output: "standalone"` mode, which would drop
 # the Prisma CLI and `tsx` that those admin commands need.
 
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 WORKDIR /app
 # Prisma's query engine binary needs OpenSSL; alpine doesn't ship it by default.
 RUN apk add --no-cache openssl
