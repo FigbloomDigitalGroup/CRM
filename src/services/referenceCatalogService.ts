@@ -28,6 +28,7 @@ const CATALOG_LABELS: Record<CatalogKey, string> = {
   pipelineStages: "Pipeline stage",
   lostReasons: "Lost reason",
   services: "Service",
+  customerLifecycleStates: "Customer lifecycle state",
 };
 
 const CATALOG_ENTITY_TYPES: Record<CatalogKey, string> = {
@@ -36,6 +37,7 @@ const CATALOG_ENTITY_TYPES: Record<CatalogKey, string> = {
   pipelineStages: "PipelineStage",
   lostReasons: "LostReason",
   services: "Service",
+  customerLifecycleStates: "CustomerLifecycleState",
 };
 
 function deriveKey(name: string): string {

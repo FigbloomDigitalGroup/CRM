@@ -6,6 +6,7 @@ import {
   createTestContext,
   createTestOrganization,
   getLeadStatusId,
+  getLifecycleStateId,
   getLostReasonId,
 } from "./helpers/fixtures";
 
@@ -26,6 +27,9 @@ describe("referenceCatalogService", () => {
     await expect(createCatalogEntry(ctx, "leadSources", { name: "Trade Show" })).rejects.toThrow(
       ForbiddenError,
     );
+    await expect(
+      createCatalogEntry(ctx, "customerLifecycleStates", { name: "Renewal Risk" }),
+    ).rejects.toThrow(ForbiddenError);
     await expect(
       updateCatalogEntry(ctx, "lostReasons", lostReasonId, { name: "Renamed" }),
     ).rejects.toThrow(ForbiddenError);
@@ -148,6 +152,50 @@ describe("referenceCatalogService", () => {
     await reorderCatalogEntry(ctx, "lostReasons", second!.id, "up");
     const unchanged = await listCatalog(ctx, "lostReasons");
     expect(unchanged[0]!.id).toBe(second!.id);
+  });
+
+  it("supports the customerLifecycleStates catalog like the other plain catalogs", async () => {
+    const org = await createTestOrganization();
+    const ctx = await createTestContext(org.id, "MANAGEMENT");
+
+    const created = await createCatalogEntry(ctx, "customerLifecycleStates", {
+      name: "Renewal Risk",
+    });
+    expect(created.key).toBe("RENEWAL_RISK");
+
+    const all = await listCatalog(ctx, "customerLifecycleStates");
+    expect(all[all.length - 1]!.id).toBe(created.id);
+
+    const updated = await updateCatalogEntry(ctx, "customerLifecycleStates", created.id, {
+      name: "Renewal Risk (Renamed)",
+    });
+    expect(updated.name).toBe("Renewal Risk (Renamed)");
+  });
+
+  it("reports a real usage count for customerLifecycleStates against Company, and deactivates without touching existing references", async () => {
+    const org = await createTestOrganization();
+    const ctx = await createTestContext(org.id, "MANAGEMENT");
+    const lifecycleStateId = await getLifecycleStateId(org.id);
+
+    await adminDb.company.create({
+      data: { organizationId: org.id, name: "Acme Ltd", lifecycleStateId },
+    });
+
+    const [before] = (await listCatalog(ctx, "customerLifecycleStates")).filter(
+      (e) => e.id === lifecycleStateId,
+    );
+    expect(before!.usageCount).toBe(1);
+
+    const deactivated = await setCatalogEntryActive(
+      ctx,
+      "customerLifecycleStates",
+      lifecycleStateId,
+      false,
+    );
+    expect(deactivated.isActive).toBe(false);
+
+    const company = await adminDb.company.findFirstOrThrow({ where: { organizationId: org.id } });
+    expect(company.lifecycleStateId).toBe(lifecycleStateId);
   });
 
   it("throws NotFoundError for an id that doesn't belong to the catalog/organization", async () => {

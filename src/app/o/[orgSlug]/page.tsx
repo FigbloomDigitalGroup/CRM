@@ -37,7 +37,7 @@ export default async function OrgDashboardPage({
     hasPermission(ctx, "tasks.view.own") ||
     hasPermission(ctx, "tasks.view.all");
 
-  const [leads, contacts, companies, deals, overdueTasks] = await Promise.all([
+  const [leads, contacts, companies, deals, overdueTasks, allTasks] = await Promise.all([
     canViewLeads ? listLeads(ctx) : Promise.resolve([]),
     hasPermission(ctx, "contacts.view")
       ? listContacts(ctx)
@@ -47,7 +47,54 @@ export default async function OrgDashboardPage({
       : Promise.resolve([]),
     canViewDeals ? listDeals(ctx) : Promise.resolve([]),
     canViewTasks ? listTasks(ctx, { overdueOnly: true }) : Promise.resolve([]),
+    canViewTasks ? listTasks(ctx) : Promise.resolve([]),
   ]);
+
+  // ---- Overview card: only what this account can actually see ----------
+  // Every list above already went through the same server-enforced
+  // own/all scoping as the stat cards and list pages, so the overview can
+  // never show a record the rest of the app wouldn't.
+  const leadLabel = (l: (typeof leads)[number]) =>
+    l.company?.name ??
+    ([l.contact?.firstName, l.contact?.lastName].filter(Boolean).join(" ") ||
+      "Unnamed lead");
+  const tempBadge = { HOT: "badge-red", WARM: "badge-orange", COLD: "badge-blue" } as const;
+
+  const latestLeads = leads.slice(0, 3);
+
+  const openDeals = deals.filter((d) => d.outcome === "OPEN");
+  const wonDeals = deals.filter((d) => d.outcome === "WON");
+  const lostDeals = deals.filter((d) => d.outcome === "LOST");
+  // A total is only honest when every open deal's value is visible to this
+  // account (deals.view.value) and they share one currency.
+  const openValueCurrencies = new Set(openDeals.map((d) => d.currency));
+  const openValue =
+    openDeals.length > 0 &&
+    openDeals.every((d) => !d.valueMasked && d.value != null) &&
+    openValueCurrencies.size === 1
+      ? `${[...openValueCurrencies][0]} ${openDeals
+          .reduce((sum, d) => sum + Number(d.value), 0)
+          .toLocaleString()}`
+      : null;
+
+  const now = Date.now();
+  const upcomingTasks = allTasks
+    .filter(
+      (t) =>
+        (t.status === "PENDING" || t.status === "IN_PROGRESS") &&
+        (!t.dueAt || new Date(t.dueAt).getTime() >= now),
+    )
+    .slice(0, 3);
+
+  const newestCompanies = [...companies]
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+    .slice(0, 3);
+
+  const hasOverview =
+    latestLeads.length > 0 ||
+    deals.length > 0 ||
+    upcomingTasks.length > 0 ||
+    newestCompanies.length > 0;
 
   const stats: {
     label: string;
@@ -132,12 +179,124 @@ export default async function OrgDashboardPage({
       <div className="grid-2">
         <div className="card">
           <strong>Overview</strong>
-          <p style={{ margin: 0, fontSize: 13.5, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-            This dashboard shows what you personally have access to &mdash; a Sales
-            membership only ever sees its own leads and deals here, never the
-            whole organization&apos;s, and a role with no reporting permission
-            at all sees a plainer view than this.
-          </p>
+          {!hasOverview ? (
+            <p className="panel-empty">Nothing to show here yet.</p>
+          ) : (
+            <div className="overview-sections">
+              {latestLeads.length > 0 && (
+                <section>
+                  <div className="overview-section-title">
+                    <span>Latest leads</span>
+                    <a href={`/o/${orgSlug}/leads`}>View all &rarr;</a>
+                  </div>
+                  <ul className="panel-list">
+                    {latestLeads.map((l) => (
+                      <li key={l.id} className="panel-row">
+                        <div>
+                          <a
+                            className="panel-row-title"
+                            href={`/o/${orgSlug}/leads/${l.id}`}
+                          >
+                            {leadLabel(l)}
+                          </a>
+                          <div className="panel-row-meta">
+                            {l.leadStatus.name} &middot; added{" "}
+                            {new Date(l.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <span className={`badge ${tempBadge[l.temperature]}`}>
+                          {l.temperature.toLowerCase()}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {deals.length > 0 && (
+                <section>
+                  <div className="overview-section-title">
+                    <span>Pipeline</span>
+                    <a href={`/o/${orgSlug}/deals`}>View all &rarr;</a>
+                  </div>
+                  <div className="overview-figures">
+                    <div>
+                      <div className="overview-figure">{openDeals.length}</div>
+                      <div className="panel-row-meta">open</div>
+                    </div>
+                    <div>
+                      <div className="overview-figure">{wonDeals.length}</div>
+                      <div className="panel-row-meta">won</div>
+                    </div>
+                    <div>
+                      <div className="overview-figure">{lostDeals.length}</div>
+                      <div className="panel-row-meta">lost</div>
+                    </div>
+                  </div>
+                  {openValue && (
+                    <div className="panel-row-meta" style={{ marginTop: 8 }}>
+                      {openValue} in open deals
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {upcomingTasks.length > 0 && (
+                <section>
+                  <div className="overview-section-title">
+                    <span>Coming up</span>
+                    <a href={`/o/${orgSlug}/tasks`}>View all &rarr;</a>
+                  </div>
+                  <ul className="panel-list">
+                    {upcomingTasks.map((t) => (
+                      <li key={t.id} className="panel-row">
+                        <div>
+                          <a
+                            className="panel-row-title"
+                            href={`/o/${orgSlug}/tasks`}
+                          >
+                            {t.title}
+                          </a>
+                          <div className="panel-row-meta">
+                            {t.dueAt
+                              ? `Due ${new Date(t.dueAt).toLocaleDateString()}`
+                              : "No due date"}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {newestCompanies.length > 0 && (
+                <section>
+                  <div className="overview-section-title">
+                    <span>Newest companies</span>
+                    <a href={`/o/${orgSlug}/companies`}>View all &rarr;</a>
+                  </div>
+                  <ul className="panel-list">
+                    {newestCompanies.map((c) => (
+                      <li key={c.id} className="panel-row">
+                        <div>
+                          <a
+                            className="panel-row-title"
+                            href={`/o/${orgSlug}/companies/${c.id}`}
+                          >
+                            {c.name}
+                          </a>
+                          <div className="panel-row-meta">
+                            {c.industry ?? "Added"} &middot;{" "}
+                            {new Date(c.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </div>
+          )}
         </div>
 
         {canViewTasks && (

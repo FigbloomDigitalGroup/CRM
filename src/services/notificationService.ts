@@ -23,6 +23,7 @@ import {
   upsertPreference,
   type NotificationTypeKey,
 } from "../repositories/notificationPreferences";
+import { findActiveLeadIdsOwnedBy } from "../repositories/leads";
 import {
   createNotification,
   listNotificationsForMembership,
@@ -229,7 +230,7 @@ async function notifyTask(
 ): Promise<void> {
   try {
     const org = await getOrganizationBasics(organizationId);
-    const link = `${appBaseUrl()}/o/${org.slug}/tasks/${task.id}`;
+    const link = `${appBaseUrl()}/o/${org.slug}/tasks`;
     const dueLabel = type === "TASK_DUE" ? "due today" : "overdue";
     await notify({
       organizationId,
@@ -348,27 +349,72 @@ export async function setWebsiteAcknowledgementSetting(
  * and may still back an email even when hidden from the feed) -- disabling
  * "in-app" for a type is enforced here, at read time, rather than by
  * skipping the write.
+ *
+ * "New lead assigned" rows are a history log, but the feed must only show
+ * what is still true, so the same read-time pass also drops a LEAD_ASSIGNED
+ * row when (a) the lead has since been reassigned away from this member,
+ * archived, or no longer exists, or (b) a newer row for the same lead is
+ * already present (a lead assigned to you twice is still one lead). That
+ * keeps the bell consistent with the dashboard and Leads list, which count
+ * exactly the leads you currently own.
  */
+async function visibleNotifications(
+  ctx: AuthContext,
+  rows: Awaited<ReturnType<typeof listNotificationsForMembership>>,
+) {
+  const preferences = await resolveEffectivePreferences(
+    ctx.organizationId,
+    ctx.membershipId,
+  );
+  const enabled = rows.filter(
+    (r) => preferences[r.type as NotificationTypeKey].inAppEnabled,
+  );
+
+  const leadIds = [
+    ...new Set(
+      enabled
+        .filter((r) => r.type === "LEAD_ASSIGNED" && r.entityId)
+        .map((r) => r.entityId as string),
+    ),
+  ];
+  const stillOwned = await findActiveLeadIdsOwnedBy(
+    ctx.organizationId,
+    ctx.membershipId,
+    leadIds,
+  );
+
+  const seenLeads = new Set<string>();
+  return enabled.filter((r) => {
+    if (r.type !== "LEAD_ASSIGNED") return true;
+    if (!r.entityId || !stillOwned.has(r.entityId)) return false;
+    if (seenLeads.has(r.entityId)) return false; // rows arrive newest-first
+    seenLeads.add(r.entityId);
+    return true;
+  });
+}
+
+const FEED_PAGE_SIZE = 50;
+const FEED_SCAN_LIMIT = 200;
+
 export async function listMyNotifications(
   ctx: AuthContext,
   filters: { unreadOnly?: boolean } = {},
 ) {
-  const [rows, preferences] = await Promise.all([
-    listNotificationsForMembership(ctx.organizationId, ctx.membershipId, filters),
-    resolveEffectivePreferences(ctx.organizationId, ctx.membershipId),
-  ]);
-  return rows.filter((r) => preferences[r.type as NotificationTypeKey].inAppEnabled);
+  const rows = await listNotificationsForMembership(
+    ctx.organizationId,
+    ctx.membershipId,
+    { ...filters, limit: FEED_SCAN_LIMIT },
+  );
+  return (await visibleNotifications(ctx, rows)).slice(0, FEED_PAGE_SIZE);
 }
 
 export async function getMyUnreadNotificationCount(ctx: AuthContext) {
-  const [rows, preferences] = await Promise.all([
-    listNotificationsForMembership(ctx.organizationId, ctx.membershipId, {
-      unreadOnly: true,
-      limit: 200,
-    }),
-    resolveEffectivePreferences(ctx.organizationId, ctx.membershipId),
-  ]);
-  return rows.filter((r) => preferences[r.type as NotificationTypeKey].inAppEnabled).length;
+  const rows = await listNotificationsForMembership(
+    ctx.organizationId,
+    ctx.membershipId,
+    { unreadOnly: true, limit: FEED_SCAN_LIMIT },
+  );
+  return (await visibleNotifications(ctx, rows)).length;
 }
 
 export async function markNotificationRead(ctx: AuthContext, notificationId: string) {
