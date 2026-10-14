@@ -51,7 +51,13 @@ test("create lead -> assign -> convert -> move stage -> log activity -> complete
       page.waitForResponse(
         (r) => /\/leads\/.+\/assign$/.test(r.url()) && r.request().method() === "POST",
       ),
-      page.getByRole("option", { name: /Dev Sales/ }).click(),
+      // Scoped to the open listbox: the page also has native <option>s (the
+      // task assignee <select>) whose text matches "Dev Sales".
+      page
+        .getByRole("listbox")
+        .getByRole("option")
+        .filter({ has: page.locator(".combo-option-label", { hasText: /^Dev Sales$/ }) })
+        .click(),
     ]);
     expect(response.ok()).toBe(true);
 
