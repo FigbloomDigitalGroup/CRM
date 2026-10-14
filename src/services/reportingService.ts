@@ -97,7 +97,10 @@ export async function getOrganizationMetrics(
     pipelineStageId: filters.pipelineStageId,
     serviceId: filters.serviceId,
     dateFrom,
-    dateTo,
+    // With no explicit end date the window is open-ended ("up to now").
+    // Bounding it by `new Date()` would drop a record created in the same
+    // millisecond, since created_at is TIMESTAMP(3) and Postgres rounds.
+    dateTo: filters.dateTo ? dateTo : undefined,
   };
 
   const [
