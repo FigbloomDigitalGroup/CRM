@@ -97,6 +97,32 @@ export async function getLeadById(organizationId: string, leadId: string) {
   );
 }
 
+/**
+ * Of the given lead ids, the ones that are still live *and* currently owned
+ * by `membershipId` (not archived, not reassigned away). Backs the
+ * notification feed's "is this assignment still true?" check so the bell and
+ * the dashboard/Leads list can never disagree about what you own.
+ */
+export async function findActiveLeadIdsOwnedBy(
+  organizationId: string,
+  membershipId: string,
+  leadIds: string[],
+): Promise<Set<string>> {
+  if (leadIds.length === 0) return new Set();
+  const rows = await withOrgContext(organizationId, (tx) =>
+    tx.lead.findMany({
+      where: {
+        organizationId,
+        id: { in: leadIds },
+        ownerMembershipId: membershipId,
+        archivedAt: null,
+      },
+      select: { id: true },
+    }),
+  );
+  return new Set(rows.map((r) => r.id));
+}
+
 export interface ListLeadsFilters {
   query?: string;
   ownerMembershipId?: string;

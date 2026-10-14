@@ -1000,6 +1000,56 @@ a.stat-card:hover {
   margin-top: 2px;
 }
 
+/* Dashboard overview card: stacked sections, one per thing the account can see */
+.overview-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 10px;
+}
+
+.overview-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.overview-section-title a {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.overview-figures {
+  display: flex;
+  gap: 28px;
+  padding-top: 10px;
+}
+
+.overview-figure {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+a.panel-row-title {
+  text-decoration: none;
+  display: block;
+}
+
+a.panel-row-title:hover {
+  text-decoration: underline;
+}
+
 .panel-empty {
   font-size: 13px;
   color: var(--text-tertiary);

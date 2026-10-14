@@ -92,9 +92,9 @@ async function OrganizationProfileSection({
 }
 
 /**
- * Add/rename/reorder/deactivate for the 5 organization-configurable
- * catalogs (FIG-599). CustomerLifecycleState is the same shape but out of
- * this ticket's scope, so it's left read-only/seed-only for now.
+ * Add/rename/reorder/deactivate for the 6 organization-configurable
+ * catalogs: the 5 FIG-599 covers, plus CustomerLifecycleState (FIG-750,
+ * same shape, just not named in FIG-599's AC).
  */
 async function ReferenceDataSection({
   orgSlug,
@@ -103,13 +103,15 @@ async function ReferenceDataSection({
   orgSlug: string;
   ctx: Awaited<ReturnType<typeof resolveRequestContext>>;
 }) {
-  const [leadSources, leadStatuses, pipelineStages, lostReasons, services] = await Promise.all([
-    listCatalog(ctx, "leadSources"),
-    listCatalog(ctx, "leadStatuses"),
-    listCatalog(ctx, "pipelineStages"),
-    listCatalog(ctx, "lostReasons"),
-    listCatalog(ctx, "services"),
-  ]);
+  const [leadSources, leadStatuses, pipelineStages, lostReasons, services, customerLifecycleStates] =
+    await Promise.all([
+      listCatalog(ctx, "leadSources"),
+      listCatalog(ctx, "leadStatuses"),
+      listCatalog(ctx, "pipelineStages"),
+      listCatalog(ctx, "lostReasons"),
+      listCatalog(ctx, "services"),
+      listCatalog(ctx, "customerLifecycleStates"),
+    ]);
 
   return (
     <div>
@@ -152,6 +154,13 @@ async function ReferenceDataSection({
         label="Services"
         entries={services}
         variant="service"
+      />
+      <CatalogEditor
+        orgSlug={orgSlug}
+        catalogKey="customerLifecycleStates"
+        label="Customer lifecycle states"
+        entries={customerLifecycleStates}
+        variant="plain"
       />
     </div>
   );

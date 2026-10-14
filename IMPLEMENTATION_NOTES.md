@@ -666,13 +666,15 @@ webhook, not always custom headers. The query param works with the
 lowest common denominator; `x-figbloom-inbound-key` is still accepted too,
 for a provider that does support custom headers.
 
-## Reference data and website lead assignment (FIG-599)
+## Reference data and website lead assignment (FIG-599, FIG-750)
 
-**One generic repository/service for 5 near-identical catalogs, instead of
-5 copy-pasted files.** LeadSource, LeadStatus, PipelineStage, LostReason,
-and Service share the same shape (`id`/`organizationId`/`key`/`name`/
-`description`/`sequence`/`isActive`) plus a small set of per-catalog extras
-(PipelineStage's `probability`/`isWon`/`isLost`, Service's `category`).
+**One generic repository/service for 6 near-identical catalogs, instead of
+6 copy-pasted files.** LeadSource, LeadStatus, PipelineStage, LostReason,
+Service, and CustomerLifecycleState (added in FIG-750 -- same shape, it
+just wasn't named in FIG-599's AC) share the same shape (`id`/
+`organizationId`/`key`/`name`/`description`/`sequence`/`isActive`) plus a
+small set of per-catalog extras (PipelineStage's `probability`/`isWon`/
+`isLost`, Service's `category`).
 `src/repositories/referenceCatalogs.ts` dispatches to the right Prisma
 delegate through one `CatalogKey`-keyed lookup (an explicit, contained
 `as unknown as` cast at that single boundary -- every caller outside this
@@ -1425,8 +1427,6 @@ break is only half-verified.
 - A full website-lead-assignment rules engine (by source, territory,
   service, etc.) — FIG-599 built a single round-robin/unassigned switch,
   not this; still tracked as FIG-436.
-- A management UI for `CustomerLifecycleState` — same shape as the 5
-  catalogs FIG-599 covers, but not named in that ticket's AC.
 - Full proposal generation/e-signature — `ProposalReference` is reference-
   only by design.
 - Multiple simultaneously-valid website API keys, or HMAC-signed webhook

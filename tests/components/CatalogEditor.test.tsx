@@ -91,6 +91,28 @@ describe("CatalogEditor", () => {
     );
   });
 
+  it("posts to the customerLifecycleStates endpoint when adding an entry for that catalog", async () => {
+    const user = userEvent.setup();
+    render(
+      <CatalogEditor
+        orgSlug="figbloom"
+        catalogKey="customerLifecycleStates"
+        label="Customer lifecycle states"
+        entries={ENTRIES}
+        variant="plain"
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Name"), "Renewal Risk");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/orgs/figbloom/reference-catalogs/customerLifecycleStates",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
   it("disables the up-arrow on the first row and the down-arrow on the last row", () => {
     render(
       <CatalogEditor

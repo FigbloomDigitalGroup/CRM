@@ -335,14 +335,15 @@ them on. Every attempt -- accepted or rejected -- shows up in that page's
 "Recent activity" table. A key can be rotated (replaced immediately) or
 revoked outright (disabled, no replacement) from there too.
 
-## Reference data (FIG-599)
+## Reference data (FIG-599, FIG-750)
 
-The 5 organization-configurable catalogs behind Lead/Deal/Company
+The 6 organization-configurable catalogs behind Lead/Deal/Company
 dropdowns -- Pipeline Stages, Lead Sources, Lead Statuses, Lost Reasons,
-Services -- have a management UI on `/o/[orgSlug]/settings`
-(`configuration.manage`, Management only): add, rename, reorder
-(move up/down), and deactivate/reactivate each entry; Pipeline Stages also
-edit `probability`/`isWon`/`isLost`, Services also edit `category`.
+Services, and Customer Lifecycle States -- have a management UI on
+`/o/[orgSlug]/settings` (`configuration.manage`, Management only): add,
+rename, reorder (move up/down), and deactivate/reactivate each entry;
+Pipeline Stages also edit `probability`/`isWon`/`isLost`, Services also
+edit `category`.
 
 Deactivating never deletes anything and can never orphan a record: every
 one of these catalogs is referenced from Lead/Deal/Company by a foreign
@@ -351,9 +352,7 @@ key that's either `onDelete: Restrict` (the ones that are required, e.g.
 hard delete was never on the table. `isActive` only gates which values a
 *new* record can pick; an existing record keeps showing its value
 regardless, and the settings UI shows how many records currently use each
-entry before you deactivate it. `CustomerLifecycleState` is the same shape
-but wasn't part of this ticket's acceptance criteria, so it's still
-seed-only.
+entry before you deactivate it.
 
 ## Notifications and outbound delivery
 
