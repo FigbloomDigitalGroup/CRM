@@ -1205,3 +1205,34 @@ model AuditEvent {
   @@index([organizationId, actorMembershipId])
   @@map("audit_events")
 }
+
+enum ScheduledJobStatus {
+  IDLE
+  RUNNING
+}
+
+/// Tracks a recurring background job's run state across the whole
+/// deployment (FIG-783) -- currently just the notifications due/overdue
+/// sweep (`scheduledJobRuns.ts`, `notificationSweepService.ts`). One row
+/// per `jobKey`, claimed by a single atomic `UPDATE ... WHERE status =
+/// 'IDLE' ...` (Postgres serializes concurrent UPDATEs touching the same
+/// row, so only one caller's statement can ever flip it to `RUNNING`),
+/// which is what stops two overlapping triggers of the same job -- an
+/// external cron firing twice, two replicas each wired to the same
+/// schedule -- from both running at once and double-sending.
+/// Global/operational state, not tenant business data: no
+/// `organizationId`, and deliberately outside the row-level-security
+/// scheme added in `*_tenant_integrity_and_rls` (RLS there is applied to
+/// an explicit, named list of tables -- a table simply absent from that
+/// list has none, which is correct here).
+model ScheduledJobRun {
+  id          String             @id @default(uuid())
+  jobKey      String             @unique @map("job_key")
+  status      ScheduledJobStatus @default(IDLE)
+  startedAt   DateTime?          @map("started_at")
+  completedAt DateTime?          @map("completed_at")
+  lastError   String?            @map("last_error")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  @@map("scheduled_job_runs")
+}

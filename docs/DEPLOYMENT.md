@@ -96,6 +96,8 @@ by whether an environment needs it:
 | `WEBSITE_LEAD_RATE_LIMIT_*` | Optional | Optional | Sane defaults apply; tune only if the defaults are wrong for real traffic. |
 | `IMPORT_MAX_ROWS` | Optional | Optional | Per-call CSV import row ceiling (FIG-596); defaults to 20000. |
 | `APP_BASE_URL` | Optional (defaults to `http://localhost:3000`) | **Required for correct links** | Builds the deep links inside notification emails (FIG-597) -- set to this environment's real public URL. |
+| `CRON_SECRET` | Not needed | **Required to use `/api/cron/notifications-sweep`** | See "Scheduled jobs," below. Not needed if the notifications sweep is only ever triggered via the CLI script. |
+| `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` | Optional | Optional | Defaults to `15`. See "Scheduled jobs," below. |
 | `SMS_PROVIDER_API_KEY` | Not needed | Optional | No real SMS provider is wired up yet (FIG-597) -- see `src/notifications/sms.ts`. Setting this alone does nothing. |
 | `LOG_LEVEL` | Optional (defaults to `info`) | Optional | `pino` level -- see "Logging," below. |
 | `NODE_ENV` | Set by tooling (`next dev`/`test`) | `production` | Set automatically by `next build`/`next start`; the Dockerfile also sets it explicitly in the runner stage. |
@@ -130,22 +132,73 @@ path.
 
 ## Scheduled jobs
 
-`npm run notifications:sweep` (`scripts/notifications-sweep.ts`, FIG-597)
-generates "task due today"/"task overdue" notifications and retries any
-failed email delivery whose backoff has elapsed. This project's deployment
-is a single Docker image with no scheduler/queue sidecar (see "The image,"
-above), so nothing runs this automatically -- wire it to whatever
-recurring-task mechanism your chosen host provides:
+The notifications due/overdue sweep (FIG-597) generates "task due
+today"/"task overdue" notifications and retries any failed email delivery
+whose backoff has elapsed. Its actual logic lives in
+`src/services/notificationSweepService.ts`'s `runNotificationsSweep` --
+both ways of triggering it below call exactly that function, so there's one
+implementation to reason about regardless of how your deployment schedules
+it.
 
-- A cron entry on a VPS: `*/15 * * * * docker exec <container> npm run notifications:sweep`
-- A platform-native scheduled job (Render Cron Jobs, Railway Cron, Fly
-  Machines on a schedule, a Kubernetes CronJob, ...)
+### Triggering it (pick one)
 
-Every 15-30 minutes is reasonable. It's safe to run more often or to miss a
-run entirely: generated notifications are deduplicated (a task is only
-ever flagged "due" or "overdue" once, see `notifications`' partial unique
-index), and a skipped run just means the next one catches up on whatever's
-now due/overdue or newly eligible for retry.
+This project's deployment is a single Docker image with no scheduler/queue
+sidecar (see "The image," above), so nothing runs this automatically on its
+own -- wire it to one of:
+
+- **An authenticated cron route (recommended -- works on any host):**
+  `GET /api/cron/notifications-sweep`, authenticated by a shared secret
+  (`CRON_SECRET`, see below) sent as either `Authorization: Bearer
+  <CRON_SECRET>` or an `X-Cron-Secret: <CRON_SECRET>` header. Point any
+  external scheduler at this URL:
+  - A VPS crontab: `*/15 * * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/notifications-sweep`
+  - A GitHub Actions workflow on a `schedule:` cron trigger
+  - A platform's own scheduled-HTTP-request feature (Vercel Cron, Render
+    Cron Jobs, Railway Cron, a Kubernetes CronJob running `curl`, ...) --
+    several of these (Vercel Cron included) already send requests with
+    exactly the `Authorization: Bearer <secret>` header this route expects.
+- **A plain CLI invocation on a schedule** (`npm run notifications:sweep`,
+  `scripts/notifications-sweep.ts`) -- for a VPS cron entry or sidecar cron
+  container that would rather `exec` into the running container than make
+  an HTTP request:
+  `*/15 * * * * docker exec <container> npm run notifications:sweep`
+
+Either way, the interval between triggers is yours to choose when you
+configure the scheduler/cron entry -- 15-30 minutes is reasonable. The app
+does not need to be told what that interval is in order to run the sweep;
+see the next section for what `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES`
+actually does.
+
+### Required/optional env vars
+
+| Variable | Required for | Notes |
+|---|---|---|
+| `CRON_SECRET` | The `/api/cron/notifications-sweep` route | Any long random value, generated per environment (same handling as `APP_DB_PASSWORD`/`SMTP_PASS`). The route refuses to run at all (500) if this is unset, rather than ever being callable without one. Not needed if you only ever trigger the sweep via the CLI script. |
+| `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` | Optional, both triggers | Defaults to `15`. Used two ways: (1) a self-throttle -- the sweep itself refuses to actually run again until this many minutes have passed since its last successful completion, so a misconfigured or too-eager scheduler calling it every minute can't force extra runs; (2) the stale-lock timeout (3x this value) that lets a crashed run's lock be reclaimed instead of wedging the job forever. Set this to match whatever interval you actually configured the scheduler/cron entry with. |
+
+### Double-send protection
+
+Overlapping runs can't double-send (two replicas triggered by the same
+schedule, a slow run still in flight when the next tick fires): every call
+to `runNotificationsSweep` first tries to claim a lock row
+(`scheduled_job_runs`, one row per job, compare-and-swap `IDLE` ->
+`RUNNING`) before touching any organization's data, and skips entirely if
+it can't. This is on top of generated notifications already being
+deduplicated regardless (a task is only ever flagged "due" or "overdue"
+once, see `notifications`' partial unique index) -- so it's also safe to
+run more often than needed or to miss a run entirely; a skipped run just
+means the next one catches up on whatever's now due/overdue or newly
+eligible for retry.
+
+### Checking it's actually running
+
+`GET /api/health`'s response includes a `notificationsSweep` object
+(`{status, lastCompletedAt, lastError}`) -- `lastCompletedAt` is `null`
+only if the job has never completed yet in this environment (e.g. before
+its scheduler/cron entry has fired for the first time). The sweep also
+logs a structured line (`src/lib/logger.ts`, so it reaches whatever log
+aggregator you've wired up) on completion and on any per-organization
+failure.
 
 ## Logging / error monitoring
 
