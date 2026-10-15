@@ -58,7 +58,6 @@ export default async function OrgLayout({
     hasPermission(ctx, "reporting.view.all");
   const canViewCompanies = hasPermission(ctx, "companies.view");
   const canViewContacts = hasPermission(ctx, "contacts.view");
-  const canManageSettings = hasPermission(ctx, "configuration.manage");
 
   const roleName = ctx.roleKey
     .split("_")
@@ -89,7 +88,6 @@ export default async function OrgLayout({
         canViewReports={canViewReports}
         canViewCompanies={canViewCompanies}
         canViewContacts={canViewContacts}
-        canManageSettings={canManageSettings}
         logoutButton={<LogoutButton />}
       />
       <div className="main">

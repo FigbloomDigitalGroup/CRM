@@ -37,7 +37,6 @@ export function Sidebar({
   canViewReports,
   canViewCompanies,
   canViewContacts,
-  canManageSettings,
   logoutButton,
 }: {
   orgSlug: string;
@@ -49,7 +48,6 @@ export function Sidebar({
   canViewReports: boolean;
   canViewCompanies: boolean;
   canViewContacts: boolean;
-  canManageSettings: boolean;
   logoutButton: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -94,8 +92,13 @@ export function Sidebar({
     { href: `${base}/contacts`, label: "Contacts", icon: <IconContacts />, visible: canViewContacts },
   ];
 
+  // Every active member can reach this -- it holds their own notification
+  // preferences regardless of role (FIG-785). The page itself gates its
+  // org-level sections (profile, members, integrations, catalogs) behind
+  // their own permissions, same as every other page; this link's
+  // visibility was never meant to be a second, redundant access check.
   const administration: NavLink[] = [
-    { href: `${base}/settings`, label: "Settings", icon: <IconSettings />, visible: canManageSettings },
+    { href: `${base}/settings`, label: "Settings", icon: <IconSettings />, visible: true },
   ];
 
   function isActive(link: NavLink) {
@@ -191,7 +194,7 @@ export function Sidebar({
       {visibleAdministration.length > 0 && (
         <div className="sidebar-bottom">
           <div className="sidebar-section sidebar-section-administration">
-            <div className="sidebar-section-label">Administration</div>
+            <div className="sidebar-section-label">Settings</div>
             {renderLinks(visibleAdministration)}
           </div>
         </div>
