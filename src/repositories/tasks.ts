@@ -71,6 +71,7 @@ export async function getTaskById(organizationId: string, taskId: string) {
 }
 
 export interface ListTasksFilters {
+  query?: string;
   assigneeMembershipId?: string;
   status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   companyId?: string;
@@ -81,6 +82,8 @@ export interface ListTasksFilters {
   /** "Due today," "due this week," etc. (FIG-443) -- independent of overdueOnly. */
   dueAfter?: Date;
   dueBefore?: Date;
+  /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
+  take?: number;
 }
 
 /**
@@ -116,8 +119,17 @@ export async function listTasks(
               status: { in: ["PENDING", "IN_PROGRESS"] },
             }
           : {}),
+        ...(filters.query
+          ? {
+              OR: [
+                { title: { contains: filters.query, mode: "insensitive" } },
+                { description: { contains: filters.query, mode: "insensitive" } },
+              ],
+            }
+          : {}),
       },
       orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
+      take: filters.take,
     }),
   );
 }

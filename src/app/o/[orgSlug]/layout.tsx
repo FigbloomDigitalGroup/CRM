@@ -7,7 +7,8 @@ import { LogoutButton } from "./LogoutButton";
 import { Sidebar } from "./_shared/Sidebar";
 import { ThemeToggle } from "./_shared/ThemeToggle";
 import { NotificationBell } from "./_shared/NotificationBell";
-import { IconChevronDown, IconSearch } from "./_shared/icons";
+import { GlobalSearch } from "./_shared/GlobalSearch";
+import { IconChevronDown } from "./_shared/icons";
 
 export default async function OrgLayout({
   children,
@@ -97,10 +98,7 @@ export default async function OrgLayout({
             <p className="topbar-datetime">{datetime}</p>
           </div>
           <div className="topbar-search">
-            <div className="topbar-search-box">
-              <IconSearch />
-              <input type="search" placeholder="Search Figbloom CRM" aria-label="Search Figbloom CRM" />
-            </div>
+            <GlobalSearch orgSlug={orgSlug} />
           </div>
           <div className="topbar-right">
             <NotificationBell orgSlug={orgSlug} />

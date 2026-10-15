@@ -461,9 +461,14 @@ a:hover {
   justify-content: center;
 }
 
-.topbar-search-box {
+.global-search {
+  position: relative;
   width: 100%;
   max-width: 460px;
+}
+
+.topbar-search-box {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -490,6 +495,76 @@ a:hover {
 
 .topbar-search-box input::placeholder {
   color: var(--text-tertiary);
+}
+
+.global-search-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(20, 20, 15, 0.12);
+  padding: 8px;
+  z-index: 30;
+}
+
+.global-search-empty {
+  padding: 10px 8px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.global-search-group + .global-search-group {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.global-search-group-label {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+.global-search-result {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.global-search-result:hover,
+.global-search-result.is-active {
+  background: var(--bg-page);
+}
+
+.global-search-result-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.global-search-result-sublabel {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+}
+
+/* Jumped to from a global-search result (FIG-787) -- Tasks has no own
+   detail page, so a search hit lands on the Tasks list scrolled to this
+   row; the highlight is what tells the user which row that was. */
+tr:target {
+  background: var(--bg-page);
+  outline: 2px solid var(--brand-green);
+  outline-offset: -2px;
 }
 
 .pill {

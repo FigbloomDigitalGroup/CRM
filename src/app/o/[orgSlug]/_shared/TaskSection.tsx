@@ -125,7 +125,7 @@ export function TaskSection({
       </thead>
       <tbody>
         {tasks.map((t) => (
-          <tr key={t.id}>
+          <tr key={t.id} id={`task-${t.id}`}>
             <td>{t.title}</td>
             <td>{assigneeName(t.assigneeMembershipId)}</td>
             <td className={isOverdue(t) ? "overdue" : undefined}>

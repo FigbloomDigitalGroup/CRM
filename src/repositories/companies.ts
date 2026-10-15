@@ -33,6 +33,8 @@ export interface ListCompaniesFilters {
   lifecycleStateId?: string;
   /** Archived companies are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
+  /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
+  take?: number;
 }
 
 /**
@@ -112,6 +114,7 @@ export async function listCompanies(
           : {}),
       },
       orderBy: { createdAt: "desc" },
+      take: filters.take,
     }),
   );
 }
