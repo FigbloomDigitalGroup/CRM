@@ -74,6 +74,7 @@ export interface ListTasksFilters {
   query?: string;
   assigneeMembershipId?: string;
   status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  priority?: "LOW" | "MEDIUM" | "HIGH";
   companyId?: string;
   contactId?: string;
   leadId?: string;
@@ -101,6 +102,7 @@ export async function listTasks(
         organizationId,
         assigneeMembershipId: filters.assigneeMembershipId,
         status: filters.status,
+        priority: filters.priority,
         companyId: filters.companyId,
         contactId: filters.contactId,
         leadId: filters.leadId,
@@ -128,6 +130,10 @@ export async function listTasks(
             }
           : {}),
       },
+      // Pulls the assignee's display name along so every role that can see a
+      // task can see who it is assigned to (the member list itself is
+      // Management-only). Nested relations are stripped in the service.
+      include: { assignee: { include: { user: true } } },
       orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
       take: filters.take,
     }),

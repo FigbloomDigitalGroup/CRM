@@ -110,11 +110,19 @@ async function grantRole(): Promise<void> {
     await client.query(
       `REVOKE INSERT, UPDATE, DELETE ON "website_lead_request_log" FROM ${ident(APP_ROLE)}`,
     );
+    // FIG-784: this role has no business with the rate-limit counter at
+    // all -- every write and every count-based read happens via the
+    // schema-owner adminDb connection, before any org/session context
+    // exists. Revoked outright, stricter than website_lead_request_log's
+    // write-only revoke above since there isn't even a read-side use.
+    await client.query(
+      `REVOKE SELECT, INSERT, UPDATE, DELETE ON "auth_rate_limit_attempts" FROM ${ident(APP_ROLE)}`,
+    );
     await client.query(
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${ident(APP_ROLE)}`,
     );
     console.log(
-      `Granted table privileges to "${APP_ROLE}" (audit_events remains append-only; website_lead_request_log is read-only).`,
+      `Granted table privileges to "${APP_ROLE}" (audit_events remains append-only; website_lead_request_log and auth_rate_limit_attempts are restricted).`,
     );
   } finally {
     await client.end();

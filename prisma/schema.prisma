@@ -1236,3 +1236,43 @@ model ScheduledJobRun {
 
   @@map("scheduled_job_runs")
 }
+
+enum AuthRateLimitAction {
+  LOGIN
+  SIGNUP
+  PASSWORD_RESET
+  WEBSITE_LEAD
+}
+
+/// Durable, cross-instance rate-limit counter (FIG-784) shared by every
+/// public, pre-session endpoint: login, signup, password-reset request,
+/// and the website lead-capture endpoint (replacing that one's own
+/// `WebsiteLeadRequestLog`-based counting, see that model's doc comment --
+/// `WebsiteLeadRequestLog` keeps writing its own richer per-org monitoring
+/// log independently; this table exists purely to decide "has this
+/// IP/email/key made too many attempts recently," nothing else reads it).
+///
+/// One row per (action, scope, key) per attempt -- e.g. a single login
+/// attempt writes two rows, `("LOGIN", "ip", "203.0.113.1")` and
+/// `("LOGIN", "email", "alice@example.com")` -- counted over a sliding
+/// window (`src/auth/rateLimiter.ts`). Never aggregated or deleted, so this
+/// grows unbounded over time -- same accepted tradeoff as
+/// `WebsiteLeadRequestLog`, no retention job exists for either.
+///
+/// No organizationId, no RLS: every one of these endpoints runs before any
+/// org/session context exists, so every access (the write AND the
+/// count-based read) goes through the schema-owner `adminDb` connection,
+/// never the RLS-scoped app role -- which has no need for this table at
+/// all and has every privilege on it revoked outright (see
+/// `scripts/db-admin.ts#grantRole` and this migration), since there's no
+/// tenant column here for RLS to filter by in the first place.
+model AuthRateLimitAttempt {
+  id        String              @id @default(uuid())
+  action    AuthRateLimitAction
+  scope     String
+  key       String
+  createdAt DateTime            @default(now()) @map("created_at")
+
+  @@index([action, scope, key, createdAt])
+  @@map("auth_rate_limit_attempts")
+}

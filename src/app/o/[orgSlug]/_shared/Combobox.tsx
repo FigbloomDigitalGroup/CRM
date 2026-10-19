@@ -48,6 +48,7 @@ export function Combobox({
   disabled,
   width = 260,
   ariaLabel,
+  searchable,
 }: {
   value: string;
   options: ComboOption[];
@@ -56,8 +57,12 @@ export function Combobox({
   disabled?: boolean;
   width?: number;
   ariaLabel?: string;
+  /** Show a type-to-filter box in the open panel. Defaults to on for lists longer than 8 options (company pickers etc.). */
+  searchable?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(
     null,
@@ -65,6 +70,15 @@ export function Combobox({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
+
+  const filterable = searchable ?? options.length > 8;
+  const needle = query.trim().toLowerCase();
+  const visible =
+    filterable && needle
+      ? options.filter((o) =>
+          `${o.label} ${o.sublabel ?? ""}`.toLowerCase().includes(needle),
+        )
+      : options;
 
   const selected = options.find((o) => o.value === value);
   const triggerText = selected
@@ -80,6 +94,7 @@ export function Combobox({
     const margin = 8;
     const left = Math.min(rect.left, window.innerWidth - margin - panelWidth);
     setCoords({ top: rect.bottom + 6, left: Math.max(margin, left), width: panelWidth });
+    setQuery("");
     setActiveIndex(Math.max(0, options.findIndex((o) => o.value === value)));
     setOpen(true);
   }
@@ -89,12 +104,16 @@ export function Combobox({
   }
 
   function choose(index: number) {
-    const opt = options[index];
+    const opt = visible[index];
     if (!opt) return;
     onChange(opt.value);
     closePanel();
     triggerRef.current?.focus();
   }
+
+  useEffect(() => {
+    if (open && filterable) searchRef.current?.focus();
+  }, [open, filterable]);
 
   useEffect(() => {
     if (!open) return;
@@ -130,11 +149,11 @@ export function Combobox({
       triggerRef.current?.focus();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => Math.min(options.length - 1, i + 1));
+      setActiveIndex((i) => Math.min(visible.length - 1, i + 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActiveIndex((i) => Math.max(0, i - 1));
-    } else if (e.key === "Enter" || e.key === " ") {
+    } else if (e.key === "Enter" || (e.key === " " && !filterable)) {
       e.preventDefault();
       choose(activeIndex);
     }
@@ -167,8 +186,26 @@ export function Combobox({
             className="combo-panel"
             style={{ top: coords.top, left: coords.left, width: coords.width }}
           >
+            {filterable && (
+              <input
+                ref={searchRef}
+                className="combo-search"
+                type="text"
+                placeholder="Search..."
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setActiveIndex(0);
+                }}
+                onKeyDown={handleKeyDown}
+                aria-label="Search options"
+              />
+            )}
             <div className="combo-options">
-              {options.map((opt, index) => {
+              {visible.length === 0 && (
+                <div className="combo-empty">No matches</div>
+              )}
+              {visible.map((opt, index) => {
                 const isSelected = opt.value === value;
                 const isActive = index === activeIndex;
                 return (

@@ -45,26 +45,6 @@ export async function recordWebsiteLeadRequest(
   });
 }
 
-/** How many requests this exact submitted key (valid or not) has made since `since`. */
-export async function countRequestsByKeyHash(
-  keyHash: string,
-  since: Date,
-): Promise<number> {
-  return adminDb.websiteLeadRequestLog.count({
-    where: { keyHash, createdAt: { gte: since } },
-  });
-}
-
-/** How many requests this IP has made (to any organization) since `since`. */
-export async function countRequestsByIp(
-  ipAddress: string,
-  since: Date,
-): Promise<number> {
-  return adminDb.websiteLeadRequestLog.count({
-    where: { ipAddress, createdAt: { gte: since } },
-  });
-}
-
 /**
  * For the settings-page monitoring view -- goes through `withOrgContext`
  * (RLS), unlike the write path above, since this is read by an

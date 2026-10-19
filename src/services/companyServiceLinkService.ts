@@ -1,6 +1,6 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
-import { NotFoundError } from "../auth/errors";
+import { NotFoundError, ValidationError } from "../auth/errors";
 import { getCompany } from "./companyService";
 import {
   createCompanyServiceLink as createCompanyServiceLinkRecord,
@@ -21,6 +21,15 @@ export type UpdateCompanyServiceServiceInput = Omit<
   "startDate" | "endDate"
 > & { startDate?: string | null; endDate?: string | null };
 
+/** An archived company is read-only until restored -- its service list included. */
+function assertCompanyActive(company: { archivedAt: Date | null }) {
+  if (company.archivedAt) {
+    throw new ValidationError(
+      "This company is archived. Restore it before changing its services.",
+    );
+  }
+}
+
 /**
  * Tracks which services (FigBloom's own catalog, not a permission) a
  * Company has/had (FIG-598) -- gated by its own `company_services.*`
@@ -34,8 +43,9 @@ export async function addCompanyService(
   ctx: AuthContext,
   input: CreateCompanyServiceLinkServiceInput,
 ) {
-  await getCompany(ctx, input.companyId);
+  const company = await getCompany(ctx, input.companyId);
   requirePermission(ctx, "company_services.manage");
+  assertCompanyActive(company);
   return createCompanyServiceLinkRecord({
     ...input,
     organizationId: ctx.organizationId,
@@ -63,7 +73,7 @@ export async function updateCompanyService(
   // Re-verifies the parent company is still visible to this caller, not
   // just that the row exists in this organization -- same belt-and-
   // suspenders as every other linked-record check in this codebase.
-  await getCompany(ctx, existing.companyId);
+  assertCompanyActive(await getCompany(ctx, existing.companyId));
   return updateCompanyServiceLinkRecord(ctx.organizationId, companyServiceId, {
     status: input.status,
     notes: input.notes,

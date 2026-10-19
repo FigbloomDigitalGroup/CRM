@@ -78,7 +78,6 @@ export function Sidebar({
 
   const overview: NavLink[] = [
     { href: base, label: "Dashboard", icon: <IconDashboard />, visible: true, exact: true },
-    { href: `${base}/reports`, label: "Reports", icon: <IconReports />, visible: canViewReports },
   ];
 
   const salesWorkspace: NavLink[] = [
@@ -98,6 +97,7 @@ export function Sidebar({
   // their own permissions, same as every other page; this link's
   // visibility was never meant to be a second, redundant access check.
   const administration: NavLink[] = [
+    { href: `${base}/reports`, label: "Reports", icon: <IconReports />, visible: canViewReports },
     { href: `${base}/settings`, label: "Settings", icon: <IconSettings />, visible: true },
   ];
 

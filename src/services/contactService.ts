@@ -1,7 +1,9 @@
+import { canAssignAccountOwner, canWorkAccounts } from "../auth/accountAccess";
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
-import { NotFoundError, ValidationError } from "../auth/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import { getCompanyById } from "../repositories/companies";
 import {
   archiveContact as archiveContactRecord,
   createContact as createContactRecord,
@@ -15,7 +17,18 @@ import {
   type ListContactsFilters,
   type UpdateContactInput,
 } from "../repositories/contacts";
+import {
+  cleanEmail,
+  cleanNotes,
+  cleanOptionalText,
+  cleanRequiredText,
+  omitNull,
+} from "./accountValidation";
 import { diffAuditedFields } from "./auditDiff";
+import {
+  assertEligibleAccountOwner,
+  listAccountOwnerCandidates,
+} from "./ownerEligibility";
 
 /** Beyond ownership (audited separately, below): identity and re-parenting (FIG-600 AC). */
 const AUDITED_CONTACT_FIELDS = ["firstName", "lastName", "companyId"] as const;
@@ -25,25 +38,110 @@ export type CreateContactServiceInput = Omit<
   "organizationId" | "createdByMembershipId"
 >;
 
+/**
+ * Contacts, like companies, are shared org-wide: anyone who can view them
+ * sees all of them, anyone who can edit them can edit all of them. Only
+ * handing a contact to a different owner is restricted
+ * (`canAssignAccountOwner`: Management).
+ */
+
+/**
+ * A contact can only be filed under a company that exists in this
+ * organization and is still active. The foreign key alone would happily
+ * accept another tenant's company id, so this is checked explicitly.
+ */
+async function assertLinkableCompany(
+  organizationId: string,
+  companyId: string | null | undefined,
+) {
+  if (!companyId) return;
+  const company = await getCompanyById(organizationId, companyId);
+  if (!company) {
+    throw new ValidationError("That company does not exist in this organization.");
+  }
+  if (company.archivedAt) {
+    throw new ValidationError(
+      "That company is archived. Restore it or pick an active company.",
+    );
+  }
+}
+
+/** People who can be handed a contact -- feeds the owner pickers. Management only. */
+export async function listAssignableContactOwners(ctx: AuthContext) {
+  if (!canAssignAccountOwner(ctx, "contacts")) {
+    throw new ForbiddenError("contacts.edit + membership.manage");
+  }
+  return listAccountOwnerCandidates(ctx.organizationId, "contacts");
+}
+
 export async function createContact(
   ctx: AuthContext,
   input: CreateContactServiceInput,
 ) {
   requirePermission(ctx, "contacts.create");
 
+  const firstName = cleanRequiredText(input.firstName, "First name");
+  if (!firstName) throw new ValidationError("First name is required.");
+
+  // The person who adds a contact owns it (when they could work it);
+  // naming someone else is a reassignment and needs the same rights as one.
+  let ownerMembershipId: string | undefined = canWorkAccounts(
+    ctx.permissionKeys,
+    "contacts",
+  )
+    ? ctx.membershipId
+    : undefined;
+  if (
+    input.ownerMembershipId &&
+    input.ownerMembershipId !== ctx.membershipId
+  ) {
+    if (!canAssignAccountOwner(ctx, "contacts")) {
+      throw new ForbiddenError("contacts.edit + membership.manage (to choose a different owner)");
+    }
+    await assertEligibleAccountOwner(
+      ctx.organizationId,
+      input.ownerMembershipId,
+      "contacts",
+    );
+    ownerMembershipId = input.ownerMembershipId;
+  }
+
+  await assertLinkableCompany(ctx.organizationId, input.companyId);
+
+  const clean = {
+    firstName,
+    lastName: omitNull(cleanOptionalText(input.lastName, "Last name")),
+    jobTitle: omitNull(cleanOptionalText(input.jobTitle, "Job title")),
+    department: omitNull(cleanOptionalText(input.department, "Department")),
+    phone: omitNull(cleanOptionalText(input.phone, "Phone", 40)),
+    email: omitNull(cleanEmail(input.email)),
+    notes: omitNull(cleanNotes(input.notes)),
+  };
+
   const possibleDuplicates = await findPossibleDuplicateContacts(
     ctx.organizationId,
-    {
-      email: input.email,
-      phone: input.phone,
-    },
+    { email: clean.email, phone: clean.phone },
   );
 
   const contact = await createContactRecord({
     ...input,
+    ...clean,
     organizationId: ctx.organizationId,
     createdByMembershipId: ctx.membershipId,
+    ownerMembershipId,
   });
+
+  if (ownerMembershipId && ownerMembershipId !== ctx.membershipId) {
+    await recordAuditEvent({
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      action: "contact.owner_reassigned",
+      entityType: "Contact",
+      entityId: contact.id,
+      previousValue: { ownerMembershipId: ctx.membershipId },
+      newValue: { ownerMembershipId },
+    });
+  }
 
   return { contact, possibleDuplicates };
 }
@@ -56,42 +154,89 @@ export async function updateContact(
   requirePermission(ctx, "contacts.edit");
 
   const previous = await getContactById(ctx.organizationId, contactId);
+  if (!previous) {
+    throw new NotFoundError("Contact", contactId);
+  }
+  if (previous.archivedAt) {
+    throw new ValidationError(
+      "This contact is archived. Restore it before editing it.",
+    );
+  }
+
+  const data: UpdateContactInput = {
+    firstName: cleanRequiredText(input.firstName, "First name"),
+    lastName: cleanOptionalText(input.lastName, "Last name"),
+    jobTitle: cleanOptionalText(input.jobTitle, "Job title"),
+    department: cleanOptionalText(input.department, "Department"),
+    phone: cleanOptionalText(input.phone, "Phone", 40),
+    email: cleanEmail(input.email),
+    notes: cleanNotes(input.notes),
+    companyId: input.companyId,
+  };
+
+  // Only re-validate the company when it is actually being changed, so a
+  // contact whose company was archived later can still have its other
+  // details corrected.
+  if (
+    input.companyId !== undefined &&
+    input.companyId !== previous.companyId
+  ) {
+    await assertLinkableCompany(ctx.organizationId, input.companyId);
+  }
+
+  let ownerChanged = false;
+  if (
+    input.ownerMembershipId !== undefined &&
+    input.ownerMembershipId !== previous.ownerMembershipId
+  ) {
+    if (!canAssignAccountOwner(ctx, "contacts")) {
+      throw new ForbiddenError("contacts.edit + membership.manage (to reassign the owner)");
+    }
+    if (!input.ownerMembershipId) {
+      throw new ValidationError(
+        "A contact needs an owner -- pick someone to hand it to.",
+      );
+    }
+    await assertEligibleAccountOwner(
+      ctx.organizationId,
+      input.ownerMembershipId,
+      "contacts",
+    );
+    data.ownerMembershipId = input.ownerMembershipId;
+    ownerChanged = true;
+  }
 
   // Ownership changes are auditable (FIG-441 AC) regardless of which
   // other fields this same edit also touches.
-  if (previous && input.ownerMembershipId !== undefined) {
-    if (previous.ownerMembershipId !== input.ownerMembershipId) {
-      await recordAuditEvent({
-        organizationId: ctx.organizationId,
-        actorMembershipId: ctx.membershipId,
-        action: "contact.owner_reassigned",
-        entityType: "Contact",
-        entityId: contactId,
-        previousValue: { ownerMembershipId: previous.ownerMembershipId },
-        newValue: { ownerMembershipId: input.ownerMembershipId },
-      });
-    }
+  if (ownerChanged) {
+    await recordAuditEvent({
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      action: "contact.owner_reassigned",
+      entityType: "Contact",
+      entityId: contactId,
+      previousValue: { ownerMembershipId: previous.ownerMembershipId },
+      newValue: { ownerMembershipId: data.ownerMembershipId },
+    });
   }
 
   // Broadened beyond ownership to other important field changes (FIG-600
   // AC) -- name edits and re-parenting to a different company, bundled
   // into one event.
-  if (previous) {
-    const diff = diffAuditedFields(previous, input, AUDITED_CONTACT_FIELDS);
-    if (diff) {
-      await recordAuditEvent({
-        organizationId: ctx.organizationId,
-        actorMembershipId: ctx.membershipId,
-        action: "contact.updated",
-        entityType: "Contact",
-        entityId: contactId,
-        previousValue: diff.previousValue,
-        newValue: diff.newValue,
-      });
-    }
+  const diff = diffAuditedFields(previous, data, AUDITED_CONTACT_FIELDS);
+  if (diff) {
+    await recordAuditEvent({
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      action: "contact.updated",
+      entityType: "Contact",
+      entityId: contactId,
+      previousValue: diff.previousValue,
+      newValue: diff.newValue,
+    });
   }
 
-  return updateContactRecord(ctx.organizationId, contactId, input);
+  return updateContactRecord(ctx.organizationId, contactId, data);
 }
 
 export async function getContact(ctx: AuthContext, contactId: string) {

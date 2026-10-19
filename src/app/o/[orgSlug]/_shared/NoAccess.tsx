@@ -27,7 +27,7 @@ export function NoAccess({
 }: {
   ctx: AuthContext;
   orgSlug: string;
-  area: "Leads" | "Deals";
+  area: "Leads" | "Deals" | "Tasks" | "Companies" | "Contacts" | "Reports";
 }) {
   const has = (k: string) => hasPermission(ctx, k);
   const roleName = titleCase(ctx.roleKey);
@@ -35,7 +35,13 @@ export function NoAccess({
   const managedBy =
     area === "Leads"
       ? "the Sales and Management teams"
-      : "the teams that work them";
+      : area === "Tasks"
+        ? "the people they are assigned to"
+        : area === "Companies" || area === "Contacts"
+          ? "the Sales and Management teams"
+          : area === "Reports"
+            ? "the people who own the work being measured"
+            : "the teams that work them";
 
   const canLeads = has("leads.view.all") || has("leads.view.own");
   const canDeals = has("deals.view.all") || has("deals.view.own");
@@ -60,7 +66,7 @@ export function NoAccess({
       ? { href: `${base}/deals`, label: "Go to Deals", icon: <IconDeals /> }
       : area !== "Leads" && canLeads
         ? { href: `${base}/leads`, label: "Go to Leads", icon: <IconLeads /> }
-        : canTasks
+        : canTasks && area !== "Tasks"
           ? { href: `${base}/tasks`, label: "Go to Tasks", icon: <IconTasks /> }
           : null;
 

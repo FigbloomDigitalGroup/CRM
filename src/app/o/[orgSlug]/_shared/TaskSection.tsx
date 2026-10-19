@@ -13,6 +13,8 @@ interface Task {
   title: string;
   description: string | null;
   assigneeMembershipId: string;
+  /** Resolved by the server so every role sees who a task is assigned to, not only those who can list members. */
+  assigneeName?: string | null;
   dueAt: string | null;
   priority: TaskPriority;
   status: TaskStatus;
@@ -65,8 +67,10 @@ export function TaskSection({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const assigneeName = (membershipId: string) =>
-    members.find((m) => m.membershipId === membershipId)?.userName ?? "--";
+  const assigneeName = (task: Task) =>
+    task.assigneeName ??
+    members.find((m) => m.membershipId === task.assigneeMembershipId)?.userName ??
+    "--";
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -127,7 +131,7 @@ export function TaskSection({
         {tasks.map((t) => (
           <tr key={t.id} id={`task-${t.id}`}>
             <td>{t.title}</td>
-            <td>{assigneeName(t.assigneeMembershipId)}</td>
+            <td>{assigneeName(t)}</td>
             <td className={isOverdue(t) ? "overdue" : undefined}>
               {t.dueAt ? new Date(t.dueAt).toLocaleString() : "--"}
               {isOverdue(t) && " (overdue)"}

@@ -3,6 +3,7 @@ import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
+import type { AccountKind } from "../auth/accountAccess";
 import { processInBatches } from "../lib/asyncBatch";
 import { parseCsvRows } from "../lib/csv";
 import { recordAuditEvent } from "../repositories/auditEvents";
@@ -15,6 +16,7 @@ import {
   findPossibleDuplicateContacts,
 } from "../repositories/contacts";
 import { createLead, findPossibleDuplicateLeads } from "../repositories/leads";
+import { assertEligibleAccountOwner } from "./ownerEligibility";
 
 /**
  * Hard ceiling on rows processed per import call, independent of upload
@@ -93,13 +95,39 @@ async function resolveOwnerMembershipId(
   return membership.id;
 }
 
+/**
+ * Company/contact imports: the named owner must be someone who can work
+ * the records (not Delivery/Finance), and rows that name nobody belong to
+ * whoever ran the import rather than being left orphaned.
+ */
+async function resolveAccountOwner(
+  organizationId: string,
+  email: string | undefined,
+  kind: AccountKind,
+  importerMembershipId: string,
+): Promise<string> {
+  const membershipId = await resolveOwnerMembershipId(organizationId, email);
+  if (!membershipId) return importerMembershipId;
+  try {
+    await assertEligibleAccountOwner(organizationId, membershipId, kind);
+  } catch (err) {
+    if (err instanceof ValidationError) throw new RowValidationError(err.message);
+    throw err;
+  }
+  return membershipId;
+}
+
 async function resolveCompanyIdByName(
   organizationId: string,
   name: string | undefined,
 ): Promise<string | undefined> {
   if (!name) return undefined;
   const matches = await adminDb.company.findMany({
-    where: { organizationId, name: { equals: name, mode: "insensitive" } },
+    where: {
+      organizationId,
+      archivedAt: null,
+      name: { equals: name, mode: "insensitive" },
+    },
     select: { id: true },
     take: 2,
   });
@@ -260,9 +288,11 @@ export async function importCompanies(
         optionalCell(rawRow, mapping, "lifecycleState"),
         "lifecycleState",
       );
-      const ownerMembershipId = await resolveOwnerMembershipId(
+      const ownerMembershipId = await resolveAccountOwner(
         ctx.organizationId,
         optionalCell(rawRow, mapping, "ownerEmail"),
+        "companies",
+        ctx.membershipId,
       );
       return {
         organizationId: ctx.organizationId,
@@ -318,9 +348,11 @@ export async function importContacts(
         ctx.organizationId,
         optionalCell(rawRow, mapping, "company"),
       );
-      const ownerMembershipId = await resolveOwnerMembershipId(
+      const ownerMembershipId = await resolveAccountOwner(
         ctx.organizationId,
         optionalCell(rawRow, mapping, "ownerEmail"),
+        "contacts",
+        ctx.membershipId,
       );
       return {
         organizationId: ctx.organizationId,

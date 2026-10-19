@@ -94,6 +94,7 @@ by whether an environment needs it:
 | `DEV_SESSION_SECRET` | Required | **Omit** | Signs the `/dev-login` placeholder cookie, which only works when `NODE_ENV` is exactly `"development"` regardless (FIG-605) -- see `IMPLEMENTATION_NOTES.md`, "Real authentication (FIG-592)". |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Optional (unset = logs the link) | **Required for real use** | Without these, password-reset/invite emails only ever reach the server log, not a real inbox -- acceptable for dev, not for real users. |
 | `WEBSITE_LEAD_RATE_LIMIT_*` | Optional | Optional | Sane defaults apply; tune only if the defaults are wrong for real traffic. |
+| `LOGIN_RATE_LIMIT_*` / `SIGNUP_RATE_LIMIT_*` / `PASSWORD_RESET_RATE_LIMIT_*` | Optional | Optional | Sane defaults apply (FIG-784) -- see "Rate limiting on login/signup/password-reset," below. |
 | `IMPORT_MAX_ROWS` | Optional | Optional | Per-call CSV import row ceiling (FIG-596); defaults to 20000. |
 | `APP_BASE_URL` | Optional (defaults to `http://localhost:3000`) | **Required for correct links** | Builds the deep links inside notification emails (FIG-597) -- set to this environment's real public URL. |
 | `CRON_SECRET` | Not needed | **Required to use `/api/cron/notifications-sweep`** | See "Scheduled jobs," below. Not needed if the notifications sweep is only ever triggered via the CLI script. |
@@ -199,6 +200,41 @@ its scheduler/cron entry has fired for the first time). The sweep also
 logs a structured line (`src/lib/logger.ts`, so it reaches whatever log
 aggregator you've wired up) on completion and on any per-organization
 failure.
+
+## Rate limiting on login/signup/password-reset
+
+`POST /api/auth/login`, `/api/auth/signup`, and
+`/api/auth/password-reset/request` are each rate-limited per IP and per
+email (FIG-784) -- real, durable limiting, not an in-process counter, so it
+works correctly across however many replicas you run. It shares the same
+backing store (`auth_rate_limit_attempts`) the website lead-capture
+endpoint's own rate limiting uses (FIG-594) -- one durable mechanism, not
+two. No setup is required beyond applying migrations as usual; there is no
+sidecar, no Redis, nothing extra to deploy.
+
+**Defaults** (all tunable via env, see `.env.example`):
+
+| Action | Window | Max per IP | Max per email |
+|---|---|---|---|
+| Login | 15 min | 20 | 5 |
+| Signup | 1 hour | 10 | 3 |
+| Password-reset request | 1 hour | 10 | 3 |
+
+Once a limit is hit, every further attempt for that IP or email within the
+window gets the same generic 429 (`"Too many requests. Please try again
+later."`) regardless of whether the credentials/email this time happen to
+be valid -- this is the lockout, and it's deliberately indistinguishable
+from "this account doesn't exist" or "this account exists but you got the
+password wrong," same enumeration-resistance reasoning IMPLEMENTATION_NOTES.md's
+"Real authentication (FIG-592)" section already documents for the 401/
+generic-reset-message bodies.
+
+If you're running behind a reverse proxy/load balancer that doesn't
+already set `X-Forwarded-For` (or sets it in a way this environment
+doesn't trust), per-IP limiting silently has nothing to key on for that
+request (see `src/app/api/_lib/clientRequest.ts`'s header comment) -- the
+per-email limit still applies regardless, so this degrades rather than
+fails open entirely.
 
 ## Logging / error monitoring
 

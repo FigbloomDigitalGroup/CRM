@@ -136,3 +136,24 @@ FIG-603, had no dedicated index: `Lead.createdAt`, `Lead.convertedAt`,
 `20261005070422_reporting_indexes` for the composite indexes added to
 cover them (all prefixed by `organizationId`, matching this schema's
 tenant-isolation convention).
+
+## Personal reports (`reporting.view.own`)
+
+Roles without `reporting.view.all` get the same figures, scoped to what the
+role may already see (`getMyMetrics` / `getReportScope` in
+`src/services/reportingService.ts`; API: `GET /api/orgs/<org>/reports/my-metrics`):
+
+- **Leads / deals:** own-only roles (Sales) report on records they own; a
+  role that can view every deal (Delivery, Finance) reports on every deal.
+- **Tasks:** follow-up figures cover tasks assigned to the caller.
+- **Areas a role cannot open are omitted** (Finance has no lead or task
+  figures, Delivery has no lead figures).
+- **Deal values:** shown for deals you own, otherwise only with
+  `deals.view.value`; otherwise counts are shown instead.
+- No owner filter, page usage or CSV export (Management only).
+
+## Date range and integrity notes
+
+- A date-only "to" includes that whole day; unreadable dates fall back to
+  the default window; a reversed range is swapped.
+- The open-pipeline snapshot excludes archived deals.

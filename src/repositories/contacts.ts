@@ -17,13 +17,13 @@ export interface CreateContactInput {
 
 export interface UpdateContactInput {
   firstName?: string;
-  lastName?: string;
+  lastName?: string | null;
   companyId?: string | null;
-  phone?: string;
-  email?: string;
-  jobTitle?: string;
-  department?: string;
-  notes?: string;
+  phone?: string | null;
+  email?: string | null;
+  jobTitle?: string | null;
+  department?: string | null;
+  notes?: string | null;
   ownerMembershipId?: string | null;
 }
 
@@ -36,6 +36,11 @@ export interface ListContactsFilters {
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
   take?: number;
 }
+
+/** See `OWNER_SUMMARY` in `companies.ts` -- a name, never the whole user row. */
+const OWNER_SUMMARY = {
+  select: { id: true, user: { select: { name: true } } },
+} as const;
 
 export async function createContact(input: CreateContactInput) {
   return withOrgContext(input.organizationId, (tx) =>
@@ -77,7 +82,7 @@ export async function getContactById(
   return withOrgContext(organizationId, (tx) =>
     tx.contact.findFirst({
       where: { id: contactId, organizationId },
-      include: { company: true },
+      include: { company: true, owner: OWNER_SUMMARY },
     }),
   );
 }
@@ -122,7 +127,7 @@ export async function listContacts(
             }
           : {}),
       },
-      include: { company: true },
+      include: { company: true, owner: OWNER_SUMMARY },
       orderBy: { createdAt: "desc" },
       take: filters.take,
     }),

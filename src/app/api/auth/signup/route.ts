@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { getClientIp } from "@/app/api/_lib/clientRequest";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
 import { SESSION_COOKIE_NAME } from "@/auth/session";
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
       body.password,
       body.name,
       request.headers.get("user-agent"),
+      getClientIp(request),
     );
 
     const response = NextResponse.json({ userId });

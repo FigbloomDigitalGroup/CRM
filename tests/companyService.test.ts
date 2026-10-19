@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ForbiddenError, NotFoundError } from "../src/auth/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../src/auth/errors";
+import { adminDb } from "../src/db/adminClient";
 import * as companyService from "../src/services/companyService";
+import * as contactService from "../src/services/contactService";
 import { createTestContext, createTestOrganization } from "./helpers/fixtures";
 
 describe("companyService", () => {
@@ -101,5 +103,207 @@ describe("companyService", () => {
     });
 
     expect(possibleDuplicates).toHaveLength(0);
+  });
+});
+
+describe("companyService: roles and ownership", () => {
+  it("makes the creator the owner by default", async () => {
+    const org = await createTestOrganization();
+    const ctx = await createTestContext(org.id, "SALES");
+    const { company } = await companyService.createCompany(ctx, { name: "Mine Co" });
+    expect(company.ownerMembershipId).toBe(ctx.membershipId);
+  });
+
+  it("lets Management create a company for someone else, but not Sales", async () => {
+    const org = await createTestOrganization();
+    const management = await createTestContext(org.id, "MANAGEMENT");
+    const sales = await createTestContext(org.id, "SALES");
+    const salesTwo = await createTestContext(org.id, "SALES");
+
+    const { company } = await companyService.createCompany(management, {
+      name: "Handed Co",
+      ownerMembershipId: sales.membershipId,
+    });
+    expect(company.ownerMembershipId).toBe(sales.membershipId);
+
+    await expect(
+      companyService.createCompany(sales, {
+        name: "Sneaky Co",
+        ownerMembershipId: salesTwo.membershipId,
+      }),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("rejects an owner whose role cannot work companies (Delivery, Finance)", async () => {
+    const org = await createTestOrganization();
+    const management = await createTestContext(org.id, "MANAGEMENT");
+    const delivery = await createTestContext(org.id, "DELIVERY");
+    const finance = await createTestContext(org.id, "FINANCE");
+
+    await expect(
+      companyService.createCompany(management, {
+        name: "Nope Co",
+        ownerMembershipId: delivery.membershipId,
+      }),
+    ).rejects.toThrow(ValidationError);
+
+    const { company } = await companyService.createCompany(management, { name: "Held Co" });
+    await expect(
+      companyService.updateCompany(management, company.id, {
+        ownerMembershipId: finance.membershipId,
+      }),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it("lets Sales edit details on any company but not reassign it", async () => {
+    const org = await createTestOrganization();
+    const management = await createTestContext(org.id, "MANAGEMENT");
+    const sales = await createTestContext(org.id, "SALES");
+    const { company } = await companyService.createCompany(management, { name: "Shared Co" });
+
+    const updated = await companyService.updateCompany(sales, company.id, {
+      industry: "Software",
+    });
+    expect(updated.industry).toBe("Software");
+
+    await expect(
+      companyService.updateCompany(sales, company.id, {
+        ownerMembershipId: sales.membershipId,
+      }),
+    ).rejects.toThrow(ForbiddenError);
+
+    // Re-sending the owner it already has is not a reassignment.
+    await expect(
+      companyService.updateCompany(sales, company.id, {
+        ownerMembershipId: management.membershipId,
+        industry: "Fintech",
+      }),
+    ).resolves.toBeTruthy();
+  });
+
+  it("lets Management reassign, audits it, and refuses to clear the owner", async () => {
+    const org = await createTestOrganization();
+    const management = await createTestContext(org.id, "MANAGEMENT");
+    const sales = await createTestContext(org.id, "SALES");
+    const { company } = await companyService.createCompany(management, { name: "Move Co" });
+
+    const moved = await companyService.updateCompany(management, company.id, {
+      ownerMembershipId: sales.membershipId,
+    });
+    expect(moved.ownerMembershipId).toBe(sales.membershipId);
+
+    await expect(
+      companyService.updateCompany(management, company.id, { ownerMembershipId: null }),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it("gives view-only roles read access but no write access", async () => {
+    const org = await createTestOrganization();
+    const management = await createTestContext(org.id, "MANAGEMENT");
+    const { company } = await companyService.createCompany(management, { name: "Look Co" });
+
+    for (const role of ["DELIVERY", "FINANCE"] as const) {
+      const ctx = await createTestContext(org.id, role);
+      expect((await companyService.listCompanies(ctx)).length).toBeGreaterThan(0);
+      await expect(companyService.createCompany(ctx, { name: "X" })).rejects.toThrow(ForbiddenError);
+      await expect(
+        companyService.updateCompany(ctx, company.id, { name: "Y" }),
+      ).rejects.toThrow(ForbiddenError);
+      await expect(companyService.archiveCompany(ctx, company.id)).rejects.toThrow(ForbiddenError);
+      await expect(
+        companyService.mergeCompanies(ctx, company.id, company.id),
+      ).rejects.toThrow(ForbiddenError);
+    }
+  });
+
+  it("shuts Restricted Technical out of companies entirely", async () => {
+    const org = await createTestOrganization();
+    const ctx = await createTestContext(org.id, "RESTRICTED_TECHNICAL");
+    await expect(companyService.listCompanies(ctx)).rejects.toThrow(ForbiddenError);
+    await expect(
+      companyService.listAssignableCompanyOwners(ctx),
+    ).rejects.toThrow(ForbiddenError);
+  });
+
+  it("only Management gets the assignable-owner list, and it excludes roles that cannot work companies", async () => {
+    const org = await createTestOrganization();
+    const management = await createTestContext(org.id, "MANAGEMENT");
+    const sales = await createTestContext(org.id, "SALES");
+    const delivery = await createTestContext(org.id, "DELIVERY");
+
+    await expect(companyService.listAssignableCompanyOwners(sales)).rejects.toThrow(ForbiddenError);
+
+    const owners = await companyService.listAssignableCompanyOwners(management);
+    const ids = owners.map((o) => o.membershipId);
+    expect(ids).toContain(management.membershipId);
+    expect(ids).toContain(sales.membershipId);
+    expect(ids).not.toContain(delivery.membershipId);
+  });
+
+  it("makes an archived company read-only until it is restored", async () => {
+    const org = await createTestOrganization();
+    const sales = await createTestContext(org.id, "SALES");
+    const { company } = await companyService.createCompany(sales, { name: "Dormant Co" });
+
+    await companyService.archiveCompany(sales, company.id);
+    await expect(
+      companyService.updateCompany(sales, company.id, { name: "Changed" }),
+    ).rejects.toThrow(ValidationError);
+
+    await companyService.restoreCompany(sales, company.id);
+    const edited = await companyService.updateCompany(sales, company.id, { name: "Changed" });
+    expect(edited.name).toBe("Changed");
+  });
+
+  it("validates and normalises what is typed", async () => {
+    const org = await createTestOrganization();
+    const sales = await createTestContext(org.id, "SALES");
+
+    await expect(
+      companyService.createCompany(sales, { name: "   " }),
+    ).rejects.toThrow(ValidationError);
+    await expect(
+      companyService.createCompany(sales, { name: "Bad Mail Co", email: "not-an-email" }),
+    ).rejects.toThrow(ValidationError);
+
+    const { company } = await companyService.createCompany(sales, {
+      name: "  Padded Co  ",
+      industry: "  Retail ",
+    });
+    expect(company.name).toBe("Padded Co");
+    expect(company.industry).toBe("Retail");
+
+    const cleared = await companyService.updateCompany(sales, company.id, { industry: "  " });
+    expect(cleared.industry).toBeNull();
+  });
+
+  it("rejects a lifecycle state from another organization", async () => {
+    const orgA = await createTestOrganization();
+    const orgB = await createTestOrganization();
+    const ctxA = await createTestContext(orgA.id, "SALES");
+    const stateB = await adminDb.customerLifecycleState.findFirstOrThrow({
+      where: { organizationId: orgB.id },
+    });
+
+    await expect(
+      companyService.createCompany(ctxA, { name: "Cross Co", lifecycleStateId: stateB.id }),
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it("lists the owner's name and the live contact count without exposing the user record", async () => {
+    const org = await createTestOrganization();
+    const sales = await createTestContext(org.id, "SALES");
+    const { company } = await companyService.createCompany(sales, { name: "Counted Co" });
+    await contactService.createContact(sales, { firstName: "Ann", companyId: company.id });
+    const archived = await contactService.createContact(sales, {
+      firstName: "Old",
+      companyId: company.id,
+    });
+    await contactService.archiveContact(sales, archived.contact.id);
+
+    const [listed] = await companyService.listCompanies(sales);
+    expect(listed!._count.contacts).toBe(1);
+    expect(listed!.owner?.user.name).toBeTruthy();
+    expect(JSON.stringify(listed)).not.toContain("passwordHash");
   });
 });

@@ -4,7 +4,7 @@ import { hasPermission } from "@/auth/context";
 import { ForbiddenError, NotFoundError } from "@/auth/errors";
 import { listActivitiesForCompany } from "@/services/activityService";
 import { listAuditHistory } from "@/services/auditService";
-import { getCompany, listCompanies } from "@/services/companyService";
+import { getCompany, listAssignableCompanyOwners, listCompanies } from "@/services/companyService";
 import { listCommunicationsForCompany } from "@/services/communicationService";
 import { listCompanyServices } from "@/services/companyServiceLinkService";
 import { listContacts } from "@/services/contactService";
@@ -16,6 +16,10 @@ import { ArchiveControl } from "../../_shared/ArchiveControl";
 import { AuditHistory } from "../../_shared/AuditHistory";
 import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
 import { MergeControl } from "../../_shared/MergeControl";
+import { OwnerChip } from "../../_shared/OwnerChip";
+import { accountCapabilities } from "../../_shared/accountCapabilities";
+import { IconShield } from "../../_shared/icons";
+import { NoAccess } from "../../_shared/NoAccess";
 import { TaskSection } from "../../_shared/TaskSection";
 import { CompanyServicesSection } from "../CompanyServicesSection";
 import { EditCompanyForm } from "./EditCompanyForm";
@@ -35,9 +39,7 @@ export default async function CompanyDetailPage({
   } catch (err) {
     if (err instanceof NotFoundError) notFound();
     if (err instanceof ForbiddenError) {
-      return (
-        <p className="error">Your role does not have access to Companies.</p>
-      );
+      return <NoAccess ctx={ctx} orgSlug={orgSlug} area="Companies" />;
     }
     throw err;
   }
@@ -83,7 +85,12 @@ export default async function CompanyDetailPage({
     if (!(err instanceof ForbiddenError)) throw err;
   }
 
-  const canMerge = hasPermission(ctx, "companies.merge") && !company.archivedAt;
+  const caps = accountCapabilities(ctx, "companies", company);
+  const owners = caps.canReassign
+    ? await listAssignableCompanyOwners(ctx)
+    : [];
+  const ownerName = company.owner?.user.name ?? null;
+  const canMerge = caps.canMerge;
   const mergeOptions = canMerge
     ? (await listCompanies(ctx))
         .filter((c) => c.id !== company.id && !c.archivedAt)
@@ -92,24 +99,105 @@ export default async function CompanyDetailPage({
 
   return (
     <div>
-      <p>
-        <a href={`/o/${orgSlug}/companies`}>&larr; Companies</a>
-      </p>
-      <h1>
-        {company.name}
-        {company.archivedAt && <span className="badge"> Archived</span>}
-      </h1>
-
-      <div className="card">
-        <p>Industry: {company.industry ?? "--"}</p>
-        <p>Email: {company.email ?? "--"}</p>
-        <p>Phone: {company.phone ?? "--"}</p>
-        <p>Website: {company.website ?? "--"}</p>
-        <p>Notes: {company.notes ?? "--"}</p>
+      <div className="detail-head">
+        <div>
+          <a className="detail-back" href={`/o/${orgSlug}/companies`}>
+            &larr; Companies
+          </a>
+          <div className="detail-title">
+            <h1>{company.name}</h1>
+            {company.archivedAt && <span className="badge">Archived</span>}
+            {company.lifecycleState && (
+              <span className="badge badge-green">{company.lifecycleState.name}</span>
+            )}
+          </div>
+          <div className="detail-meta">
+            <span>Owner</span>
+            <OwnerChip name={ownerName} />
+            <span>Added {company.createdAt.toLocaleDateString()}</span>
+          </div>
+        </div>
       </div>
 
-      {hasPermission(ctx, "companies.edit") && (
-        <EditCompanyForm orgSlug={orgSlug} company={company} />
+      {company.archivedAt && (
+        <div className="scope-notice">
+          <IconShield />
+          <p>
+            <strong>This company is archived.</strong> It is read-only until it
+            is restored &mdash; no edits, new contacts or service changes.
+          </p>
+        </div>
+      )}
+      {!company.archivedAt && !hasPermission(ctx, "companies.edit") && (
+        <div className="scope-notice">
+          <IconShield />
+          <p>
+            <strong>You can view this company but not change it.</strong>{" "}
+            Editing is handled by the Sales and Management teams.
+          </p>
+        </div>
+      )}
+
+      <div className="card">
+        <strong>Details</strong>
+        <dl className="detail-grid">
+          <div>
+            <dt>Industry</dt>
+            <dd>{company.industry ?? "--"}</dd>
+          </div>
+          <div>
+            <dt>Lifecycle</dt>
+            <dd>{company.lifecycleState?.name ?? "--"}</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd>{company.email ?? "--"}</dd>
+          </div>
+          <div>
+            <dt>Phone</dt>
+            <dd>{company.phone ?? "--"}</dd>
+          </div>
+          <div>
+            <dt>Website</dt>
+            <dd>{company.website ?? "--"}</dd>
+          </div>
+          <div>
+            <dt>Location</dt>
+            <dd>{company.location ?? "--"}</dd>
+          </div>
+          <div className="is-wide">
+            <dt>Notes</dt>
+            <dd>{company.notes ?? "--"}</dd>
+          </div>
+        </dl>
+      </div>
+
+      {caps.canEdit && (
+        <div className="card">
+          <strong>Edit company</strong>
+          <EditCompanyForm
+            orgSlug={orgSlug}
+            company={{
+              id: company.id,
+              name: company.name,
+              industry: company.industry,
+              website: company.website,
+              location: company.location,
+              email: company.email,
+              phone: company.phone,
+              notes: company.notes,
+              lifecycleStateId: company.lifecycleStateId,
+              ownerMembershipId: company.ownerMembershipId,
+            }}
+            lifecycleStates={referenceData.lifecycleStates.map((s) => ({
+              id: s.id,
+              name: s.name,
+            }))}
+            owners={owners}
+            ownerName={ownerName}
+            canAssign={caps.canReassign}
+          />
+        </div>
       )}
 
       {hasPermission(ctx, "company_services.view") && (
@@ -126,14 +214,15 @@ export default async function CompanyDetailPage({
             notes: s.notes,
           }))}
           catalog={referenceData.services}
-          canManage={hasPermission(ctx, "company_services.manage")}
+          canManage={hasPermission(ctx, "company_services.manage") && !company.archivedAt}
         />
       )}
 
       {hasPermission(ctx, "contacts.view") && (
         <>
           <h2>Contacts at this company</h2>
-          <table>
+          <div className="card table-card">
+          <table className="data-table">
             <thead>
               <tr>
                 <th>Name</th>
@@ -162,6 +251,7 @@ export default async function CompanyDetailPage({
               )}
             </tbody>
           </table>
+          </div>
         </>
       )}
 
@@ -231,7 +321,7 @@ export default async function CompanyDetailPage({
         orgSlug={orgSlug}
         basePath={`companies/${company.id}`}
         archivedAt={company.archivedAt?.toISOString() ?? null}
-        canArchive={hasPermission(ctx, "companies.archive")}
+        canArchive={caps.canArchive || caps.canRestore}
       />
     </div>
   );

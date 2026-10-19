@@ -13,6 +13,8 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const csv = await exportContactsCsv(ctx, {
       query: searchParams.get("q") ?? undefined,
+      companyId: searchParams.get("companyId") || undefined,
+      ownerMembershipId: searchParams.get("ownerMembershipId") || undefined,
     });
     return csvExportResponse(csv, "contacts.csv");
   });
