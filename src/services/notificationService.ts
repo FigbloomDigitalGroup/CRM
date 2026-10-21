@@ -24,7 +24,6 @@ import {
   upsertPreference,
   type NotificationTypeKey,
 } from "../repositories/notificationPreferences";
-import { findActiveLeadIdsOwnedBy } from "../repositories/leads";
 import {
   createNotification,
   listNotificationsForMembership,
