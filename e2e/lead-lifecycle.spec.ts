@@ -38,33 +38,44 @@ test("create lead -> assign -> convert -> move stage -> log activity -> complete
   });
 
   await test.step("assign the lead to a different member", async () => {
-    // The owner picker is the custom Combobox (FIG-752 leads revamp), not a
-    // native <select>: open it, then click the option in its portaled panel.
-    const ownerTrigger = page.getByRole("button", { name: "Reassign lead" });
+    // Ownership lives in the lead edit form's "Owner" Combobox (Sprint 5
+    // lead UI): pick the member, then "Save changes" fires the assign POST.
+    const editForm = page.locator("form.lead-edit-form");
+    const ownerTrigger = editForm.getByRole("button", { name: "Owner" });
     await expect(ownerTrigger).toBeVisible();
-    await ownerTrigger.click();
+    // A click before the client component hydrates is silently lost, so
+    // click until the panel is actually open (never toggling it shut).
+    await expect(async () => {
+      if ((await ownerTrigger.getAttribute("aria-expanded")) !== "true") {
+        await ownerTrigger.click();
+      }
+      await expect(ownerTrigger).toHaveAttribute("aria-expanded", "true", { timeout: 1000 });
+    }).toPass({ timeout: 10_000 });
 
-    // Clicking an option only fires onChange, not the async fetch it kicks
-    // off -- reloading immediately after raced the POST and reloaded before
-    // it reached the server. Wait for the actual response instead.
+    // Scoped to the open listbox: the page also has native <option>s (the
+    // task assignee <select>) whose text matches "Dev Sales".
+    await page
+      .getByRole("listbox")
+      .getByRole("option")
+      .filter({ has: page.locator(".combo-option-label", { hasText: /^Dev Sales$/ }) })
+      .click();
+
+    // Wait for the actual assign response rather than reloading straight
+    // after the click, which raced the POST.
     const [response] = await Promise.all([
       page.waitForResponse(
         (r) => /\/leads\/.+\/assign$/.test(r.url()) && r.request().method() === "POST",
       ),
-      // Scoped to the open listbox: the page also has native <option>s (the
-      // task assignee <select>) whose text matches "Dev Sales".
-      page
-        .getByRole("listbox")
-        .getByRole("option")
-        .filter({ has: page.locator(".combo-option-label", { hasText: /^Dev Sales$/ }) })
-        .click(),
+      editForm.getByRole("button", { name: "Save changes" }).click(),
     ]);
     expect(response.ok()).toBe(true);
 
     // Confirm the reassignment actually persisted, not just the picker's
-    // own optimistic local state.
+    // own local state.
     await page.reload();
-    await expect(page.getByRole("button", { name: "Reassign lead" })).toHaveText(/Dev Sales/);
+    await expect(
+      page.locator("form.lead-edit-form").getByRole("button", { name: "Owner" }),
+    ).toHaveText(/Dev Sales/);
   });
 
   let dealUrl = "";
