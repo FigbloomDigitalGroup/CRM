@@ -62,7 +62,7 @@ Legend: **Done** built and wired; **Partial** exists but incomplete; **Missing**
 | Finance sees won values and payments, **not** open pipeline | Q56 | Mismatch: Finance sees all deals; no payment model or screen exists |
 | Developers and designers see only assigned projects and relevant requirements | Q56, FIG-297 §23 | Missing: Restricted Technical has Tasks only; no project model |
 | Sales also sees shared and unassigned leads | Q56 | Missing: Sales sees own only |
-| Customer lifecycle states manageable | FIG-299 §4.9 | UI built (FIG-750, marked Done) but only on unmerged branch `fig-750-customer-lifecycle-states-settings`, so not on `main` |
+| Customer lifecycle states manageable | FIG-299 §4.9 | UI built and merged (FIG-750, PR #5, `d15ddbc`) |
 | Dormant-customer and renewal reminders, proposal chase | Q58 Tier 2 | Missing (planned V2) |
 | Mobile-first capture, notes after a call, tap-to-call and WhatsApp | Q61–62, Q73 | Missing |
 | "Not a surveillance tool"; few mandatory fields; fast; no duplicates | Q72 | Design principles to keep (see brief) |
@@ -85,9 +85,9 @@ FIG-436, 437, 438, 439, 440, 441, 442, 592, 593, 594, 595, 596, 597, 598, 599, 6
 ### Done in Linear but **not what main shows**: reconcile these first
 | Issue | Linear says | Reality in the repo |
 |---|---|---|
-| **FIG-443** role-specific dashboards and reporting | Done (27 Sep): "Sales dashboard surfaces actionable work", "Management dashboard shows agreed V1 metrics" | The home page on `main` is generic: four count cards, a static "Overview" paragraph, overdue list. The Reports page is strong. The role-specific *home* the acceptance criteria describe is not on `main`. |
-| **FIG-750** Settings UI for Customer Lifecycle States | Done | Commit `f6c0589` exists only on branch `fig-750-customer-lifecycle-states-settings`. It is **not merged into `main`**. `IMPLEMENTATION_NOTES.md` on `main` still lists the screen under "Deliberately not built". |
-| **FIG-737** CI Node version fix | Done | Branch `fix/ci-node-22-rebased` is not merged either (a remote variant `fix/ci-node-22-v2` also exists). Check which one landed. |
+| **FIG-443** role-specific dashboards and reporting | Done (27 Sep): "Sales dashboard surfaces actionable work", "Management dashboard shows agreed V1 metrics" | The home page on `main` is generic: four count cards, a static "Overview" paragraph, overdue list. The Reports page is strong. The role-specific *home* the acceptance criteria describe is not on `main`. **Update 22 Oct (FIG-1009):** the reporting backend, Reports page and Overview card are on `main` (FIG-603, PR #4); only the role-specific home remains, re-scoped to the frontend makeover and the issue reopened. |
+| **FIG-750** Settings UI for Customer Lifecycle States | Done | **Resolved 22 Oct (FIG-1009):** merged via PR #5 (`d15ddbc`). |
+| **FIG-737** CI Node version fix | Done | **Resolved 22 Oct (FIG-1009):** merged via PR #3 (`92fb56f`) and PR #8 (`ff1f049`); CI on Node 22 is green on `main`. |
 
 ### In Progress in Linear (all moved to In Progress on 19 Oct, 09:47–09:48; same cycle)
 | Issue | What it is | Overlap with the makeover |
