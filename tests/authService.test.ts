@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { hashPassword } from "../src/auth/password";
 import { resolveSessionUserId } from "../src/auth/session";
@@ -52,7 +53,7 @@ describe("authService.login", () => {
 
     let unknownEmailMessage = "";
     try {
-      await authService.login("nobody@example.test", "whatever-12345");
+      await authService.login(unknownEmail(), "whatever-12345");
     } catch (err) {
       unknownEmailMessage = (err as Error).message;
     }
@@ -89,6 +90,16 @@ describe("authService.logout", () => {
   });
 });
 
+/**
+ * An address no test has used before. The durable auth rate limiter
+ * (FIG-784) keys on the email and keeps its attempts in the database across
+ * suite runs, so a fixed "nobody@example.test" slowly tripped the limit and
+ * made these tests fail intermittently (B0.02 baseline).
+ */
+function unknownEmail(): string {
+  return `nobody-${randomUUID()}@example.test`;
+}
+
 describe("authService password reset", () => {
   it("returns the same generic message whether or not the email exists", async () => {
     const user = await createUserWithPassword();
@@ -98,7 +109,7 @@ describe("authService password reset", () => {
       (token) => `https://example.test/reset-password?token=${token}`,
     );
     const forUnknown = await authService.requestPasswordReset(
-      "nobody@example.test",
+      unknownEmail(),
       (token) => `https://example.test/reset-password?token=${token}`,
     );
 

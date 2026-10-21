@@ -43,12 +43,20 @@ cp .env.example .env   # adjust APP_DB_PASSWORD if you want a non-default one
 npm run db:setup
 ```
 
-Run the test suite (spins up its own migrations/role/grants against the
-separate `figbloom_crm_test` database — see `tests/globalSetup.ts`):
+Run the test suite with one command (starts Postgres and waits until it is
+healthy, then runs the suite; migrations, the `figbloom_app` role and its
+grants are applied to the separate `figbloom_crm_test` database by
+`tests/globalSetup.ts`):
 
 ```bash
-npm test
+npm run test:local
 ```
+
+If Postgres is already running, `npm test` does the same without the
+`docker compose` step. The suite refuses to start, with a message saying
+how to fix it, when the database is unreachable; it never skips database
+tests. See `docs/TEST_BASELINE.md` for the current counts, duration and
+coverage.
 
 Run the app itself:
 

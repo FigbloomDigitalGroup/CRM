@@ -18,6 +18,7 @@
     "db:setup": "npm run migrate:deploy && npm run db:bootstrap-role && npm run db:grant-role && npm run seed",
     "notifications:sweep": "tsx scripts/notifications-sweep.ts",
     "test": "vitest run",
+    "test:local": "docker compose up -d --wait && vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
