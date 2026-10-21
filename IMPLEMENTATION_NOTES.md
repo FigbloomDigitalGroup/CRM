@@ -248,9 +248,9 @@ connection using a disposable Ethereal test account during development —
 the transport code itself is proven working end-to-end, not just mocked.
 
 Basic brute-force throttling (rate limiting / lockout) was deliberately not
-added — it isn't in FIG-592's acceptance criteria, and doing it properly
-needs shared state (Redis or similar) this project doesn't otherwise use.
-Revisit if this goes internet-facing for real external users.
+added as part of FIG-592 — it wasn't in that ticket's acceptance criteria.
+It was added later, for real, in FIG-784 (below) once this went
+internet-facing for real external users.
 
 `resolveRequestContext`/`getCurrentUserId` (`src/auth/requestContext.ts`)
 take an optional `CookieReader` override for exactly this reason: `cookies()`
@@ -1444,6 +1444,145 @@ every other org-wide metric there), fixed to a trailing 7-day window
 regardless of the page's own date-range filter -- see
 `docs/REPORTING_METRICS.md`'s "Page usage" section for the exact query.
 
+## Error tracking (FIG-753, FIG-444 §5)
+
+**Hooked in at the single existing choke point, not at each call site.**
+`logger.error`/`logger.fatal` already existed at 7 call sites across the
+codebase before this ticket (route-handler fallbacks, notification
+delivery failures); the ticket's own framing ("it would hook in at the
+same `logger.error` call sites") suggested touching all of them, but pino
+already has an extension point built for exactly this --
+`hooks.logMethod(args, method, level)`, which runs with the correct `this`
+binding before the real log call. `src/lib/logger.ts` reports to Sentry
+there once, so every existing call site (and every one added later) is
+covered automatically with zero per-call-site changes. A naive approach
+(spreading pino's instance into a wrapper object to override `.error`)
+would have broken pino's internal `this` binding; `hooks.logMethod` is
+pino's own documented mechanism for this, not a workaround.
+
+**Front and back end, both landing in the same place.** Backend: the
+logger bridge above, plus `onRequestError` (`src/instrumentation.ts`) for
+errors Next.js itself catches during rendering/data fetching before a
+route handler ever runs. Frontend: `src/app/error.tsx` (nested boundary)
+and `src/app/global-error.tsx` (root-layout-level fallback -- a new file;
+`error.tsx` structurally can't catch a failure in the layout it's nested
+inside). `src/instrumentation-client.ts` is the filename/location
+`@sentry/nextjs`'s build plugin looks for automatically -- no explicit
+import wires it in anywhere.
+
+**`withSentryConfig` is not on `@sentry/nextjs`'s main export -- it's
+under `@sentry/nextjs/config`.** The package's main CJS entry
+(`build/cjs/index.server.js`) is the runtime SDK; the Next.js config
+wrapper lives in a separate `./config` subpath export. Importing it from
+the main entry fails at build time with "withSentryConfig is not a
+function" -- caught by actually running `npm run build`, not just
+`tsc --noEmit` (the require happens too late/dynamically for typecheck to
+catch it either way, since `next.config.js` is plain CommonJS, outside
+the TS project).
+
+**`sendDefaultPii` doesn't exist in this SDK major version.** Older Sentry
+SDK docs/training knowledge name a top-level `sendDefaultPii: false`
+option for "don't attach IP/cookies/headers by default." In the installed
+version (`@sentry/nextjs` 11.x), that behavior is simply the default with
+no integration enabled to do otherwise (no `requestDataIntegration`/
+`httpIntegration` with PII options added here) -- there's no such field in
+`ClientOptions` at all, confirmed by `tsc` rejecting it. The real,
+active defense regardless is `beforeSend`/`beforeSendTransaction`
+(`scrubSentryEvent`), which the SDK calls on every event whether or not
+any upstream integration ever attaches PII in the first place.
+
+**PII scrubbing is one function, shared by three call sites.**
+`src/lib/sentryScrub.ts`'s `scrubPII` (generic key/pattern redaction) and
+`scrubSentryEvent` (applies it to the relevant parts of a Sentry event
+shape) are used by the client `beforeSend`, the server `beforeSend`, and
+the logger bridge's `extra` context -- one definition of "sensitive,"
+not three copies that could drift. Key-based redaction (`email`, `value`,
+`notes`, etc.) catches the ticket's explicit "deal values" case (no
+numeric pattern distinguishes a deal amount from any other number);
+pattern-based redaction (email/phone regexes applied to every string,
+recursively) catches the same data showing up somewhere unexpected -- a
+validation error message that echoes the invalid email back, for
+instance. The `user` object on an event is reduced to just an id (never
+name/email), since this app never calls `Sentry.setUser` with anything
+else.
+
+**A DSN is deliberately not a secret.** Unlike `SENTRY_AUTH_TOKEN` (which
+is), the DSN is safe to commit as an example value and safe to ship to the
+browser by Sentry's own design -- its only job is "where to send events,"
+not an authentication credential. That's why one `NEXT_PUBLIC_SENTRY_DSN`
+var covers both the client and server init, rather than a public/private
+pair like `APP_DATABASE_URL`/`DATABASE_URL`.
+
+## Rate limiting on login/signup/password-reset (FIG-784)
+
+Closes the gap FIG-592 explicitly deferred (see that section, above) and
+generalizes FIG-594's website lead-capture rate limiting rather than
+building a second, parallel mechanism: both now count against one shared,
+durable table, `auth_rate_limit_attempts` (`src/auth/rateLimiter.ts`,
+`enforceRateLimit`). Durable (Postgres, via the schema-owner `adminDb`
+connection, not an RLS-scoped table -- there's no organization at this
+point in any of these requests) and cross-instance by construction, unlike
+an in-process `Map`, which would silently reset per replica/restart and
+never agree across more than one instance.
+
+One row per `(action, scope, key)` per attempt -- e.g. a single login
+attempt writes two rows, one scoped `"ip"` and one scoped `"email"` --
+counted over a sliding window and checked *before* any real work (user
+lookup, password hashing/verification, email send), so a caller being
+hammered costs as little as possible per rejected attempt. A rule whose
+key is `null` (no IP header present, e.g. local dev with no reverse proxy
+in front -- see `getClientIp`'s header comment) is skipped rather than
+treated as unlimited.
+
+**This is the lockout.** Once an IP or email has hit its limit within the
+window, every further attempt gets the same generic `RateLimitedError`
+(429) regardless of whether the credentials this time happen to be
+correct -- proven directly in `tests/authRateLimiting.test.ts` by hitting
+the per-email login limit with wrong passwords, then showing the very next
+attempt with the *correct* password is still locked out. A rejected
+attempt is not itself recorded, so continuing to hammer past the limit
+doesn't keep extending the lockout window indefinitely -- it expires based
+on the real, counted attempts that preceded it.
+
+**Enumeration resistance extends to the rate limit itself**, not just the
+401/generic-reset-message bodies FIG-592 already covered: the limiter
+counts by the raw submitted email string regardless of whether a matching
+user actually exists, so a real and a nonexistent email hit the exact same
+threshold, at the exact same attempt count, with the exact same error --
+also proven directly in the test suite (both the login and password-reset
+describe blocks). Signup is the one exception by design (same reasoning as
+FIG-592: revealing "that email is already registered" is normal signup
+UX), but it's still rate-limited per IP and per email like the other two.
+
+Limits are three env vars per action (`*_RATE_LIMIT_WINDOW_MS`,
+`*_RATE_LIMIT_MAX_PER_IP`, `*_RATE_LIMIT_MAX_PER_EMAIL`), read live rather
+than frozen at module load -- same reasoning and naming convention as
+`WEBSITE_LEAD_RATE_LIMIT_*`: ops can retune without a code change, and
+tests set a tiny window/limit instead of firing dozens of real requests.
+Defaults: login 20/IP and 5/email per 15 minutes; signup and password-reset
+10/IP and 3/email per hour each. See `.env.example` and
+`docs/DEPLOYMENT.md`.
+
+`websiteLeadService.ts`'s own rate limiting was moved onto this same table
+(previously it counted rows in `WebsiteLeadRequestLog`, which still exists
+and still gets a row per request -- that log serves its own, independent
+purpose, the per-org monitoring view in `/o/[orgSlug]/settings`, and
+continues to; it's no longer what rate limiting counts against). The two
+now-unused count queries (`countRequestsByIp`/`countRequestsByKeyHash`)
+were deleted from `src/repositories/websiteLeadRequestLog.ts` rather than
+left dead. `tests/websiteAbuseProtection.test.ts`'s existing rate-limit
+tests needed no changes -- they assert `submitWebsiteLead`'s external
+behavior, not which table backs it.
+
+`auth_rate_limit_attempts` has no `organizationId` and no row-level
+security, same treatment as `scheduled_job_runs` (FIG-783) and for the
+same reason: every one of these endpoints runs before any org/session
+context can exist. The RLS-scoped `figbloom_app` role has every privilege
+on this table revoked outright (migration + `scripts/db-admin.ts#grantRole`)
+since it has no legitimate use for it at all -- stricter than
+`website_lead_request_log`'s "write revoked, read kept" treatment, since
+there isn't even a read-side use here.
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit
@@ -1473,5 +1612,6 @@ regardless of the page's own date-range filter -- see
 - Multiple simultaneously-valid website API keys, or HMAC-signed webhook
   support as an alternative — revisit if a second real integration
   consumer shows up.
-- Self-service account creation/signup, SSO, and login rate-limiting — see
-  "Real authentication (FIG-592)," above, for why.
+- Self-service account creation/signup and SSO — see "Real authentication
+  (FIG-592)," above, for why. (Login/signup/password-reset rate limiting
+  *is* built — FIG-784, below.)

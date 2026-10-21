@@ -15,12 +15,17 @@ export function CreateLeadForm({
   leadSources,
   companies,
   contacts,
+  owners = [],
+  defaultOwnerMembershipId = "",
 }: {
   orgSlug: string;
   leadStatuses: Option[];
   leadSources: Option[];
   companies: Option[];
   contacts: Option[];
+  /** Only passed for people with `leads.assign`; everyone else's new lead is simply theirs. */
+  owners?: { membershipId: string; userName: string; roleName: string }[];
+  defaultOwnerMembershipId?: string;
 }) {
   const router = useRouter();
   const [leadStatusId, setLeadStatusId] = useState(leadStatuses[0]?.id ?? "");
@@ -31,6 +36,12 @@ export function CreateLeadForm({
     "WARM",
   );
   const [notes, setNotes] = useState("");
+  const canChooseOwner = owners.length > 0;
+  const [ownerMembershipId, setOwnerMembershipId] = useState(
+    owners.some((o) => o.membershipId === defaultOwnerMembershipId)
+      ? defaultOwnerMembershipId
+      : (owners[0]?.membershipId ?? ""),
+  );
   const [error, setError] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -51,6 +62,10 @@ export function CreateLeadForm({
           contactId: contactId || undefined,
           temperature,
           notes: notes || undefined,
+          ownerMembershipId:
+            canChooseOwner && ownerMembershipId !== defaultOwnerMembershipId
+              ? ownerMembershipId
+              : undefined,
         }),
       });
       const body = await res.json();
@@ -120,6 +135,21 @@ export function CreateLeadForm({
           onChange={(v) => setTemperature(v as "HOT" | "WARM" | "COLD")}
         />
       </label>
+      {canChooseOwner && (
+        <label>
+          Owner
+          <Combobox
+            value={ownerMembershipId}
+            options={owners.map((o) => ({
+              value: o.membershipId,
+              label: o.userName,
+              sublabel: o.roleName,
+              avatarLabel: o.userName.slice(0, 2).toUpperCase(),
+            }))}
+            onChange={setOwnerMembershipId}
+          />
+        </label>
+      )}
       <label>
         Notes
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />

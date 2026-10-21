@@ -6,8 +6,13 @@ import { listActivitiesForDeal } from "@/services/activityService";
 import { listAuditHistory } from "@/services/auditService";
 import { listCommunicationsForDeal } from "@/services/communicationService";
 import { listContacts } from "@/services/contactService";
-import { getDeal } from "@/services/dealService";
+import {
+  getDeal,
+  getDealOwnerNames,
+  listAssignableDealOwners,
+} from "@/services/dealService";
 import { listProposalReferences } from "@/services/proposalService";
+import { recordPageView } from "@/services/pageViewService";
 import { getFormReferenceData } from "@/services/referenceDataService";
 import { listTasks } from "@/services/taskService";
 import { ActivityTimeline } from "../../_shared/ActivityTimeline";
@@ -15,6 +20,8 @@ import { ArchiveControl } from "../../_shared/ArchiveControl";
 import { AuditHistory } from "../../_shared/AuditHistory";
 import { CommunicationTimeline } from "../../_shared/CommunicationTimeline";
 import { TaskSection } from "../../_shared/TaskSection";
+import { dealCapabilities } from "../dealCapabilities";
+import { AssignDealControl } from "./AssignDealControl";
 import { EditDealForm } from "./EditDealForm";
 import { ProposalReferences } from "./ProposalReferences";
 
@@ -25,6 +32,7 @@ export default async function DealDetailPage({
 }) {
   const { orgSlug, dealId } = await params;
   const ctx = await resolveRequestContext(orgSlug);
+  await recordPageView(ctx, "deals_detail");
 
   let deal;
   try {
@@ -91,10 +99,14 @@ export default async function DealDetailPage({
     if (!(err instanceof ForbiddenError)) throw err;
   }
 
-  const canEdit =
-    hasPermission(ctx, "deals.edit.all") ||
-    (hasPermission(ctx, "deals.edit.own") &&
-      deal.ownerMembershipId === ctx.membershipId);
+  // Same rules as the board and the service layer: an archived deal is
+  // read-only until restored, and only people who can edit every deal
+  // (Management) can hand a deal to someone else.
+  const caps = dealCapabilities(ctx, deal);
+  const canEdit = caps.canEdit;
+  const owners = caps.canReassign ? await listAssignableDealOwners(ctx) : [];
+  const ownerNames = await getDealOwnerNames(ctx, [deal.ownerMembershipId]);
+  const ownerName = ownerNames[deal.ownerMembershipId] ?? null;
   const canManageProposals = hasPermission(ctx, "proposals.manage") && canEdit;
 
   const valueDisplay = deal.valueMasked
@@ -146,15 +158,31 @@ export default async function DealDetailPage({
         {deal.outcome === "LOST" && (
           <p>Lost reason: {deal.lostReason?.name ?? "--"}</p>
         )}
-        <p>
-          Owner:{" "}
-          {referenceData.members.find(
-            (m) => m.membershipId === deal.ownerMembershipId,
-          )?.userName ?? "--"}
-        </p>
+        <p>Owner: {ownerName ?? "--"}</p>
         {deal.lead && <p className="badge">Converted from a lead</p>}
         <p>Notes: {deal.notes ?? "--"}</p>
       </div>
+
+      {deal.archivedAt && (
+        <div className="scope-notice">
+          <p>
+            <strong>This deal is archived.</strong> It is read-only until it is
+            restored &mdash; no edits or reassigning.
+          </p>
+        </div>
+      )}
+
+      {caps.canReassign && (
+        <div className="card">
+          <strong>Owner</strong>
+          <AssignDealControl
+            orgSlug={orgSlug}
+            dealId={deal.id}
+            currentOwnerMembershipId={deal.ownerMembershipId}
+            owners={owners}
+          />
+        </div>
+      )}
 
       {canEdit && (
         <EditDealForm
@@ -255,11 +283,7 @@ export default async function DealDetailPage({
         orgSlug={orgSlug}
         basePath={`deals/${deal.id}`}
         archivedAt={deal.archivedAt?.toISOString() ?? null}
-        canArchive={
-          hasPermission(ctx, "deals.archive.all") ||
-          (hasPermission(ctx, "deals.archive.own") &&
-            deal.ownerMembershipId === ctx.membershipId)
-        }
+        canArchive={caps.canArchive || caps.canRestore}
       />
     </div>
   );

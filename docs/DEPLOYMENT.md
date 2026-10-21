@@ -94,8 +94,11 @@ by whether an environment needs it:
 | `DEV_SESSION_SECRET` | Required | **Omit** | Signs the `/dev-login` placeholder cookie, which only works when `NODE_ENV` is exactly `"development"` regardless (FIG-605) -- see `IMPLEMENTATION_NOTES.md`, "Real authentication (FIG-592)". |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Optional (unset = logs the link) | **Required for real use** | Without these, password-reset/invite emails only ever reach the server log, not a real inbox -- acceptable for dev, not for real users. |
 | `WEBSITE_LEAD_RATE_LIMIT_*` | Optional | Optional | Sane defaults apply; tune only if the defaults are wrong for real traffic. |
+| `LOGIN_RATE_LIMIT_*` / `SIGNUP_RATE_LIMIT_*` / `PASSWORD_RESET_RATE_LIMIT_*` | Optional | Optional | Sane defaults apply (FIG-784) -- see "Rate limiting on login/signup/password-reset," below. |
 | `IMPORT_MAX_ROWS` | Optional | Optional | Per-call CSV import row ceiling (FIG-596); defaults to 20000. |
 | `APP_BASE_URL` | Optional (defaults to `http://localhost:3000`) | **Required for correct links** | Builds the deep links inside notification emails (FIG-597) -- set to this environment's real public URL. |
+| `CRON_SECRET` | Not needed | **Required to use `/api/cron/notifications-sweep`** | See "Scheduled jobs," below. Not needed if the notifications sweep is only ever triggered via the CLI script. |
+| `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` | Optional | Optional | Defaults to `15`. See "Scheduled jobs," below. |
 | `SMS_PROVIDER_API_KEY` | Not needed | Optional | No real SMS provider is wired up yet (FIG-597) -- see `src/notifications/sms.ts`. Setting this alone does nothing. |
 | `LOG_LEVEL` | Optional (defaults to `info`) | Optional | `pino` level -- see "Logging," below. |
 | `NODE_ENV` | Set by tooling (`next dev`/`test`) | `production` | Set automatically by `next build`/`next start`; the Dockerfile also sets it explicitly in the runner stage. |
@@ -130,22 +133,108 @@ path.
 
 ## Scheduled jobs
 
-`npm run notifications:sweep` (`scripts/notifications-sweep.ts`, FIG-597)
-generates "task due today"/"task overdue" notifications and retries any
-failed email delivery whose backoff has elapsed. This project's deployment
-is a single Docker image with no scheduler/queue sidecar (see "The image,"
-above), so nothing runs this automatically -- wire it to whatever
-recurring-task mechanism your chosen host provides:
+The notifications due/overdue sweep (FIG-597) generates "task due
+today"/"task overdue" notifications and retries any failed email delivery
+whose backoff has elapsed. Its actual logic lives in
+`src/services/notificationSweepService.ts`'s `runNotificationsSweep` --
+both ways of triggering it below call exactly that function, so there's one
+implementation to reason about regardless of how your deployment schedules
+it.
 
-- A cron entry on a VPS: `*/15 * * * * docker exec <container> npm run notifications:sweep`
-- A platform-native scheduled job (Render Cron Jobs, Railway Cron, Fly
-  Machines on a schedule, a Kubernetes CronJob, ...)
+### Triggering it (pick one)
 
-Every 15-30 minutes is reasonable. It's safe to run more often or to miss a
-run entirely: generated notifications are deduplicated (a task is only
-ever flagged "due" or "overdue" once, see `notifications`' partial unique
-index), and a skipped run just means the next one catches up on whatever's
-now due/overdue or newly eligible for retry.
+This project's deployment is a single Docker image with no scheduler/queue
+sidecar (see "The image," above), so nothing runs this automatically on its
+own -- wire it to one of:
+
+- **An authenticated cron route (recommended -- works on any host):**
+  `GET /api/cron/notifications-sweep`, authenticated by a shared secret
+  (`CRON_SECRET`, see below) sent as either `Authorization: Bearer
+  <CRON_SECRET>` or an `X-Cron-Secret: <CRON_SECRET>` header. Point any
+  external scheduler at this URL:
+  - A VPS crontab: `*/15 * * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/notifications-sweep`
+  - A GitHub Actions workflow on a `schedule:` cron trigger
+  - A platform's own scheduled-HTTP-request feature (Vercel Cron, Render
+    Cron Jobs, Railway Cron, a Kubernetes CronJob running `curl`, ...) --
+    several of these (Vercel Cron included) already send requests with
+    exactly the `Authorization: Bearer <secret>` header this route expects.
+- **A plain CLI invocation on a schedule** (`npm run notifications:sweep`,
+  `scripts/notifications-sweep.ts`) -- for a VPS cron entry or sidecar cron
+  container that would rather `exec` into the running container than make
+  an HTTP request:
+  `*/15 * * * * docker exec <container> npm run notifications:sweep`
+
+Either way, the interval between triggers is yours to choose when you
+configure the scheduler/cron entry -- 15-30 minutes is reasonable. The app
+does not need to be told what that interval is in order to run the sweep;
+see the next section for what `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES`
+actually does.
+
+### Required/optional env vars
+
+| Variable | Required for | Notes |
+|---|---|---|
+| `CRON_SECRET` | The `/api/cron/notifications-sweep` route | Any long random value, generated per environment (same handling as `APP_DB_PASSWORD`/`SMTP_PASS`). The route refuses to run at all (500) if this is unset, rather than ever being callable without one. Not needed if you only ever trigger the sweep via the CLI script. |
+| `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` | Optional, both triggers | Defaults to `15`. Used two ways: (1) a self-throttle -- the sweep itself refuses to actually run again until this many minutes have passed since its last successful completion, so a misconfigured or too-eager scheduler calling it every minute can't force extra runs; (2) the stale-lock timeout (3x this value) that lets a crashed run's lock be reclaimed instead of wedging the job forever. Set this to match whatever interval you actually configured the scheduler/cron entry with. |
+
+### Double-send protection
+
+Overlapping runs can't double-send (two replicas triggered by the same
+schedule, a slow run still in flight when the next tick fires): every call
+to `runNotificationsSweep` first tries to claim a lock row
+(`scheduled_job_runs`, one row per job, compare-and-swap `IDLE` ->
+`RUNNING`) before touching any organization's data, and skips entirely if
+it can't. This is on top of generated notifications already being
+deduplicated regardless (a task is only ever flagged "due" or "overdue"
+once, see `notifications`' partial unique index) -- so it's also safe to
+run more often than needed or to miss a run entirely; a skipped run just
+means the next one catches up on whatever's now due/overdue or newly
+eligible for retry.
+
+### Checking it's actually running
+
+`GET /api/health`'s response includes a `notificationsSweep` object
+(`{status, lastCompletedAt, lastError}`) -- `lastCompletedAt` is `null`
+only if the job has never completed yet in this environment (e.g. before
+its scheduler/cron entry has fired for the first time). The sweep also
+logs a structured line (`src/lib/logger.ts`, so it reaches whatever log
+aggregator you've wired up) on completion and on any per-organization
+failure.
+
+## Rate limiting on login/signup/password-reset
+
+`POST /api/auth/login`, `/api/auth/signup`, and
+`/api/auth/password-reset/request` are each rate-limited per IP and per
+email (FIG-784) -- real, durable limiting, not an in-process counter, so it
+works correctly across however many replicas you run. It shares the same
+backing store (`auth_rate_limit_attempts`) the website lead-capture
+endpoint's own rate limiting uses (FIG-594) -- one durable mechanism, not
+two. No setup is required beyond applying migrations as usual; there is no
+sidecar, no Redis, nothing extra to deploy.
+
+**Defaults** (all tunable via env, see `.env.example`):
+
+| Action | Window | Max per IP | Max per email |
+|---|---|---|---|
+| Login | 15 min | 20 | 5 |
+| Signup | 1 hour | 10 | 3 |
+| Password-reset request | 1 hour | 10 | 3 |
+
+Once a limit is hit, every further attempt for that IP or email within the
+window gets the same generic 429 (`"Too many requests. Please try again
+later."`) regardless of whether the credentials/email this time happen to
+be valid -- this is the lockout, and it's deliberately indistinguishable
+from "this account doesn't exist" or "this account exists but you got the
+password wrong," same enumeration-resistance reasoning IMPLEMENTATION_NOTES.md's
+"Real authentication (FIG-592)" section already documents for the 401/
+generic-reset-message bodies.
+
+If you're running behind a reverse proxy/load balancer that doesn't
+already set `X-Forwarded-For` (or sets it in a way this environment
+doesn't trust), per-IP limiting silently has nothing to key on for that
+request (see `src/app/api/_lib/clientRequest.ts`'s header comment) -- the
+per-email limit still applies regardless, so this degrades rather than
+fails open entirely.
 
 ## Logging / error monitoring
 
@@ -156,11 +245,68 @@ aggregator) actually wants. Every route's unhandled-error fallback logs
 through this (`logger.error({ err }, ...)`) instead of a bare
 `console.error`.
 
-A real error-tracking service (Sentry or similar) is a deliberate next
-step, not built here -- it needs a real account/DSN this project doesn't
-have, the same kind of infrastructure-dependent gap as SMTP (FIG-592) and
-captcha (FIG-594). It would hook in at the same `logger.error` call sites
-already in place.
+### Error tracking (Sentry, FIG-753)
+
+Real error tracking is wired in via `@sentry/nextjs`, covering both ends:
+
+- **Backend**: every `logger.error`/`logger.fatal` call already in the
+  codebase also reports to Sentry (`src/lib/logger.ts`'s pino
+  `hooks.logMethod` -- no change needed at any of those call sites, and
+  none needed for ones added later either). Framework-level errors Next.js
+  itself catches during rendering/data fetching are reported via
+  `onRequestError` in `src/instrumentation.ts`.
+- **Frontend**: unhandled render/hydration errors are reported via
+  `src/app/error.tsx` (the per-route boundary) and `src/app/global-error.tsx`
+  (the one Next.js falls back to if the root layout itself throws -- a
+  plain `error.tsx` can't catch that). Client-side `Sentry.init` lives in
+  `src/instrumentation-client.ts`, the filename/location Next.js's build
+  plugin looks for automatically.
+
+**Setup:**
+
+1. Create a Sentry project (any org/plan with a free tier works for a
+   pilot-scale deployment) and copy its DSN.
+2. Set `NEXT_PUBLIC_SENTRY_DSN` in the target environment (staging,
+   production). A DSN is not a secret by Sentry's own design -- it's safe
+   in a committed example file's comment and safe to ship to the browser,
+   which is why one var covers both the client and server init rather than
+   a public/private pair.
+3. Optional, build-time only, for readable stack traces (real source
+   instead of minified build output): set `SENTRY_ORG`, `SENTRY_PROJECT`,
+   and `SENTRY_AUTH_TOKEN` (a Sentry auth token *is* a real secret -- treat
+   it the same as `APP_DB_PASSWORD`/`SMTP_PASS`). All three are read
+   directly from the environment by the underlying bundler plugin; nothing
+   in this repo needs to reference them. Omitting `SENTRY_AUTH_TOKEN`
+   (e.g. in CI, or any environment without one set up yet) just skips the
+   source-map upload step -- the build still succeeds, and the app's own
+   error reporting is completely unaffected.
+
+Leave all four unset for local dev/CI: every Sentry call in this app
+(`Sentry.init` in both instrumentation files, the logger bridge) is a
+complete no-op without a DSN, so no Sentry account is required to run or
+test this app locally. See `.env.example` for the exact variable names and
+their defaults/comments.
+
+**What's deliberately never sent (FIG-753 AC):** no email address, phone
+number, or deal/money value reaches Sentry, even inside a free-text error
+message, request body, or breadcrumb. `src/lib/sentryScrub.ts` is the one
+place this is implemented -- `scrubPII` (key-based redaction for known
+sensitive fields like `email`/`value`/`notes`, pattern-based redaction for
+anything that looks like an email or phone number embedded in a string)
+and `scrubSentryEvent` (applies it to an event's request data, extra
+context, tags, contexts, breadcrumbs, exception message, and `user` object
+-- which is reduced to just a membership id, since this app never calls
+`Sentry.setUser` with anything else). Both the client and server
+`Sentry.init` set this as `beforeSend`/`beforeSendTransaction`, and the
+logger bridge applies the same `scrubPII` to whatever context object was
+passed to `logger.error`. See `tests/sentryScrub.test.ts` for the exact
+behavior this guarantees.
+
+**Verifying it's working:** after setting `NEXT_PUBLIC_SENTRY_DSN` in a
+real environment, trigger a real error (any unhandled exception in a route
+or page) and confirm it appears in the Sentry project within a minute or
+two, with a redacted/absent `email`/`phone`/`value` wherever the
+underlying error touched one.
 
 ## Inbound email provider
 

@@ -69,6 +69,8 @@ export interface UpdateDealInput {
   lostReasonId?: string | null;
   wonAt?: Date | null;
   lostAt?: Date | null;
+  /** Only ever set by `dealService.assignDeal` -- never from a general edit. */
+  ownerMembershipId?: string;
 }
 
 export async function updateDeal(
@@ -109,6 +111,8 @@ export interface ListDealsFilters {
   stalledOnly?: boolean;
   /** Archived deals are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
+  /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
+  take?: number;
 }
 
 export async function listDeals(
@@ -143,6 +147,7 @@ export async function listDeals(
       },
       include: DEAL_INCLUDE,
       orderBy: [{ pipelineStage: { sequence: "asc" } }, { createdAt: "desc" }],
+      take: filters.take,
     }),
   );
 }

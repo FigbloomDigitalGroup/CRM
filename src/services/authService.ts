@@ -11,6 +11,7 @@ import {
   consumePasswordResetToken,
   createPasswordResetToken,
 } from "../auth/passwordResetToken";
+import { enforceRateLimit, type RateLimitRule } from "../auth/rateLimiter";
 import {
   createSession,
   resolveSessionUserId,
@@ -42,6 +43,86 @@ import {
 const INVALID_CREDENTIALS_MESSAGE = "Invalid email or password.";
 const GENERIC_RESET_REQUESTED_MESSAGE =
   "If that email has an account, a password reset link has been sent.";
+
+/**
+ * Rate limiting (FIG-784) -- per IP and per email, durable across
+ * instances (`src/auth/rateLimiter.ts`), checked before any real work
+ * (user lookup, password hashing/verification, email send) so a caller
+ * being throttled pays as little cost per rejected attempt as possible.
+ * This is what actually implements "lockout": once an IP or email has hit
+ * its limit, every further attempt within the window gets the exact same
+ * generic `RateLimitedError` regardless of whether the credentials this
+ * time happen to be correct -- same enumeration-resistant treatment as
+ * `INVALID_CREDENTIALS_MESSAGE` above, just a 429 instead of a 401.
+ *
+ * Every limit is read live from the environment (not frozen at module
+ * load) -- same reasoning as `websiteLeadService.ts`'s rate limits: ops
+ * can retune without a code change, and tests can set a tiny window/limit
+ * instead of firing dozens of real requests.
+ */
+function envInt(name: string, fallback: number): number {
+  const raw = Number(process.env[name]);
+  return Number.isFinite(raw) && raw > 0 ? raw : fallback;
+}
+
+/** Rate-limit bucket identity for an email -- normalized so `Alice@x.com` and `alice@x.com` share one counter instead of doubling the real limit. */
+function normalizeEmailForRateLimit(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function loginRateLimitRules(ipAddress: string | null, email: string): RateLimitRule[] {
+  return [
+    {
+      scope: "ip",
+      key: ipAddress,
+      windowMs: envInt("LOGIN_RATE_LIMIT_WINDOW_MS", 15 * 60_000),
+      max: envInt("LOGIN_RATE_LIMIT_MAX_PER_IP", 20),
+    },
+    {
+      scope: "email",
+      key: normalizeEmailForRateLimit(email),
+      windowMs: envInt("LOGIN_RATE_LIMIT_WINDOW_MS", 15 * 60_000),
+      max: envInt("LOGIN_RATE_LIMIT_MAX_PER_EMAIL", 5),
+    },
+  ];
+}
+
+function signupRateLimitRules(ipAddress: string | null, email: string): RateLimitRule[] {
+  return [
+    {
+      scope: "ip",
+      key: ipAddress,
+      windowMs: envInt("SIGNUP_RATE_LIMIT_WINDOW_MS", 60 * 60_000),
+      max: envInt("SIGNUP_RATE_LIMIT_MAX_PER_IP", 10),
+    },
+    {
+      scope: "email",
+      key: normalizeEmailForRateLimit(email),
+      windowMs: envInt("SIGNUP_RATE_LIMIT_WINDOW_MS", 60 * 60_000),
+      max: envInt("SIGNUP_RATE_LIMIT_MAX_PER_EMAIL", 3),
+    },
+  ];
+}
+
+function passwordResetRateLimitRules(
+  ipAddress: string | null,
+  email: string,
+): RateLimitRule[] {
+  return [
+    {
+      scope: "ip",
+      key: ipAddress,
+      windowMs: envInt("PASSWORD_RESET_RATE_LIMIT_WINDOW_MS", 60 * 60_000),
+      max: envInt("PASSWORD_RESET_RATE_LIMIT_MAX_PER_IP", 10),
+    },
+    {
+      scope: "email",
+      key: normalizeEmailForRateLimit(email),
+      windowMs: envInt("PASSWORD_RESET_RATE_LIMIT_WINDOW_MS", 60 * 60_000),
+      max: envInt("PASSWORD_RESET_RATE_LIMIT_MAX_PER_EMAIL", 3),
+    },
+  ];
+}
 
 async function recordAuthAuditEvent(
   userId: string,
@@ -84,7 +165,10 @@ export async function signup(
   password: string,
   name: string,
   userAgent?: string | null,
+  ipAddress?: string | null,
 ): Promise<{ token: string; expiresAt: Date; userId: string }> {
+  await enforceRateLimit("SIGNUP", signupRateLimitRules(ipAddress ?? null, email));
+
   if (!isPasswordStrongEnough(password)) {
     throw new ValidationError(
       `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
@@ -118,6 +202,7 @@ export async function login(
   email: string,
   password: string,
   userAgent?: string | null,
+  ipAddress?: string | null,
 ): Promise<{
   token: string;
   expiresAt: Date;
@@ -131,6 +216,8 @@ export async function login(
    */
   organizationSlug: string | null;
 }> {
+  await enforceRateLimit("LOGIN", loginRateLimitRules(ipAddress ?? null, email));
+
   const user = await adminDb.user.findUnique({ where: { email } });
 
   if (!user || user.status !== "ACTIVE" || !user.passwordHash) {
@@ -165,7 +252,13 @@ export async function logout(token: string): Promise<void> {
 export async function requestPasswordReset(
   email: string,
   buildResetUrl: (token: string) => string,
+  ipAddress?: string | null,
 ): Promise<{ message: string }> {
+  await enforceRateLimit(
+    "PASSWORD_RESET",
+    passwordResetRateLimitRules(ipAddress ?? null, email),
+  );
+
   const user = await adminDb.user.findUnique({ where: { email } });
 
   if (user && user.status === "ACTIVE") {

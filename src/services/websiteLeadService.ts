@@ -1,5 +1,6 @@
+import { UnauthorizedError, ValidationError } from "../auth/errors";
+import { enforceRateLimit, type RateLimitRule } from "../auth/rateLimiter";
 import { verifyCaptchaToken } from "../auth/captcha";
-import { RateLimitedError, UnauthorizedError, ValidationError } from "../auth/errors";
 import {
   hashWebsiteApiKey,
   resolveWebsitePublicContext,
@@ -15,8 +16,6 @@ import {
   sendWebsiteLeadAcknowledgement,
 } from "./notificationService";
 import {
-  countRequestsByIp,
-  countRequestsByKeyHash,
   recordWebsiteLeadRequest,
   type WebsiteLeadRequestOutcome,
 } from "../repositories/websiteLeadRequestLog";
@@ -32,13 +31,16 @@ import {
  * optional per-key honeypot/captcha, and optional per-key allowed origins.
  * Every attempt -- accepted or rejected -- is logged via
  * `recordWebsiteLeadRequest` in a `finally` block, so exactly one log row
- * exists per request regardless of which check (if any) rejected it; that
- * log is also what rate limiting counts against, rather than maintaining a
- * separate in-memory counter this project has nowhere durable to keep.
+ * exists per request regardless of which check (if any) rejected it --
+ * that log is purely for this organization's own monitoring view
+ * (`integrationService.listRecentWebsiteActivity`), independent of rate
+ * limiting itself: the counting now goes through the same durable,
+ * cross-instance store every other public auth endpoint uses
+ * (`src/auth/rateLimiter.ts`, FIG-784), not this table.
  *
- * The three limits below are read live from the environment (not frozen
- * at module load), defaulting to sane values if unset -- this lets ops
- * tune them without a code change, and lets tests set a tiny window/limit
+ * The two limits below are read live from the environment (not frozen at
+ * module load), defaulting to sane values if unset -- this lets ops tune
+ * them without a code change, and lets tests set a tiny window/limit
  * instead of firing dozens of real requests to prove the limiting works.
  */
 function rateLimitWindowMs(): number {
@@ -98,24 +100,17 @@ export async function submitWebsiteLead(
       throw new ValidationError("Request body is too large.");
     }
 
-    if (meta.ipAddress) {
-      const since = new Date(Date.now() - rateLimitWindowMs());
-      const ipCount = await countRequestsByIp(meta.ipAddress, since);
-      if (ipCount >= rateLimitMaxPerIp()) {
-        outcome = "RATE_LIMITED";
-        reason = "Per-IP rate limit exceeded.";
-        throw new RateLimitedError();
-      }
-    }
-
-    if (keyHash) {
-      const since = new Date(Date.now() - rateLimitWindowMs());
-      const keyCount = await countRequestsByKeyHash(keyHash, since);
-      if (keyCount >= rateLimitMaxPerKey()) {
-        outcome = "RATE_LIMITED";
-        reason = "Per-key rate limit exceeded.";
-        throw new RateLimitedError();
-      }
+    const windowMs = rateLimitWindowMs();
+    const rateLimitRules: RateLimitRule[] = [
+      { scope: "ip", key: meta.ipAddress, windowMs, max: rateLimitMaxPerIp() },
+      { scope: "key", key: keyHash, windowMs, max: rateLimitMaxPerKey() },
+    ];
+    try {
+      await enforceRateLimit("WEBSITE_LEAD", rateLimitRules);
+    } catch (err) {
+      outcome = "RATE_LIMITED";
+      reason = "Per-IP or per-key rate limit exceeded.";
+      throw err;
     }
 
     let context;

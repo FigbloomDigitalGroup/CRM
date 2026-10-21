@@ -67,6 +67,7 @@ export function AssignLeadControl({
         options={options}
         onChange={handleChange}
         disabled={submitting}
+        placeholder="Unassigned - Assign"
         width={240}
         ariaLabel="Reassign lead"
       />

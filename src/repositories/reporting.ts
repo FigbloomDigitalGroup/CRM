@@ -109,6 +109,9 @@ export async function getPipelineValueByStage(
       where: {
         organizationId,
         outcome: "OPEN",
+        // An archived deal is out of the pipeline; counting it would
+        // overstate what is actually open.
+        archivedAt: null,
         ownerMembershipId: filters.ownerMembershipId,
         serviceId: filters.serviceId,
         pipelineStageId: filters.pipelineStageId,

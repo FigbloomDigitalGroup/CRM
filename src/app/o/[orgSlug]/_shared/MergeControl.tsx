@@ -56,7 +56,7 @@ export function MergeControl({
   }
 
   return (
-    <div className="card">
+    <div className="card" id="merge">
       <strong>Merge duplicate</strong>
       <p className="who">
         Moves this record&apos;s activities, tasks, communications, leads, and deals onto the

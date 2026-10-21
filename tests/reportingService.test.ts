@@ -225,4 +225,152 @@ describe("reportingService", () => {
       expect(Number(filtered.salesByService[0]._sum.value)).toBe(100);
     });
   });
+
+  describe("getReportScope", () => {
+    it("reports what each role's reports cover", async () => {
+      const org = await createTestOrganization();
+      const management = reportingService.getReportScope(
+        await createTestContext(org.id, "MANAGEMENT"),
+      );
+      expect(management).toEqual({ mode: "organization", leads: "all", deals: "all", tasks: "all" });
+
+      const sales = reportingService.getReportScope(await createTestContext(org.id, "SALES"));
+      expect(sales).toEqual({ mode: "personal", leads: "own", deals: "own", tasks: "own" });
+
+      const delivery = reportingService.getReportScope(await createTestContext(org.id, "DELIVERY"));
+      expect(delivery).toEqual({ mode: "personal", leads: null, deals: "all", tasks: "own" });
+
+      const finance = reportingService.getReportScope(await createTestContext(org.id, "FINANCE"));
+      expect(finance).toEqual({ mode: "personal", leads: null, deals: "all", tasks: null });
+    });
+
+    it("refuses Restricted Technical", async () => {
+      const org = await createTestOrganization();
+      const tech = await createTestContext(org.id, "RESTRICTED_TECHNICAL");
+      expect(() => reportingService.getReportScope(tech)).toThrow(ForbiddenError);
+      await expect(reportingService.getMyMetrics(tech)).rejects.toThrow(ForbiddenError);
+    });
+  });
+
+  describe("getMyMetrics", () => {
+    it("counts only the caller's own leads and deals for Sales, values visible", async () => {
+      const org = await createTestOrganization();
+      const sales = await createTestContext(org.id, "SALES", "mine");
+      const salesTwo = await createTestContext(org.id, "SALES", "theirs");
+      const leadStatusId = await getLeadStatusId(org.id);
+      const pipelineStageId = await getPipelineStageId(org.id);
+      const wonStageId = await getPipelineStageId(org.id, "CLOSED_WON");
+      const { company } = await createCompany(sales, { name: "Mine Co" });
+
+      await leadService.createLead(sales, { leadStatusId });
+      await leadService.createLead(salesTwo, { leadStatusId });
+      await leadService.createLead(salesTwo, { leadStatusId });
+
+      const won = await dealService.createDeal(sales, {
+        companyId: company.id,
+        pipelineStageId,
+        value: "750",
+      });
+      await dealService.updateDeal(sales, won.id, { pipelineStageId: wonStageId });
+      await dealService.createDeal(salesTwo, { companyId: company.id, pipelineStageId, value: "50" });
+
+      const metrics = await reportingService.getMyMetrics(sales);
+      expect(metrics.leadConversion?.total).toBe(1);
+      expect(metrics.dealOutcomes?.won.count).toBe(1);
+      expect(Number(metrics.dealOutcomes?.won.value)).toBe(750);
+      expect(metrics.pipelineByStage).toHaveLength(0); // the only open deal belongs to the colleague
+      expect(metrics.valueMasked).toBe(false);
+    });
+
+    it("scopes follow-ups to tasks assigned to the caller", async () => {
+      const org = await createTestOrganization();
+      const sales = await createTestContext(org.id, "SALES", "a");
+      const other = await createTestContext(org.id, "SALES", "b");
+      await taskService.createTask(sales, { title: "Mine", dueAt: new Date().toISOString() });
+      await taskService.createTask(other, { title: "Theirs", dueAt: new Date().toISOString() });
+
+      const metrics = await reportingService.getMyMetrics(sales);
+      const total = (metrics.followUpBreakdown ?? []).reduce((n, r) => n + r._count._all, 0);
+      expect(total).toBe(1);
+    });
+
+    it("gives Finance deals only, with values; Delivery deals and tasks, values hidden", async () => {
+      const org = await createTestOrganization();
+      const management = await createTestContext(org.id, "MANAGEMENT");
+      const finance = await createTestContext(org.id, "FINANCE");
+      const delivery = await createTestContext(org.id, "DELIVERY");
+      const pipelineStageId = await getPipelineStageId(org.id);
+      const { company } = await createCompany(management, { name: "Shared Co" });
+      await dealService.createDeal(management, { companyId: company.id, pipelineStageId, value: "900" });
+
+      const fin = await reportingService.getMyMetrics(finance);
+      expect(fin.leadVolumeBySource).toBeNull();
+      expect(fin.leadConversion).toBeNull();
+      expect(fin.followUpBreakdown).toBeNull();
+      expect(fin.valueMasked).toBe(false);
+      expect(fin.pipelineByStage).toHaveLength(1);
+      expect(Number(fin.pipelineByStage?.[0]?._sum.value)).toBe(900);
+
+      const del = await reportingService.getMyMetrics(delivery);
+      expect(del.leadConversion).toBeNull();
+      expect(del.followUpBreakdown).not.toBeNull();
+      expect(del.valueMasked).toBe(true);
+      expect(del.pipelineByStage?.[0]?._count._all).toBe(1);
+      expect(del.pipelineByStage?.[0]?._sum.value).toBeNull();
+    });
+  });
+
+  describe("report data integrity", () => {
+    it("leaves archived deals out of the open pipeline", async () => {
+      const org = await createTestOrganization();
+      const management = await createTestContext(org.id, "MANAGEMENT");
+      const pipelineStageId = await getPipelineStageId(org.id);
+      const { company } = await createCompany(management, { name: "Archive Co" });
+      const deal = await dealService.createDeal(management, {
+        companyId: company.id,
+        pipelineStageId,
+        value: "300",
+      });
+
+      expect((await reportingService.getOrganizationMetrics(management)).pipelineByStage).toHaveLength(1);
+      await dealService.archiveDeal(management, deal.id);
+      expect((await reportingService.getOrganizationMetrics(management)).pipelineByStage).toHaveLength(0);
+    });
+
+    it("includes the whole of the chosen end date", async () => {
+      const org = await createTestOrganization();
+      const management = await createTestContext(org.id, "MANAGEMENT");
+      const leadStatusId = await getLeadStatusId(org.id);
+      await leadService.createLead(management, { leadStatusId });
+
+      const today = new Date().toISOString().slice(0, 10);
+      const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+      const metrics = await reportingService.getOrganizationMetrics(management, {
+        dateFrom: yesterday,
+        dateTo: today,
+      });
+      expect(metrics.leadConversion.total).toBe(1);
+    });
+
+    it("survives unreadable or reversed dates instead of failing", async () => {
+      const org = await createTestOrganization();
+      const management = await createTestContext(org.id, "MANAGEMENT");
+      const leadStatusId = await getLeadStatusId(org.id);
+      await leadService.createLead(management, { leadStatusId });
+
+      const garbage = await reportingService.getOrganizationMetrics(management, {
+        dateFrom: "not-a-date",
+        dateTo: "also-not",
+      });
+      expect(garbage.leadConversion.total).toBe(1);
+
+      const today = new Date().toISOString().slice(0, 10);
+      const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+      const reversed = await reportingService.getOrganizationMetrics(management, {
+        dateFrom: today,
+        dateTo: yesterday,
+      });
+      expect(reversed.leadConversion.total).toBe(1);
+    });
+  });
 });

@@ -13,6 +13,8 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const csv = await exportCompaniesCsv(ctx, {
       query: searchParams.get("q") ?? undefined,
+      lifecycleStateId: searchParams.get("lifecycleStateId") || undefined,
+      ownerMembershipId: searchParams.get("ownerMembershipId") || undefined,
     });
     return csvExportResponse(csv, "companies.csv");
   });

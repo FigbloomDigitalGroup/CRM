@@ -71,8 +71,10 @@ export async function getTaskById(organizationId: string, taskId: string) {
 }
 
 export interface ListTasksFilters {
+  query?: string;
   assigneeMembershipId?: string;
   status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  priority?: "LOW" | "MEDIUM" | "HIGH";
   companyId?: string;
   contactId?: string;
   leadId?: string;
@@ -81,6 +83,8 @@ export interface ListTasksFilters {
   /** "Due today," "due this week," etc. (FIG-443) -- independent of overdueOnly. */
   dueAfter?: Date;
   dueBefore?: Date;
+  /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
+  take?: number;
 }
 
 /**
@@ -98,6 +102,7 @@ export async function listTasks(
         organizationId,
         assigneeMembershipId: filters.assigneeMembershipId,
         status: filters.status,
+        priority: filters.priority,
         companyId: filters.companyId,
         contactId: filters.contactId,
         leadId: filters.leadId,
@@ -116,8 +121,21 @@ export async function listTasks(
               status: { in: ["PENDING", "IN_PROGRESS"] },
             }
           : {}),
+        ...(filters.query
+          ? {
+              OR: [
+                { title: { contains: filters.query, mode: "insensitive" } },
+                { description: { contains: filters.query, mode: "insensitive" } },
+              ],
+            }
+          : {}),
       },
+      // Pulls the assignee's display name along so every role that can see a
+      // task can see who it is assigned to (the member list itself is
+      // Management-only). Nested relations are stripped in the service.
+      include: { assignee: { include: { user: true } } },
       orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
+      take: filters.take,
     }),
   );
 }

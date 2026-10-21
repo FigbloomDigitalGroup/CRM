@@ -17,12 +17,12 @@ export interface CreateCompanyInput {
 
 export interface UpdateCompanyInput {
   name?: string;
-  industry?: string;
-  website?: string;
-  location?: string;
-  phone?: string;
-  email?: string;
-  notes?: string;
+  industry?: string | null;
+  website?: string | null;
+  location?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  notes?: string | null;
   lifecycleStateId?: string | null;
   ownerMembershipId?: string | null;
 }
@@ -33,7 +33,18 @@ export interface ListCompaniesFilters {
   lifecycleStateId?: string;
   /** Archived companies are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
+  /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
+  take?: number;
 }
+
+/**
+ * Just enough of the owning membership to show a name -- never the whole
+ * user row (it carries the password hash) so list/detail results are safe
+ * to serialize into API responses.
+ */
+const OWNER_SUMMARY = {
+  select: { id: true, user: { select: { name: true } } },
+} as const;
 
 /**
  * Org-scoped functions take `organizationId` explicitly, run inside
@@ -80,7 +91,11 @@ export async function getCompanyById(
   return withOrgContext(organizationId, (tx) =>
     tx.company.findFirst({
       where: { id: companyId, organizationId },
-      include: { contacts: true, lifecycleState: true },
+      include: {
+        contacts: true,
+        lifecycleState: true,
+        owner: OWNER_SUMMARY,
+      },
     }),
   );
 }
@@ -111,7 +126,13 @@ export async function listCompanies(
             }
           : {}),
       },
+      include: {
+        lifecycleState: true,
+        owner: OWNER_SUMMARY,
+        _count: { select: { contacts: { where: { archivedAt: null } } } },
+      },
       orderBy: { createdAt: "desc" },
+      take: filters.take,
     }),
   );
 }

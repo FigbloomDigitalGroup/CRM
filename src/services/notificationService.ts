@@ -10,6 +10,7 @@ import {
   sendWebsiteLeadAcknowledgementEmail,
 } from "../notifications/email";
 import { deliverSmsOrLog } from "../notifications/sms";
+import { findActiveLeadIdsOwnedBy } from "../repositories/leads";
 import {
   createNotificationDelivery,
   listDueDeliveries,
@@ -23,7 +24,6 @@ import {
   upsertPreference,
   type NotificationTypeKey,
 } from "../repositories/notificationPreferences";
-import { findActiveLeadIdsOwnedBy } from "../repositories/leads";
 import {
   createNotification,
   listNotificationsForMembership,
@@ -230,7 +230,11 @@ async function notifyTask(
 ): Promise<void> {
   try {
     const org = await getOrganizationBasics(organizationId);
-    const link = `${appBaseUrl()}/o/${org.slug}/tasks`;
+    // Tasks has no own detail route (FIG-787) -- the anchor lands on the
+    // Tasks list scrolled to this row (see TaskSection.tsx's `#task-{id}`
+    // and globals.css's `tr:target` highlight). This used to point at
+    // `/tasks/${task.id}`, a route that has never existed.
+    const link = `${appBaseUrl()}/o/${org.slug}/tasks#task-${task.id}`;
     const dueLabel = type === "TASK_DUE" ? "due today" : "overdue";
     await notify({
       organizationId,

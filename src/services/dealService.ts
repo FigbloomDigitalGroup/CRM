@@ -4,7 +4,7 @@ import {
   requirePermission,
   requireOwnedRecordPermission,
 } from "../auth/context";
-import { NotFoundError, ValidationError } from "../auth/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
@@ -18,6 +18,10 @@ import {
   type ListDealsFilters,
 } from "../repositories/deals";
 import { diffAuditedFields } from "./auditDiff";
+import {
+  assertEligibleDealOwner,
+  listDealOwnerCandidates,
+} from "./ownerEligibility";
 
 /**
  * Beyond outcome (audited separately, below): other important field
@@ -59,16 +63,94 @@ function maskValue<T extends DealWithOwner>(
   return { ...deal, value: null, valueMasked: true };
 }
 
+/**
+ * Deals have no dedicated "assign" permission; handing a deal to someone
+ * else is reserved for people who can edit every deal (`deals.edit.all`,
+ * i.e. Management). Someone with only `deals.edit.own` (Sales) can work the
+ * deals they own but can never move them to another person -- same shape as
+ * `leads.assign` on leads.
+ */
+function canReassignDeals(ctx: AuthContext): boolean {
+  return hasPermission(ctx, "deals.edit.all");
+}
+
+/** Owners a deal may be handed to: active members whose role can view and edit deals. */
+export async function listAssignableDealOwners(ctx: AuthContext) {
+  if (!canReassignDeals(ctx)) {
+    throw new ForbiddenError("deals.edit.all (to choose a deal owner)");
+  }
+  return listDealOwnerCandidates(ctx.organizationId);
+}
+
+/**
+ * Display names for deal owners, so every role that can see a deal can see
+ * who owns it. The organization member list itself stays Management-only
+ * (`membership.view`); this only resolves the ids the caller already sees
+ * on deals they are allowed to view.
+ */
+export async function getDealOwnerNames(
+  ctx: AuthContext,
+  membershipIds: string[],
+): Promise<Record<string, string>> {
+  if (
+    !hasPermission(ctx, "deals.view.all") &&
+    !hasPermission(ctx, "deals.view.own")
+  ) {
+    throw new ForbiddenError("deals.view.own or deals.view.all");
+  }
+  const ids = [...new Set(membershipIds)];
+  if (ids.length === 0) return {};
+  const memberships = await adminDb.membership.findMany({
+    where: { organizationId: ctx.organizationId, id: { in: ids } },
+    include: { user: true },
+  });
+  return Object.fromEntries(memberships.map((m) => [m.id, m.user.name]));
+}
+
 export async function createDeal(
   ctx: AuthContext,
   input: CreateDealServiceInput,
 ) {
   requirePermission(ctx, "deals.create");
+
+  // The creator owns what they create. Naming a different owner is a
+  // reassignment in all but name, so it needs the same authority as
+  // `assignDeal` and the person must actually be able to work deals.
+  let ownerMembershipId = ctx.membershipId;
+  if (
+    input.ownerMembershipId &&
+    input.ownerMembershipId !== ctx.membershipId
+  ) {
+    if (!canReassignDeals(ctx)) {
+      throw new ForbiddenError("deals.edit.all (to create a deal for someone else)");
+    }
+    await assertEligibleDealOwner(ctx.organizationId, input.ownerMembershipId);
+    ownerMembershipId = input.ownerMembershipId;
+  }
+
+  // A deal is created open. Won/Lost are only reached by moving an
+  // existing deal (that is the path that records the outcome and, for
+  // Lost, the reason) -- creating straight into one would leave a deal on a
+  // closed stage whose outcome still says OPEN.
+  const stage = await adminDb.pipelineStage.findFirst({
+    where: { id: input.pipelineStageId, organizationId: ctx.organizationId },
+  });
+  if (!stage) {
+    throw new ValidationError(
+      "The selected pipeline stage was not found in this organization.",
+    );
+  }
+  if (stage.isWon || stage.isLost) {
+    throw new ValidationError(
+      "A new deal must start in an open pipeline stage.",
+    );
+  }
+
   const deal = await createDealRecord({
     ...input,
     organizationId: ctx.organizationId,
     createdByMembershipId: ctx.membershipId,
-    ownerMembershipId: input.ownerMembershipId ?? ctx.membershipId,
+    ownerMembershipId,
     // Prisma throws (doesn't coerce) for a DateTime field given a
     // date-only string, so convert here. Bug existed since FIG-440
     // (CreateDealForm sends a plain "YYYY-MM-DD" string), caught in FIG-443.
@@ -200,6 +282,12 @@ export async function updateDeal(
     deal.ownerMembershipId,
   );
 
+  if (deal.archivedAt) {
+    throw new ValidationError(
+      "This deal is archived. Restore it before making changes.",
+    );
+  }
+
   const outcomeFields = input.pipelineStageId
     ? await resolveOutcomeFields(
         ctx.organizationId,
@@ -261,6 +349,50 @@ export async function updateDeal(
   }
 
   return maskValue(ctx, updated);
+}
+
+/**
+ * Reassigns a deal. Management only (see `canReassignDeals`); the new
+ * owner must be someone whose role can work deals, and an archived deal
+ * has to be restored first.
+ */
+export async function assignDeal(
+  ctx: AuthContext,
+  dealId: string,
+  newOwnerMembershipId: string,
+) {
+  if (!canReassignDeals(ctx)) {
+    throw new ForbiddenError("deals.edit.all (to reassign a deal)");
+  }
+  const deal = await loadOwnedDeal(ctx, dealId);
+  if (deal.archivedAt) {
+    throw new ValidationError(
+      "This deal is archived. Restore it before reassigning it.",
+    );
+  }
+  const target = await assertEligibleDealOwner(
+    ctx.organizationId,
+    newOwnerMembershipId,
+  );
+  if (target.id === deal.ownerMembershipId) {
+    return maskValue(ctx, deal);
+  }
+
+  const reassigned = await updateDealRecord(ctx.organizationId, dealId, {
+    ownerMembershipId: target.id,
+  });
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "deal.owner_reassigned",
+    entityType: "Deal",
+    entityId: dealId,
+    previousValue: { ownerMembershipId: deal.ownerMembershipId },
+    newValue: { ownerMembershipId: target.id },
+  });
+
+  return maskValue(ctx, reassigned);
 }
 
 /** Soft-delete (FIG-601) -- own/all split, same tier as `deals.edit.own/.all`. */
