@@ -2,6 +2,7 @@
 
 **Status:** Draft for review (Michael / project lead sign-off required before any go/no-go decision is exercised)
 **Date:** 2026-09-29
+**Updated:** 2026-10-22 (FIG-788). Sections 2, 5, 7, 9, 13, 17, 19 and the closing note were brought up to date with `main` (squash commit `02894f7`). The auth, deployment and provisioning gaps this plan originally recorded have been closed (FIG-592, 593, 595, 604, 784, 753); the remaining sections are as written on 29 Sep. Test counts are in `docs/TEST_BASELINE.md`.
 **Scope:** Readiness, operational and pilot-definition deliverable. Does **not** redesign the CRM architecture, and does **not** build subscriber billing, self-service onboarding, white-labeling, or a subscriber-facing tenant administration platform.
 **Depends on / does not reopen:** FIG-436 (V1 Architecture & Tenant Model), FIG-437 (Authentication, Organizations, Roles & Tenant Isolation), FIG-438 (Core Data Model & Migrations), FIG-439 (Leads/Contacts/Companies), FIG-440 (Deals/Pipeline/Conversion), FIG-441 (Activities/Tasks/Audit), FIG-442 (Website Lead Capture), FIG-443 (Dashboards/Reporting), FIG-297/299/300 (requirements, data model, MVP scope).
 
@@ -34,17 +35,20 @@ What it is: a measurable readiness framework, a concrete first-subscriber operat
 
 ## 2. Current V1 Position
 
-As implemented today, the CRM is a **single internally-used tenant**. Concretely:
+As implemented today (22 Oct 2026), the CRM is still **one internally-used tenant in production use**, but the operational machinery this plan originally listed as missing now exists. Concretely:
 
-- One organization exists: `figbloom` ("FigBloom Digital Group"), created by `prisma/seed.ts`.
-- Five seeded dev users (`dev.management@figbloom.local`, etc.), one per V1 role, authenticate via `/dev-login` — a signed cookie with **no password check at all** (`src/auth/devSession.ts`). This is explicitly documented in the code and in README.md as a placeholder for FIG-437's real authentication provider, which has never been chosen or built. **This alone is a hard blocker for any external subscriber** — no organization outside FigBloom can be given a login mechanism that lets anyone pick which account to "become."
-- There is no way to create a second organization today except by directly invoking `createOrganization()` (`src/repositories/organizations.ts`) — an admin-only repository function with no API route, no UI, and no CLI wrapping it. The only caller anywhere in the codebase is `prisma/seed.ts`, hard-coded to the single `figbloom` slug.
-- There is no user/membership creation flow beyond direct seeding; `scripts/manual-add-second-sales-user.ts` is a one-off manual script, not a repeatable tool.
-- There is no deployment beyond local development: `docker-compose.yml` runs a single local Postgres container; there is no `Dockerfile` for the application itself and no CI/CD configuration anywhere in the repository. The app has only ever been run via `npm run dev`.
-- The CRM's core workflows (leads, contacts, companies, deals/pipeline, lead conversion, activities/tasks, audit history for ownership/outcome changes, role-specific dashboards and organization-wide reporting, and website lead capture with round-robin assignment) are implemented and, per `IMPLEMENTATION_NOTES.md`, were each verified through both an automated test suite and a scripted manual HTTP walkthrough across all five roles at the time each ticket was completed.
-- Tenant isolation is implemented in three independent layers (composite tenant-integrity foreign keys, Postgres row-level security via a separate least-privilege `figbloom_app` role, and application-level `organizationId` scoping in every repository) and has dedicated automated tests (`tests/tenant-isolation.test.ts`, 9 tests; `tests/authorization.test.ts`). **These tests could not be re-executed during the preparation of this document** (this session's tooling could not reach the project's local Postgres instance) — re-running them is recorded as a mandatory pre-pilot gate item (§9, §17), not assumed to still pass.
+- One real organization exists: `figbloom` ("FigBloom Digital Group"), created by `prisma/seed.ts`. A second organization can now be created repeatably (below).
+- **Authentication is real** (FIG-592): in-house email and password, database-backed sessions that can be revoked, and password reset by email (SMTP, with a log fallback when unconfigured). New users join through invites and membership administration (FIG-593). `/signup` exists but only creates a user with no organization access. Login, signup and password-reset are rate limited with durable, cross-instance limits (FIG-784). `/dev-login` and the six seeded dev accounts remain, but only when `NODE_ENV` is exactly `development`; they are not a production login path.
+- **Tenant provisioning exists** (FIG-604): `scripts/provision-organization.ts` (a thin wrapper over `provisionOrganization` in `src/services/organizationProvisioningService.ts`) creates an organization, seeds its default catalogs and invites the first administrator through the real invite flow. Companion scripts cover tenant export (`scripts/export-organization.ts`), offboarding (`scripts/offboard-organization.ts`) and data-subject erasure (`scripts/erase-data-subject.ts`, FIG-601). `scripts/manual-add-second-sales-user.ts` is a one-off dev helper, not part of provisioning.
+- **Deployment machinery exists** (FIG-595): a `Dockerfile` (Node 22), GitHub Actions CI on every pull request and push to `main` (lint, typecheck, migrations, the full Vitest suite with a coverage floor, Playwright e2e and a Docker build, against a real Postgres service container), and `docs/DEPLOYMENT.md` with the deploy sequence and a tested backup and restore procedure. Whether a hosted staging or production environment is actually running is not recorded in the repository and remains an open pilot prerequisite (section 5).
+- Monitoring exists in code: structured logging with `pino` and `@sentry/nextjs` error tracking with personal data scrubbed (FIG-753); error reports need a real Sentry DSN to be configured per environment.
+- Notifications and outbound delivery exist (FIG-597): in-app notifications, email and SMS delivery with retries, and a scheduled sweep for due and overdue tasks (FIG-783). CSV import and export exist (FIG-596).
+- The CRM's core workflows (leads, contacts, companies, deals/pipeline, lead conversion, activities/tasks, audit history, role-specific reporting, website lead capture with assignment rules, archive/restore, merge, communications, settings) are implemented and covered by automated tests.
+- Tenant isolation is implemented in three independent layers (composite tenant-integrity foreign keys, Postgres row-level security via a separate least-privilege `figbloom_app` role, and application-level `organizationId` scoping in every repository). It has dedicated automated tests (`tests/tenant-isolation.test.ts`, 9 tests; `tests/authorization.test.ts`), and `tests/databaseSmoke.test.ts` fails if any tenant table lacks enabled and forced RLS. The full suite is green on `main` (521 tests, `docs/TEST_BASELINE.md`) and is re-run on every pull request. A current passing run immediately before any pilot decision is still a mandatory gate item (sections 9 and 17).
+- Still open: the permission matrix was signed off on 22 Oct 2026 with five departures applied (`docs/DECISIONS.md`), but those backend changes are not built yet (B1.01). There is no organization-switcher UI (V1.1).
 
-In short: the product logic that a subscriber would actually use is comparatively mature; the *operational* machinery to safely admit a second tenant (real authentication, a provisioning process, a deployed environment, export/migration tooling) does not yet exist. This document treats both halves honestly.
+In short: the product logic, authentication, provisioning, deployment tooling and tests that a subscriber would rely on now exist. What remains before an external pilot is mostly operational and decision work: a running hosted environment, the matrix changes, retention and support agreements, and the adoption and data-quality measures in sections 3 and 4.
+
 
 ## 3. Internal Adoption Readiness
 
@@ -83,10 +87,10 @@ D7 and D8 are worth calling out specifically: they are not aspirational threshol
 
 | Area | Requirement | Current state |
 |---|---|---|
-| Deployments | At least one successful deploy to a real, non-local environment | **Gap.** No `Dockerfile`, no CI/CD, no staging/production environment exists anywhere in the repository today. This must exist before internal adoption can even be meaningfully measured beyond a developer's own machine, let alone before an external pilot. |
+| Deployments | At least one successful deploy to a real, non-local environment | **Tooling done, environment open.** `Dockerfile`, GitHub Actions CI and `docs/DEPLOYMENT.md` exist (FIG-595) and the image was built and run against Postgres. Whether a hosted staging or production environment is running is not recorded in the repository: confirm before any pilot. |
 | Migrations | `prisma migrate deploy` runs cleanly against a fresh database, in order | Automated (`tests/migrations.test.ts`) and documented as the recovery pattern (`IMPLEMENTATION_NOTES.md` — Prisma Migrate is roll-forward only; "rollback" means re-provisioning and re-deploying, not down-migrations) |
-| Backup/recovery | A tested backup and restore of the production database | **Gap** — no production database exists yet, so none exists to back up. Must be established alongside the deployment environment above. |
-| Authentication | A real authentication mechanism (not `/dev-login`) | **Gap — hard blocker.** FIG-437 explicitly leaves "exact authentication provider" and "session/token strategy" open. This must be resolved and built before internal-adoption measurement can be considered representative of production conditions, and absolutely before any external user is invited in. |
+| Backup/recovery | A tested backup and restore of the production database | **Procedure done, production open.** The `pg_dump`/`pg_restore` sequence in `docs/DEPLOYMENT.md` was run and verified (row counts and the RLS flag checked on the restored database, FIG-595). It must be scheduled and rehearsed on the real production database once one exists. |
+| Authentication | A real authentication mechanism (not `/dev-login`) | **Done** (FIG-592, 593, 784). Email and password, revocable database-backed sessions, password reset, invites and rate limiting. `/dev-login` works only when `NODE_ENV` is `development`. |
 | Authorization | Role/permission boundaries hold under test | Automated (`tests/authorization.test.ts`) and exercised manually across all 5 roles for every ticket (`IMPLEMENTATION_NOTES.md`) — but the permission matrix itself is explicitly documented as **provisional**, pending confirmation by Michael/the project lead (`prisma/seedData.ts` header comment) |
 | Tenant isolation | Cross-organization access is impossible at every layer | Automated (`tests/tenant-isolation.test.ts`, 9 tests) — see §9 for the full verification list |
 | Critical defects | No unresolved critical/high-severity defect affecting core workflows | Per `IMPLEMENTATION_NOTES.md`, every defect found during each ticket's manual walkthrough (3 in FIG-439, 2 in FIG-443, 0 in FIG-440/441/442) was fixed with a regression test in the same ticket. No defects are recorded as open. This should be re-confirmed against the current codebase state as part of the pre-pilot gate, not assumed permanent. |
@@ -105,12 +109,12 @@ Before the **first** external organization is onboarded, all of the following mu
 
 ## 7. Tenant Provisioning
 
-The V1 provisioning process is **controlled, not self-service**, consistent with the approved architecture (Organization = Tenant; users join through Memberships; FigBloom is the only party that creates organizations). Concretely, today, provisioning a new organization means running the same pattern `prisma/seed.ts` already demonstrates for `figbloom` itself — `createOrganization()` → `seedOrganizationDefaults(organization.id)` → create `User` + `Membership` rows — but that pattern is currently hard-coded to one organization and is not a reusable tool. **Turning it into a small, reusable, parameterized provisioning script (organization name/slug, initial admin user, initial role assignments) is itself a prerequisite of this readiness plan, not something to build ad hoc during onboarding.**
+The V1 provisioning process is **controlled, not self-service**, consistent with the approved architecture (Organization = Tenant; users join through Memberships; FigBloom is the only party that creates organizations). Concretely, provisioning a new organization means the same pattern `prisma/seed.ts` already demonstrates for `figbloom` itself — `createOrganization()` → `seedOrganizationDefaults(organization.id)` → create `User` + `Membership` rows — and that pattern is now a reusable, parameterized tool (FIG-604): `scripts/provision-organization.ts` takes the organization name and slug and the first administrator, and uses the real invite flow rather than a preset password.
 
 Given that, the V1 sequence for the first external subscriber is:
 
 1. External subscriber is approved for pilot (§17 — a specific named organization, not "the pilot" in the abstract).
-2. FigBloom staff run the (to-be-built) provisioning script to create the organization/tenant and seed its default catalogs.
+2. FigBloom staff run the provisioning script (`scripts/provision-organization.ts`) to create the organization/tenant and seed its default catalogs.
 3. FigBloom staff review and adjust the seeded catalogs for the subscriber's actual business (§8) — the FigBloom-specific defaults are a starting point, not a fit for every subscriber.
 4. Initial administrator/user accounts are created for the subscriber's team, under whatever real authentication mechanism has been built (§5) — **not** `/dev-login`.
 5. Roles are assigned from the existing fixed 5-role catalog (Management, Sales, Delivery, Finance, Restricted Technical) — no new roles are invented per subscriber (§2, and consistent with "Roles are global, not organization-configurable," `IMPLEMENTATION_NOTES.md`).
@@ -150,7 +154,7 @@ This is the mandatory pre-pilot security gate. Every item below has a correspond
 
 **Explicit requirement:** the full suite above must show a green run, on the actual pre-pilot codebase, on record, before go/no-go is exercised (§17). A test file existing is not equivalent to a passing run performed today — this document could not execute the suite itself (§2) and does not claim to have verified it.
 
-One security-relevant gap to record honestly: authentication itself (§5) is not yet real, so "role/permission boundaries hold" today describes the *authorization* layer sitting on top of a placeholder *authentication* layer. Authorization tests passing does not substitute for a real login mechanism existing.
+Authentication is now real (FIG-592, section 5), so "role/permission boundaries hold" describes the authorization layer sitting on a real, rate-limited login. Passing authorization tests still does not substitute for re-running them against the pre-pilot codebase (section 17).
 
 ## 10. Support Boundaries
 
@@ -206,7 +210,7 @@ What does exist that an export could be built on: authenticated, org-scoped REST
 The following are **intentional V1 boundaries**, not unfinished acceptance criteria, and are not implied to exist anywhere else in this document:
 
 - **Subscriber billing — DEFERRED.** No billing engine, automated invoicing, or subscription-management workflow is required for, or will be built for, the external pilot. Any commercial arrangement with a pilot subscriber is handled outside this platform entirely (a manual agreement/invoice process).
-- **Self-service onboarding — DEFERRED.** Subscribers do not create or configure their own tenant. Tenant provisioning remains entirely controlled by FigBloom staff (§7), using a to-be-built internal script — not a public signup flow.
+- **Self-service onboarding — DEFERRED.** Subscribers do not create or configure their own tenant. Tenant provisioning remains entirely controlled by FigBloom staff (§7), using the internal provisioning script (`scripts/provision-organization.ts`, FIG-604) — not a public tenant sign-up flow. (`/signup` creates a user with no organization access; it does not create a tenant.)
 - **White-labeling — DEFERRED.** The pilot does not require independent branding, custom domains, or a separate product identity per subscriber. Every subscriber uses the same FigBloom-branded application.
 - **Advanced tenant administration — DEFERRED.** No subscriber-facing tenant administration console, custom role builder, or advanced per-tenant configuration UI will be built for this pilot. The one tenant-level setting a subscriber's own Management user can change today (the website API key, §8) remains the extent of subscriber-facing configuration.
 
@@ -274,9 +278,9 @@ The external pilot must not proceed if **any** of the following remain true at d
 - Tenant isolation has not been re-verified (a passing, current run of `tests/tenant-isolation.test.ts` and `tests/authorization.test.ts`) immediately before the decision.
 - Cross-tenant access is possible in any tested path.
 - Critical authorization vulnerabilities remain open.
-- No real authentication mechanism exists — `/dev-login` remains the only login path.
-- No deployed, non-local environment exists for the subscriber to actually use.
-- A tenant-provisioning process (beyond the hard-coded single-org seed script) does not exist.
+- No real authentication mechanism exists — `/dev-login` remains the only login path. **Met (22 Oct 2026):** real authentication exists (FIG-592).
+- No deployed, non-local environment exists for the subscriber to actually use. **Open:** deployment tooling and a runbook exist (FIG-595); a running hosted environment must be confirmed.
+- A tenant-provisioning process (beyond the hard-coded single-org seed script) does not exist. **Met (22 Oct 2026):** `scripts/provision-organization.ts` (FIG-604).
 - Required data cannot be safely migrated, where the specific candidate subscriber requires migration.
 - Required data cannot be exported, where export is a term of that subscriber's pilot agreement.
 - Any critical unresolved defect affects a core CRM workflow (lead capture, qualification, conversion, pipeline, activity/task tracking, reporting).
@@ -322,7 +326,7 @@ This document does not have a basis in existing operational data (support-staffi
 - [ ] Authorization tests passing — **re-run `tests/authorization.test.ts` now**
 - [ ] Role boundaries verified — confirm the permission matrix has been reviewed/confirmed by Michael/the project lead, not left provisional
 - [ ] Sensitive data restrictions verified (deal value masking, per §9)
-- [ ] Real authentication mechanism in place (not `/dev-login`)
+- [x] Real authentication mechanism in place (not `/dev-login`) — FIG-592, 22 Oct 2026
 
 ### Data
 - [ ] Migration approach agreed for this specific subscriber (clean start / import / both)
@@ -400,4 +404,4 @@ FIG-444 is complete as a **document** when every item below is true — none of 
 - [x] The final document is saved in the repository (`documents/`).
 - [x] Acceptance criteria traceability is included (§21).
 
-**This document does not claim external subscriber readiness has been achieved.** As recorded throughout, several structural prerequisites do not yet exist — a real authentication provider, a deployed environment, a reusable tenant-provisioning tool, migration tooling, and an export feature — and each is marked as a mandatory NO-GO condition (§17) until built. FIG-444 defines the conditions and process for reaching readiness; it is not itself the readiness.
+**This document does not claim external subscriber readiness has been achieved.** As of 22 Oct 2026 the structural prerequisites it originally listed (a real authentication provider, a reusable tenant-provisioning tool, deployment tooling, import and export, error tracking) have been built. Still open before any pilot: a confirmed running hosted environment, the permission-matrix changes decided on 22 Oct (B1.01), a current passing run of the isolation and authorization tests immediately before the decision, the internal adoption and data-quality thresholds (sections 3 and 4), and the support, retention and exit agreements. Each remains a NO-GO condition (section 17) until met. FIG-444 defines the conditions and process for reaching readiness; it is not itself the readiness.

@@ -4,7 +4,7 @@ Sources: `prisma/seedData.ts` (`ROLE_PERMISSIONS`), `src/app/**` pages and API r
 
 ## 1. Roles as seeded today
 
-Five fixed roles. The six dev accounts are Management, Sales, Sales Two (a second Sales user), Delivery, Finance and Restricted Technical. The permission matrix is still **provisional** and needs Michael's confirmation (FIG-444, FIG-437 §18).
+Five fixed roles. The six dev accounts are Management, Sales, Sales Two (a second Sales user), Delivery, Finance and Restricted Technical. The matrix below is **as seeded today**. It was **signed off on 22 Oct 2026** with the five departures in the next section applied (decision log: `docs/DECISIONS.md`, FIG-1013).
 
 | Capability | Management | Sales | Delivery | Finance | Restricted Technical |
 |---|---|---|---|---|---|
@@ -24,6 +24,19 @@ Five fixed roles. The six dev accounts are Management, Sales, Sales Two (a secon
 | Bulk export | yes | no | no | no | no |
 
 **Rule of thumb for design:** every screen must show a clear own-vs-organisation scope indicator, a "no access" state that explains *why*, and masked values where a role lacks `deals.view.value`.
+
+### Signed matrix (22 Oct 2026): what B1.01 changes from the seeded matrix
+
+Decided by Given on Michael's behalf (`docs/DECISIONS.md` §1). Key names are proposals; B1.01 fixes the final names. Where a row below does not mention a role, the seeded matrix above stands.
+
+| Change | Roles | What changes |
+|---|---|---|
+| Won deals only | Delivery, Finance | Replace `deals.view.all` with a won-only scope (proposed `deals.view.won`). Open pipeline and unqualified leads are not visible. Delivery sees client profile and scope once a deal is Won, read-only. Finance keeps `deals.view.value` on those deals. |
+| Shared pool | Sales | Own records plus the shared/unassigned pool: view and claim (proposed `leads.view.shared`, `leads.claim`). No editing of other people's records. Deal values on deals they don't own stay masked. |
+| My work | Restricted Technical | Minimal assigned-work surface: own tasks plus the client requirements relevant to that work. No project model in V1. |
+| Follow-up note, no tasks | Finance | No task permissions. Can add a follow-up note on a payment or customer (proposed `finance.followup.note`). |
+| Delivery handoff | Management, Sales (start), Delivery (receive) | New permission (proposed `deals.handoff`). It does not allow moving a stage on someone else's deal. Delivery and Management may mark a handoff Delivered (FIG-1013 question 19). |
+| Customer Support | new sixth role | Behind a feature flag, off by default. Permissions to be proposed in B1.01. |
 
 ### Mismatches between the documents and the seeded matrix (decide before design freezes)
 
