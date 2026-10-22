@@ -39,6 +39,8 @@ jobs:
       APP_DATABASE_URL: postgresql://figbloom_app:figbloom_app_ci_only@localhost:55432/figbloom_crm_dev?schema=public
       TEST_APP_DATABASE_URL: postgresql://figbloom_app:figbloom_app_ci_only@localhost:55432/figbloom_crm_test?schema=public
       DEV_SESSION_SECRET: figbloom_ci_dev_session_secret
+      # The dev seed (npm run seed:dev) refuses to run without this (FIG-1016).
+      ALLOW_DEV_ACCOUNTS: "true"
 
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +105,7 @@ jobs:
       # suite below logs in as a real seeded user through the real app,
       # not a fixture it creates for itself the way the Vitest suite does.
       - name: Seed dev data for e2e
-        run: npm run seed
+        run: npm run seed:dev
 
       # One build, reused by both the build-succeeds check and the e2e
       # suite below (which drives a real `next start`, not `next dev`).

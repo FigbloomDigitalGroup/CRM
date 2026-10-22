@@ -51,10 +51,10 @@ export default defineConfig({
       // -- the e2e suite -- which this Vitest-level report can't see at
       // all, V8 coverage being process-local to whatever ran the code).
       thresholds: {
-        lines: 35,
-        statements: 35,
-        functions: 55,
-        branches: 65,
+        lines: 42,
+        statements: 42,
+        functions: 69,
+        branches: 80,
       },
     },
   },

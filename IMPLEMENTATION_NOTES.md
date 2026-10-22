@@ -1828,3 +1828,64 @@ Described in `docs/FEATURE_FLAGS.md`. Decisions:
 - **Tests:** `tests/featureFlags.test.ts` (resolution, `requireFeature`, the
   explained response from a route with the flag on and off, toggles, audit,
   isolation, override, API).
+
+## Seed v2 (FIG-1016, B0.08)
+
+Described in the README's "Seeds" section. Decisions:
+
+- **Two commands.** `npm run seed` is reference data only (roles and
+  permissions) and is the same everywhere; `npm run seed:dev` adds the dev
+  organizations, accounts and sample data and refuses to run when
+  `NODE_ENV=production` or without `ALLOW_DEV_ACCOUNTS="true"` (CLAUDE.md
+  rule 10). `npm run db:setup` now ends with `seed:dev`; CI's e2e seed step
+  uses it too and sets the variable. The per-organization catalogues (5
+  stages, 8 statuses, 15 sources, 11 lost reasons, 14 services, 6 lifecycle
+  states) come from `seedOrganizationDefaults`, so every organization gets them.
+- **Sample data is checked in** (`prisma/sampleData.ts`, taken from
+  `design-spec/crm-store.js`), not read from `design-spec/` at run time, so the
+  read-only prototype folder can be replaced without breaking the seed. Dates
+  are shifted to the seed run.
+- **Idempotent and atomic.** Accounts and catalogues are upserts; the sample
+  data and a `dev_seed` marker setting go in one transaction. An organization
+  that already has companies is skipped, never duplicated.
+- **Direct database writes, not the services.** The seed stamps the prototype's
+  historical dates and owners, which the services would overwrite with "now".
+- **Deferred.** Customer Support account (role comes with B1.01 / B6.23), Dev
+  Super Admin (FIG-1196 / B0.09), payments (B3.03), tags and templates.
+  `scripts/manual-seed-demo-data.ts` and `scripts/manual-add-second-sales-user.ts`
+  are superseded by this seed and can be deleted.
+- **Tests:** `tests/devSeed.test.ts` (guards, the commands exiting as
+  expected, accounts, both organizations, catalogue counts, data coverage,
+  date shifting, role scoping, notifications, idempotency).
+
+## Dev-only Super Admin and the dev-account guards (FIG-1196, B0.09)
+
+Described in the README's "Dev accounts and production". Decisions:
+
+- **A platform identity table, not a user.** `platform_identities` (migration
+  `20261022140000_platform_identities`) holds the Dev Super Admin
+  (`is_dev = true`). It has no `users` row, so it can never have a membership
+  or resolve a tenant context; `resolveRequestContext` does not read its cookie.
+  B6.03 adopts the table for real platform admins.
+- **Two walls on the table:** row-level security enabled and forced with no
+  policy, and the `figbloom_app` privileges revoked (in the migration and
+  again in `db:grant-role`, which grants on all tables each run).
+- **Stateless dev cookie, separate from the tenant one** (`figbloom_dev_platform_session`,
+  signed under a different domain so neither cookie can be replayed as the
+  other). Real platform sessions come with B6.03.
+- **One gate for every dev route:** `devAccountsAllowed()` = `NODE_ENV` exactly
+  `development` AND `ALLOW_DEV_ACCOUNTS` exactly `true`. `/dev-login`,
+  `/api/dev-session` and `/platform` use it (the first two previously needed
+  only `development`; they now also need the flag, so add it to your `.env`).
+- **The login page was not touched** (frozen). Its existing dev-account list
+  still hides itself in production; the dev chip for the Super Admin and the
+  flag-based gating of that list are F1.07's job.
+- **Boot guard in `instrumentation.ts`.** It fails closed (also when the
+  database cannot be asked). The e2e suite needs a documented override because
+  it runs the production build against a dev-seeded database; see the README.
+- **Audit:** every dev Super Admin sign-in writes `platform.dev_signin`
+  (platform-level, no organization).
+- **Tests:** `tests/devSuperAdmin.test.ts` (the three guards, platform vs
+  tenant cookies, route 404 matrix, audit, privileges and RLS, holding page)
+  and `e2e/dev-accounts-closed.spec.ts` (production build: no `/dev-login`,
+  `/platform`, dev sign-in API or chips).

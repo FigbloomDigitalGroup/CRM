@@ -52,4 +52,33 @@ export function verifySessionCookieValue(
   return userId;
 }
 
+/**
+ * The dev Super Admin's cookie (FIG-1196). A separate cookie with a
+ * separate signing domain: a tenant dev cookie can never be replayed as a
+ * platform one or the other way round, and `resolveRequestContext` never
+ * reads this one, so the platform identity cannot reach a tenant context.
+ * Honored only through `devAccountsAllowed()` (development + ALLOW_DEV_ACCOUNTS).
+ */
+const PLATFORM_COOKIE_NAME = "figbloom_dev_platform_session";
+
+export function createPlatformCookieValue(identityId: string): string {
+  return `${identityId}.${sign(`platform:${identityId}`)}`;
+}
+
+export function verifyPlatformCookieValue(
+  value: string | undefined | null,
+): string | null {
+  if (!value) return null;
+  const separatorIndex = value.lastIndexOf(".");
+  if (separatorIndex <= 0) return null;
+
+  const identityId = value.slice(0, separatorIndex);
+  const providedBuf = Buffer.from(value.slice(separatorIndex + 1));
+  const expectedBuf = Buffer.from(sign(`platform:${identityId}`));
+  if (providedBuf.length !== expectedBuf.length) return null;
+  if (!timingSafeEqual(providedBuf, expectedBuf)) return null;
+  return identityId;
+}
+
 export { COOKIE_NAME as DEV_SESSION_COOKIE_NAME };
+export { PLATFORM_COOKIE_NAME as DEV_PLATFORM_COOKIE_NAME };

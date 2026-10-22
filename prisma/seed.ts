@@ -1,137 +1,20 @@
 import "dotenv/config";
-import { DEV_FIXTURE_PASSWORD } from "../src/auth/devAccounts";
-import { hashPassword } from "../src/auth/password";
 import { adminDb } from "../src/db/adminClient";
-import { seedOrganizationDefaults } from "../src/services/organizationDefaults";
-import { PERMISSIONS, ROLE_PERMISSIONS, ROLES } from "./seedData";
+import { seedRolesAndPermissions } from "./seedReference";
 
 /**
- * Deterministic V1 seed. Every write is an upsert keyed on a stable
- * natural key, so this script is safe to run repeatedly.
+ * The production-safe seed (FIG-1016, B0.08): reference data only -- the
+ * role and permission catalogue. It creates no organization, no user and no
+ * sample data, so it is the same command in every environment. Per-
+ * organization catalogues (stages, statuses, sources, lost reasons,
+ * services, lifecycle states) are created with each organization.
+ *
+ * Local development and demos use `npm run seed:dev` (`prisma/seedDev.ts`),
+ * which adds the dev organizations, the dev accounts and the sample data
+ * and refuses to run in production.
  */
-async function seedRolesAndPermissions() {
-  for (const role of ROLES) {
-    await adminDb.role.upsert({
-      where: { key: role.key },
-      update: { name: role.name, description: role.description },
-      create: role,
-    });
-  }
-
-  for (const permission of PERMISSIONS) {
-    await adminDb.permission.upsert({
-      where: { key: permission.key },
-      update: { area: permission.area, description: permission.description },
-      create: permission,
-    });
-  }
-
-  for (const [roleKey, permissionKeys] of Object.entries(ROLE_PERMISSIONS)) {
-    const role = await adminDb.role.findUniqueOrThrow({
-      where: { key: roleKey },
-    });
-    for (const permissionKey of permissionKeys) {
-      const permission = await adminDb.permission.findUniqueOrThrow({
-        where: { key: permissionKey },
-      });
-      await adminDb.rolePermission.upsert({
-        where: {
-          roleId_permissionId: { roleId: role.id, permissionId: permission.id },
-        },
-        update: {},
-        create: { roleId: role.id, permissionId: permission.id },
-      });
-    }
-  }
-
-  console.log(
-    `Seeded ${ROLES.length} roles, ${PERMISSIONS.length} permissions.`,
-  );
-}
-
-/**
- * Creates FigBloom's own internal organization for local development, plus
- * one membership per V1 role for exercising the app locally. These are
- * clearly-synthetic internal *user* fixtures (dev.sales@figbloom.local,
- * etc.) -- not fabricated customer/business data. No Companies/Contacts/
- * Leads/Deals are seeded here on purpose, so nothing looks like real
- * customer data.
- */
-async function seedDevFigBloomOrganization() {
-  const organization = await adminDb.organization.upsert({
-    where: { slug: "figbloom" },
-    update: {},
-    create: { name: "FigBloom Digital Group", slug: "figbloom" },
-  });
-
-  await seedOrganizationDefaults(organization.id);
-
-  const devUsers: { email: string; name: string; roleKey: string }[] = [
-    {
-      email: "dev.management@figbloom.local",
-      name: "Dev Management",
-      roleKey: "MANAGEMENT",
-    },
-    { email: "dev.sales@figbloom.local", name: "Dev Sales", roleKey: "SALES" },
-    {
-      email: "dev.delivery@figbloom.local",
-      name: "Dev Delivery",
-      roleKey: "DELIVERY",
-    },
-    {
-      email: "dev.finance@figbloom.local",
-      name: "Dev Finance",
-      roleKey: "FINANCE",
-    },
-    {
-      email: "dev.tech@figbloom.local",
-      name: "Dev Restricted Technical",
-      roleKey: "RESTRICTED_TECHNICAL",
-    },
-  ];
-
-  const devPasswordHash = await hashPassword(DEV_FIXTURE_PASSWORD);
-
-  for (const devUser of devUsers) {
-    const user = await adminDb.user.upsert({
-      where: { email: devUser.email },
-      update: { name: devUser.name, passwordHash: devPasswordHash },
-      create: {
-        email: devUser.email,
-        name: devUser.name,
-        passwordHash: devPasswordHash,
-      },
-    });
-
-    const role = await adminDb.role.findUniqueOrThrow({
-      where: { key: devUser.roleKey },
-    });
-
-    await adminDb.membership.upsert({
-      where: {
-        organizationId_userId: {
-          organizationId: organization.id,
-          userId: user.id,
-        },
-      },
-      update: { roleId: role.id },
-      create: {
-        organizationId: organization.id,
-        userId: user.id,
-        roleId: role.id,
-        joinedAt: new Date(),
-      },
-    });
-  }
-
-  console.log(
-    `Seeded development organization "${organization.slug}" with ${devUsers.length} member fixtures.`,
-  );
-}
-
 async function main() {
   await seedRolesAndPermissions();
-  await seedDevFigBloomOrganization();
 }
 
 main()
