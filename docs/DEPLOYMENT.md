@@ -96,7 +96,7 @@ by whether an environment needs it:
 | `WEBSITE_LEAD_RATE_LIMIT_*` | Optional | Optional | Sane defaults apply; tune only if the defaults are wrong for real traffic. |
 | `LOGIN_RATE_LIMIT_*` / `SIGNUP_RATE_LIMIT_*` / `PASSWORD_RESET_RATE_LIMIT_*` | Optional | Optional | Sane defaults apply (FIG-784) -- see "Rate limiting on login/signup/password-reset," below. |
 | `IMPORT_MAX_ROWS` | Optional | Optional | Per-call CSV import row ceiling (FIG-596); defaults to 20000. |
-| `APP_BASE_URL` | Optional (defaults to `http://localhost:3000`) | **Required for correct links** | Builds the deep links inside notification emails (FIG-597) -- set to this environment's real public URL. |
+| `APP_BASE_URL` | Optional (defaults to `http://localhost:3000`) | **Required for correct links** | Builds the deep links inside notification emails (FIG-597) and is an allowed origin for the CSRF check (FIG-802) -- set to this environment's real public URL. |
 | `CRON_SECRET` | Not needed | **Required to use `/api/cron/notifications-sweep`** | See "Scheduled jobs," below. Not needed if the notifications sweep is only ever triggered via the CLI script. |
 | `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` | Optional | Optional | Defaults to `15`. See "Scheduled jobs," below. |
 | `SMS_PROVIDER_API_KEY` | Not needed | Optional | No real SMS provider is wired up yet (FIG-597) -- see `src/notifications/sms.ts`. Setting this alone does nothing. |

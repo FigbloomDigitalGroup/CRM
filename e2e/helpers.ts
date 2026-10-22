@@ -33,3 +33,19 @@ export async function loginAs(page: Page, email: string): Promise<void> {
 export function uniqueSuffix(): string {
   return `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 }
+
+/** Goes to a page and waits until React has hydrated, so a fill/click is not lost to a not-yet-interactive client component. */
+export async function gotoAndSettle(page: Page, path: string): Promise<void> {
+  await page.goto(path);
+  await page.waitForLoadState("networkidle");
+}
+
+/**
+ * Calls the app's own API the way its pages do. Same-origin requests carry an
+ * `Origin` header from a real browser; Playwright's request client does not
+ * add one, and the API refuses state-changing requests without it (FIG-802).
+ */
+export async function apiPost(page: Page, path: string, data?: unknown) {
+  const origin = new URL(page.url() === "about:blank" ? "http://localhost:3100" : page.url()).origin;
+  return page.request.post(path, { data, headers: { origin } });
+}
