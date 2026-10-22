@@ -1,11 +1,16 @@
 import { withOrgContext } from "../db/orgScopedClient";
 
-export type NotificationTypeKey = "LEAD_ASSIGNED" | "TASK_DUE" | "TASK_OVERDUE";
+export type NotificationTypeKey =
+  | "LEAD_ASSIGNED"
+  | "TASK_DUE"
+  | "TASK_OVERDUE"
+  | "DEAL_WON_HANDOFF";
 
 export const NOTIFICATION_TYPES: NotificationTypeKey[] = [
   "LEAD_ASSIGNED",
   "TASK_DUE",
   "TASK_OVERDUE",
+  "DEAL_WON_HANDOFF",
 ];
 
 /** No row for a (membership, type) means "both channels on" -- see the model's doc comment in schema.prisma. */

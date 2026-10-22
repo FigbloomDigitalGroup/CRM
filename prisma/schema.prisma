@@ -82,6 +82,8 @@ model Organization {
   services                   Service[]
   websiteLeadAssignmentRules WebsiteLeadAssignmentRule[]
   pageViews                  PageView[]
+  dealHandoffs               DealHandoff[]
+  idempotencyKeys            IdempotencyKey[]
 
   @@map("organizations")
 }
@@ -443,6 +445,56 @@ model PageView {
   @@map("page_views")
 }
 
+/// One row per deal that has been handed off to Delivery (FIG-792). It is the
+/// idempotency marker for the won-deal handoff: the unique `dealId` means a
+/// deal that is re-opened and won again does not get a second set of
+/// onboarding tasks or a second notification. Later states (awaiting owner,
+/// onboarding, delivered) extend this table in B2.08. The membership columns
+/// are plain ids here; their tenant-integrity foreign keys are hand-written in
+/// the migration like every other composite FK (see
+/// `tenant_integrity_and_rls`).
+model DealHandoff {
+  id                        String   @id @default(uuid())
+  organizationId            String   @map("organization_id")
+  dealId                    String   @map("deal_id")
+  deliveryOwnerMembershipId String   @map("delivery_owner_membership_id")
+  createdByMembershipId     String   @map("created_by_membership_id")
+  createdAt                 DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@unique([dealId])
+  @@index([organizationId])
+  @@index([organizationId, deliveryOwnerMembershipId])
+  @@map("deal_handoffs")
+}
+
+/// A create request already seen, keyed by the client's Idempotency-Key header
+/// (FIG-1014). Replaying the same key with the same body returns the stored
+/// response instead of creating the record again.
+model IdempotencyKey {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  membershipId   String    @map("membership_id")
+  key            String
+  method         String
+  path           String
+  requestHash    String    @map("request_hash")
+  /// IN_PROGRESS until the create finishes, then COMPLETED.
+  status         String    @default("IN_PROGRESS")
+  responseStatus Int?      @map("response_status")
+  responseBody   Json?     @map("response_body")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  completedAt    DateTime? @map("completed_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, membershipId, key], map: "idempotency_keys_org_member_key_key")
+  @@index([organizationId, createdAt])
+  @@map("idempotency_keys")
+}
+
 /// What a Notification is "about" (FIG-597). Each type is deduplicated to
 /// at most one Notification per entity (see Notification's unique index
 /// below) -- a lead is only ever announced once, and a task crosses into
@@ -452,6 +504,7 @@ enum NotificationType {
   LEAD_ASSIGNED
   TASK_DUE
   TASK_OVERDUE
+  DEAL_WON_HANDOFF
 }
 
 /// In-app notification feed entry for one membership (FIG-597). Always has
@@ -924,6 +977,7 @@ model Deal {
   tasks              Task[]
   communications     Communication[]
   proposalReferences ProposalReference[]
+  handoff            DealHandoff?
 
   @@unique([organizationId, id])
   @@unique([organizationId, leadId])

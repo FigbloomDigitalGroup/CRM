@@ -85,6 +85,19 @@ jobs:
           path: coverage/
           retention-days: 14
 
+      # FIG-1014 (B0.06): the OpenAPI document generated from the Zod
+      # schemas, kept as an artifact so the contract can be diffed between
+      # builds and fed to the typed client.
+      - name: Export the OpenAPI document
+        run: npm run openapi:export
+
+      - name: Upload the OpenAPI document
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi
+          path: openapi/
+          retention-days: 30
+
       # Seeds the dev-fixture org/users/permissions into figbloom_crm_dev
       # (not the test database the Vitest suite above used) -- the e2e
       # suite below logs in as a real seeded user through the real app,

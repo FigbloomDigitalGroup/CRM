@@ -1,14 +1,13 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
-import { parseJsonBody } from "@/app/api/_lib/validation";
+import { pageQueryShape, toPageRequest } from "@/app/api/_lib/pageQuery";
+import { parseJsonBody, parseQueryParams } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { ValidationError } from "@/auth/errors";
 import {
   createActivity,
-  listActivitiesForCompany,
-  listActivitiesForContact,
-  listActivitiesForDeal,
-  listActivitiesForLead,
+  listActivitiesPage,
+  listTimelineActivitiesPage,
 } from "@/services/activityService";
 
 const CreateActivitySchema = z.object({
@@ -44,10 +43,14 @@ export async function GET(
     const leadId = searchParams.get("leadId");
     const dealId = searchParams.get("dealId");
 
-    if (companyId) return listActivitiesForCompany(ctx, companyId);
-    if (contactId) return listActivitiesForContact(ctx, contactId);
-    if (leadId) return listActivitiesForLead(ctx, leadId);
-    if (dealId) return listActivitiesForDeal(ctx, dealId);
+    const page = toPageRequest(
+      parseQueryParams(searchParams, z.object(pageQueryShape)),
+    );
+
+    if (companyId) return listTimelineActivitiesPage(ctx, { companyId }, page);
+    if (contactId) return listTimelineActivitiesPage(ctx, { contactId }, page);
+    if (leadId) return listActivitiesPage(ctx, { leadId }, page);
+    if (dealId) return listActivitiesPage(ctx, { dealId }, page);
     throw new ValidationError(
       "One of companyId, contactId, leadId, or dealId is required.",
     );

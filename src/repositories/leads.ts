@@ -133,8 +133,65 @@ export interface ListLeadsFilters {
   createdBefore?: Date;
   /** Archived leads are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
+  /** Standard `sort` (B0.06); the default order is newest first. `id` always breaks ties. */
+  sort?: { field: LeadSortField; direction: "asc" | "desc" };
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
   take?: number;
+  /** Rows to skip before `take` -- set by the paged list functions (FIG-789), not by callers. */
+  skip?: number;
+}
+
+export const LEAD_SORT_FIELDS = ["createdAt", "updatedAt", "temperature", "nextFollowUpAt"] as const;
+export type LeadSortField = (typeof LEAD_SORT_FIELDS)[number];
+
+/** Shared by the list and count queries so a page and its total can never disagree (FIG-789). */
+function leadsWhere(
+  organizationId: string,
+  filters: ListLeadsFilters,
+): Prisma.LeadWhereInput {
+  return {
+    organizationId,
+    ownerMembershipId: filters.ownerMembershipId,
+    leadStatusId: filters.leadStatusId,
+    leadSourceId: filters.leadSourceId,
+    temperature: filters.temperature,
+    ...(filters.includeArchived ? {} : { archivedAt: null }),
+    ...(filters.createdAfter || filters.createdBefore
+      ? {
+          createdAt: {
+            ...(filters.createdAfter ? { gte: filters.createdAfter } : {}),
+            ...(filters.createdBefore ? { lt: filters.createdBefore } : {}),
+          },
+        }
+      : {}),
+    ...(filters.query
+      ? {
+          OR: [
+            { notes: { contains: filters.query, mode: "insensitive" } },
+            {
+              company: {
+                name: { contains: filters.query, mode: "insensitive" },
+              },
+            },
+            {
+              contact: {
+                firstName: { contains: filters.query, mode: "insensitive" },
+              },
+            },
+            {
+              contact: {
+                lastName: { contains: filters.query, mode: "insensitive" },
+              },
+            },
+            {
+              contact: {
+                email: { contains: filters.query, mode: "insensitive" },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
 }
 
 export async function listLeads(
@@ -143,58 +200,29 @@ export async function listLeads(
 ) {
   return withOrgContext(organizationId, (tx) =>
     tx.lead.findMany({
-      where: {
-        organizationId,
-        ownerMembershipId: filters.ownerMembershipId,
-        leadStatusId: filters.leadStatusId,
-        leadSourceId: filters.leadSourceId,
-        temperature: filters.temperature,
-        ...(filters.includeArchived ? {} : { archivedAt: null }),
-        ...(filters.createdAfter || filters.createdBefore
-          ? {
-              createdAt: {
-                ...(filters.createdAfter ? { gte: filters.createdAfter } : {}),
-                ...(filters.createdBefore ? { lt: filters.createdBefore } : {}),
-              },
-            }
-          : {}),
-        ...(filters.query
-          ? {
-              OR: [
-                { notes: { contains: filters.query, mode: "insensitive" } },
-                {
-                  company: {
-                    name: { contains: filters.query, mode: "insensitive" },
-                  },
-                },
-                {
-                  contact: {
-                    firstName: { contains: filters.query, mode: "insensitive" },
-                  },
-                },
-                {
-                  contact: {
-                    lastName: { contains: filters.query, mode: "insensitive" },
-                  },
-                },
-                {
-                  contact: {
-                    email: { contains: filters.query, mode: "insensitive" },
-                  },
-                },
-              ],
-            }
-          : {}),
-      },
+      where: leadsWhere(organizationId, filters),
       include: {
         company: true,
         contact: true,
         leadStatus: true,
         leadSource: true,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: filters.sort
+        ? [{ [filters.sort.field]: filters.sort.direction }, { id: "asc" }]
+        : [{ createdAt: "desc" }, { id: "asc" }],
       take: filters.take,
+      skip: filters.skip,
     }),
+  );
+}
+
+/** Rows matching `filters` across all pages (FIG-789) -- ignores `take`/`skip`. */
+export async function countLeads(
+  organizationId: string,
+  filters: ListLeadsFilters = {},
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.lead.count({ where: leadsWhere(organizationId, filters) }),
   );
 }
 

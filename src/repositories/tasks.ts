@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { withOrgContext } from "../db/orgScopedClient";
 
 export interface CreateTaskInput {
@@ -80,11 +81,15 @@ export interface ListTasksFilters {
   leadId?: string;
   dealId?: string;
   overdueOnly?: boolean;
+  /** Still open and not yet past due (no due date counts): the dashboard's "upcoming" list (FIG-789). */
+  upcomingOnly?: boolean;
   /** "Due today," "due this week," etc. (FIG-443) -- independent of overdueOnly. */
   dueAfter?: Date;
   dueBefore?: Date;
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
   take?: number;
+  /** Rows to skip before `take` -- set by the paged list functions (FIG-789), not by callers. */
+  skip?: number;
 }
 
 /**
@@ -92,50 +97,85 @@ export interface ListTasksFilters {
  * never stored (FIG-436). `overdueOnly` wins if a caller passes both it
  * and `dueAfter`/`dueBefore`, though no call site does.
  */
+/** Shared by the list and count queries so a page and its total can never disagree (FIG-789). */
+function tasksWhere(
+  organizationId: string,
+  filters: ListTasksFilters,
+): Prisma.TaskWhereInput {
+  return {
+    organizationId,
+    assigneeMembershipId: filters.assigneeMembershipId,
+    status: filters.status,
+    priority: filters.priority,
+    companyId: filters.companyId,
+    contactId: filters.contactId,
+    leadId: filters.leadId,
+    dealId: filters.dealId,
+    ...(filters.dueAfter || filters.dueBefore
+      ? {
+          dueAt: {
+            ...(filters.dueAfter ? { gte: filters.dueAfter } : {}),
+            ...(filters.dueBefore ? { lt: filters.dueBefore } : {}),
+          },
+        }
+      : {}),
+    ...(filters.overdueOnly
+      ? {
+          dueAt: { lt: new Date() },
+          status: { in: ["PENDING", "IN_PROGRESS"] },
+        }
+      : {}),
+    ...(filters.upcomingOnly
+      ? {
+          AND: [
+            { status: { in: ["PENDING", "IN_PROGRESS"] } },
+            { OR: [{ dueAt: null }, { dueAt: { gte: new Date() } }] },
+          ],
+        }
+      : {}),
+    ...(filters.query
+      ? {
+          OR: [
+            { title: { contains: filters.query, mode: "insensitive" } },
+            { description: { contains: filters.query, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+}
+
 export async function listTasks(
   organizationId: string,
   filters: ListTasksFilters = {},
 ) {
   return withOrgContext(organizationId, (tx) =>
     tx.task.findMany({
-      where: {
-        organizationId,
-        assigneeMembershipId: filters.assigneeMembershipId,
-        status: filters.status,
-        priority: filters.priority,
-        companyId: filters.companyId,
-        contactId: filters.contactId,
-        leadId: filters.leadId,
-        dealId: filters.dealId,
-        ...(filters.dueAfter || filters.dueBefore
-          ? {
-              dueAt: {
-                ...(filters.dueAfter ? { gte: filters.dueAfter } : {}),
-                ...(filters.dueBefore ? { lt: filters.dueBefore } : {}),
-              },
-            }
-          : {}),
-        ...(filters.overdueOnly
-          ? {
-              dueAt: { lt: new Date() },
-              status: { in: ["PENDING", "IN_PROGRESS"] },
-            }
-          : {}),
-        ...(filters.query
-          ? {
-              OR: [
-                { title: { contains: filters.query, mode: "insensitive" } },
-                { description: { contains: filters.query, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
+      where: tasksWhere(organizationId, filters),
       // Pulls the assignee's display name along so every role that can see a
       // task can see who it is assigned to (the member list itself is
       // Management-only). Nested relations are stripped in the service.
       include: { assignee: { include: { user: true } } },
-      orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }],
+      orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }, { id: "asc" }],
       take: filters.take,
+      skip: filters.skip,
     }),
+  );
+}
+
+/** Removes tasks by id -- only used to roll back a half-finished won-deal handoff (FIG-792). */
+export async function deleteTasksByIds(organizationId: string, ids: string[]) {
+  if (ids.length === 0) return { count: 0 };
+  return withOrgContext(organizationId, (tx) =>
+    tx.task.deleteMany({ where: { organizationId, id: { in: ids } } }),
+  );
+}
+
+/** Rows matching `filters` across all pages (FIG-789) -- ignores `take`/`skip`. */
+export async function countTasks(
+  organizationId: string,
+  filters: ListTasksFilters = {},
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.task.count({ where: tasksWhere(organizationId, filters) }),
   );
 }

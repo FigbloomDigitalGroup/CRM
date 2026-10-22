@@ -1,13 +1,15 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { pageQueryShape, toPageRequest } from "@/app/api/_lib/pageQuery";
 import { parseJsonBody, parseQueryParams, requiredString } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
-import { createCompany, listCompanies } from "@/services/companyService";
+import { createCompany, listCompaniesPage } from "@/services/companyService";
 
 const ListCompaniesQuerySchema = z.object({
   q: z.string().optional(),
   ownerMembershipId: z.string().optional(),
   includeArchived: z.enum(["true", "false"]).optional(),
+  ...pageQueryShape,
 });
 
 const CreateCompanySchema = z.object({
@@ -31,11 +33,15 @@ export async function GET(
     const ctx = await resolveRequestContext(orgSlug);
     const { searchParams } = new URL(request.url);
     const query = parseQueryParams(searchParams, ListCompaniesQuerySchema);
-    return listCompanies(ctx, {
-      query: query.q,
-      ownerMembershipId: query.ownerMembershipId,
-      includeArchived: query.includeArchived === "true",
-    });
+    return listCompaniesPage(
+      ctx,
+      {
+        query: query.q,
+        ownerMembershipId: query.ownerMembershipId,
+        includeArchived: query.includeArchived === "true",
+      },
+      toPageRequest(query),
+    );
   });
 }
 

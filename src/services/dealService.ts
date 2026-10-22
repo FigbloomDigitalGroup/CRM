@@ -11,7 +11,9 @@ import {
   archiveDeal as archiveDealRecord,
   createDeal as createDealRecord,
   getDealById,
+  countDeals as countDealsRecords,
   listDeals as listDealsRecords,
+  summarizeDeals as summarizeDealsRecords,
   restoreDeal as restoreDealRecord,
   updateDeal as updateDealRecord,
   type CreateDealInput,
@@ -22,6 +24,8 @@ import {
   assertEligibleDealOwner,
   listDealOwnerCandidates,
 } from "./ownerEligibility";
+import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
+import { assertValidHandoffOwner, startDealWonHandoff } from "./handoffService";
 
 /**
  * Beyond outcome (audited separately, below): other important field
@@ -190,21 +194,92 @@ export async function getDeal(ctx: AuthContext, dealId: string) {
  * Same "own filter is server-enforced, never client-trusted" rule as
  * leadService.listLeads.
  */
+function scopeDealFilters(
+  ctx: AuthContext,
+  filters: ListDealsFilters,
+): ListDealsFilters {
+  if (hasPermission(ctx, "deals.view.all")) return filters;
+  requirePermission(ctx, "deals.view.own");
+  return { ...filters, ownerMembershipId: ctx.membershipId };
+}
+
+/** Every matching deal, unpaged -- internal use; list screens and the API use `listDealsPage` (FIG-789). */
 export async function listDeals(
   ctx: AuthContext,
   filters: ListDealsFilters = {},
 ) {
-  let deals;
-  if (hasPermission(ctx, "deals.view.all")) {
-    deals = await listDealsRecords(ctx.organizationId, filters);
-  } else {
-    requirePermission(ctx, "deals.view.own");
-    deals = await listDealsRecords(ctx.organizationId, {
-      ...filters,
-      ownerMembershipId: ctx.membershipId,
-    });
-  }
+  const deals = await listDealsRecords(
+    ctx.organizationId,
+    scopeDealFilters(ctx, filters),
+  );
   return deals.map((deal) => maskValue(ctx, deal));
+}
+
+/** One page of deals plus the total; values are masked exactly as in `listDeals` (FIG-789). */
+export async function listDealsPage(
+  ctx: AuthContext,
+  filters: ListDealsFilters = {},
+  request: PageRequest = {},
+) {
+  const scoped = scopeDealFilters(ctx, filters);
+  const paging = resolvePaging(request);
+  const [deals, total] = await Promise.all([
+    listDealsRecords(ctx.organizationId, {
+      ...scoped,
+      take: paging.take,
+      skip: paging.skip,
+    }),
+    countDealsRecords(ctx.organizationId, scoped),
+  ]);
+  return buildPage(
+    deals.map((deal) => maskValue(ctx, deal)),
+    total,
+    paging,
+  );
+}
+
+/** How many deals this caller can see for `filters` -- a COUNT, never a row fetch (FIG-789). */
+export async function countDeals(
+  ctx: AuthContext,
+  filters: ListDealsFilters = {},
+) {
+  return countDealsRecords(ctx.organizationId, scopeDealFilters(ctx, filters));
+}
+
+/**
+ * The dashboard's deal numbers from COUNT/SUM aggregates instead of
+ * loading every deal (FIG-789). Same own/all scoping and value masking as
+ * `listDeals`: the open-pipeline total is only reported when every open
+ * deal's value is visible to this caller (`deals.view.value`, or they own
+ * it), every open deal has a value, and they share one currency -- a total
+ * that silently left deals out would be wrong, so it is omitted instead.
+ */
+export async function getDealSummary(ctx: AuthContext) {
+  const summary = await summarizeDealsRecords(
+    ctx.organizationId,
+    scopeDealFilters(ctx, {}),
+    ctx.membershipId,
+  );
+
+  const valuesVisible =
+    hasPermission(ctx, "deals.view.value") ||
+    summary.openNotOwnedByViewer === 0;
+  const [only] = summary.openByCurrency;
+  const openValue =
+    summary.open > 0 &&
+    valuesVisible &&
+    summary.openByCurrency.length === 1 &&
+    only!.valuedCount === only!.count
+      ? { currency: only!.currency, amount: only!.sum }
+      : null;
+
+  return {
+    total: summary.total,
+    open: summary.open,
+    won: summary.won,
+    lost: summary.lost,
+    openValue,
+  };
 }
 
 /**
@@ -267,6 +342,12 @@ export interface UpdateDealServiceInput {
   currency?: string;
   expectedCloseDate?: string | null;
   notes?: string | null;
+  /**
+   * Only read when this update moves the deal to a won stage (FIG-792):
+   * who in Delivery receives the onboarding tasks. Defaults to the deal's
+   * owner. The handoff dialog (F2.06) sends this.
+   */
+  handoff?: { deliveryOwnerMembershipId?: string };
 }
 
 export async function updateDeal(
@@ -295,6 +376,17 @@ export async function updateDeal(
         input.lostReasonId,
       )
     : undefined;
+
+  // A bad Delivery owner must fail the request before the deal changes,
+  // not leave a won deal with no handoff.
+  const becomingWon =
+    outcomeFields?.outcome === "WON" && deal.outcome !== "WON";
+  if (becomingWon) {
+    await assertValidHandoffOwner(
+      ctx.organizationId,
+      input.handoff?.deliveryOwnerMembershipId,
+    );
+  }
 
   const updated = await updateDealRecord(ctx.organizationId, dealId, {
     primaryContactId: input.primaryContactId,
@@ -346,6 +438,21 @@ export async function updateDeal(
       previousValue: diff.previousValue,
       newValue: diff.newValue,
     });
+  }
+
+  // Winning a deal hands it to Delivery (FIG-792). Idempotent per deal: a
+  // deal that is re-opened and won again does not get a second handoff.
+  if (becomingWon) {
+    await startDealWonHandoff(
+      ctx,
+      {
+        id: dealId,
+        companyId: deal.companyId,
+        serviceId: updated.serviceId,
+        ownerMembershipId: deal.ownerMembershipId,
+      },
+      { deliveryOwnerMembershipId: input.handoff?.deliveryOwnerMembershipId },
+    );
   }
 
   return maskValue(ctx, updated);

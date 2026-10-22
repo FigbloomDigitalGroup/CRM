@@ -1,33 +1,23 @@
-import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
-import { parseJsonBody, parseQueryParams, requiredString } from "@/app/api/_lib/validation";
+import { pageQueryShape, toPageRequest } from "@/app/api/_lib/pageQuery";
+import { parseJsonBody, parseQueryParams } from "@/app/api/_lib/validation";
+import {
+  CreateLeadBodySchema,
+  CreateLeadResponseSchema,
+  LEAD_SORTS,
+  ListLeadsQuerySchema,
+  ListLeadsResponseSchema,
+  toLeadDto,
+} from "@/api/dto/leads";
+import { respond } from "@/api/respond";
 import { resolveRequestContext } from "@/auth/requestContext";
-import { createLead, listLeads } from "@/services/leadService";
+import { withIdempotency } from "@/lib/idempotency";
+import { parseSort } from "@/lib/listQuery";
+import { createLead, listLeadsPage } from "@/services/leadService";
 
-const TemperatureEnum = z.enum(["HOT", "WARM", "COLD"]);
-
-const ListLeadsQuerySchema = z.object({
-  q: z.string().optional(),
-  ownerMembershipId: z.string().optional(),
-  leadStatusId: z.string().optional(),
-  leadSourceId: z.string().optional(),
-  temperature: TemperatureEnum.optional(),
-  includeArchived: z.enum(["true", "false"]).optional(),
-});
-
-const CreateLeadSchema = z.object({
-  leadStatusId: requiredString("leadStatusId is required."),
-  companyId: z.string().optional(),
-  contactId: z.string().optional(),
-  leadSourceId: z.string().optional(),
-  temperature: TemperatureEnum.optional(),
-  serviceInterestId: z.string().optional(),
-  ownerMembershipId: z.string().optional(),
-  // Arbitrary per-status qualification answers -- no fixed shape to
-  // validate against (z.any, not z.unknown, so this stays assignable to
-  // Prisma's InputJsonValue without a cast).
-  qualificationData: z.any().optional(),
-});
+// Reference implementation of the API conventions (FIG-1014, B0.06): schemas
+// in `src/api/dto/leads.ts`, standard list query, checked response, standard
+// error envelope, idempotent create. See `docs/API_CONVENTIONS.md`.
 
 export async function GET(
   request: Request,
@@ -37,14 +27,26 @@ export async function GET(
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
     const { searchParams } = new URL(request.url);
-    const query = parseQueryParams(searchParams, ListLeadsQuerySchema);
-    return listLeads(ctx, {
-      query: query.q,
-      ownerMembershipId: query.ownerMembershipId,
-      leadStatusId: query.leadStatusId,
-      leadSourceId: query.leadSourceId,
-      temperature: query.temperature,
-      includeArchived: query.includeArchived === "true",
+    const query = parseQueryParams(
+      searchParams,
+      ListLeadsQuerySchema.extend(pageQueryShape),
+    );
+    const page = await listLeadsPage(
+      ctx,
+      {
+        query: query.q,
+        ownerMembershipId: query.ownerMembershipId,
+        leadStatusId: query.leadStatusId,
+        leadSourceId: query.leadSourceId,
+        temperature: query.temperature,
+        includeArchived: query.includeArchived === "true",
+        sort: parseSort(query.sort, LEAD_SORTS),
+      },
+      toPageRequest(query),
+    );
+    return respond(ListLeadsResponseSchema, {
+      ...page,
+      items: page.items.map((lead) => toLeadDto(ctx, lead)),
     });
   });
 }
@@ -56,7 +58,9 @@ export async function POST(
   return handleRoute(async () => {
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    const body = await parseJsonBody(request, CreateLeadSchema);
-    return createLead(ctx, body);
+    const body = await parseJsonBody(request, CreateLeadBodySchema);
+    return withIdempotency(ctx, request, body, async () =>
+      respond(CreateLeadResponseSchema, await createLead(ctx, body)),
+    );
   });
 }

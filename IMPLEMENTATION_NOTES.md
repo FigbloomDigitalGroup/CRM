@@ -113,14 +113,21 @@ its id. `src/services/recordAccess.ts#assertCanAccessLinkedRecords` closes
 that by re-running each linked record's own service-layer view check before
 allowing the activity/task write.
 
-## "Reminders" is the existing overdue mechanism, not a notification system
+## "Reminders": overdue is computed at query time; notifications came later (FIG-441, FIG-597)
 
-There's no email/push infrastructure anywhere in this codebase, and nothing
-in the source docs asks for scheduled delivery. "Reminders" is: `Task.dueAt`
-in the past + status still open = overdue, computed at query time and
-surfaced on the dashboard and the Tasks page filter. The same call applies
-to the website endpoint's "acknowledgement" step (see below) — it creates
-an internal follow-up task, not an outbound email/SMS to the visitor.
+When activities and tasks were built (FIG-441) there was no email or push
+infrastructure, so "reminders" meant only this: `Task.dueAt` in the past
+with the status still open = overdue, computed at query time and surfaced
+on the dashboard and the Tasks page filter. That is still how overdue is
+*defined*.
+
+**This is no longer the whole story.** FIG-597 added real notifications
+and outbound delivery (see "Notifications and outbound delivery
+(FIG-597)," below): in-app `Notification` rows plus `NotificationDelivery`
+email and SMS, with a sweep for due and overdue tasks that runs as a
+scheduled job (FIG-783). The website endpoint's "acknowledgement" step
+still creates the internal follow-up task described below, and now also
+sends an outbound email or SMS to the enquirer where one is configured.
 
 ## Audit history
 
@@ -177,7 +184,8 @@ row. If an organization somehow has no eligible rep, the lead is created
 unowned rather than the request failing.
 
 "Acknowledgement" is a 24-hour follow-up Task assigned to the new lead's
-owner, not an outbound email — see "Reminders," above. A submitted
+owner; since FIG-597 it also sends an outbound email or SMS to the
+enquirer where one is configured — see "Reminders," above. A submitted
 `service` value is matched against the org's Service catalog best-effort
 (case-insensitive name or key); an unmatched value doesn't reject the
 submission, it's kept on the lead for a human to reconcile. Required
@@ -1583,6 +1591,93 @@ since it has no legitimate use for it at all -- stricter than
 `website_lead_request_log`'s "write revoked, read kept" treatment, since
 there isn't even a read-side use here.
 
+## Pagination, counts and streamed exports (FIG-789)
+
+Every list now has a paged form: `listLeadsPage`, `listContactsPage`,
+`listCompaniesPage`, `listDealsPage`, `listTasksPage`, `listActivitiesPage`
+and `listTimelineActivitiesPage` (services), backed by `skip`/`take` and a
+`count*` function in each repository. They return
+`{ items, page, pageSize, total, pageCount }`. The default page size is 25
+and the hard maximum is 100 (`src/lib/pagination.ts`); a larger `pageSize`
+is clamped, a non-numeric `page`/`pageSize` is a 400. The list `GET` API
+routes take `page` and `pageSize` and now return that object instead of a
+bare array (nothing in the repo consumed the old shape).
+
+Offset paging, not cursors: every list view needs a total and "page N of
+M", and the lists sort on several columns. Every paged query ends its sort
+with `id`, so the order is total and no row appears on two pages or none.
+The page query and the count query share one `where` builder per entity,
+so a page and its total cannot disagree, and both go through the same
+own/all scoping (`scope*Filters`) as the unpaged lists.
+
+The unpaged `listLeads`/`listContacts`/... service functions still exist
+for internal callers that pass their own `take` (global search, the
+dashboard's "latest" rows) or genuinely need the whole set. The list
+*pages* in `src/app/o/[orgSlug]/*` still call them: wiring the page
+controls into those screens is part of the frontend makeover (F2.04,
+F4.10 and the list-page issues; `docs/DECISIONS.md` §2.1), not this
+change.
+
+The dashboard (`src/app/o/[orgSlug]/page.tsx`) no longer loads full lists
+to count them. It uses `countLeads`/`countContacts`/`countCompanies`/
+`countTasks` and `getDealSummary` (COUNT/SUM aggregates through
+`summarizeDeals`), plus `take: 3` or `take: 5` lists for the "latest"
+rows. `getDealSummary` keeps the old masking rule: the open-pipeline total
+is only shown when the viewer can see every open deal's value
+(`deals.view.value`, or they own every open deal), every open deal has a
+value, and there is one currency.
+
+CSV exports (`exportService.ts`) read the full filtered set a batch of 500
+at a time (`iterateInBatches`) and map rows lazily into the existing
+streamed response, so memory stays flat however large the set is. The
+audit event's `count` now comes from a `COUNT` query. Reports export is
+unchanged (a handful of aggregate rows).
+
+## Sales-to-delivery handoff when a deal is won (FIG-792)
+
+Moving a deal to a won stage (`dealService.updateDeal`, the only path that
+sets `outcome = WON`) now runs `handoffService.startDealWonHandoff`:
+
+1. the deal's service is linked to the company (`CompanyService`): created
+   as ACTIVE with today's start date, or reactivated if a link for the same
+   service had ended; an already-active link is left alone. The enum has no
+   "onboarding" status, so the link is ACTIVE and the onboarding stage lives
+   on the handoff (B2.08 adds Awaiting owner / Onboarding / Delivered);
+2. the company moves to the configured customer lifecycle state (default:
+   the organization's `CUSTOMER` state), with a `company.lifecycle_state_changed`
+   audit event;
+3. the organization's onboarding task template is created as tasks assigned
+   to the Delivery owner chosen when the deal was won (`handoff.deliveryOwnerMembershipId`
+   on the PATCH body; the deal's owner if none), linked to the deal and the
+   company, due `dueInDays` after the win;
+4. a "Handed off to Delivery" note is written as an Activity on the deal and
+   the company, so it shows on both timelines, plus a `deal.handoff_created`
+   audit event;
+5. the assignee gets a `DEAL_WON_HANDOFF` notification (in-app, and email
+   unless they switched it off; it is a normal notification preference).
+
+**One handoff per deal.** `deal_handoffs.deal_id` is unique and is claimed
+first; a deal that is re-opened and won again, or two requests winning it
+at once, finds the claim taken and creates nothing a second time (no
+duplicate tasks, notification, link or timeline note). If a later step
+fails, the tasks that attempt created and the claim are removed so winning
+again can retry. A Delivery owner who cannot be assigned tasks, or who is in
+another organization, is rejected *before* the deal changes.
+
+The template and customer state live in `organization_settings`
+(`delivery_handoff`) and are read and written by `GET/PUT
+/api/orgs/{slug}/handoff-settings` (`organization.manage_settings`, so
+Management). Defaults: three tasks (kick-off call, confirm scope and
+access, set up and confirm go-live) and the `CUSTOMER` state. An empty task
+list turns onboarding tasks off but keeps the rest. `GET
+/api/orgs/{slug}/deals/{dealId}/handoff` returns the recorded handoff.
+
+The handoff reacts to a stage move a person made. It never moves a stage,
+sets a discount or approves anything (CLAUDE.md rule 9). The handoff dialog,
+the Settings screen for the template and the Delivery Handoffs view are
+built in the new design (F2.06); this change is the backend half
+(`docs/DECISIONS.md` §2.1).
+
 ## Known non-obvious fixes
 
 - Dates from an `<input type="date">` (`"YYYY-MM-DD"`) need an explicit
@@ -1601,17 +1696,135 @@ there isn't even a read-side use here.
 
 ## Deliberately not built
 
+Each item says which Linear issue tracks it. "No issue" means a search of
+the CRM project on 22 Oct 2026 found none; raise one if it is wanted.
+(Updated 22 Oct 2026, FIG-788.)
+
 - A self-service "Erase my data" button/route, or Company erasure --
   FIG-601's GDPR/DPA path is a standalone admin script scoped to Contact
   only; see that section above for why both are deliberate.
+  *Tracked in: FIG-1062 (B4.05, data and privacy: export rights, retention
+  settings, data-subject requests).*
 - Undoing a Company/Contact merge -- restoring a merged record un-hides
   the shell, it doesn't pull back the Contacts/Leads/Deals/etc. that were
-  reassigned (FIG-601).
+  reassigned (FIG-601). *No issue for undo itself. Related: FIG-1033
+  (B2.04, merge audit) and FIG-1097 (F3.03, merge UI).*
 - Full proposal generation/e-signature — `ProposalReference` is reference-
-  only by design.
+  only by design. *Tracked in: FIG-1143 (B6.11, quotes), FIG-1144 (B6.12,
+  quote preview and send), FIG-1168 (F6.09, quote builder) and FIG-1186
+  (B7.04, e-signature signing page), all V1.1 or later. Deposit requests on
+  signed quotes are FIG-1187 (B7.05), V2 and decision-gated
+  (`docs/DECISIONS.md` §2.5).*
 - Multiple simultaneously-valid website API keys, or HMAC-signed webhook
   support as an alternative — revisit if a second real integration
-  consumer shows up.
-- Self-service account creation/signup and SSO — see "Real authentication
-  (FIG-592)," above, for why. (Login/signup/password-reset rate limiting
-  *is* built — FIG-784, below.)
+  consumer shows up. *Tracked in: FIG-804 (outbound webhooks), FIG-805
+  (public REST API with personal tokens) and FIG-1194 (F7.03, developers
+  settings screen).*
+- Self-service **tenant** sign-up, and SSO. Account sign-up itself **is**
+  built: `/signup` creates a user with no organisation access (FIG-592,
+  above), and login, signup and password-reset rate limiting is built
+  (FIG-784, below). Self-service tenant creation, billing, white-labelling
+  and a customer portal stay deferred (FIG-436; `docs/DECISIONS.md` §4,
+  question 8). *SSO: no issue. Related: FIG-1167 (F6.08, two-step sign-in
+  screens).*
+- A multi-organisation switcher UI -- login lands on the user's oldest
+  active membership (FIG-604, above). Decided as V1.1
+  (`docs/DECISIONS.md` §2.3). *Tracked in: FIG-1133 (B6.01, API) and
+  FIG-1165 (F6.06, switcher and top bar variants).*
+
+## Calendar feed (FIG-794, backend half of B2.10)
+
+`GET /api/orgs/{slug}/calendar?from=&to=[&membershipId=]` returns the
+calendar's data; the month/week/day UI, empty-slot creation and the mobile
+day/list mode are built in the frontend makeover (F2.08), per the FIG-794
+re-scope comment. No calendar UI was added.
+
+- **Items:** open and closed tasks by `dueAt`, and calls and meetings by their
+  `occurredAt` time (a future time is a scheduled one). Each item has `kind`,
+  `type`, `title`, `start`, `status`, `priority`, `overdue`, the assignee, and
+  a `link` (`{type, id}` of the lead/deal/company/contact to open).
+- **Overdue** is derived at request time: open task and due before now.
+- **Scope:** default is the caller's own items. `membershipId=<member>` or
+  `all` needs `tasks.view.all` (otherwise 403). Another member's calls and
+  meetings are included only when the caller can also view all leads and deals;
+  otherwise only the caller's own appear. Opening an item re-checks access on
+  the record, as everywhere else.
+- **Limits:** the window must be at most 62 days (a month view with its
+  leading and trailing days) and each source returns at most 1000 items;
+  `truncated: true` says the cap was hit.
+- **Tests:** `tests/calendar.test.ts` (range, sorting, links, overdue, own vs
+  team scope, cross-organisation, validation).
+
+## Customer reports (FIG-793, backend half of B3.09)
+
+Queries and APIs for the active/repeat/dormant customer report, won by
+salesperson (total or by month) and upcoming renewals. The screens, charts
+and CSV buttons are built in F3.07, per the FIG-793 re-scope comment; the
+definitions are in `docs/REPORTING_METRICS.md` ("Customer reports").
+
+- **Dormancy is configurable** per organisation (`reports.dormancy_days` in
+  `OrganizationSetting`, default 90) with a per-request override.
+- **Customer reports are Management-only** (they cover the whole customer
+  base). Won by salesperson also serves Sales (own row only), and Delivery and
+  Finance (all rows, values per `deals.view.value`).
+- **Salesperson by month** uses one raw `date_trunc` query (Prisma `groupBy`
+  cannot bucket by month); it goes through `withOrgContext`, so RLS applies.
+- **Tests:** `tests/customerReports.test.ts` on fixed fixtures (segments,
+  threshold, scope, masking, month split, renewals, tenant isolation, CSV).
+
+## API conventions (FIG-1014, B0.06)
+
+The rules every route follows are in `docs/API_CONVENTIONS.md`. What was
+built and the decisions behind it:
+
+- **Zod DTOs are the source of truth** (`src/api/dto/`). Routes parse with
+  them and check their response with `respond()` (outside production a
+  mismatch is a 500 with the drifted fields logged, so any test that hits a
+  drifted route fails). Reference routes: leads list and create, deal detail.
+- **OpenAPI 3.1 from the same schemas** using Zod 4's built-in
+  `z.toJSONSchema` (no extra dependency): `src/api/openapi.ts`,
+  `GET /api/openapi.json` outside production, `npm run openapi:export`, and a
+  CI step that keeps the file as the `openapi` artifact.
+- **Error envelope** (`src/lib/apiErrors.ts`): `code`, `message`,
+  `fieldErrors`, `requestId` and, for 403s, `denial {role, requiredRoles,
+  whoToAsk}`. The old `error` and `issues` fields are kept, so no existing
+  caller changed. `ForbiddenError` now carries the permission keys and the
+  caller's role (set in `requirePermission`); roles are looked up and cached.
+- **List query standard**: `page`/`pageSize` stay (FIG-789); `limit`,
+  `cursor` and `sort` are added and responses gain `nextCursor`. Offset paging
+  was kept on purpose (lists need totals); the cursor is opaque so it can
+  become keyset later. Sort is allow-listed per route (leads so far).
+- **Idempotency keys**: table `idempotency_keys` (migration
+  `20261022120000_idempotency_keys`, RLS, composite tenant key). On leads
+  create first; other creates adopt `withIdempotency`.
+- **Record fields**: `archived`, `masked`, `scope` on leads and deals;
+  `valueMasked` on deals stays as the older name.
+- **Tests**: `tests/apiConventions.test.ts` (envelope, list standard,
+  contract and drift for leads list and deal detail, idempotency including
+  cross-organisation and concurrency, OpenAPI document).
+- **Not converted yet**: the other routes keep their current shapes (they
+  already get the new error envelope through `handleRoute`). They move to DTOs
+  as their backend issues land (B1 to B4).
+
+## Release flags and organisation toggles (FIG-1015, B0.07)
+
+Described in `docs/FEATURE_FLAGS.md`. Decisions:
+
+- **No new table.** Toggle values and a per-organization release override are
+  `OrganizationSetting` rows (`feature_toggles`, `release_override`), like the
+  other per-organization configuration. Defaults live in code, so a new
+  toggle needs no migration.
+- **The deployment's release is `ACTIVE_RELEASE`** (default `v1`). A toggle
+  whose `minRelease` has not arrived is off and cannot be changed, so a V1.1
+  feature cannot be switched on by accident.
+- **The release override is not an HTTP route.** Moving an organization to a
+  different release is a platform operation (B6); `setOrganizationRelease` is
+  there for that console, scripts and tests, and is audited.
+- **"Not available yet" is a 403** with code `FEATURE_UNAVAILABLE` and a
+  `feature` block saying why and when, in the standard error envelope.
+- **`permissions.provisional_departures` defaults on** because the departures
+  were signed (`docs/DECISIONS.md` 1). B1.03 reads it; switching it off is
+  the way back to the seeded matrix.
+- **Tests:** `tests/featureFlags.test.ts` (resolution, `requireFeature`, the
+  explained response from a route with the flag on and off, toggles, audit,
+  isolation, override, API).

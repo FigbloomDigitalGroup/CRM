@@ -1,10 +1,10 @@
 import { resolveRequestContext } from "@/auth/requestContext";
 import { hasPermission } from "@/auth/context";
-import { listCompanies } from "@/services/companyService";
-import { listContacts } from "@/services/contactService";
-import { listDeals } from "@/services/dealService";
-import { listLeads } from "@/services/leadService";
-import { listTasks } from "@/services/taskService";
+import { countCompanies, listCompanies } from "@/services/companyService";
+import { countContacts } from "@/services/contactService";
+import { getDealSummary } from "@/services/dealService";
+import { countLeads, listLeads } from "@/services/leadService";
+import { countTasks, listTasks } from "@/services/taskService";
 import { recordPageView } from "@/services/pageViewService";
 import {
   IconCompanies,
@@ -37,62 +37,63 @@ export default async function OrgDashboardPage({
     hasPermission(ctx, "tasks.view.own") ||
     hasPermission(ctx, "tasks.view.all");
 
-  const [leads, contacts, companies, deals, overdueTasks, allTasks] = await Promise.all([
-    canViewLeads ? listLeads(ctx) : Promise.resolve([]),
+  // FIG-789: counts and aggregates (COUNT/SUM), never full lists -- the
+  // dashboard only ever shows numbers plus a handful of "latest" rows, so
+  // it must not load every lead, deal and task to produce them. Each call
+  // keeps the same server-enforced own/all scoping and value masking as the
+  // list pages.
+  const canViewCompanies = hasPermission(ctx, "companies.view");
+  const [
+    leadCount,
+    latestLeads,
+    contactCount,
+    companyCount,
+    newestCompanies,
+    dealSummary,
+    overdueCount,
+    overdueTasks,
+    upcomingTasks,
+  ] = await Promise.all([
+    canViewLeads ? countLeads(ctx) : Promise.resolve(0),
+    canViewLeads ? listLeads(ctx, { take: 3 }) : Promise.resolve([]),
     hasPermission(ctx, "contacts.view")
-      ? listContacts(ctx)
+      ? countContacts(ctx)
+      : Promise.resolve(0),
+    canViewCompanies ? countCompanies(ctx) : Promise.resolve(0),
+    canViewCompanies ? listCompanies(ctx, { take: 3 }) : Promise.resolve([]),
+    canViewDeals ? getDealSummary(ctx) : Promise.resolve(null),
+    canViewTasks
+      ? countTasks(ctx, { overdueOnly: true })
+      : Promise.resolve(0),
+    canViewTasks
+      ? listTasks(ctx, { overdueOnly: true, take: 5 })
       : Promise.resolve([]),
-    hasPermission(ctx, "companies.view")
-      ? listCompanies(ctx)
+    canViewTasks
+      ? listTasks(ctx, { upcomingOnly: true, take: 3 })
       : Promise.resolve([]),
-    canViewDeals ? listDeals(ctx) : Promise.resolve([]),
-    canViewTasks ? listTasks(ctx, { overdueOnly: true }) : Promise.resolve([]),
-    canViewTasks ? listTasks(ctx) : Promise.resolve([]),
   ]);
 
   // ---- Overview card: only what this account can actually see ----------
-  // Every list above already went through the same server-enforced
-  // own/all scoping as the stat cards and list pages, so the overview can
-  // never show a record the rest of the app wouldn't.
-  const leadLabel = (l: (typeof leads)[number]) =>
+  const leadLabel = (l: (typeof latestLeads)[number]) =>
     l.company?.name ??
     ([l.contact?.firstName, l.contact?.lastName].filter(Boolean).join(" ") ||
       "Unnamed lead");
   const tempBadge = { HOT: "badge-red", WARM: "badge-orange", COLD: "badge-blue" } as const;
 
-  const latestLeads = leads.slice(0, 3);
-
-  const openDeals = deals.filter((d) => d.outcome === "OPEN");
-  const wonDeals = deals.filter((d) => d.outcome === "WON");
-  const lostDeals = deals.filter((d) => d.outcome === "LOST");
+  const dealCount = dealSummary?.total ?? 0;
+  const openDealCount = dealSummary?.open ?? 0;
+  const wonDealCount = dealSummary?.won ?? 0;
+  const lostDealCount = dealSummary?.lost ?? 0;
   // A total is only honest when every open deal's value is visible to this
-  // account (deals.view.value) and they share one currency.
-  const openValueCurrencies = new Set(openDeals.map((d) => d.currency));
-  const openValue =
-    openDeals.length > 0 &&
-    openDeals.every((d) => !d.valueMasked && d.value != null) &&
-    openValueCurrencies.size === 1
-      ? `${[...openValueCurrencies][0]} ${openDeals
-          .reduce((sum, d) => sum + Number(d.value), 0)
-          .toLocaleString()}`
-      : null;
-
-  const now = Date.now();
-  const upcomingTasks = allTasks
-    .filter(
-      (t) =>
-        (t.status === "PENDING" || t.status === "IN_PROGRESS") &&
-        (!t.dueAt || new Date(t.dueAt).getTime() >= now),
-    )
-    .slice(0, 3);
-
-  const newestCompanies = [...companies]
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
-    .slice(0, 3);
+  // account (deals.view.value) and they share one currency -- getDealSummary
+  // returns null otherwise.
+  const openValue = dealSummary?.openValue
+    ? `${dealSummary.openValue.currency} ${dealSummary.openValue.amount.toLocaleString()}`
+    : null;
 
   const hasOverview =
     latestLeads.length > 0 ||
-    deals.length > 0 ||
+    dealCount > 0 ||
     upcomingTasks.length > 0 ||
     newestCompanies.length > 0;
 
@@ -110,7 +111,7 @@ export default async function OrgDashboardPage({
       label: "Leads",
       dot: "blue",
       icon: <IconLeads />,
-      value: leads.length,
+      value: leadCount,
       caption: hasPermission(ctx, "leads.view.all")
         ? "visible organization-wide"
         : "owned by you",
@@ -122,7 +123,7 @@ export default async function OrgDashboardPage({
       label: "Deals",
       dot: "green",
       icon: <IconDeals />,
-      value: deals.length,
+      value: dealCount,
       caption: hasPermission(ctx, "deals.view.all")
         ? "visible organization-wide"
         : "owned by you",
@@ -132,20 +133,20 @@ export default async function OrgDashboardPage({
   if (canViewTasks) {
     stats.push({
       label: "Overdue Tasks",
-      dot: overdueTasks.length > 0 ? "red" : "green",
+      dot: overdueCount > 0 ? "red" : "green",
       icon: <IconTasks />,
-      value: overdueTasks.length,
+      value: overdueCount,
       caption: "past due, still open",
       href: `/o/${orgSlug}/tasks?overdueOnly=true`,
     });
   }
-  if (hasPermission(ctx, "companies.view")) {
+  if (canViewCompanies) {
     stats.push({
       label: "Companies",
       dot: "orange",
       icon: <IconCompanies />,
-      value: companies.length,
-      caption: `${contacts.length} contact${contacts.length === 1 ? "" : "s"} across them`,
+      value: companyCount,
+      caption: `${contactCount} contact${contactCount === 1 ? "" : "s"} across them`,
       href: `/o/${orgSlug}/companies`,
     });
   }
@@ -213,7 +214,7 @@ export default async function OrgDashboardPage({
                 </section>
               )}
 
-              {deals.length > 0 && (
+              {dealCount > 0 && (
                 <section>
                   <div className="overview-section-title">
                     <span>Pipeline</span>
@@ -221,15 +222,15 @@ export default async function OrgDashboardPage({
                   </div>
                   <div className="overview-figures">
                     <div>
-                      <div className="overview-figure">{openDeals.length}</div>
+                      <div className="overview-figure">{openDealCount}</div>
                       <div className="panel-row-meta">open</div>
                     </div>
                     <div>
-                      <div className="overview-figure">{wonDeals.length}</div>
+                      <div className="overview-figure">{wonDealCount}</div>
                       <div className="panel-row-meta">won</div>
                     </div>
                     <div>
-                      <div className="overview-figure">{lostDeals.length}</div>
+                      <div className="overview-figure">{lostDealCount}</div>
                       <div className="panel-row-meta">lost</div>
                     </div>
                   </div>
@@ -302,11 +303,11 @@ export default async function OrgDashboardPage({
         {canViewTasks && (
           <div className="card">
             <strong>Needs your attention</strong>
-            {overdueTasks.length === 0 ? (
+            {overdueCount === 0 ? (
               <p className="panel-empty">Nothing overdue right now.</p>
             ) : (
               <ul className="panel-list">
-                {overdueTasks.slice(0, 5).map((t) => (
+                {overdueTasks.map((t) => (
                   <li key={t.id} className="panel-row">
                     <div>
                       <div className="panel-row-title">{t.title}</div>
@@ -319,10 +320,10 @@ export default async function OrgDashboardPage({
                 ))}
               </ul>
             )}
-            {overdueTasks.length > 5 && (
+            {overdueCount > 5 && (
               <p style={{ marginTop: 12 }}>
                 <a href={`/o/${orgSlug}/tasks?overdueOnly=true`}>
-                  All {overdueTasks.length} overdue tasks &rarr;
+                  All {overdueCount} overdue tasks &rarr;
                 </a>
               </p>
             )}
