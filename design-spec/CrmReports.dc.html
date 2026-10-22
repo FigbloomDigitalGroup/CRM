@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="crm-theme.css"><script src="icons.js"></script><script src="crm-store.js"></script></helmet>
+<div data-screen-label="{{ label }}" style="display:flex; flex-direction:column; gap:18px;">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+    <div>
+      <h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">{{ title }}</h1>
+      <div style="font-size:13.5px; color:var(--text-2); margin-top:4px;">{{ sub }}</div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; background:{{ sc.bg }}; color:{{ sc.fg }}; font-size:12.5px; font-weight:600; white-space:nowrap;"><span style="width:6px; height:6px; border-radius:99px; background:{{ sc.dot }};"></span>{{ sc.label }}</span><span style="font-size:13.5px; color:var(--text-2);">{{ hint }}</span></div>
+    </div>
+    <sc-if value="{{ canExport }}"><button onClick="{{ exportAll }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;"><fb-icon name="download" size="16"></fb-icon>Export CSV</button></sc-if>
+  </div>
+
+  <sc-if value="{{ org }}">
+    <div style="display:flex; align-items:center; gap:12px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; color:var(--text-3);">NEEDS ATTENTION<span style="flex:1; height:1px; background:var(--border);"></span></div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px;">
+      <sc-for list="{{ attention }}" as="k"><button onClick="{{ k.go }}" style="text-align:left; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px; box-shadow:var(--shadow-sm);"><div style="display:flex; justify-content:space-between;"><span style="font-size:14px; font-weight:600;">{{ k.l }}</span><span style="width:36px; height:36px; border-radius:10px; background:{{ k.bg }}; color:{{ k.fg }}; display:flex; align-items:center; justify-content:center;"><fb-icon name="{{ k.icon }}" size="18"></fb-icon></span></div><div style="font-size:30px; font-weight:700; margin-top:10px; color:{{ k.col }};">{{ k.n }}</div><div style="font-size:13px; color:var(--text-2); margin-top:4px;">{{ k.sub }}</div></button></sc-for>
+    </div>
+  </sc-if>
+
+  <div style="display:flex; align-items:center; gap:12px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; color:var(--text-3);">PERFORMANCE<span style="flex:1; height:1px; background:var(--border);"></span></div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <div style="display:inline-flex; gap:2px; padding:4px; border-radius:12px; background:var(--surface-3); border:1px solid var(--border);"><sc-for list="{{ periods }}" as="p"><button onClick="{{ p.go }}" style="border:0; padding:7px 13px; border-radius:9px; background:{{ p.bg }}; box-shadow:{{ p.sh }}; font-size:14px; font-weight:600; color:{{ p.fg }};">{{ p.l }}</button></sc-for></div>
+    <sc-if value="{{ org }}"><sc-for list="{{ filters }}" as="f"><select aria-label="{{ f.l }}" style="height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><option>{{ f.l }}</option><sc-for list="{{ f.opts }}" as="o"><option>{{ o }}</option></sc-for></select></sc-for></sc-if>
+  </div>
+  <div style="font-size:13px; color:var(--text-3); margin-top:-6px;">Showing {{ range }}. Open pipeline is always a live snapshot.</div>
+
+  <sc-if value="{{ st.loading }}"><div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px;"><sc-for list="{{ skel }}" as="s"><div style="height:104px; border-radius:14px; background:linear-gradient(90deg,var(--skel) 0%,var(--skel-2) 50%,var(--skel) 100%); background-size:1200px 100%; animation:fbShimmer 1.4s linear infinite;"></div></sc-for></div></sc-if>
+  <sc-if value="{{ st.error }}"><div role="alert" style="padding:40px; text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:14px;"><div style="font-weight:700;">Reports didn’t load</div><button onClick="{{ retry }}" style="margin-top:12px; height:38px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Retry</button></div></sc-if>
+  <sc-if value="{{ st.empty }}"><div style="padding:52px 24px; text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:14px;"><div style="display:flex; justify-content:center; color:var(--orange-text);"><fb-icon name="chart" size="26"></fb-icon></div><div style="font-weight:700; font-size:18px; margin-top:10px;">Not enough data yet</div><div style="color:var(--text-2); margin-top:6px; font-size:14px;">Reports fill in once leads and deals start moving. Check back after your first week.</div></div></sc-if>
+
+  <sc-if value="{{ st.ok }}">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px;">
+      <sc-for list="{{ kpis }}" as="k"><div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px;"><div style="display:flex; align-items:center; gap:7px; font-size:14px; color:var(--text-2);"><span style="width:7px; height:7px; border-radius:99px; background:{{ k.dot }};"></span>{{ k.l }}</div><div style="font-size:26px; font-weight:700; margin-top:8px; letter-spacing:-0.03em;">{{ k.v }}</div><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">{{ k.sub }}</div></div></sc-for>
+    </div>
+    <sc-for list="{{ sections }}" as="sec">
+      <div style="display:flex; align-items:center; gap:12px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; color:var(--text-3); margin-top:6px;">{{ sec.l }}<span style="flex:1; height:1px; background:var(--border);"></span></div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr)); gap:16px; align-items:start;">
+        <sc-for list="{{ sec.charts }}" as="c">
+          <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+              <div><h2 style="margin:0; font-size:15.5px;">{{ c.title }}</h2><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">{{ c.sub }}</div></div>
+              <div style="display:flex; gap:6px; align-items:center;">
+                <sc-if value="{{ c.toggleable }}"><div style="display:inline-flex; gap:2px; padding:2px; border-radius:8px; background:var(--surface-3);"><button onClick="{{ c.showChart }}" aria-label="Chart view" style="width:28px; height:26px; border:0; border-radius:6px; background:{{ c.cbg }}; display:flex; align-items:center; justify-content:center; color:var(--text-2);"><fb-icon name="chart" size="14"></fb-icon></button><button onClick="{{ c.showTable }}" aria-label="Table view" style="width:28px; height:26px; border:0; border-radius:6px; background:{{ c.tbg }}; display:flex; align-items:center; justify-content:center; color:var(--text-2);"><fb-icon name="table" size="14"></fb-icon></button></div></sc-if>
+                <sc-if value="{{ canExport }}"><button onClick="{{ c.csv }}" aria-label="Download CSV" title="Download CSV" style="width:30px; height:30px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-2); display:flex; align-items:center; justify-content:center;"><fb-icon name="download" size="14"></fb-icon></button></sc-if>
+              </div>
+            </div>
+            <sc-if value="{{ c.chart }}">
+              <div role="img" aria-label="{{ c.aria }}" style="display:flex; flex-direction:column; gap:12px; margin-top:18px;">
+                <sc-for list="{{ c.rows }}" as="r"><div style="display:grid; grid-template-columns:minmax(90px,150px) minmax(0,1fr) auto; gap:12px; align-items:center;"><span style="font-size:13px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.l }}</span><div style="height:10px; border-radius:99px; background:var(--surface-3); position:relative;"><div style="height:10px; border-radius:99px; width:{{ r.w }}; background:{{ r.col }};"></div></div><span style="font-size:13px; font-weight:700; min-width:48px; text-align:right;">{{ r.v }}<sc-if value="{{ r.note }}"><span style="font-weight:500; color:var(--text-3); margin-left:6px;">{{ r.note }}</span></sc-if></span></div></sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ c.table }}">
+              <div style="overflow-x:auto; overflow-y:hidden; margin-top:14px;"><table style="width:100%; border-collapse:collapse; font-size:13.5px;"><thead><tr style="background:var(--surface-2);"><sc-for list="{{ c.head }}" as="h"><th style="text-align:left; padding:9px 12px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; letter-spacing:.08em; color:var(--text-3);">{{ h }}</th></sc-for></tr></thead><tbody><sc-for list="{{ c.body }}" as="r"><tr style="border-top:1px solid var(--border);"><sc-for list="{{ r }}" as="cell"><td style="padding:10px 12px;">{{ cell }}</td></sc-for></tr></sc-for></tbody></table></div>
+            </sc-if>
+          </section>
+        </sc-for>
+      </div>
+    </sc-for>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { period: '30', tables: {} };
+  componentDidMount() { const h = () => { this.un = FB.sub(() => this.forceUpdate()); FB.preview && FB.preview('reports'); this.forceUpdate(); }; if (window.FB) h(); else { const iv = setInterval(() => { if (window.FB) { clearInterval(iv); h(); } }, 40); } }
+  componentWillUnmount() { this.un && this.un(); }
+  bars(key, title, sub, data, opt) {
+    opt = opt || {};
+    const mx = Math.max(1, ...data.map(d => d.n));
+    const tbl = !!this.state.tables[key] || opt.tableOnly;
+    return { title, sub, toggleable: !opt.tableOnly, chart: !tbl, table: tbl, cbg: tbl ? 'transparent' : 'var(--surface)', tbg: tbl ? 'var(--surface)' : 'transparent',
+      showChart: () => this.setState({ tables: { ...this.state.tables, [key]: false } }), showTable: () => this.setState({ tables: { ...this.state.tables, [key]: true } }), csv: () => FB.toast(key + '.csv downloaded'),
+      rows: data.map(d => ({ l: d.l, v: d.v != null ? d.v : d.n, note: d.note || '', w: Math.max(2, d.n / mx * 100) + '%', col: d.col || 'var(--primary)' })), aria: title + ': ' + data.map(d => d.l + ' ' + (d.v != null ? d.v : d.n)).join(', '),
+      head: opt.head || [opt.cat || 'CATEGORY', opt.val || 'VALUE'], body: opt.body || data.map(d => [d.l, String(d.v != null ? d.v : d.n)]) };
+  }
+  renderVals() {
+    if (!window.FB) return { st: {} };
+    const S = FB.s, role = FB.role(), org = FB.can('reports.org'), me = S.userId, now = FB.now;
+    const st0 = this.state; const sim = S.sim;
+    const st = { loading: sim === 'loading', error: sim === 'error', empty: sim === 'empty', ok: !['loading', 'error', 'empty'].includes(sim) };
+    const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : '0%';
+    const open = t => t.status !== 'Completed' && t.status !== 'Cancelled';
+    const leads = org ? S.leads : S.leads.filter(l => l.ownerId === me);
+    const deals = org ? S.deals : role === 'sales' ? S.deals.filter(d => d.ownerId === me) : FB.dealsVisible();
+    const tasks = org ? S.tasks : S.tasks.filter(t => t.assigneeId === me);
+    const won = deals.filter(d => d.stage === 'Closed Won'), lost = deals.filter(d => d.stage === 'Closed Lost'), openD = deals.filter(d => !d.stage.startsWith('Closed'));
+    const valOK = FB.can('deals.values') || role === 'sales';
+    const money = n => valOK ? FB.kesShort(n) : 'Hidden';
+    const conv = leads.filter(l => l.status === 'Converted').length;
+    const doneT = tasks.filter(t => t.status === 'Completed').length;
+    const P = { '7': 'last 7 days', '30': '19 Sep 2026 to 19 Oct 2026', '90': '21 Jul 2026 to 19 Oct 2026', '365': 'Oct 2025 to Oct 2026' }[st0.period];
+    const SRC_COL = ['var(--primary)', 'var(--orange)', 'var(--blue)', 'var(--purple)', 'var(--red)', 'var(--text-3)'];
+    const bySrc = {}; leads.forEach(l => bySrc[l.source] = (bySrc[l.source] || 0) + 1);
+    const srcData = Object.entries(bySrc).sort((a, b) => b[1] - a[1]).map(([l, n]) => ({ l, n }));
+    const order = ['New', 'Qualified', 'Contacted', 'Needs Identified', 'Converted'];
+    const reached = s => leads.filter(l => order.indexOf(l.status) >= order.indexOf(s) || (s === 'New')).length;
+    const funnel = order.map((s, i) => { const n = s === 'New' ? leads.length : leads.filter(l => order.indexOf(l.status) >= i).length + (s === 'Converted' ? 0 : 0); return { l: s, n, note: i ? pct(n, leads.length) : '100%' }; });
+    const stages = FB.ref.stages.slice(0, 3).map((s, i) => { const ds = openD.filter(d => d.stage === s); return { l: s, n: valOK ? ds.reduce((a, d) => a + d.value, 0) : ds.length, v: valOK ? FB.kesShort(ds.reduce((a, d) => a + d.value, 0)) : ds.length + ' deals', note: ds.length + ' deals', col: FB.stageTone(s) }; });
+    const lr = {}; [...lost.map(d => d.lostReason), ...leads.filter(l => l.status === 'Lost').map(l => l.lostReason)].filter(Boolean).forEach(r => lr[r] = (lr[r] || 0) + 1);
+    const lrData = Object.entries(lr).map(([l, n]) => ({ l, n, col: 'var(--red)' }));
+    const svc = {}; won.forEach(d => svc[d.service] = (svc[d.service] || 0) + d.value);
+    const svcData = Object.entries(svc).sort((a, b) => b[1] - a[1]).map(([l, n]) => ({ l, n, v: money(n) }));
+    const tabsOn = this.state.tables;
+    const out = { label: org ? 'Reports' : 'My metrics', title: org ? 'Reports' : 'My metrics', sub: org ? 'How the whole organization is performing.' : 'How your own work is going. Same numbers your manager sees for you.', st, org, range: P, skel: [1, 2, 3, 4, 5, 6], retry: () => FB.simulate('normal'),
+      sc: { ...FB.scopeStyle(org ? 'org' : 'own'), label: org ? 'Organisation reports' : 'Personal' }, hint: org ? 'Covers all leads, all deals, all tasks.' : 'Only records you own or are assigned to.',
+      canExport: FB.can('deals.export'), exportAll: () => FB.toast('report-2026-10-19.csv downloaded'),
+      periods: [['7', 'Last 7 days'], ['30', 'Last 30 days'], ['90', 'Last 90 days'], ['365', 'Last 12 months']].map(([id, l]) => ({ l, bg: st0.period === id ? 'var(--surface)' : 'transparent', sh: st0.period === id ? 'var(--shadow-sm)' : 'none', fg: st0.period === id ? 'var(--text)' : 'var(--text-2)', go: () => this.setState({ period: id }) })),
+      filters: [{ l: 'Any owner', opts: ['Dev Sales', 'Dev Sales Two', 'Dev Management'] }, { l: 'Any source', opts: FB.ref.sources }, { l: 'Any stage', opts: FB.ref.stages }, { l: 'Any service', opts: FB.ref.services }],
+    };
+    if (org) {
+      out.attention = [
+        { l: 'Overdue tasks', n: S.tasks.filter(t => open(t) && t.due < now).length, sub: 'past their due time', icon: 'tasks', bg: 'var(--red-soft)', fg: 'var(--red)', go: () => FB.go('tasks') },
+        { l: 'Due today', n: S.tasks.filter(t => open(t) && t.due >= now && FB.sameDay(t.due, now)).length, sub: 'open follow-ups for today', icon: 'calendar', bg: 'var(--orange-soft)', fg: 'var(--orange-text)', go: () => FB.go('tasks') },
+        { l: 'New leads', n: S.leads.filter(l => now - l.createdAt < 7 * 864e5).length, sub: 'created in the last 7 days', icon: 'users', bg: 'var(--blue-soft)', fg: 'var(--blue)', go: () => FB.go('leads') },
+        { l: 'Stalled deals', n: S.deals.filter(FB.stalled).length, sub: 'no activity for 10+ days', icon: 'briefcase', bg: 'var(--orange-soft)', fg: 'var(--orange-text)', go: () => FB.go('deals') },
+      ].map(k => ({ ...k, col: k.l === 'Overdue tasks' && k.n ? 'var(--red)' : 'var(--text)' }));
+      out.kpis = [{ l: 'Leads created', v: leads.length, sub: 'in the selected range', dot: 'var(--blue)' }, { l: 'Conversion', v: pct(conv, leads.length), sub: conv + ' of ' + leads.length + ' converted', dot: 'var(--primary)' }, { l: 'Won deals', v: won.length, sub: 'value ' + FB.kesShort(won.reduce((a, d) => a + d.value, 0)), dot: 'var(--primary)' }, { l: 'Win rate', v: pct(won.length, won.length + lost.length), sub: won.length + ' won · ' + lost.length + ' lost', dot: 'var(--purple)' }, { l: 'Open pipeline', v: FB.kesShort(openD.reduce((a, d) => a + d.value, 0)), sub: 'across ' + openD.length + ' open deals', dot: 'var(--orange)' }, { l: 'Expected revenue', v: FB.kesShort(openD.reduce((a, d) => a + d.value * ({ 'Solution Presented': 0.2, 'Proposal Sent': 0.4, 'Negotiation': 0.7 }[d.stage] || 0), 0)), sub: 'weighted 20% / 40% / 70% by stage', dot: 'var(--primary)' }, { l: 'Follow-ups done', v: pct(doneT, tasks.length), sub: doneT + ' of ' + tasks.length + ' tasks due in range', dot: 'var(--blue)' }];
+      const people = ['s1', 's2', 'mg'];
+      out.sections = [
+        { l: 'LEADS', charts: [this.bars('lead-sources', 'Lead volume by source', 'Where new leads came from', srcData, { cat: 'SOURCE', val: 'LEADS' }), this.bars('conversion', 'Conversion and drop-off', 'Share of leads that reached each status', funnel, { cat: 'STATUS', val: 'LEADS' })] },
+        { l: 'PIPELINE', charts: [this.bars('pipeline', 'Pipeline by stage', 'Open deals, live', stages, { cat: 'STAGE', val: 'VALUE' }), this.bars('lost', 'Won, lost and lost reasons', won.length + ' won · ' + lost.length + ' lost · ' + leads.filter(l => l.status === 'Lost').length + ' leads lost', [{ l: 'Won', n: won.length, col: 'var(--primary)' }, { l: 'Lost', n: lost.length, col: 'var(--red)' }, ...lrData.map(d => ({ ...d, l: '· ' + d.l }))], { cat: 'OUTCOME / REASON', val: 'COUNT' })] },
+        { l: 'SALES', charts: [this.bars('services', 'Sales by service', 'Closed won value', svcData, { cat: 'SERVICE', val: 'WON VALUE' }), this.bars('people', 'Sales by salesperson', 'Won value and open pipeline', [], { tableOnly: true, head: ['PERSON', 'WON', 'OPEN PIPELINE', 'OPEN LEADS', 'CONVERSION'], body: people.map(id => { const ld = S.leads.filter(l => l.ownerId === id); return [FB.uname(id), FB.kesShort(S.deals.filter(d => d.ownerId === id && d.stage === 'Closed Won').reduce((a, d) => a + d.value, 0)), FB.kesShort(S.deals.filter(d => d.ownerId === id && !d.stage.startsWith('Closed')).reduce((a, d) => a + d.value, 0)), String(ld.filter(l => !['Converted', 'Lost'].includes(l.status) && !l.archived).length), pct(ld.filter(l => l.status === 'Converted').length, ld.length)]; }) })] },
+        { l: 'FOLLOW-UP PERFORMANCE', charts: [this.bars('followups', 'Follow-ups done on time', 'Completed before their due time', people.map(id => { const ts = S.tasks.filter(t => t.assigneeId === id); const ok = ts.filter(t => t.status === 'Completed').length; return { l: FB.uname(id), n: ts.length ? ok / ts.length * 100 : 0, v: pct(ok, ts.length), note: ok + ' of ' + ts.length }; }), { cat: 'PERSON', val: 'ON TIME' }), this.bars('response', 'First response to new leads', 'Median time from lead created to first logged contact', [{ l: 'Dev Management', n: 0.6, v: '0.6 h' }, { l: 'Dev Sales', n: 1.4, v: '1.4 h' }, { l: 'Dev Sales Two', n: 3.2, v: '3.2 h', col: 'var(--orange)' }], { cat: 'PERSON', val: 'MEDIAN' })] },
+        { l: 'COMMUNICATION', charts: [this.bars('channels', 'Conversations by channel', 'Logged and received, last 30 days', ['whatsapp', 'call', 'email', 'meeting', 'social'].map(k => ({ l: { whatsapp: 'WhatsApp', call: 'Calls', email: 'Email', meeting: 'Meetings', social: 'Social messages' }[k], n: S.activities.filter(a => a.kind === k).length })), { cat: 'CHANNEL', val: 'CONVERSATIONS' }), this.bars('margin', 'Margin on won deals', 'Value minus delivery cost · Management only', S.deals.filter(d => d.stage === 'Closed Won' && d.cost).map(d => ({ l: FB.company(d.companyId).name, n: (d.value - d.cost) / d.value * 100, v: Math.round((d.value - d.cost) / d.value * 100) + '%', note: FB.kesShort(d.value - d.cost) })), { cat: 'DEAL', val: 'MARGIN' })] },
+        { l: 'CUSTOMERS', charts: [this.bars('customers', 'Customer base', 'Lifecycle today', [{ l: 'Active', n: S.companies.filter(c => c.lifecycle === 'Active Customer').length, col: 'var(--primary)' }, { l: 'Onboarding', n: S.companies.filter(c => c.lifecycle === 'Onboarding').length, col: 'var(--blue)' }, { l: 'Repeat (2+ won)', n: S.companies.filter(c => S.deals.filter(d => d.companyId === c.id && d.stage === 'Closed Won').length > 1).length, col: 'var(--purple)' }, { l: 'Dormant', n: S.companies.filter(c => c.lifecycle === 'Dormant Customer').length, col: 'var(--orange)' }], { cat: 'LIFECYCLE', val: 'CUSTOMERS' }), this.bars('renewals', 'Upcoming renewals and dormant clients', 'Next 60 days', [], { tableOnly: true, head: ['CUSTOMER', 'WHAT', 'WHEN', 'OWNER'], body: [['Hillcrest Preparatory School', 'Hosting renewal', '15 Nov 2026', 'Dev Sales'], ['Kileleshwa Property Managers', 'Starlink plan renewal', '3 Dec 2026', 'Dev Sales Two'], ['Kileleshwa Property Managers', 'Dormant since 17 Jun', '124 days', 'Dev Sales Two']] })] },
+      ];
+    } else if (role === 'finance') {
+      const inv = S.payments.flatMap(p => p.invoices);
+      const sum = s => inv.filter(i => i.status === s).reduce((a, i) => a + i.amount, 0);
+      out.kpis = [{ l: 'Won value', v: FB.kesShort(won.reduce((a, d) => a + d.value, 0)), sub: won.length + ' won deals', dot: 'var(--primary)' }, { l: 'Collected', v: FB.kesShort(sum('Paid')), sub: 'paid invoices', dot: 'var(--primary)' }, { l: 'Awaiting payment', v: FB.kesShort(sum('Sent')), sub: 'invoices sent', dot: 'var(--blue)' }, { l: 'Overdue', v: FB.kesShort(sum('Overdue')), sub: 'past due date', dot: 'var(--red)' }];
+      out.sections = [{ l: 'PAYMENTS', charts: [this.bars('inv-status', 'Invoices by status', 'Value per status', ['Paid', 'Sent', 'Overdue', 'Not invoiced'].map(s => ({ l: s, n: sum(s), v: FB.kesShort(sum(s)), col: FB.invTone(s)[1] })), { cat: 'STATUS', val: 'VALUE' }), this.bars('won-service', 'Won value by service', 'All won deals', svcData, { cat: 'SERVICE', val: 'VALUE' })] }];
+    } else if (role === 'delivery') {
+      out.kpis = [{ l: 'Active onboardings', v: won.filter(d => d.handoff && d.handoff.status !== 'Delivered').length, sub: 'in progress', dot: 'var(--blue)' }, { l: 'Tasks done', v: doneT, sub: 'of ' + tasks.length + ' assigned', dot: 'var(--primary)' }, { l: 'On time', v: pct(doneT, tasks.length), sub: 'completed by due date', dot: 'var(--orange)' }];
+      out.sections = [{ l: 'MY WORK', charts: [this.bars('my-tasks', 'My tasks by status', 'Assigned to me', ['Pending', 'In progress', 'Completed'].map(s => ({ l: s, n: tasks.filter(t => t.status === s).length })), { cat: 'STATUS', val: 'TASKS' })] }];
+    } else {
+      out.kpis = [{ l: 'My leads', v: leads.filter(l => !l.archived).length, sub: leads.filter(l => now - l.createdAt < 30 * 864e5).length + ' new this month', dot: 'var(--blue)' }, { l: 'My conversion', v: pct(conv, leads.length), sub: conv + ' of ' + leads.length + ' converted', dot: 'var(--primary)' }, { l: 'Won', v: FB.kesShort(won.reduce((a, d) => a + d.value, 0)), sub: won.length + ' deals', dot: 'var(--primary)' }, { l: 'My pipeline', v: FB.kesShort(openD.reduce((a, d) => a + d.value, 0)), sub: openD.length + ' open deals', dot: 'var(--orange)' }, { l: 'Follow-ups on time', v: pct(doneT, tasks.length), sub: tasks.filter(t => open(t) && t.due < now).length + ' overdue now', dot: 'var(--red)' }];
+      out.sections = [{ l: 'MY PIPELINE', charts: [this.bars('my-stages', 'My pipeline by stage', 'Open deals I own', stages, { cat: 'STAGE', val: 'VALUE' }), this.bars('my-sources', 'Where my leads came from', 'All my leads', srcData, { cat: 'SOURCE', val: 'LEADS' })] }];
+    }
+    return out;
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="crm-theme.css"><script src="icons.js"></script><script src="crm-store.js"></script></helmet>
+<div data-screen-label="Dashboard" style="display:flex; flex-direction:column; gap:22px;">
+  <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+    <div>
+      <h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">{{ title }}</h1>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px;">
+        <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; background:{{ sc.bg }}; color:{{ sc.fg }}; font-size:12.5px; font-weight:600; white-space:nowrap;"><span style="width:6px; height:6px; border-radius:99px; background:{{ sc.dot }};"></span>{{ sc.label }}</span>
+        <span style="font-size:13.5px; color:var(--text-2);">{{ subtitle }}</span>
+      </div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <sc-for list="{{ quick }}" as="q"><button onClick="{{ q.go }}" style="display:flex; align-items:center; gap:8px; height:38px; padding:0 14px; border-radius:10px; border:1px solid {{ q.bd }}; background:{{ q.bg }}; color:{{ q.fg }}; font-weight:600; font-size:13.5px;" style-hover="filter:brightness(0.97);"><fb-icon name="{{ q.icon }}" size="16"></fb-icon>{{ q.label }}</button></sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{ st.loading }}">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px;">
+      <sc-for list="{{ skel4 }}" as="s"><div style="height:132px; border-radius:16px; border:1px solid var(--border); background:linear-gradient(90deg,var(--skel) 0%,var(--skel-2) 50%,var(--skel) 100%); background-size:1200px 100%; animation:fbShimmer 1.4s linear infinite;"></div></sc-for>
+    </div>
+    <div style="display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:16px;"><div style="height:320px; border-radius:16px; background:linear-gradient(90deg,var(--skel) 0%,var(--skel-2) 50%,var(--skel) 100%); background-size:1200px 100%; animation:fbShimmer 1.4s linear infinite;"></div><div style="height:320px; border-radius:16px; background:linear-gradient(90deg,var(--skel) 0%,var(--skel-2) 50%,var(--skel) 100%); background-size:1200px 100%; animation:fbShimmer 1.4s linear infinite;"></div></div>
+  </sc-if>
+
+  <sc-if value="{{ st.error }}">
+    <div role="alert" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:48px 32px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px;">
+      <div style="width:52px; height:52px; border-radius:999px; background:var(--red-soft); color:var(--red); display:flex; align-items:center; justify-content:center;"><fb-icon name="alert" size="24"></fb-icon></div>
+      <h2 style="margin:6px 0 0; font-size:19px;">We couldn’t load your dashboard</h2>
+      <p style="margin:0; max-width:420px; color:var(--text-2); line-height:1.5;">The server didn’t respond in time. Nothing you saved is lost. Try again in a moment.</p>
+      <button onClick="{{ retry }}" style="margin-top:8px; height:40px; padding:0 18px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700; display:flex; gap:8px; align-items:center;"><fb-icon name="refresh" size="16"></fb-icon>Try again</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ st.empty }}">
+    <div style="background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:56px 32px; display:flex; flex-direction:column; align-items:flex-start; gap:12px; max-width:760px;">
+      <div style="width:56px; height:56px; border-radius:18px; background:var(--orange-soft); color:var(--orange-text); display:flex; align-items:center; justify-content:center;"><fb-icon name="{{ empty.icon }}" size="26"></fb-icon></div>
+      <h2 style="margin:8px 0 0; font-size:24px; letter-spacing:-0.025em;">{{ empty.title }}</h2>
+      <p style="margin:0; color:var(--text-2); font-size:15px; line-height:1.55; max-width:560px;">{{ empty.body }}</p>
+      <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;"><sc-for list="{{ empty.actions }}" as="a"><button onClick="{{ a.go }}" style="height:42px; padding:0 18px; border-radius:10px; border:1px solid {{ a.bd }}; background:{{ a.bg }}; color:{{ a.fg }}; font-weight:700; display:flex; align-items:center; gap:8px;"><fb-icon name="{{ a.icon }}" size="16"></fb-icon>{{ a.label }}</button></sc-for></div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ fr.show }}">
+    <section data-screen-label="First-run checklist" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px; display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
+      <div style="flex:1 1 220px;"><div style="font-weight:700; font-size:16px;">Get Figbloom ready for the team</div><div style="font-size:13px; color:var(--text-2); margin-top:3px;">{{ fr.done }} of 4 done. Each step takes a few minutes.</div><div style="height:6px; border-radius:99px; background:var(--surface-3); margin-top:10px;"><div style="height:6px; border-radius:99px; width:{{ fr.w }}; background:var(--primary);"></div></div></div>
+      <div style="flex:2 1 420px; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px;"><sc-for list="{{ fr.steps }}" as="s"><button onClick="{{ s.go }}" style="display:flex; gap:10px; align-items:center; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:{{ s.bg }}; text-align:left; font-size:13.5px; font-weight:600; color:{{ s.fg }};"><span style="flex:none; width:22px; height:22px; border-radius:99px; border:1.5px solid {{ s.bd }}; background:{{ s.dot }}; color:#ffffff; display:flex; align-items:center; justify-content:center;"><sc-if value="{{ s.on }}"><fb-icon name="check" size="12" stroke="3"></fb-icon></sc-if></span>{{ s.l }}</button></sc-for></div>
+      <button aria-label="Hide checklist" onClick="{{ fr.hide }}" style="width:32px; height:32px; border-radius:8px; border:0; background:transparent; color:var(--text-3); display:flex; align-items:center; justify-content:center;"><fb-icon name="x" size="15"></fb-icon></button>
+    </section>
+  </sc-if>
+  <sc-if value="{{ st.ok }}">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px;">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+        <button onClick="{{ k.go }}" style="text-align:left; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px; box-shadow:var(--shadow-sm); display:flex; flex-direction:column; gap:14px; min-height:132px;" style-hover="border-color:var(--border-strong); box-shadow:var(--shadow-md);">
+          <div style="display:flex; justify-content:space-between; gap:10px; width:100%;"><span style="font-size:14px; font-weight:600; line-height:1.3;">{{ k.label }}</span><span style="flex:none; width:36px; height:36px; border-radius:10px; background:{{ k.tbg }}; color:{{ k.tfg }}; display:flex; align-items:center; justify-content:center;"><fb-icon name="{{ k.icon }}" size="18"></fb-icon></span></div>
+          <div><div style="font-size:30px; font-weight:700; letter-spacing:-0.03em; color:{{ k.ncol }}; line-height:1;">{{ k.n }}</div><div style="font-size:13px; color:var(--text-2); margin-top:6px;">{{ k.sub }}</div></div>
+        </button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ r.sales }}">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr)); gap:16px; align-items:start;">
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-sm);">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 20px 10px;"><h2 style="margin:0; font-size:16px; letter-spacing:-0.01em;">Do these today</h2><button onClick="{{ goTasks }}" style="border:0; background:transparent; color:var(--primary-text); font-weight:600; font-size:13px;">All tasks</button></div>
+          <sc-for list="{{ todo }}" as="t">
+            <div style="display:flex; align-items:center; gap:12px; padding:12px 20px; border-top:1px solid var(--border);">
+              <button aria-label="Mark done" onClick="{{ t.done }}" style="flex:none; width:22px; height:22px; border-radius:7px; border:1.5px solid var(--border-strong); background:var(--surface); color:var(--primary); display:flex; align-items:center; justify-content:center;" style-hover="border-color:var(--primary); background:var(--primary-soft);"></button>
+              <div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px; line-height:1.35;">{{ t.title }}</div>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:4px;"><span style="font-size:12.5px; font-weight:600; color:{{ t.dueCol }};">{{ t.dueLabel }}</span><sc-if value="{{ t.link }}"><button onClick="{{ t.open }}" style="border:1px solid var(--border); background:var(--surface-2); border-radius:999px; padding:1px 9px; font-size:12px; color:var(--text-2);">{{ t.link }} ↗</button></sc-if></div></div>
+              <button onClick="{{ t.log }}" title="Log a call" style="flex:none; display:flex; align-items:center; gap:6px; height:32px; padding:0 11px; border-radius:999px; border:1px solid var(--border); background:var(--surface); font-size:12.5px; font-weight:600; color:var(--text-2);" style-hover="background:var(--surface-2); color:var(--text);"><fb-icon name="phone" size="14"></fb-icon>Log</button>
+            </div>
+          </sc-for>
+          <sc-if value="{{ todoEmpty }}"><div style="padding:26px 20px; border-top:1px solid var(--border); color:var(--text-2); font-size:14px; display:flex; gap:10px; align-items:center;"><span style="color:var(--primary); display:flex;"><fb-icon name="check-circle" size="18"></fb-icon></span>Nothing due today. Nice.</div></sc-if>
+        </section>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-sm);">
+            <div style="padding:18px 20px 10px;"><h2 style="margin:0; font-size:16px;">New since your last visit</h2><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">Since yesterday, 5:40 PM</div></div>
+            <sc-for list="{{ newLeads }}" as="l">
+              <button onClick="{{ l.open }}" style="display:flex; align-items:center; gap:12px; width:100%; text-align:left; border:0; border-top:1px solid var(--border); background:transparent; padding:12px 20px;" style-hover="background:var(--surface-2);">
+                <span style="flex:none; width:34px; height:34px; border-radius:999px; background:var(--orange-soft); color:var(--orange-text); font-weight:700; font-size:12.5px; display:flex; align-items:center; justify-content:center;">{{ l.ini }}</span>
+                <span style="flex:1; min-width:0;"><span style="display:block; font-weight:600; font-size:14px;">{{ l.name }}</span><span style="display:block; font-size:12.5px; color:var(--text-3);">{{ l.meta }}</span></span>
+                <span style="font-size:10.5px; font-weight:700; letter-spacing:.05em; padding:3px 8px; border-radius:999px; background:{{ l.tbg }}; color:{{ l.tfg }};">{{ l.temp }}</span>
+              </button>
+            </sc-for>
+            <sc-if value="{{ newEmpty }}"><div style="padding:20px; border-top:1px solid var(--border); color:var(--text-3); font-size:13.5px;">No new leads since you were last here.</div></sc-if>
+          </section>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ r.pipe }}">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr)); gap:16px; align-items:start;">
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-sm); padding:18px 20px 20px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px;"><h2 style="margin:0; font-size:16px;">Pipeline by stage</h2><span style="font-size:13px; color:var(--text-2);">{{ pipe.total }} open</span></div>
+          <div style="display:flex; height:14px; border-radius:99px; overflow:hidden; margin:18px 0 14px; gap:3px; background:var(--surface-3);" role="img" aria-label="{{ pipe.aria }}">
+            <sc-for list="{{ pipe.stages }}" as="s"><div style="width:{{ s.w }}; background:{{ s.col }};"></div></sc-for>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px;">
+            <sc-for list="{{ pipe.stages }}" as="s"><button onClick="{{ s.go }}" style="text-align:left; border:0; background:transparent; padding:0;"><div style="display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-2);"><span style="width:8px; height:8px; border-radius:99px; background:{{ s.col }};"></span>{{ s.name }} · {{ s.n }}</div><div style="font-size:17px; font-weight:700; margin-top:4px; letter-spacing:-0.02em;">{{ s.val }}</div></button></sc-for>
+          </div>
+        </section>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-sm);">
+          <div style="padding:18px 20px 10px;"><h2 style="margin:0; font-size:16px;">Deals moving and stalled</h2><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">“Stalled” is a reminder. Stages only change when someone moves them.</div></div>
+          <sc-for list="{{ moving }}" as="d">
+            <div style="display:flex; align-items:center; gap:12px; padding:12px 20px; border-top:1px solid var(--border);">
+              <div style="flex:1; min-width:0;"><button onClick="{{ d.open }}" style="border:0; background:transparent; padding:0; font-weight:600; font-size:14px; color:var(--primary-text); text-align:left;">{{ d.company }}</button><div style="font-size:12.5px; color:var(--text-3); margin-top:2px;">{{ d.stage }} · {{ d.value }}<sc-if value="{{ d.mgmt }}"> · {{ d.owner }}</sc-if></div></div>
+              <span style="flex:none; font-size:12px; font-weight:600; padding:3px 9px; border-radius:999px; background:{{ d.fbg }}; color:{{ d.ffg }}; display:flex; align-items:center; gap:5px;"><fb-icon name="{{ d.ficon }}" size="12"></fb-icon>{{ d.flag }}</span>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ r.mgmt }}">
+      <div style="display:flex; align-items:center; gap:12px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; color:var(--text-3);">THIS MONTH VS LAST<span style="flex:1; height:1px; background:var(--border);"></span></div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px;">
+        <sc-for list="{{ mom }}" as="m"><div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px;"><div style="display:flex; align-items:center; gap:7px; font-size:13.5px; color:var(--text-2);"><span style="width:7px; height:7px; border-radius:99px; background:{{ m.dot }};"></span>{{ m.label }}</div><div style="display:flex; align-items:baseline; gap:8px; margin-top:8px;"><span style="font-size:26px; font-weight:700; letter-spacing:-0.03em;">{{ m.now }}</span><span style="font-size:12.5px; font-weight:600; color:{{ m.dcol }};">{{ m.delta }}</span></div><div style="font-size:12.5px; color:var(--text-3); margin-top:4px;">Last month {{ m.prev }}</div></div></sc-for>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr)); gap:16px; align-items:start;">
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px;">
+          <h2 style="margin:0; font-size:16px;">Revenue won by service line</h2><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">Year to date, closed won</div>
+          <div style="display:flex; flex-direction:column; gap:14px; margin-top:18px;">
+            <sc-for list="{{ revenue }}" as="v"><div><div style="display:flex; justify-content:space-between; font-size:13.5px;"><span>{{ v.name }}</span><strong>{{ v.val }}</strong></div><div style="height:6px; border-radius:99px; background:var(--surface-3); margin-top:6px;"><div style="height:6px; border-radius:99px; width:{{ v.w }}; background:var(--primary);"></div></div></div></sc-for>
+          </div>
+        </section>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px;">
+          <div style="padding:18px 20px 12px;"><h2 style="margin:0; font-size:16px;">Team follow-up health</h2><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">So you can help unblock, not to rank people.</div></div>
+          <div style="overflow-x:auto; overflow-y:hidden;"><table style="width:100%; border-collapse:collapse; font-size:13.5px;">
+            <thead><tr style="background:var(--surface-2);"><th style="text-align:left; padding:9px 20px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; color:var(--text-3); font-weight:500;">PERSON</th><th style="text-align:right; padding:9px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-3); font-weight:500;">OPEN LEADS</th><th style="text-align:right; padding:9px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-3); font-weight:500;">OVERDUE</th><th style="text-align:right; padding:9px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-3); font-weight:500;">FIRST REPLY</th><th style="text-align:right; padding:9px 20px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-3); font-weight:500;">WON (MTD)</th></tr></thead>
+            <tbody><sc-for list="{{ team }}" as="p"><tr style="border-top:1px solid var(--border);"><td style="padding:12px 20px;"><span style="display:inline-flex; align-items:center; gap:8px;"><span style="width:26px; height:26px; border-radius:99px; background:var(--primary-soft); color:var(--primary-text); font-size:11px; font-weight:700; display:inline-flex; align-items:center; justify-content:center;">{{ p.ini }}</span>{{ p.name }}</span></td><td style="text-align:right; padding:12px 10px;">{{ p.leads }}</td><td style="text-align:right; padding:12px 10px; color:{{ p.odCol }}; font-weight:600;">{{ p.overdue }}</td><td style="text-align:right; padding:12px 10px;">{{ p.reply }}</td><td style="text-align:right; padding:12px 20px;">{{ p.won }}</td></tr></sc-for></tbody>
+          </table></div>
+        </section>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px;">
+          <div style="padding:18px 20px 10px;"><h2 style="margin:0; font-size:16px;">Dormant clients and renewals</h2></div>
+          <sc-for list="{{ retention }}" as="x"><button onClick="{{ x.open }}" style="display:flex; align-items:center; gap:12px; width:100%; text-align:left; border:0; border-top:1px solid var(--border); background:transparent; padding:12px 20px;" style-hover="background:var(--surface-2);"><span style="flex:none; width:34px; height:34px; border-radius:10px; background:{{ x.bg }}; color:{{ x.fg }}; display:flex; align-items:center; justify-content:center;"><fb-icon name="{{ x.icon }}" size="16"></fb-icon></span><span style="flex:1;"><span style="display:block; font-weight:600; font-size:14px;">{{ x.name }}</span><span style="display:block; font-size:12.5px; color:var(--text-3);">{{ x.meta }}</span></span><span style="font-size:12.5px; font-weight:600; color:{{ x.fg }};">{{ x.when }}</span></button></sc-for>
+        </section>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px;">
+          <h2 style="margin:0; font-size:16px;">Adoption health</h2><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">From page-usage tracking · last 14 days</div>
+          <div style="display:flex; align-items:flex-end; gap:5px; height:72px; margin-top:16px;" role="img" aria-label="Daily active members, last 14 days, between 2 and 6"><sc-for list="{{ adoption }}" as="a"><div style="flex:1; height:{{ a.h }}; border-radius:4px 4px 0 0; background:{{ a.col }};"></div></sc-for></div>
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-3); margin-top:6px; font-family:'IBM Plex Mono',monospace;"><span>6 OCT</span><span>TODAY</span></div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px;"><div style="padding:10px 12px; border-radius:12px; background:var(--surface-2);"><div style="font-size:20px; font-weight:700;">5 of 6</div><div style="font-size:12px; color:var(--text-2);">members active this week</div></div><div style="padding:10px 12px; border-radius:12px; background:var(--surface-2);"><div style="font-size:20px; font-weight:700;">Leads</div><div style="font-size:12px; color:var(--text-2);">most used page, then Tasks</div></div></div>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ r.delivery }}">
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr)); gap:16px; align-items:start;">
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 20px 10px;"><h2 style="margin:0; font-size:16px;">Handed off to Delivery</h2><button onClick="{{ goDelivery }}" style="border:0; background:transparent; color:var(--primary-text); font-weight:600; font-size:13px;">All handoffs</button></div>
+          <sc-for list="{{ handoffs }}" as="h"><div style="display:flex; gap:12px; padding:14px 20px; border-top:1px solid var(--border); align-items:center;"><span style="flex:none; width:38px; height:38px; border-radius:12px; background:var(--blue-soft); color:var(--blue); display:flex; align-items:center; justify-content:center;"><fb-icon name="package" size="18"></fb-icon></span><div style="flex:1; min-width:0;"><button onClick="{{ h.open }}" style="border:0; background:transparent; padding:0; font-weight:700; font-size:14px; color:var(--primary-text);">{{ h.company }}</button><div style="font-size:12.5px; color:var(--text-2); margin-top:2px;">{{ h.title }} · starts {{ h.start }}</div></div><span style="font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; background:{{ h.sbg }}; color:{{ h.sfg }};">{{ h.status }}</span></div></sc-for>
+        </section>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px;">
+          <div style="padding:18px 20px 10px;"><h2 style="margin:0; font-size:16px;">My tasks</h2></div>
+          <sc-for list="{{ todo }}" as="t"><div style="display:flex; align-items:center; gap:12px; padding:12px 20px; border-top:1px solid var(--border);"><button aria-label="Mark done" onClick="{{ t.done }}" style="flex:none; width:22px; height:22px; border-radius:7px; border:1.5px solid var(--border-strong); background:var(--surface);" style-hover="border-color:var(--primary); background:var(--primary-soft);"></button><div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px;">{{ t.title }}</div><div style="font-size:12.5px; font-weight:600; color:{{ t.dueCol }}; margin-top:3px;">{{ t.dueLabel }}<sc-if value="{{ t.onboarding }}"><span style="color:var(--blue); margin-left:8px;">Onboarding</span></sc-if></div></div></div></sc-for>
+          <sc-if value="{{ todoEmpty }}"><div style="padding:20px; border-top:1px solid var(--border); color:var(--text-3);">No open tasks.</div></sc-if>
+        </section>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ r.finance }}">
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:18px 20px 12px;"><div><h2 style="margin:0; font-size:16px;">Won deals · invoice and payment status</h2><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">A light tracker. Invoicing and payments happen in your accounting tools.</div></div><button onClick="{{ goFinance }}" style="border:0; background:transparent; color:var(--primary-text); font-weight:600; font-size:13px;">Open payments</button></div>
+        <div style="overflow-x:auto; overflow-y:hidden;"><table style="width:100%; border-collapse:collapse; font-size:13.5px; min-width:640px;">
+          <thead><tr style="background:var(--surface-2);"><th style="text-align:left; padding:9px 20px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; color:var(--text-3); font-weight:500;">CUSTOMER</th><th style="text-align:right; padding:9px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-3); font-weight:500;">CONTRACT</th><th style="text-align:right; padding:9px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-3); font-weight:500;">PAID</th><th style="text-align:left; padding:9px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-3); font-weight:500;">STATUS</th><th style="text-align:left; padding:9px 20px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-3); font-weight:500;">NEXT</th></tr></thead>
+          <tbody><sc-for list="{{ fin }}" as="p"><tr style="border-top:1px solid var(--border);"><td style="padding:12px 20px;"><div style="font-weight:600;">{{ p.company }}</div><div style="font-size:12px; color:var(--text-3);">{{ p.title }}</div></td><td style="text-align:right; padding:12px 10px;">{{ p.contract }}</td><td style="text-align:right; padding:12px 10px;">{{ p.paid }}</td><td style="padding:12px 10px;"><span style="font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; background:{{ p.sbg }}; color:{{ p.sfg }};">{{ p.status }}</span></td><td style="padding:12px 20px; color:var(--text-2);">{{ p.next }}</td></tr></sc-for></tbody>
+        </table></div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ r.support }}">
+      <div style="display:flex; gap:10px; align-items:flex-start; padding:12px 16px; border-radius:12px; border:1px dashed var(--orange); background:var(--orange-soft); color:var(--orange-text); font-size:13.5px;"><fb-icon name="info" size="17"></fb-icon><span><strong>Proposed role.</strong> Customer Support is named in FIG-297 §23 but isn’t one of the five V1 roles. This view shows what it would need: maintenance tickets, customer lookup and their own tasks.</span></div>
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
+        <div style="padding:18px 20px 10px;"><h2 style="margin:0; font-size:16px;">Open support tickets</h2></div>
+        <sc-for list="{{ tickets }}" as="t"><div style="display:flex; gap:12px; align-items:center; padding:12px 20px; border-top:1px solid var(--border);"><span style="flex:none; width:36px; height:36px; border-radius:10px; background:var(--blue-soft); color:var(--blue); display:flex; align-items:center; justify-content:center;"><fb-icon name="help" size="16"></fb-icon></span><div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:14px;">{{ t.title }}</div><button onClick="{{ t.open }}" style="border:0; background:transparent; padding:0; font-size:12.5px; color:var(--primary-text);">{{ t.company }}</button></div><select value="{{ t.status }}" onChange="{{ t.set }}" aria-label="Ticket status" style="height:34px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 8px; font-size:13px;"><option>Open</option><option>Waiting on client</option><option>Resolved</option></select></div></sc-for>
+      </section>
+    </sc-if>
+    <sc-if value="{{ r.tech }}">
+      <div style="display:flex; gap:10px; align-items:flex-start; padding:12px 16px; border-radius:14px; background:var(--surface-2); color:var(--text-2); font-size:13.5px;"><fb-icon name="info" size="17"></fb-icon><span>You see the tasks assigned to you and the client requirements that go with them. Your access to client data is logged in the audit history. Need context on something else? Ask Dev Management.</span></div>
+      <div style="display:flex; flex-direction:column; gap:14px;">
+        <sc-for list="{{ techWork }}" as="t">
+          <section style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px 20px;">
+            <div style="display:flex; gap:12px; align-items:flex-start;">
+              <button aria-label="Mark done" onClick="{{ t.done }}" style="flex:none; width:22px; height:22px; margin-top:2px; border-radius:7px; border:1.5px solid var(--border-strong); background:var(--surface);" style-hover="border-color:var(--primary); background:var(--primary-soft);"></button>
+              <div style="flex:1;"><div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><strong style="font-size:15.5px;">{{ t.title }}</strong><span style="font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:999px; background:{{ t.pbg }}; color:{{ t.pfg }};">{{ t.priority }}</span><span style="font-size:11.5px; font-weight:600; padding:2px 9px; border-radius:999px; background:var(--surface-3); color:var(--text-2);">{{ t.status }}</span></div>
+                <div style="font-size:13px; color:{{ t.dueCol }}; font-weight:600; margin-top:5px;">{{ t.dueLabel }} · for {{ t.client }}</div>
+                <sc-if value="{{ t.desc }}"><p style="margin:8px 0 0; font-size:13.5px; color:var(--text-2);">{{ t.desc }}</p></sc-if>
+                <div style="margin-top:12px; padding:12px 14px; border-radius:12px; background:var(--surface-2);"><div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; color:var(--text-3);">CLIENT REQUIREMENTS FOR THIS WORK</div><ul style="margin:8px 0 0; padding-left:18px; font-size:13.5px; line-height:1.7;"><sc-for list="{{ t.req }}" as="q"><li>{{ q }}</li></sc-for></ul></div>
+              </div>
+            </div>
+          </section>
+        </sc-for>
+      </div>
+    </sc-if>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() { const h = () => { this.un = FB.sub(() => this.forceUpdate()); FB.preview && FB.preview('dashboard'); this.forceUpdate(); }; if (window.FB) h(); else { const iv = setInterval(() => { if (window.FB) { clearInterval(iv); h(); } }, 40); } }
+  componentWillUnmount() { this.un && this.un(); }
+  renderVals() {
+    if (!window.FB) return { st: {} };
+    const S = FB.s, role = FB.role(), me = S.userId, now = FB.now;
+    const mgmt = role === 'management';
+    const sim = S.sim;
+    const st = { loading: sim === 'loading', error: sim === 'error', empty: sim === 'empty', ok: !['loading', 'error', 'empty'].includes(sim) };
+    const sc = FB.scopeStyle(mgmt ? 'org' : role === 'delivery' || role === 'finance' ? 'ro' : 'own');
+    const scLabel = mgmt ? 'Whole team' : role === 'technical' ? 'Assigned to me' : role === 'delivery' ? 'Delivery view' : role === 'finance' ? 'Finance view' : 'My work';
+    const open = t => t.status !== 'Completed' && t.status !== 'Cancelled';
+    const tasks = FB.tasksVisible().filter(open);
+    const dueSoon = tasks.filter(t => t.due && (t.due < now || FB.sameDay(t.due, now))).sort((a, b) => a.due - b.due);
+    const overdue = tasks.filter(t => t.due && t.due < now && !FB.sameDay(t.due, now) || (t.due && t.due < now));
+    const todayN = tasks.filter(t => t.due && FB.sameDay(t.due, now) && t.due >= now).length;
+    const leads = FB.leadsVisible().filter(l => !l.archived);
+    const newLeads = [...leads, ...(role === 'sales' ? FB.poolLeads() : [])].filter(l => l.createdAt > S.lastVisit);
+    const deals = FB.dealsVisible().filter(d => !d.archived);
+    const openDeals = deals.filter(d => !d.stage.startsWith('Closed'));
+    const stalled = openDeals.filter(FB.stalled);
+    const tone = { orange: ['var(--orange-soft)', 'var(--orange-text)'], red: ['var(--red-soft)', 'var(--red)'], blue: ['var(--blue-soft)', 'var(--blue)'], green: ['var(--primary-soft)', 'var(--primary-text)'], purple: ['var(--purple-soft)', 'var(--purple)'] };
+    const K = (label, n, sub, icon, t, go, red) => ({ label, n, sub, icon, tbg: tone[t][0], tfg: tone[t][1], ncol: red && n ? 'var(--red)' : 'var(--text)', go: go || (() => {}) });
+    const todo = (role === 'sales' || mgmt ? dueSoon : tasks.sort((a, b) => (a.due || 0) - (b.due || 0))).slice(0, 7).map(t => {
+      const ds = FB.dueState(t.due);
+      return { title: t.title, dueLabel: FB.dueLabel(t.due), dueCol: ds === 'overdue' ? 'var(--red)' : ds === 'today' ? 'var(--orange-text)' : 'var(--text-3)', link: FB.linkAllowed(t.link) ? FB.linkLabel(t.link) : '', open: () => FB.openLink(t.link.type, t.link.id), done: () => FB.toggleTask(t.id), log: () => FB.drawer('note', t.link ? { rt: t.link.type, rid: t.link.id } : {}), onboarding: !!t.onboarding };
+    });
+    const go = p => () => FB.go(p);
+    const qBtn = (label, icon, fn, primary) => ({ label, icon, go: fn, bg: primary ? 'var(--primary-btn)' : 'var(--surface)', fg: primary ? '#ffffff' : 'var(--text)', bd: primary ? 'var(--primary-btn)' : 'var(--border-strong)' });
+    let kpis = [], quick = [], title = 'Today', subtitle = 'Monday, October 19 · what needs you today';
+    const r = {};
+    const out = { st, sc: { ...sc, label: scLabel }, skel4: [1, 2, 3, 4], retry: () => FB.simulate('normal'), goTasks: go('tasks'), goDelivery: go('delivery'), goFinance: go('finance') };
+
+    if (role === 'sales' || mgmt) {
+      r.sales = true; r.pipe = true;
+      kpis = [
+        K('Follow-ups due today', todayN, mgmt ? 'across the team' : 'tasks and lead follow-ups', 'calendar', 'orange', go('tasks')),
+        K('Overdue', overdue.length, overdue.length ? 'oldest ' + FB.daysSince(overdue.sort((a, b) => a.due - b.due)[0].due) + ' days' : 'all clear', 'alert', 'red', go('tasks'), true),
+        K('New leads since last visit', newLeads.length, role === 'sales' ? 'yours and the shared pool' : 'organisation-wide', 'users', 'blue', go('leads')),
+        K('Stalled deals', stalled.length, 'no activity for 10+ days', 'briefcase', 'orange', go('deals')),
+      ];
+      quick = [qBtn('New lead', 'user-plus', () => FB.drawer('lead'), true), qBtn('Log a call', 'phone', () => FB.drawer('note')), qBtn('New task', 'tasks', () => FB.drawer('task'))];
+      if (mgmt) subtitle = 'Monday, October 19 · team pipeline and follow-up health';
+      const stages = FB.ref.stages.slice(0, 3);
+      const tot = openDeals.reduce((a, d) => a + d.value, 0) || 1;
+      const showVal = d => FB.valueVisible(d);
+      out.pipe = { total: FB.kesShort(openDeals.filter(showVal).reduce((a, d) => a + d.value, 0)), stages: stages.map(s => { const ds = openDeals.filter(d => d.stage === s); const v = ds.reduce((a, d) => a + d.value, 0); return { name: s, n: ds.length, val: FB.kes(v), w: Math.max(4, v / tot * 100) + '%', col: FB.stageTone(s), go: go('deals') }; }) };
+      out.pipe.aria = out.pipe.stages.map(s => s.name + ' ' + s.val).join(', ');
+      out.moving = openDeals.sort((a, b) => FB.stalled(b) - FB.stalled(a) || b.lastActivity - a.lastActivity).slice(0, 5).map(d => { const s = FB.stalled(d); const days = FB.daysSince(d.lastActivity); return { company: FB.company(d.companyId).name, stage: d.stage, value: FB.dealValue(d), owner: FB.uname(d.ownerId), mgmt, open: () => FB.go('deal', d.id), flag: s ? 'Stalled · ' + days + ' days' : days <= 1 ? 'Active today' : 'Touched ' + days + ' days ago', fbg: s ? 'var(--orange-soft)' : 'var(--primary-soft)', ffg: s ? 'var(--orange-text)' : 'var(--primary-text)', ficon: s ? 'clock' : 'trend' }; });
+      out.newLeads = newLeads.map(l => ({ name: l.name, ini: FB.initials(l.name), meta: l.source + ' · ' + l.service + (l.ownerId ? '' : ' · unassigned'), temp: l.temp.toUpperCase(), tbg: FB.tempTone(l.temp)[0], tfg: FB.tempTone(l.temp)[1], open: () => FB.go('lead', l.id) }));
+      out.newEmpty = !newLeads.length;
+    }
+    if (mgmt) {
+      r.mgmt = true;
+      const inMonth = (d, m) => d && d.getMonth() === m && d.getFullYear() === 2026;
+      const wonM = m => S.deals.filter(d => d.stage === 'Closed Won' && inMonth(d.wonAt, m));
+      const nl = m => S.leads.filter(l => inMonth(l.createdAt, m)).length;
+      const D = (a, b, money) => { const d = a - b; return { delta: (d > 0 ? '▲ ' : d < 0 ? '▼ ' : '') + (money ? FB.kesShort(Math.abs(d)) : Math.abs(d) || 'no change'), dcol: d > 0 ? 'var(--primary-text)' : d < 0 ? 'var(--red)' : 'var(--text-3)' }; };
+      out.mom = [
+        { label: 'New leads', now: nl(9), prev: nl(8), dot: 'var(--blue)', ...D(nl(9), nl(8)) },
+        { label: 'Conversion', now: '17%', prev: '11%', dot: 'var(--primary)', delta: '▲ 6 pts', dcol: 'var(--primary-text)' },
+        { label: 'Won', now: wonM(9).length, prev: wonM(8).length, dot: 'var(--primary)', ...D(wonM(9).length, wonM(8).length) },
+        { label: 'Won value', now: FB.kesShort(wonM(9).reduce((a, d) => a + d.value, 0)), prev: 'KES 0', dot: 'var(--orange)', ...D(wonM(9).reduce((a, d) => a + d.value, 0), 0, true) },
+        { label: 'Lost', now: S.deals.filter(d => d.stage === 'Closed Lost' && inMonth(d.lastActivity, 9)).length, prev: 1, dot: 'var(--red)', delta: '▼ 1', dcol: 'var(--primary-text)' },
+      ];
+      const byS = {}; S.deals.filter(d => d.stage === 'Closed Won').forEach(d => byS[d.service] = (byS[d.service] || 0) + d.value);
+      const mx = Math.max(...Object.values(byS));
+      out.revenue = Object.entries(byS).sort((a, b) => b[1] - a[1]).map(([name, v]) => ({ name, val: FB.kes(v), w: (v / mx * 100) + '%' }));
+      out.team = ['s1', 's2', 'mg'].map(id => { const u = FB.user(id); const od = S.tasks.filter(t => t.assigneeId === id && open(t) && t.due < now).length; return { name: u.name, ini: FB.initials(u.name.replace('Dev ', '')), leads: S.leads.filter(l => l.ownerId === id && !l.archived && !['Converted', 'Lost'].includes(l.status)).length, overdue: od, odCol: od ? 'var(--red)' : 'var(--text)', reply: { s1: '1.4 h', s2: '3.2 h', mg: '0.6 h' }[id], won: S.deals.filter(d => d.ownerId === id && d.stage === 'Closed Won' && inMonth(d.wonAt, 9)).length }; });
+      out.retention = [
+        { name: 'Kileleshwa Property Managers', meta: 'Dormant · last contact 17 Jun · owner Dev Sales Two', when: '124 days', icon: 'clock', bg: 'var(--orange-soft)', fg: 'var(--orange-text)', open: () => FB.go('company', 'c10') },
+        { name: 'Hillcrest Preparatory School', meta: 'Hosting renewal · KES 36,000 / year', when: 'in 27 days', icon: 'refresh', bg: 'var(--purple-soft)', fg: 'var(--purple)', open: () => FB.go('company', 'c9') },
+        { name: 'Kileleshwa Property Managers', meta: 'Starlink plan renewal', when: 'in 45 days', icon: 'refresh', bg: 'var(--purple-soft)', fg: 'var(--purple)', open: () => FB.go('company', 'c10') },
+      ];
+      out.adoption = [4, 5, 3, 5, 6, 2, 2, 5, 5, 4, 6, 5, 2, 5].map((v, i) => ({ h: (v / 6 * 100) + '%', col: i === 13 ? '#ff9400' : 'var(--primary-soft)' }));
+      quick.push(qBtn('Reports', 'chart', go('reports')));
+    }
+    if (role === 'delivery') {
+      r.delivery = true; title = 'Today'; subtitle = 'Monday, October 19 · won work coming your way';
+      const hs = S.deals.filter(d => d.stage === 'Closed Won' && d.handoff && d.handoff.status !== 'Delivered');
+      const mine = tasks;
+      kpis = [
+        K('Handoffs needing an owner', hs.filter(d => !d.handoff.ownerId).length, 'won deals not yet picked up', 'package', 'blue', go('delivery')),
+        K('Onboarding tasks due', mine.filter(t => t.onboarding && t.due && (t.due < now || FB.sameDay(t.due, now) || t.due - now < 3 * 864e5)).length, 'today and next 3 days', 'calendar', 'orange', go('tasks')),
+        K('My open tasks', mine.length, 'assigned to you', 'tasks', 'green', go('tasks')),
+        K('Active onboardings', hs.length, 'customers in onboarding', 'building', 'purple', go('delivery')),
+      ];
+      out.handoffs = hs.map(d => { const c = FB.company(d.companyId); const s = d.handoff.ownerId ? d.handoff.status : 'Needs an owner'; return { company: c.name, title: d.title, start: FB.dshort(d.handoff.start), status: s, sbg: d.handoff.ownerId ? 'var(--blue-soft)' : 'var(--orange-soft)', sfg: d.handoff.ownerId ? 'var(--blue)' : 'var(--orange-text)', open: () => FB.go('delivery', d.id) }; });
+      quick = [qBtn('Log a note', 'note', () => FB.drawer('note'), true), qBtn('New task', 'tasks', () => FB.drawer('task'))];
+    }
+    if (role === 'finance') {
+      r.finance = true; subtitle = 'Monday, October 19 · won value and what’s still to collect';
+      const inv = S.payments.flatMap(p => p.invoices.map(i => ({ ...i, dealId: p.dealId })));
+      const sum = a => FB.kesShort(a.reduce((x, i) => x + i.amount, 0));
+      const ni = inv.filter(i => i.status === 'Not invoiced'), se = inv.filter(i => i.status === 'Sent'), ov = inv.filter(i => i.status === 'Overdue'), pd = inv.filter(i => i.status === 'Paid');
+      kpis = [K('Won, not yet invoiced', ni.length, sum(ni) + ' to invoice', 'file', 'blue', go('finance')), K('Awaiting payment', se.length, sum(se) + ' sent', 'clock', 'orange', go('finance')), K('Overdue payments', ov.length, sum(ov) + ' overdue', 'alert', 'red', go('finance'), true), K('Collected this year', sum(pd), pd.length + ' invoices paid', 'banknote', 'green', go('finance'))];
+      out.fin = S.payments.map(p => { const d = FB.deal(p.dealId); const paid = p.invoices.filter(i => i.status === 'Paid').reduce((a, i) => a + i.amount, 0); const worst = p.invoices.find(i => i.status === 'Overdue') || p.invoices.find(i => i.status === 'Sent') || p.invoices.find(i => i.status === 'Not invoiced') || p.invoices[0]; const stt = paid >= p.contract ? 'Paid in full' : worst.status === 'Overdue' ? 'Overdue' : worst.status === 'Sent' ? 'Awaiting payment' : 'To invoice'; const t = FB.invTone(paid >= p.contract ? 'Paid' : worst.status); return { company: FB.company(d.companyId).name, title: d.title, contract: FB.kes(p.contract), paid: FB.kes(paid), status: stt, sbg: t[0], sfg: t[1], next: p.next || '—' }; });
+      quick = [qBtn('Open payments', 'wallet', go('finance'), true)];
+    }
+    if (role === 'support') {
+      r.support = true; title = 'Support'; subtitle = 'Monday, October 19 · maintenance clients and open tickets';
+      const tk = S.tickets || [];
+      kpis = [K('Open tickets', tk.filter(t => t.status === 'Open').length, 'need a first response', 'help', 'blue', () => {}), K('Waiting on client', tk.filter(t => t.status !== 'Open' && t.status !== 'Resolved').length, 'nothing to do yet', 'clock', 'orange', () => {}), K('My tasks', tasks.length, 'assigned to you', 'tasks', 'green', go('tasks'))];
+      out.tickets = tk.filter(t => t.status !== 'Resolved').map(t => ({ title: t.title, status: t.status, company: FB.company(t.companyId).name, open: () => FB.go('company', t.companyId), set: e => { t.status = e.target.value; FB.toast('Ticket marked ' + t.status); FB.emit(); } }));
+      quick = [qBtn('Log a note', 'note', () => FB.drawer('note'), true)];
+    }
+    if (role === 'technical') {
+      r.tech = true; title = 'My work'; subtitle = 'Monday, October 19 · tasks assigned to you';
+      kpis = [K('Assigned to me', tasks.length, 'open tasks', 'tasks', 'green', go('tasks')), K('Due this week', tasks.filter(t => t.due && t.due - now < 6 * 864e5).length, 'by Sunday', 'calendar', 'orange', go('tasks')), K('Overdue', overdue.length, overdue.length ? 'needs a look' : 'all clear', 'alert', 'red', go('tasks'), true)];
+      out.techWork = tasks.map(t => { const ds = FB.dueState(t.due); const tp = FB.prioTone(t.priority); return { title: t.title, desc: t.desc || '', priority: t.priority, status: t.status, pbg: tp[0], pfg: tp[1], dueLabel: FB.dueLabel(t.due), dueCol: ds === 'overdue' ? 'var(--red)' : 'var(--text-2)', client: t.link ? FB.company(t.link.id).name : 'internal', req: t.req || ['No requirements attached yet'], done: () => FB.toggleTask(t.id) }; });
+      quick = [qBtn('New task for myself', 'plus', () => FB.drawer('task'), true)];
+    }
+    const empties = {
+      management: { icon: 'user-plus', title: 'Nothing here yet. Start with your team.', body: 'Invite the people who sell and deliver, then connect the website form so enquiries land here as leads with an owner and a follow-up.', actions: [qBtn('Invite members', 'user-plus', () => FB.go('settings', null, { tab: 'members' }), true), qBtn('Connect the website form', 'globe', () => FB.go('settings', null, { tab: 'website' }))] },
+      sales: { icon: 'users', title: 'Nothing here yet. Start with your first lead.', body: 'Add someone you spoke to this week. Only the name is required; you can qualify them later. Your follow-ups and deals will show up here every morning.', actions: [qBtn('Add your first lead', 'user-plus', () => FB.drawer('lead'), true), qBtn('Add a contact', 'contact', () => FB.drawer('contact'))] },
+      delivery: { icon: 'package', title: 'No handoffs yet', body: 'When Sales marks a deal won, the scope, requirements and onboarding tasks land here with a start date. Nothing to do until then.', actions: [] },
+      finance: { icon: 'wallet', title: 'No won deals yet', body: 'Won deals appear here with their contract amount so you can track invoices and payments. The open pipeline stays with Sales.', actions: [] },
+      technical: { icon: 'tasks', title: 'No work assigned yet', body: 'When someone assigns you a task, it shows here with the client requirements you need. You can also add tasks for yourself.', actions: [qBtn('Add a task for myself', 'plus', () => FB.drawer('task'), true)] },
+    };
+    empties.support = { icon: 'help', title: 'No tickets yet', body: 'Maintenance requests from customers will appear here.', actions: [] };
+    const FR = S.firstRun || {}; const frDone = ['invite', 'import', 'website', 'mobile'].filter(k => FR[k]).length;
+    const fr = { show: mgmt && st.ok && !S.firstRunHidden && frDone < 4, done: frDone, w: frDone * 25 + '%', hide: () => { S.firstRunHidden = true; FB.emit(); },
+      steps: [['invite', 'Invite your team', () => FB.go('settings', null, { tab: 'members' })], ['import', 'Import existing data', () => FB.go('settings', null, { tab: 'migration' })], ['website', 'Connect the website form', () => FB.go('settings', null, { tab: 'website' })], ['mobile', 'Install on your phone', () => { FR.mobile = true; FB.toast('Install link sent to your phone'); FB.emit(); }]].map(([k, l, g]) => ({ l, on: !!FR[k], go: () => { FR[k] = true; g(); }, bg: FR[k] ? 'var(--primary-soft)' : 'var(--surface)', fg: FR[k] ? 'var(--primary-text)' : 'var(--text)', dot: FR[k] ? 'var(--primary)' : 'transparent', bd: FR[k] ? 'var(--primary)' : 'var(--border-strong)' })) };
+    return { ...out, r, kpis, quick, title, subtitle, todo, todoEmpty: !todo.length, empty: empties[role], fr };
+  }
+}
+</script>
+</body>
+</html>

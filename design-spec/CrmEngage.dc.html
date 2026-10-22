@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="crm-theme.css"><script src="icons.js"></script><script src="crm-store.js"></script></helmet>
+<div style="display:flex; flex-direction:column; gap:18px;">
+
+<sc-if value="{{ isConv }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Conversations" style="display:flex; flex-direction:column; gap:18px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+      <div>
+        <h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">Conversations</h1>
+        <div style="font-size:13.5px; color:var(--text-2); margin-top:4px;">Every WhatsApp, call, email, meeting and social message with customers, in one place.</div>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; background:{{ sc.bg }}; color:{{ sc.fg }}; font-size:12.5px; font-weight:600; white-space:nowrap;"><span style="width:6px; height:6px; border-radius:99px; background:{{ sc.dot }};"></span>{{ sc.label }}</span><span style="font-size:13.5px; color:var(--text-2);">{{ hint }}</span></div>
+      </div>
+      <sc-if value="{{ canCreate }}"><button onClick="{{ logNew }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;" style-hover="background:var(--primary-hover);"><fb-icon name="plus" size="16" stroke="2.2"></fb-icon>Log a conversation</button></sc-if>
+    </div>
+
+    <sc-if value="{{ audited }}"><div role="note" style="display:flex; gap:10px; align-items:flex-start; padding:12px 16px; border-radius:12px; background:var(--surface-2); border:1px solid var(--border); color:var(--text-2); font-size:13.5px; line-height:1.45;"><fb-icon name="shield" size="16"></fb-icon><span><strong style="color:var(--text);">Read-only, and your access is logged.</strong> You see conversations for clients you have assigned work for. Opening them is recorded in the audit log.</span></div></sc-if>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px;">
+      <sc-for list="{{ stats }}" as="s"><div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px;"><div style="display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--text-2);"><span style="display:flex; color:{{ s.fg }};"><fb-icon name="{{ s.icon }}" size="15"></fb-icon></span>{{ s.l }}</div><div style="font-size:24px; font-weight:700; margin-top:6px;">{{ s.n }}</div><div style="font-size:12px; color:var(--text-3); margin-top:2px;">{{ s.sub }}</div></div></sc-for>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+      <div role="tablist" style="display:inline-flex; gap:2px; padding:4px; border-radius:12px; background:var(--surface-3); border:1px solid var(--border); flex-wrap:wrap;"><sc-for list="{{ tabs }}" as="t"><button role="tab" onClick="{{ t.go }}" style="display:flex; gap:7px; align-items:center; border:0; padding:7px 12px; border-radius:9px; background:{{ t.bg }}; box-shadow:{{ t.sh }}; font-size:13.5px; font-weight:600; color:{{ t.fg }};"><fb-icon name="{{ t.icon }}" size="14"></fb-icon>{{ t.l }}<span style="font-size:12px; color:var(--text-3); font-weight:500;">{{ t.n }}</span></button></sc-for></div>
+      <div style="position:relative; flex:0 1 300px;"><span style="position:absolute; left:12px; top:11px; color:var(--text-3); display:flex;"><fb-icon name="search" size="16"></fb-icon></span><input value="{{ q }}" onChange="{{ setQ }}" placeholder="Search conversations" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px 0 36px; font-size:14px; outline:none;"></div>
+    </div>
+
+    <sc-if value="{{ showQueue }}">
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:14px 18px; background:var(--orange-soft); color:var(--orange-text);"><div style="display:flex; gap:10px; align-items:center;"><fb-icon name="inbox" size="17"></fb-icon><strong style="font-size:14.5px;">Needs linking · {{ queueN }}</strong></div><span style="font-size:12.5px;">New emails and social messages that don’t match anyone yet. Link them or turn them into a lead.</span></div>
+        <sc-for list="{{ queue }}" as="m">
+          <div style="display:flex; gap:14px; align-items:flex-start; padding:14px 18px; border-top:1px solid var(--border); flex-wrap:wrap;">
+            <span style="flex:none; width:36px; height:36px; border-radius:11px; background:{{ m.ibg }}; color:{{ m.ifg }}; display:flex; align-items:center; justify-content:center;"><fb-icon name="{{ m.icon }}" size="17"></fb-icon></span>
+            <div style="flex:1 1 300px; min-width:0;"><div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><strong style="font-size:14px;">{{ m.name }}</strong><span style="font-size:12px; color:var(--text-3);">{{ m.from }} · {{ m.when }}</span></div><div style="font-weight:600; font-size:13.5px; margin-top:3px;">{{ m.subject }}</div><div style="font-size:13.5px; color:var(--text-2); margin-top:2px; line-height:1.45;">{{ m.summary }}</div></div>
+            <sc-if value="{{ canCreate }}"><div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><select value="" onChange="{{ m.link }}" aria-label="Link to a record" style="height:36px; max-width:230px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 8px; font-size:13px;"><option value="">Link to existing…</option><sc-for list="{{ linkOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select><sc-if value="{{ canLead }}"><button onClick="{{ m.lead }}" style="height:36px; padding:0 12px; border-radius:8px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700; font-size:13px; display:flex; gap:6px; align-items:center;"><fb-icon name="user-plus" size="14"></fb-icon>Create lead</button></sc-if></div></sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ queueEmpty }}"><div style="padding:22px 18px; border-top:1px solid var(--border); color:var(--text-2); font-size:13.5px; display:flex; gap:8px; align-items:center;"><span style="color:var(--primary); display:flex;"><fb-icon name="check-circle" size="16"></fb-icon></span>Everything is linked.</div></sc-if>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ showFeed }}">
+      <sc-for list="{{ days }}" as="d">
+        <div style="display:flex; align-items:center; gap:12px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; color:var(--text-3);">{{ d.l }}<span style="flex:1; height:1px; background:var(--border);"></span></div>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+          <sc-for list="{{ d.items }}" as="a">
+            <div style="display:grid; grid-template-columns:36px minmax(0,1fr) auto; gap:14px; align-items:flex-start; padding:14px 18px; border-bottom:1px solid var(--border);">
+              <span style="width:36px; height:36px; border-radius:11px; background:{{ a.ibg }}; color:{{ a.ifg }}; display:flex; align-items:center; justify-content:center;"><fb-icon name="{{ a.icon }}" size="17"></fb-icon></span>
+              <div style="min-width:0;">
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><button onClick="{{ a.open }}" style="border:0; background:transparent; padding:0; font-weight:700; font-size:14px; color:var(--primary-text);" style-hover="text-decoration:underline;">{{ a.who }}</button><span style="font-size:11px; font-weight:700; letter-spacing:.04em; padding:2px 8px; border-radius:999px; background:{{ a.dbg }}; color:{{ a.dfg }};">{{ a.dir }}</span><span style="font-size:12px; color:var(--text-3);">{{ a.channel }}</span><sc-if value="{{ a.outcome }}"><span style="font-size:12px; font-weight:600; padding:1px 8px; border-radius:999px; background:var(--surface-3); color:var(--text-2);">{{ a.outcome }}</span></sc-if></div>
+                <div style="font-size:14px; line-height:1.5; margin-top:4px;">{{ a.text }}</div>
+                <div style="font-size:12.5px; color:var(--text-3); margin-top:4px;">{{ a.by }} · {{ a.time }}</div>
+              </div>
+              <sc-if value="{{ a.canReply }}"><div style="display:flex; gap:6px;"><a href="{{ a.tel }}" onClick="{{ a.call }}" aria-label="Call" title="Call" style="width:34px; height:34px; border-radius:9px; border:1px solid var(--border-strong); color:var(--primary-text); display:flex; align-items:center; justify-content:center;"><fb-icon name="phone" size="15"></fb-icon></a><a href="{{ a.wa }}" onClick="{{ a.whatsapp }}" aria-label="WhatsApp" title="WhatsApp" style="width:34px; height:34px; border-radius:9px; border:1px solid var(--border-strong); color:var(--primary-text); display:flex; align-items:center; justify-content:center;"><fb-icon name="whatsapp" size="15"></fb-icon></a></div></sc-if>
+            </div>
+          </sc-for>
+        </section>
+      </sc-for>
+      <sc-if value="{{ feedEmpty }}"><div style="padding:44px; text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:14px; color:var(--text-2);">No conversations here yet. Calls and chats you log from any record show up in this feed.</div></sc-if>
+    </sc-if>
+    <div style="font-size:12.5px; color:var(--text-3); display:flex; gap:8px; align-items:center;"><fb-icon name="info" size="14"></fb-icon>WhatsApp and calls open on your phone; you’re asked to log the outcome after. Email and Facebook/Instagram messages arrive automatically once connected in Settings › Integrations.</div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isRet }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Renewals and retention" style="display:flex; flex-direction:column; gap:18px;">
+    <div>
+      <h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">Renewals &amp; retention</h1>
+      <div style="font-size:13.5px; color:var(--text-2); margin-top:4px;">Keep customers after the first sale: renewals coming up, customers going quiet, and proposals nobody answered.</div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; background:{{ sc.bg }}; color:{{ sc.fg }}; font-size:12.5px; font-weight:600; white-space:nowrap;"><span style="width:6px; height:6px; border-radius:99px; background:{{ sc.dot }};"></span>{{ sc.label }}</span><span style="font-size:13.5px; color:var(--text-2);">Reminders only. Nothing here changes a record until you act.</span></div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px;">
+      <sc-for list="{{ rk }}" as="k"><div style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:16px 18px; box-shadow:var(--shadow-sm);"><div style="display:flex; justify-content:space-between; gap:8px;"><span style="font-size:14px; font-weight:600;">{{ k.l }}</span><span style="width:34px; height:34px; border-radius:10px; background:{{ k.bg }}; color:{{ k.fg }}; display:flex; align-items:center; justify-content:center;"><fb-icon name="{{ k.icon }}" size="17"></fb-icon></span></div><div style="font-size:28px; font-weight:700; margin-top:8px;">{{ k.n }}</div><div style="font-size:12.5px; color:var(--text-2); margin-top:2px;">{{ k.sub }}</div></div></sc-for>
+    </div>
+
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+      <div style="padding:16px 18px 10px;"><h2 style="margin:0; font-size:16px;">Recurring services and renewals</h2><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">Hosting, maintenance, retainers and data plans. You’re reminded 30 days before each renewal.</div></div>
+      <div style="overflow-x:auto; overflow-y:hidden;"><table style="width:100%; border-collapse:collapse; min-width:820px; font-size:13.5px;"><thead><tr style="background:var(--surface-2);"><sc-for list="{{ renHead }}" as="h"><th style="text-align:left; padding:10px 16px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; letter-spacing:.08em; color:var(--text-3);">{{ h }}</th></sc-for></tr></thead>
+        <tbody><sc-for list="{{ renewals }}" as="r"><tr style="border-top:1px solid var(--border);"><td style="padding:12px 16px;"><button onClick="{{ r.open }}" style="border:0; background:transparent; padding:0; font-weight:600; color:var(--primary-text); text-align:left;">{{ r.company }}</button></td><td style="padding:12px 16px;">{{ r.service }}</td><td style="padding:12px 16px; color:var(--text-2);">{{ r.cycle }}</td><td style="padding:12px 16px; font-weight:600;">{{ r.value }}</td><td style="padding:12px 16px;"><div style="font-weight:600;">{{ r.renews }}</div><div style="font-size:12px; color:{{ r.scol }}; font-weight:600;">{{ r.state }}</div></td><td style="padding:12px 16px; color:var(--text-2);">{{ r.owner }}</td><td style="padding:12px 16px; text-align:right; white-space:nowrap;"><sc-if value="{{ r.can }}"><span style="display:inline-flex; gap:6px;"><button onClick="{{ r.remind }}" style="height:32px; padding:0 12px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); font-size:12.5px; font-weight:600;">Add follow-up</button><button onClick="{{ r.deal }}" style="height:32px; padding:0 12px; border-radius:8px; border:0; background:var(--primary-btn); color:#ffffff; font-size:12.5px; font-weight:700;">Start renewal deal</button></span></sc-if></td></tr></sc-for></tbody></table></div>
+    </section>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr)); gap:16px; align-items:start;">
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+        <div style="padding:16px 18px 10px;"><h2 style="margin:0; font-size:16px;">Going quiet</h2><div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:12.5px; color:var(--text-3); margin-top:6px;">No logged contact for <select value="{{ dormantDays }}" onChange="{{ setDormant }}" disabled="{{ cantDormant }}" aria-label="Going-quiet threshold" style="height:28px; border-radius:7px; border:1px solid var(--border-strong); background:var(--surface); padding:0 6px; font-size:12.5px;"><option value="60">60</option><option value="90">90</option><option value="120">120</option><option value="180">180</option></select> days or more. {{ dormantNote }}</div></div>
+        <sc-for list="{{ dormant }}" as="c"><div style="display:flex; gap:12px; align-items:center; padding:12px 18px; border-top:1px solid var(--border);"><span style="flex:none; width:36px; height:36px; border-radius:10px; background:var(--orange-soft); color:var(--orange-text); display:flex; align-items:center; justify-content:center;"><fb-icon name="clock" size="16"></fb-icon></span><div style="flex:1; min-width:0;"><button onClick="{{ c.open }}" style="border:0; background:transparent; padding:0; font-weight:600; font-size:14px; color:var(--text); text-align:left;">{{ c.name }}</button><div style="font-size:12.5px; color:var(--text-3);">{{ c.meta }}</div></div><sc-if value="{{ c.can }}"><button onClick="{{ c.plan }}" style="height:32px; padding:0 12px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); font-size:12.5px; font-weight:600;">Plan a check-in</button></sc-if></div></sc-for>
+        <sc-if value="{{ dormantEmpty }}"><div style="padding:18px; border-top:1px solid var(--border); color:var(--text-3); font-size:13.5px;">No one has gone quiet.</div></sc-if>
+      </section>
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+        <div style="padding:16px 18px 10px;"><h2 style="margin:0; font-size:16px;">Proposals waiting for a reply</h2><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">Sent 5+ days ago with no response logged since.</div></div>
+        <sc-for list="{{ chase }}" as="p"><div style="display:flex; gap:12px; align-items:center; padding:12px 18px; border-top:1px solid var(--border);"><span style="flex:none; width:36px; height:36px; border-radius:10px; background:var(--blue-soft); color:var(--blue); display:flex; align-items:center; justify-content:center;"><fb-icon name="send" size="16"></fb-icon></span><div style="flex:1; min-width:0;"><button onClick="{{ p.open }}" style="border:0; background:transparent; padding:0; font-weight:600; font-size:14px; color:var(--text); text-align:left;">{{ p.company }}</button><div style="font-size:12.5px; color:var(--text-3);">{{ p.no }} · sent {{ p.sent }} · {{ p.owner }}</div></div><span style="font-size:12px; font-weight:600; color:var(--orange-text); white-space:nowrap;">{{ p.days }} days</span><sc-if value="{{ p.can }}"><button onClick="{{ p.chase }}" style="height:32px; padding:0 12px; border-radius:8px; border:0; background:var(--primary-btn); color:#ffffff; font-size:12.5px; font-weight:700; display:flex; gap:6px; align-items:center;"><fb-icon name="whatsapp" size="13"></fb-icon>Chase</button></sc-if></div></sc-for>
+        <sc-if value="{{ chaseEmpty }}"><div style="padding:18px; border-top:1px solid var(--border); color:var(--text-3); font-size:13.5px;">No proposals waiting.</div></sc-if>
+      </section>
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+        <div style="padding:16px 18px 10px;"><h2 style="margin:0; font-size:16px;">Cross-sell ideas</h2><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">Active customers and the services they don’t use yet. Suggestions, not tasks.</div></div>
+        <sc-for list="{{ upsell }}" as="u"><div style="display:flex; gap:12px; align-items:center; padding:12px 18px; border-top:1px solid var(--border);"><div style="flex:1; min-width:0;"><button onClick="{{ u.open }}" style="border:0; background:transparent; padding:0; font-weight:600; font-size:14px; color:var(--text); text-align:left;">{{ u.name }}</button><div style="font-size:12.5px; color:var(--text-3);">Uses {{ u.uses }}</div></div><div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;"><sc-for list="{{ u.ideas }}" as="i"><span style="font-size:12px; font-weight:600; padding:3px 9px; border-radius:999px; background:var(--purple-soft); color:var(--purple);">{{ i }}</span></sc-for></div></div></sc-for>
+      </section>
+    </div>
+  </div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'all', q: '' };
+  componentDidMount() { const h = () => { this.un = FB.sub(() => this.forceUpdate()); FB.preview && FB.preview('conversations'); this.forceUpdate(); }; if (window.FB) h(); else { const iv = setInterval(() => { if (window.FB) { clearInterval(iv); h(); } }, 40); } }
+  componentWillUnmount() { this.un && this.un(); }
+  chan(k) { return { call: ['Call', 'phone', 'var(--primary-soft)', 'var(--primary-text)'], whatsapp: ['WhatsApp', 'whatsapp', 'var(--primary-soft)', 'var(--primary-text)'], email: ['Email', 'mail', 'var(--blue-soft)', 'var(--blue)'], meeting: ['Meeting', 'users', 'var(--purple-soft)', 'var(--purple)'], social: ['Social message', 'message', 'var(--orange-soft)', 'var(--orange-text)'] }[k] || ['Note', 'note', 'var(--surface-3)', 'var(--text-2)']; }
+  contactFor(rt, rid) { const S = FB.s; if (rt === 'lead') { const l = FB.lead(rid); return l && FB.contact(l.contactId); } if (rt === 'deal') { const d = FB.deal(rid); return d && FB.contact(d.contactId); } return S.contacts.find(p => p.companyId === rid); }
+  renderVals() {
+    if (!window.FB) return {};
+    const S = FB.s, role = FB.role(), mgmt = role === 'management', st = this.state, now = FB.now;
+    const pg = S.route.page;
+    if (pg === 'retention') return this.retention();
+    const canCreate = FB.can('comms.create');
+    const all = FB.commsVisible();
+    const K = ['whatsapp', 'call', 'email', 'meeting', 'social'];
+    const q = st.q.toLowerCase();
+    const flt = all.filter(a => (st.tab === 'all' || st.tab === 'queue' || a.kind === st.tab) && (!q || (a.text + ' ' + FB.linkLabel({ type: a.rt, id: a.rid })).toLowerCase().includes(q)));
+    const inboxQ = S.inbox.filter(m => !m.link);
+    const groups = {};
+    flt.forEach(a => { const k = FB.sameDay(a.at, now) ? 'TODAY' : FB.sameDay(a.at, new Date(now.getTime() - 864e5)) ? 'YESTERDAY' : a.at.toDateString().slice(4, 10).toUpperCase(); (groups[k] = groups[k] || []).push(a); });
+    const days = Object.entries(groups).map(([l, items]) => ({ l, items: items.map(a => { const c = this.chan(a.kind); const p = this.contactFor(a.rt, a.rid); const dirIn = a.dir === 'in'; const who = FB.linkLabel({ type: a.rt, id: a.rid }).replace(/^\w+ · /, '');
+      return { who, icon: c[1], ibg: c[2], ifg: c[3], channel: c[0] + (p ? ' · ' + FB.cname(p) : ''), dir: dirIn ? 'INBOUND' : 'OUTBOUND', dbg: dirIn ? 'var(--blue-soft)' : 'var(--primary-soft)', dfg: dirIn ? 'var(--blue)' : 'var(--primary-text)', outcome: a.outcome || '', text: a.text, by: a.byId ? FB.uname(a.byId) : 'Figbloom automation', time: FB.when(a.at), open: () => FB.openLink(a.rt, a.rid),
+        canReply: canCreate && !!(p && p.phone), tel: p ? 'tel:' + p.phone : '', wa: p ? 'https://wa.me/' + p.phone.replace(/\D/g, '') : '', call: e => { e.preventDefault(); FB.modal('logPrompt', { kind: 'call', name: p.first, rt: a.rt, rid: a.rid }); }, whatsapp: e => { e.preventDefault(); FB.modal('logPrompt', { kind: 'whatsapp', name: p.first, rt: a.rt, rid: a.rid }); } }; }) }));
+    const count = k => all.filter(a => a.kind === k).length;
+    const tabsDef = [['all', 'All', 'message', all.length], ...(canCreate ? [['queue', 'Needs linking', 'inbox', inboxQ.length]] : []), ['whatsapp', 'WhatsApp', 'whatsapp', count('whatsapp')], ['call', 'Calls', 'phone', count('call')], ['email', 'Email', 'mail', count('email')], ['meeting', 'Meetings', 'users', count('meeting')], ['social', 'Social', 'message', count('social')]];
+    const linkOpts = [...S.companies.filter(c => !c.archived).map(c => ({ v: 'company:' + c.id, l: 'Customer · ' + c.name })), ...FB.leadsVisible().filter(l => !l.archived && l.status !== 'Converted').map(l => ({ v: 'lead:' + l.id, l: 'Lead · ' + l.name }))];
+    const week = all.filter(a => now - a.at < 7 * 864e5);
+    const sc = FB.scopeStyle(mgmt ? 'org' : canCreate ? 'own' : 'ro');
+    return {
+      isConv: true, isRet: false, canCreate, canLead: FB.can('leads'), audited: role === 'technical',
+      sc: { ...sc, label: mgmt ? 'All organisation conversations' : role === 'sales' ? 'My customers’ conversations' : role === 'delivery' ? 'Won customers' : 'Read-only · assigned clients' },
+      hint: mgmt ? 'Everything the team logged or received.' : role === 'sales' ? 'Leads, deals and customers you own.' : role === 'delivery' ? 'Customers you’re delivering for.' : '',
+      logNew: () => FB.drawer('note', { kind: 'whatsapp' }),
+      stats: [{ l: 'This week', n: week.length, sub: 'conversations logged or received', icon: 'message', fg: 'var(--primary-text)' }, { l: 'Inbound', n: week.filter(a => a.dir === 'in').length, sub: 'customers reaching out', icon: 'inbox', fg: 'var(--blue)' }, { l: 'WhatsApp share', n: (week.length ? Math.round(week.filter(a => a.kind === 'whatsapp').length / week.length * 100) : 0) + '%', sub: 'of this week’s conversations', icon: 'whatsapp', fg: 'var(--primary-text)' }, ...(canCreate ? [{ l: 'Needs linking', n: inboxQ.length, sub: 'unmatched emails and messages', icon: 'alert', fg: 'var(--orange-text)' }] : [])],
+      tabs: tabsDef.map(([id, l, icon, n]) => ({ l, icon, n, bg: st.tab === id ? 'var(--surface)' : 'transparent', sh: st.tab === id ? 'var(--shadow-sm)' : 'none', fg: st.tab === id ? 'var(--text)' : 'var(--text-2)', go: () => this.setState({ tab: id }) })),
+      q: st.q, setQ: e => this.setState({ q: e.target.value }),
+      showQueue: canCreate && (st.tab === 'all' || st.tab === 'queue'), queueN: inboxQ.length, queueEmpty: !inboxQ.length, linkOpts,
+      queue: inboxQ.map(m => { const c = this.chan(m.channel === 'social' ? 'social' : 'email'); return { ...m, when: FB.when(m.at), icon: c[1], ibg: c[2], ifg: c[3], link: e => { const [t, id] = e.target.value.split(':'); if (id) FB.linkInbox(m.id, t, id); }, lead: () => FB.inboxToLead(m.id) }; }),
+      showFeed: st.tab !== 'queue', days, feedEmpty: !flt.length,
+    };
+  }
+  retention() {
+    const S = FB.s, role = FB.role(), mgmt = role === 'management', now = FB.now, me = S.userId;
+    const mineCo = c => mgmt || c.ownerId === me;
+    const can = FB.can('comms.create');
+    const ren = S.recurring.filter(r => mgmt || r.ownerId === me);
+    const quiet = S.companies.filter(c => !c.archived && (c.lifecycle === 'Dormant Customer' || c.lifecycle === 'Active Customer') && mineCo(c)).map(c => { const last = S.activities.filter(a => (a.rt === 'company' && a.rid === c.id) || (a.rt === 'deal' && FB.deal(a.rid) && FB.deal(a.rid).companyId === c.id)).sort((a, b) => b.at - a.at)[0]; return { c, last, days: last ? FB.daysSince(last.at) : 999 }; }).filter(x => x.days >= (S.dormantDays || 90) || x.c.lifecycle === 'Dormant Customer');
+    const chase = S.deals.filter(d => d.stage === 'Proposal Sent' && (mgmt || d.ownerId === me)).map(d => { const p = d.proposals[d.proposals.length - 1]; const sentAt = p && p.sentAt; const replied = sentAt && S.activities.some(a => a.rt === 'deal' && a.rid === d.id && a.dir === 'in' && a.at > sentAt); return { d, p, days: sentAt ? FB.daysSince(sentAt) : 0, replied }; }).filter(x => x.p && x.days >= 5 && !x.replied);
+    const SVC = ['CCTV', 'Starlink / Internet', 'Web Development', 'Social Media Management', 'Automation Systems'];
+    const upsell = S.companies.filter(c => ['Active Customer', 'Onboarding'].includes(c.lifecycle) && mineCo(c)).map(c => { const uses = [...new Set(S.deals.filter(d => d.companyId === c.id && d.stage === 'Closed Won').map(d => d.service))]; return { name: c.name, uses: uses.join(', ') || 'no services yet', ideas: SVC.filter(s => !uses.includes(s)).slice(0, 3), open: () => FB.go('company', c.id) }; });
+    const due = r => Math.round((r.renews - now) / 864e5);
+    const sc = FB.scopeStyle(mgmt ? 'org' : 'own');
+    return {
+      isConv: false, isRet: true, sc: { ...sc, label: mgmt ? 'All customers' : 'Customers you own' },
+      rk: [{ l: 'Renewals in 60 days', n: ren.filter(r => due(r) <= 60 && due(r) >= 0).length, sub: FB.kesShort(ren.filter(r => due(r) <= 60).reduce((a, r) => a + r.value, 0)) + ' up for renewal', icon: 'refresh', bg: 'var(--purple-soft)', fg: 'var(--purple)' }, { l: 'Going quiet', n: quiet.length, sub: 'no contact in 90+ days', icon: 'clock', bg: 'var(--orange-soft)', fg: 'var(--orange-text)' }, { l: 'Proposals unanswered', n: chase.length, sub: 'sent 5+ days ago', icon: 'send', bg: 'var(--blue-soft)', fg: 'var(--blue)' }, { l: 'Repeat customers', n: S.companies.filter(c => S.deals.filter(d => d.companyId === c.id && d.stage === 'Closed Won').length > 1).length, sub: '2 or more won deals', icon: 'check-circle', bg: 'var(--primary-soft)', fg: 'var(--primary-text)' }],
+      renHead: ['CUSTOMER', 'SERVICE', 'CYCLE', 'VALUE', 'RENEWS', 'OWNER', ''],
+      renewals: ren.sort((a, b) => a.renews - b.renews).map(r => { const c = FB.company(r.companyId); const n = due(r); return { company: c.name, service: r.service, cycle: r.cycle, value: FB.kes(r.value) + (r.cycle === 'Monthly' ? ' / mo' : ' / yr'), renews: FB.date(r.renews), state: n < 0 ? 'Lapsed ' + -n + ' days ago' : n <= 30 ? 'Due in ' + n + ' days' : r.state, scol: n <= 30 ? 'var(--orange-text)' : 'var(--text-3)', owner: FB.uname(r.ownerId), can, open: () => FB.go('company', c.id),
+        remind: () => FB.saveTask({ title: 'Renewal: confirm ' + r.service + ' with ' + c.name, due: new Date(Math.max(now.getTime() + 864e5, r.renews.getTime() - 14 * 864e5)), priority: 'Medium', assigneeId: r.ownerId, link: { type: 'company', id: c.id } }),
+        deal: () => FB.drawer('deal', { companyId: c.id }) }; }),
+      dormantDays: String(S.dormantDays || 90), cantDormant: FB.role() !== 'management', setDormant: e => { S.dormantDays = +e.target.value; FB.auditAdd('Going-quiet threshold changed', 'Renewals & retention', S.dormantDays + ' days'); FB.toast('Now flagging customers after ' + S.dormantDays + ' days. ' + quiet.length + ' match before the change.'); FB.emit(); }, dormantNote: FB.role() === 'management' ? 'Flags only; lifecycle never changes on its own.' : 'Management sets this.',
+      dormant: quiet.map(x => ({ name: x.c.name, meta: (x.last ? 'Last contact ' + FB.date(x.last.at) + ' · ' + x.days + ' days' : 'No contact logged') + ' · ' + FB.uname(x.c.ownerId), can, open: () => FB.go('company', x.c.id), plan: () => FB.saveTask({ title: 'Check in with ' + x.c.name, due: new Date(now.getTime() + 2 * 864e5), priority: 'Medium', assigneeId: x.c.ownerId || me, link: { type: 'company', id: x.c.id } }) })), dormantEmpty: !quiet.length,
+      chase: chase.map(x => ({ company: FB.company(x.d.companyId).name, no: x.p.no, sent: x.p.sent, days: x.days, owner: FB.uname(x.d.ownerId), can, open: () => FB.go('deal', x.d.id), chase: () => FB.drawer('note', { rt: 'deal', rid: x.d.id, kind: 'whatsapp' }) })), chaseEmpty: !chase.length,
+      upsell,
+    };
+  }
+}
+</script>
+</body>
+</html>

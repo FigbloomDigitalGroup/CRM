@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Figbloom CRM · Screen and state checklist</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>*{box-sizing:border-box} html,body{margin:0;background:#faf9f7;color:#1b1d1a;font-family:'Instrument Sans',system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased} a{color:#275b3a} a:hover{color:#1f4d30}</style>
+</helmet>
+<div style="min-height:100vh;">
+  <header style="display:flex; align-items:center; gap:14px; padding:14px 40px; background:#203e2a; color:#ffffff;"><img src="assets/logo-mark.png" alt="" style="width:26px; height:32px; object-fit:contain;"><div style="font-size:19px; font-weight:700; letter-spacing:-0.03em;">Figbloom <span style="font-weight:400; color:#ff9400;">CRM</span> <span style="font-weight:500; color:rgba(255,255,255,.7); margin-left:8px;">Screen and state checklist</span></div><span style="flex:1;"></span><a href="Figbloom CRM.dc.html" style="color:#ffffff; font-weight:600;">Open prototype</a><a href="Figbloom Design System.dc.html" style="color:#ffffff; font-weight:600;">Design system</a></header>
+  <div style="max-width:1240px; margin:0 auto; padding:36px 40px 100px; display:flex; flex-direction:column; gap:36px;">
+    <div><h1 style="margin:0; font-size:30px; letter-spacing:-0.03em;">Every screen, who sees it, and which states it has</h1><p style="margin:8px 0 0; color:#5f625c; font-size:15px; line-height:1.55; max-width:820px;">One row per screen, ready to become a Linear issue. Role cells: <strong>E</strong> edit, <strong>O</strong> own only, <strong>R</strong> read-only, <strong>·</strong> no access (shows the explained No-access page; for the platform console, a plain Page not found). SUPPORT* is the proposed sixth role; PLATFORM is the Platform Super Admin, who has a separate console and no organisation role. Use the review bar in the prototype to switch account, device, theme and state.</p></div>
+
+    <section style="background:#ffffff; border:1px solid #e9e7e1; border-radius:16px; overflow:hidden;">
+      <div style="overflow-x:auto; overflow-y:hidden;"><table style="width:100%; border-collapse:collapse; min-width:1100px; font-size:13px;">
+        <thead><tr style="background:#f6f5f1;"><sc-for list="{{ head }}" as="h"><th style="text-align:left; padding:11px 12px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; letter-spacing:.06em; color:#878a83; white-space:nowrap;">{{ h }}</th></sc-for></tr></thead>
+        <tbody><sc-for list="{{ rows }}" as="r"><tr style="border-top:1px solid #e9e7e1; background:{{ r.bg }};">
+          <td style="padding:10px 12px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#878a83;">{{ r.id }}</td>
+          <td style="padding:10px 12px;"><div style="font-weight:700;">{{ r.screen }}</div><div style="font-size:12px; color:#878a83;">{{ r.area }}</div></td>
+          <sc-for list="{{ r.roles }}" as="c"><td style="padding:10px 6px; text-align:center;"><span style="display:inline-flex; width:24px; height:24px; border-radius:7px; align-items:center; justify-content:center; font-weight:700; font-size:11.5px; background:{{ c.bg }}; color:{{ c.fg }};">{{ c.v }}</span></td></sc-for>
+          <td style="padding:10px 12px; color:#5f625c; line-height:1.5;">{{ r.states }}</td>
+          <td style="padding:10px 12px;"><span style="font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:999px; background:{{ r.sbg }}; color:{{ r.sfg }}; white-space:nowrap;">{{ r.status }}</span></td>
+          <td style="padding:10px 12px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:2px 7px; border-radius:6px; background:{{ r.rbg }}; color:{{ r.rfg }};">{{ r.release }}</span></td>
+          <td style="padding:10px 12px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#5f625c; white-space:nowrap;">{{ r.linear }}</td>
+        </tr></sc-for></tbody>
+      </table></div>
+    </section>
+
+    <section style="background:#ffffff; border:1px solid #e9e7e1; border-radius:16px; overflow:hidden;">
+      <div style="padding:20px 22px 12px;"><h2 style="margin:0; font-size:18px;">Spec coverage · preparation documents → prototype</h2><p style="margin:4px 0 0; font-size:13px; color:#5f625c;">Each requirement from the Findings, Questionnaire, MVP scope, Data model, FIG-436, FIG-437 and FIG-444, and where it lives.</p></div>
+      <div style="overflow-x:auto; overflow-y:hidden;"><table style="width:100%; border-collapse:collapse; min-width:980px; font-size:13px;">
+        <thead><tr style="background:#f6f5f1;"><sc-for list="{{ covHead }}" as="h"><th style="text-align:left; padding:10px 14px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; letter-spacing:.06em; color:#878a83;">{{ h }}</th></sc-for></tr></thead>
+        <tbody><sc-for list="{{ coverage }}" as="c"><tr style="border-top:1px solid #e9e7e1;"><td style="padding:10px 14px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#878a83; white-space:nowrap;">{{ c.src }}</td><td style="padding:10px 14px; font-weight:600;">{{ c.req }}</td><td style="padding:10px 14px; color:#5f625c;">{{ c.where }}</td><td style="padding:10px 14px;"><span style="font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:999px; background:{{ c.bg }}; color:{{ c.fg }}; white-space:nowrap;">{{ c.state }}</span></td></tr></sc-for></tbody>
+      </table></div>
+    </section>
+
+    <section style="display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:20px;">
+      <div style="background:#ffffff; border:1px solid #e9e7e1; border-radius:16px; padding:22px;"><h2 style="margin:0 0 4px; font-size:18px;">Departures from the permission matrix</h2><p style="margin:0 0 12px; font-size:13px; color:#5f625c;">Designed to the stakeholder’s intent; each is flagged in the UI. Needs Michael’s sign-off (FIG-444).</p><ol style="margin:0; padding-left:20px; line-height:1.65; font-size:14px;"><sc-for list="{{ departures }}" as="d"><li style="margin-bottom:8px;">{{ d }}</li></sc-for></ol></div>
+      <div style="background:#ffffff; border:1px solid #e9e7e1; border-radius:16px; padding:22px;"><h2 style="margin:0 0 4px; font-size:18px;">Open questions</h2><p style="margin:0 0 12px; font-size:13px; color:#5f625c;">Decisions the prototype assumes but can’t make.</p><ol style="margin:0; padding-left:20px; line-height:1.65; font-size:14px;"><sc-for list="{{ questions }}" as="d"><li style="margin-bottom:8px;">{{ d }}</li></sc-for></ol></div>
+      <div style="background:#ffffff; border:1px solid #e9e7e1; border-radius:16px; padding:22px;"><h2 style="margin:0 0 4px; font-size:18px;">Assumptions</h2><p style="margin:0 0 12px; font-size:13px; color:#5f625c;">Made to keep the prototype moving.</p><ol style="margin:0; padding-left:20px; line-height:1.65; font-size:14px;"><sc-for list="{{ assumptions }}" as="d"><li style="margin-bottom:8px;">{{ d }}</li></sc-for></ol></div>
+    </section>
+
+    <section style="background:#ffffff; border:1px solid #e9e7e1; border-radius:16px; padding:22px;"><div style="display:flex; gap:10px; align-items:center;"><h2 style="margin:0; font-size:18px;">Role matrix · Platform block</h2><span style="font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:999px; background:#fdf2e3; color:#a95a06;">PROVISIONAL · FOR MICHAEL</span></div><p style="margin:6px 0 14px; font-size:13px; color:#5f625c; line-height:1.5;">Separate from tenant permissions and never granted through an organisation membership. Platform admins hold none of the tenant keys (no leads.view.all, no deals.view.value). Platform actions run under a separate service identity, so row-level security and organisation scoping stay intact. Customer Support stays a proposed sixth tenant role.</p><div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:8px;"><sc-for list="{{ platformKeys }}" as="k"><div style="display:flex; gap:10px; align-items:center; padding:9px 12px; border-radius:10px; background:#f1ecf8;"><code style="font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:#7650b0; font-weight:600;">{{ k.k }}</code><span style="font-size:12.5px; color:#5f625c;">{{ k.d }}</span></div></sc-for></div></section>
+
+    <section style="background:#ffffff; border:1px solid #e9e7e1; border-radius:16px; padding:22px;"><h2 style="margin:0 0 4px; font-size:18px;">Priority: value vs effort</h2><p style="margin:0 0 14px; font-size:13px; color:#5f625c;">A suggested build order for the features added in this pass. Release tags match the review bar switch.</p><div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px;"><sc-for list="{{ priority }}" as="p"><div style="border-radius:14px; background:{{ p.bg }}; padding:14px 16px;"><div style="font-weight:700; color:{{ p.fg }};">{{ p.l }}</div><div style="font-size:12.5px; color:#5f625c; margin-top:2px;">{{ p.d }}</div><ul style="margin:10px 0 0; padding-left:18px; font-size:13.5px; line-height:1.7;"><sc-for list="{{ p.items }}" as="i"><li>{{ i }}</li></sc-for></ul></div></sc-for></div></section>
+
+    <section style="background:#ffffff; border:1px solid #e9e7e1; border-radius:16px; padding:22px;"><h2 style="margin:0 0 12px; font-size:18px;">Global states (review bar → State)</h2><div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px;"><sc-for list="{{ states }}" as="s"><div style="padding:12px 14px; border-radius:12px; background:#f6f5f1;"><div style="font-weight:700;">{{ s.l }}</div><div style="font-size:13px; color:#5f625c; margin-top:3px; line-height:1.45;">{{ s.d }}</div></div></sc-for></div></section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const T = { E: ['#e9f1eb', '#275b3a'], O: ['#fdf2e3', '#a95a06'], R: ['#f1f0ec', '#5f625c'], '·': ['transparent', '#c4c2bb'] };
+    const S = { Frozen: ['#f1f0ec', '#5f625c'], Redesign: ['#eaf0f8', '#3a69a8'], New: ['#fdf2e3', '#a95a06'], Proposed: ['#f1ecf8', '#7650b0'] };
+    const std = 'Loading, empty first-run, no results, error + retry';
+    const data = [
+      ['A1', 'Sign in', 'Auth', 'EEEEEE·', 'Validation error, dev accounts', 'Frozen', '—', 'V1'],
+      ['A2', 'Sign up → awaiting access', 'Auth', 'EEEEEE·', 'Validation, no-organisation state (proposed)', 'Frozen', '—', 'V1'],
+      ['A3', 'Forgot / reset password, accept invite', 'Auth', 'EEEEEE·', 'Sent confirmation, mismatch error', 'Frozen', '—', 'V1'],
+      ['A4', 'Session expired', 'Auth', 'EEEEEE·', 'Email prefilled, re-auth', 'Proposed', 'new', 'V1'],
+      ['G1', 'App shell: sidebar, top bar, quick create, review bar', 'Global', 'EEEEEE·', 'Collapsed sidebar, nav filter, offline banner, slow-connection bar, dark theme', 'Redesign', 'new', 'V1'],
+      ['G2', 'Global search dropdown + results page', 'Global', 'EEEEEE·', 'No matches, role-limited results', 'Redesign', 'FIG-787', 'V1'],
+      ['G3', 'Notification bell + notification centre', 'Global', 'EEEEEE·', 'Unread, all caught up, type filters', 'New', 'new', 'V1'],
+      ['D1', 'Home: Sales “Today”', 'Dashboard', '·O·····', std + ', stalled flags', 'Redesign', 'FIG-443', 'V1'],
+      ['D2', 'Home: Management', 'Dashboard', 'E······', std + ', month vs last, adoption', 'Redesign', 'FIG-443', 'V1'],
+      ['D3', 'Home: Delivery, Finance, Technical', 'Dashboard', '··RRO··', std, 'New', 'FIG-443', 'V1'],
+      ['L1', 'Leads list + bulk actions', 'Leads', 'EO·····', std + ', archived tab, shared pool (provisional)', 'Redesign', 'FIG-789', 'V1'],
+      ['L2', 'Lead detail + progress strip + qualification', 'Leads', 'EO·····', 'Archived banner, duplicate warning, reassign disabled-with-reason', 'Redesign', 'new (qualification)', 'V1'],
+      ['L3', 'Lead drawer, convert, lost reason, import/export', 'Leads', 'EO·····', 'Duplicate warn, import progress / partial / failure, already-converted', 'Redesign', 'FIG-596', 'V1'],
+      ['P1', 'Deals board (drag + Move to…) and list', 'Deals', 'EORR···', std + ', values hidden, stalled, close date passed, drop highlight', 'Redesign', 'FIG-790', 'V1'],
+      ['P2', 'Deal detail + proposals', 'Deals', 'EORR···', 'Archived, stalled banner, masked amounts', 'Redesign', 'FIG-789', 'V1'],
+      ['P3', 'Won-deal handoff dialog', 'Deals', 'EO·····', 'Owner later, template off, lifecycle off', 'New', 'FIG-792', 'V1'],
+      ['P4', 'Delivery receiving view (Handoffs)', 'Delivery', 'E·E····', 'Awaiting owner, delivered, no requirements', 'New', 'FIG-792', 'V1'],
+      ['T1', 'Tasks grouped by due state', 'Tasks', 'EOO·OO·', std + ', done collapsed, others’ tasks read-only', 'Redesign', 'FIG-789', 'V1'],
+      ['T2', 'Calendar month / week / day / list', 'Tasks', 'EO·····', 'Click to create, overdue dot, team filter locked for Sales', 'New', 'FIG-794', 'V1'],
+      ['C1', 'Companies list', 'Customers', 'EORR·R·', std + ', archived, dormant', 'Redesign', 'FIG-789', 'V1'],
+      ['C2', 'Customer 360', 'Customers', 'EORR·R·', 'Archived read-only, values hidden, payments for Finance and Management only', 'Redesign', 'new', 'V1'],
+      ['C3', 'Contacts list + contact detail (call / WhatsApp → log prompt)', 'Customers', 'EORR·R·', 'Missing email, standalone contact', 'Redesign', 'FIG-791', 'V1'],
+      ['C4', 'Merge duplicates', 'Customers', 'EO·····', 'Pick record to keep', 'Redesign', '—', 'V1'],
+      ['R1', 'Reports (organisation) incl. customer reports', 'Reports', 'E······', std + ', chart ↔ table, CSV', 'Redesign', 'FIG-793', 'V1'],
+      ['R2', 'My metrics (personal)', 'Reports', '·OOO···', std, 'Redesign', 'FIG-443', 'V1'],
+      ['F1', 'Payments tracker', 'Finance', 'R··E···', 'Overdue, paid in full, nothing to collect', 'New', 'new', 'V1'],
+      ['S1', 'Settings: profile, members, website, email, reference data, template', 'Settings', 'E······', 'Invited, deactivated, key rotated, rejected submissions', 'Redesign', 'FIG-750', 'V1'],
+      ['S2', 'Organisation audit log', 'Settings', 'E······', 'Export', 'New', 'FIG-799', 'V1'],
+      ['S3', 'Notification preferences + PWA install', 'Settings', 'EEEEEE·', 'Per-role list', 'Redesign', 'FIG-791', 'V1'],
+      ['S4', 'No access (explained)', 'Global', 'EEEEEE·', 'Names role, owner roles, who to ask', 'New', 'new', 'V1'],
+      ['E1', 'Conversations hub + Needs-linking queue', 'Customers', 'EOER···', 'Channel tabs, inbound/outbound, link or create lead, read-only audited notice', 'New', 'new', 'V1'],
+      ['E2', 'Renewals & retention', 'After the sale', 'EO·····', 'Due in 30 days, lapsed, going quiet, unanswered proposals, cross-sell', 'New', 'new', 'V1'],
+      ['S5', 'Settings: Automations', 'Settings', 'E······', 'On/off per rule, never moves stages', 'New', 'new', 'V1'],
+      ['S6', 'Settings: Integrations', 'Settings', 'E······', 'Connected, not connected, planned, click-to-chat only', 'New', 'new', 'V1'],
+      ['S7', 'Settings: Data migration wizard', 'Settings', 'E······', '7 steps, field mapping, error report', 'New', 'new', 'V1'],
+      ['S8', 'Settings: Security & access', 'Settings', 'E······', 'Sessions, sign-in events, lockout, remove vs deactivate', 'New', 'FIG-437', 'V1'],
+      ['S9', 'Settings: Data & privacy', 'Settings', 'E······', 'Export rights, retention, data-subject requests', 'New', 'new', 'V1'],
+      ['M1', 'Mobile: Today, Leads, Quick capture', 'Mobile 375', 'EO·····', 'Duplicate warn, offline queued', 'New', 'FIG-791', 'V1'],
+      ['M2', 'Mobile: Customer lookup, record, call/WhatsApp → log sheet', 'Mobile 375', 'EORR·R·', 'No phone on file', 'New', 'FIG-791', 'V1'],
+      ['M3', 'Mobile: Tasks, Notifications, More, read-only pipeline', 'Mobile 375', 'EOOOOO·', 'All caught up', 'New', 'FIG-791', 'V1'],
+
+      ['Q1', 'Quote builder, document preview, versions', 'Deals', 'EO·····', 'Draft, pending approval, approved, sent, empty lines, value differs from deal', 'New', 'new', 'V1.1'],
+      ['Q2', 'Client e-signature + deposit request', 'Deals', 'EO·····', 'Unsigned, signed, deposit requested (open decision)', 'New', 'new', 'V2'],
+      ['Q3', 'Approvals inbox', 'Insights', 'E······', 'Waiting, decided, reason shown to requester', 'New', 'new', 'V1.1'],
+      ['Q4', 'Forecast & targets (mine / team)', 'Insights', 'EO·····', 'No target, on track, short, close date passed', 'New', 'FIG-793', 'V1.1'],
+      ['X1', 'Record extras: attachments, tags, custom fields, comments, follow, score, health', 'Records', 'EOR·RR·', 'Empty, Management-only file, @mention', 'New', 'new', 'V1'],
+      ['X2', 'Ask Figbloom assistant', 'Global', 'EOOOOO·', 'Off in settings, confirm before acting, role-masked answers', 'New', 'new', 'V1.1'],
+      ['X3', 'Command palette (Ctrl/Cmd+K), Help and What’s new', 'Global', 'EEEEEE·', 'No results, recent items', 'New', 'new', 'V1.1'],
+      ['X4', 'Saved views pinned in the sidebar', 'Leads', 'EO·····', 'Personal vs shared', 'New', 'new', 'V1.1'],
+      ['S5', 'Settings: templates, tags, custom fields', 'Settings', 'E······', 'In use (hide, not delete)', 'New', 'new', 'V1'],
+      ['S6', 'Settings: catalogue, pipelines & stage rules, sequences, web forms, approval rules', 'Settings', 'E······', 'Rule blocks a move with a reason', 'New', 'new', 'V1.1'],
+      ['S7', 'Settings: email & calendar connection, AI assistant, two-step sign-in', 'Settings', 'E······', 'Step-by-step connect, trusted devices, unusual activity', 'New', 'FIG-437', 'V1.1'],
+      ['S8', 'Settings: roles & field access, developers (API tokens, webhooks)', 'Settings', 'E······', 'Failing webhook retrying, token revoked', 'New', 'new', 'V2'],
+      ['A5', 'Two-step sign-in code screen (after the frozen sign-in)', 'Auth', 'EEEEEE·', 'Wrong code, remember device', 'Proposed', 'FIG-437', 'V1.1'],
+      ['M4', 'Mobile: camera attachments, business-card capture, waiting-to-sync queue', 'Mobile 375', 'EOR·RR·', 'Offline queue, sync done', 'New', 'FIG-791', 'V1.1'],
+      ['A6','Sign-in chips: Dev Super Admin, Dev Customer Support','Auth','EEEEEEE','One tap; frozen page otherwise unchanged','Frozen','new','V1.1'],
+      ['PL1','Platform home','Platform','······E','All healthy, degraded, loading, error; needs-attention list; trends; dev-only skipped strip','New','new','V1.1'],
+      ['PL2','Organisations list','Platform','······E','First run (one org), empty search, status filter, sort','New','new','V1.1'],
+      ['PL3','Provision organisation wizard','Platform','······E','Slug taken, email already invited, seeding failed (nothing created), success with invite link','New','new','V1.1'],
+      ['PL4','Organisation detail','Platform','······E','Suspended / offboarding banner, members (names only), integrations health, usage, jobs, actions menu','New','new','V1.1'],
+      ['PL5','Suspend, reactivate and offboard dialogs','Platform','······E','Reason required, typed confirmation, notify admin','New','new','V1.1'],
+      ['PL6','Offboarding and data requests','Platform','······E','Nothing waiting, overdue, second-admin approval pending, retention countdown, certificate','New','FIG-444','V1.1'],
+      ['PL7','Support access (break-glass)','Platform','······E','Pending, approved, active countdown, ended, denied, expired; values masked','New','new','V2'],
+      ['PL8','Platform audit log','Platform','······E','Filters, export, cannot-be-edited notice','New','new','V1.1'],
+      ['PL9','System health','Platform','······E','Healthy, degraded, down; timeline; what to do','New','new','V1.1'],
+      ['PL10','Platform admins','Platform','······E','Minimum two (removal blocked), invite, lost device recovery','New','new','V1.1'],
+      ['PL11','Platform security','Platform','······E','Verification locked on, short sessions, IP allowlist, alerts','New','new','V1.1'],
+      ['PL12','Flags and limits','Platform','······E','Change history; no prices','New','new','V2'],
+      ['PL13','Announcements','Platform','······E','Compose, target orgs, preview in org shell, scheduled, live, expired','New','new','V2'],
+      ['PL14','Verify it’s you (platform second step)','Auth','······E','Wrong code with attempts left, backup code, lockout, dev skipped variant','Proposed','FIG-437','V1.1'],
+      ['PL15','Not found (org user at platform address)','Global','EEEEEE·','Plain 404, nothing advertised','New','new','V1.1'],
+      ['PLM','Platform mobile: Home, Health, Approvals','Mobile 375','······E','Approve second-admin deletion on the phone','New','new','V1.1'],
+      ['OS1','Suspended organisation screen','Org shell','RRRRRR·','No data shown; who to contact','New','new','V1.1'],
+      ['OS2','Support access approval card','Org shell','E······','Approve, deny, expiry; also in Notifications','New','new','V2'],
+      ['OS3','Support access banner','Org shell','RRRRRR·','Countdown time; Management can end it','New','new','V2'],
+      ['OS4','Settings › Support access history','Settings','E······','Pages viewed, ended by','New','new','V2'],
+      ['OS5','Maintenance and announcement banner','Org shell','RRRRRR·','Dismissible','New','new','V2'],
+      ['OS6','Settings › Data requests (organisation side)','Settings','E······','File export, deletion or offboarding; see status','New','FIG-444','V1.1'],
+      ['AP1','Preferences shell: Profile, Notifications, Appearance, Security','Preferences','EEEEEEE','Loading, saved, undo toast; user menu and sidebar entry for every role','New','new','V1'],
+      ['AP2','Appearance: themes, page colours, density, text size, accessibility, start page, sidebar, date and time','Preferences','EEEEEEE','Live apply with undo, device-only note, Largest text check, shared-look variant; platform limited to light/dark and accessibility','New','new','V1'],
+      ['AP3','Profile picture upload and crop','Preferences','EEEEEEE','Uploading, too large, wrong type, failed, removed (initials); mobile camera or files','New','new','V1'],
+      ['AP4','Your own colours with contrast check','Preferences','EEEEEE·','Hex and picker, live preview, auto-darkened buttons, light sidebar text switch','New','new','V1.1'],
+      ['AP5','Shared-look read-only variant','Preferences','·RRRRR·','Management locked personalisation','New','new','V1'],
+      ['AP6','Notifications tab per role','Preferences','EEEEEEE','Presets, per-event channels, quiet hours, daily email cap, overdue always on','Redesign','FIG-791','V1'],
+      ['AP7','Security: my sessions, sign-in history, password, two-step','Preferences','EEEEEEE','Sign out other devices; two-step V1.1','New','FIG-437','V1'],
+      ['AP8','Reset to default confirmation','Preferences','EEEEEEE','Restores Forest on White','New','new','V1'],
+      ['AP9','Organisation profile: logo, default theme, allow personalisation','Settings','E······','No logo (Figbloom mark), lock personalisation','New','new','V1'],
+      ['TB1','Top bar with identity block, per role','Global','EEEEEE·','Logo or mark, long names truncate, role label + signed-in time once','Redesign','new','V1'],
+      ['TB2','Identity popover','Global','EEEEEE·','Full signed-in time, device, session left, time-zone differs, support notice','New','new','V1'],
+      ['TB3','Session-expiring prompt','Global','EEEEEE·','Stay signed in, sign out; then Session expired screen','New','FIG-437','V1'],
+      ['TB4','Organisation switcher','Global','EEEEEE·','Several orgs, role per org, unread, pending invite (Accept), suspended disabled, switching toast, slow, failed (offline); Alt+O; command palette','New','FIG-437','V1.1'],
+      ['TB5','Top bar at tablet and 375px','Global','EEEEEE·','Label drops at tablet; logo-only at 375 with identity sheet','New','new','V1'],
+      ['TB6','Top bar in support view and in Platform console','Global','······E','No org logo; Platform console pill and environment label','New','new','V1.1'],
+    ];
+    return {
+      head: ['ID', 'SCREEN', 'MGMT', 'SALES', 'DELIV', 'FIN', 'TECH', 'SUPPORT*', 'PLATFORM', 'STATES DESIGNED', 'STATUS', 'RELEASE', 'LINEAR'],
+      rows: data.map(([id, screen, area, roles, states, status, linear, release], i) => ({ id, screen, release, rbg: { V1: '#e9f1eb', 'V1.1': '#eaf0f8', V2: '#f1ecf8' }[release], rfg: { V1: '#275b3a', 'V1.1': '#3a69a8', V2: '#7650b0' }[release], area, states, status, linear, sbg: S[status][0], sfg: S[status][1], bg: i % 2 ? '#fcfbf9' : '#ffffff', roles: roles.split('').map(v => ({ v, bg: T[v][0], fg: T[v][1] })) })),
+      departures: [
+        'Delivery and Finance see won deals only, not the open pipeline (matrix grants deals.view.all). A dashed “Provisional access” banner explains this on their Deals page.',
+        'Sales gets a “Shared pool” tab of unassigned leads with an “Ask to take” action, marked Provisional. Today Sales sees own records only.',
+        'Restricted Technical gets “My work”: tasks plus the client requirements attached to them. There is no project model, so requirements ride on tasks.',
+        'Finance has no Tasks in the matrix, so payment follow-ups are a “next” note on each won deal rather than tasks.',
+        'Delivery can take ownership of a handoff and update its status and deliverables. That needs a small delivery-handoff permission not in the matrix today.',
+      ],
+      questions: [
+        'Sync: theme, page colours, own colours, density, start page and picture follow the account; text size and accessibility stay on the device. Should density be device-only too (laptop vs phone)?',
+        'May Management lock personalisation for everyone, or only set the default? The design supports locking; text size and accessibility always stay personal.',
+        'Organisation switching: V1 shows no switcher for single-organisation users and the full switcher is tagged V1.1. Confirm it isn’t needed for V1 (FIG-437 open decision).',
+        'Should an organisation’s logo also appear on quotes and client-facing pages, or only in the top bar?',
+        'Two-person rule: should every deletion need a second platform admin, or only whole-organisation deletion? With only Given and Michael, holidays can block deletions.',
+        'Support access: must the organisation always approve, or can Figbloom act alone during an outage (with the org notified afterwards)?',
+        'Platform admins have no business-data access by default. Is any read-only view of customer records ever acceptable without break-glass?',
+        'Self-service tenant sign-up, billing, white-labelling and a customer portal stay deferred (FIG-436). Seat limits in Flags are counts only, not prices: confirm.',
+        'Sales Lead role: team-scoped visibility between Sales and Management once the team grows past two or three?',
+        'Read-only Viewer or Auditor role (investor, quality reviewer)?',
+        'Should website forms, API tokens and automations appear in audit logs as named service actors rather than as a person?',
+        'Will Marketing or Business Development (unticked in the questionnaire) ever be distinct people needing their own role?',
+        'Payment processing is excluded from the MVP. Should a signed quote be able to send an M-Pesa deposit request through a provider (V2), or stay status-only?',
+        'Multi-language: is Swahili needed for the client-facing quote, signing page and web form?',
+        'Confirm the boundary: automations, sequences and the assistant may assign, remind and draft, but never move a stage, set a discount or approve. Any exceptions?',
+        'Customer Support as a sixth role, or Delivery with ticket access?',
+        'Is a deal “stalled” after 10 days without activity, or should the threshold vary by stage?',
+        'Should Sales see deal values on deals they don’t own when they view a shared company (currently hidden)?',
+        'Who can mark a handoff Delivered: Delivery only, or Management too? Delivered moves the company to Active Customer here.',
+        'Does Customer Support (FIG-297 §23) become a sixth role, or ride on Delivery?',
+        'Should Finance be able to raise payment follow-ups as tasks (needs tasks permission)?',
+        'Organisation switcher: needed for V1, or only once a second tenant exists?',
+        'Logo: re-export at #203E2A / #FF9400 to match the screen?',
+      ],
+      assumptions: [
+        'Default look is Forest (#203E2A sidebar, green accent, #FF9400 highlight) on White. Auth pages never change with anyone’s appearance settings.',
+        'Status colours, scope pills, masked values, archived and support-access banners never follow a theme; accents are auto-darkened to keep white button text at 4.5:1.',
+        'The top-bar light/dark button flips between the user’s chosen light and dark page colours.',
+        'Management is the organisation admin; there is no separate Organisation Admin role.',
+        'Platform admins sign in on the same frozen sign-in page; the separate Verify it’s you screen follows. Dev chips skip it and show a Dev only strip.',
+        'Seat and import limits are operational limits only. No prices, invoices or billing anywhere in the console.',
+        '04-BRAND-TOKENS.md wasn’t in the upload, so tokens were measured from the current screenshots. Component names are proposals to map against your existing names.',
+        'Sign-in and sign-up use your screenshots’ left panels as-is (cropped pixel-for-pixel); the right-hand forms are rebuilt to match so they’re clickable.',
+        'Session expired and Awaiting access are proposed additions in the same frozen style.',
+        'Sample data: today is Monday 19 Oct 2026, 15:12, KES, +254 numbers; overdue counts follow from that.',
+        'Invoices are tracked as status only; no amounts are processed and no bank details are stored.',
+        'Mobile pipeline and settings are read-friendly; editing hands off to the desktop page.',
+      ],
+      covHead: ['SOURCE', 'REQUIREMENT', 'WHERE IT LIVES', 'STATUS'],
+      coverage: [
+        ['Findings §4.1, §18 · MVP §4.2','Lead capture from website, WhatsApp, calls, email, social, referrals, walk-ins','Leads › New lead; mobile Quick capture; Settings › Website, Inbound email, Web forms','Covered'],
+        ['Findings §6 · MVP §4.2','Qualification that adapts to the service','Lead detail › Qualification; Settings › Custom fields','Covered'],
+        ['Findings §5.1, §15 · MVP §4.5','Pipeline Solution Presented → Proposal Sent → Negotiation → Won/Lost, never auto-moved','Deals board, Move to…, Settings › Pipelines & stage rules','Covered'],
+        ['Findings §8.1–8.4 · MVP §4.3','Contacts, companies, multiple contacts and services per company','Contact drawer; Contact detail; Customer 360','Covered'],
+        ['Findings §9–10 · MVP §4.4','Customer 360 and complete history','Customer 360; record timelines; attachments and comments','Covered'],
+        ['Findings §11–12 · MVP §4.6','Follow-ups, reminders, task ownership','Tasks, Calendar, Today, follow-up sequences','Covered'],
+        ['Findings §13 · MVP §4.8','Proposals and quotations with status, versions and approval','Quote builder, version history, Approvals inbox','Covered'],
+        ['Findings §16 · MVP §4.9','Sales-to-delivery handoff with scope and requirements','Handoff dialog; Handoffs page','Covered'],
+        ['Findings §17 · MVP §4.7','Communication timeline across channels','Conversations hub; record timelines; message templates','Covered'],
+        ['Findings §17.3','WhatsApp Business API two-way messaging','Click-to-chat + log prompt; API listed as later phase','Deferred'],
+        ['Findings §19 · MVP §4.11','Email and calendar sync','Settings › Email & calendar connection steps','Covered (UI only)'],
+        ['Findings §20','Other systems: accounting, PMS, social, online store','Settings › Integrations; Developers (API tokens, webhooks)','Covered (UI only)'],
+        ['Findings §21 · MVP §4.12','Reports: sources, conversion, pipeline, lost reasons, per person, forecast','Reports; Forecast & targets','Covered'],
+        ['Findings §22','Role-specific dashboards','Today for each of the five roles','Covered'],
+        ['Findings §23–24 · FIG-437 §8–10','Five roles, permission-based visibility','Review bar accounts; No-access page; scope pills; Roles & field access','Covered'],
+        ['Findings §23 · FIG-297 §23','Customer Support role','Proposed sixth role in Roles & field access','Open decision'],
+        ['Findings §25 · FIG-437 §14','Audit trail','Settings › Audit log; record audit history','Covered'],
+        ['Findings §26–27 · MVP §4.13','Automations within a clear boundary (assign, remind, never decide)','Settings › Automations, Approval rules, sequences','Covered'],
+        ['Findings §26 (8–9)','Renewal reminders and dormant-customer detection','Renewals & retention page','Covered'],
+        ['Findings §28 · MVP §4.14','Mobile: lookup, call, WhatsApp, quick notes, camera attachments, offline','Mobile 375 frame','Covered'],
+        ['Findings §29','Simple, fast, low-training UI','Command palette, Help panel, first-run checklist','Covered'],
+        ['Findings §30','Migrate existing data','Settings › Data migration; CSV import for leads, deals, companies, contacts','Covered'],
+        ['Findings §31','Data quality: duplicates, completeness','Duplicate warnings, merge dialog, required-on-qualify fields','Covered'],
+        ['Findings §32 · FIG-437 §12','Security and sensitive information','Hidden values, Management-only margin, two-step sign-in, unusual activity alerts','Covered'],
+        ['FIG-437 §6, §13','Sessions, sign-in events, remove vs deactivate','Settings › Security & access','Covered'],
+        ['FIG-437 §7','Active organisation and switching','User menu › Organisation; sandbox badge','Open decision'],
+        ['FIG-436','Single tenant now, multi-tenant ready','Organisation switcher shows one org today','Covered'],
+        ['FIG-444','Pilot readiness: data protection, export control, retention','Settings › Data & privacy; export approval rule','Covered'],
+        ['FIG-444','Subscriber onboarding and billing for external pilots','Not designed: outside V1 internal use','Deferred'],
+        ['MVP §6 exclusions','Payment processing (M-Pesa deposit request on signed quotes)','Shown on the quote as an open decision, V2 only','Open decision'],
+        ['Questionnaire Q28','Migrate roughly 3 months of existing data','Settings › Data migration','Covered'],
+        ['Data model','Communication entity, recurring services, renewal dates','Conversations feed; Renewals; Customer 360 services','Covered'],
+      ].map(([src, req, where, state]) => { const t = state.startsWith('Covered') ? ['#e9f1eb', '#275b3a'] : state === 'Open decision' ? ['#fdf2e3', '#a95a06'] : ['#f1f0ec', '#5f625c']; return { src, req, where, state, bg: t[0], fg: t[1] }; }),
+      platformKeys: [['platform.orgs.view','See organisations, counts and health'],['platform.orgs.provision','Provision a new organisation'],['platform.orgs.suspend','Suspend, reactivate, start offboarding'],['platform.data_requests.manage','Work offboarding and data requests'],['platform.data_requests.approve','Second-admin approval for deletion'],['platform.support.request','Request break-glass support access'],['platform.audit.view','Read the platform audit log'],['platform.health.view','See system health'],['platform.admins.manage','Invite and remove platform admins'],['platform.security.manage','Change platform security'],['platform.flags.manage','Per-organisation flags and limits (V2)'],['platform.announcements.manage','Announcements (V2)']].map(([k, d]) => ({ k, d })),
+      priority: [
+        ['Do first', 'High value, low effort', ['Attachments, tags and custom fields', 'Message templates', 'Two-step sign-in for Management and Finance', 'Saved views', 'First-run checklist']],
+        ['Plan next', 'High value, more effort', ['Quote builder with approvals', 'Forecast and targets', 'Email and calendar sync', 'Follow-up sequences', 'Pipelines with stage rules']],
+        ['Quick wins', 'Lower value, low effort', ['Command palette and Help', 'Tag and catalogue admin', 'Webhook test button']],
+        ['Later', 'Lower value or blocked by a decision', ['E-signature', 'Deposit requests (payment decision)', 'Roles & field access editor', 'Customer Support role', 'AI churn hints']],
+      ].map(([l, d, items], i) => ({ l, d, items, bg: ['#e9f1eb', '#eaf0f8', '#fdf2e3', '#f1f0ec'][i], fg: ['#275b3a', '#3a69a8', '#a95a06', '#5f625c'][i] })),
+      states: [{ l: 'Loading', d: 'Shimmer skeletons that match the final layout, plus a thin orange progress bar.' }, { l: 'Empty (first run)', d: '“Nothing here yet, start with…” with one primary action per role.' }, { l: 'Error', d: 'Plain-language message, nothing lost, Retry.' }, { l: 'Offline', d: 'Orange banner on desktop and mobile; saves are queued.' }, { l: 'Slow connection', d: 'Thin progress bar, content stays usable.' }, { l: 'Per record', d: 'Archived banner + Restore, duplicate warning, values hidden, stalled, overdue, undo toasts.' }],
+    };
+  }
+}
+</script>
+</body>
+</html>

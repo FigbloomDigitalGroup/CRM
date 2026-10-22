@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="crm-theme.css"><script src="icons.js"></script><script src="crm-store.js"></script></helmet>
+<div style="display:flex; flex-direction:column; gap:18px;">
+<sc-if value="{{ v.list }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="{{ L.label }}" style="display:flex; flex-direction:column; gap:18px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+      <div>
+        <h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">{{ L.title }}</h1>
+        <div style="font-size:13.5px; color:var(--text-2); margin-top:4px;">{{ L.sub }}</div>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; background:{{ sc.bg }}; color:{{ sc.fg }}; font-size:12.5px; font-weight:600; white-space:nowrap;"><span style="width:6px; height:6px; border-radius:99px; background:{{ sc.dot }};"></span>{{ sc.label }}</span><span style="font-size:13.5px; color:var(--text-2);">{{ L.hint }}</span></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <sc-if value="{{ can.import }}"><button onClick="{{ L.import }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;"><fb-icon name="upload" size="16"></fb-icon>Import CSV</button></sc-if>
+        <sc-if value="{{ can.export }}"><button onClick="{{ L.export }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;"><fb-icon name="download" size="16"></fb-icon>Export CSV</button></sc-if>
+        <sc-if value="{{ can.edit }}"><button onClick="{{ L.create }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;"><fb-icon name="plus" size="16" stroke="2.2"></fb-icon>{{ L.createLabel }}</button></sc-if>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px;">
+      <sc-for list="{{ L.stats }}" as="s"><div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow-sm);"><div style="display:flex; align-items:center; gap:7px; font-size:14px; color:var(--text-2);"><span style="width:7px; height:7px; border-radius:99px; background:{{ s.dot }};"></span>{{ s.l }}</div><div style="font-size:26px; font-weight:700; margin-top:8px;">{{ s.n }}</div><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">{{ s.sub }}</div></div></sc-for>
+    </div>
+    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;">
+      <div role="tablist" style="display:inline-flex; gap:2px; padding:4px; border-radius:12px; background:var(--surface-3); border:1px solid var(--border); flex-wrap:wrap;"><sc-for list="{{ L.tabs }}" as="t"><button role="tab" onClick="{{ t.go }}" style="display:flex; gap:7px; align-items:center; border:0; padding:7px 13px; border-radius:9px; background:{{ t.bg }}; box-shadow:{{ t.sh }}; font-size:14px; font-weight:600; color:{{ t.fg }};">{{ t.l }}<span style="font-size:12px; color:var(--text-3); font-weight:500;">{{ t.n }}</span></button></sc-for></div>
+      <div style="position:relative; flex:0 1 340px;"><span style="position:absolute; left:12px; top:11px; color:var(--text-3); display:flex;"><fb-icon name="search" size="16"></fb-icon></span><input value="{{ q }}" onChange="{{ setQ }}" placeholder="{{ L.ph }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px 0 36px; font-size:14px; outline:none;"></div>
+    </div>
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:var(--shadow-sm);">
+      <div style="overflow-x:auto; overflow-y:hidden;"><table style="width:100%; border-collapse:collapse; min-width:860px; font-size:14px;">
+        <thead><tr style="background:var(--surface-2);"><sc-for list="{{ L.cols }}" as="c"><th style="text-align:{{ c.al }}; padding:12px 14px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; letter-spacing:.08em; color:var(--text-3); white-space:nowrap;">{{ c.l }}</th></sc-for></tr></thead>
+        <tbody>
+          <sc-if value="{{ v.companies }}"><sc-for list="{{ L.rows }}" as="r"><tr style="border-top:1px solid var(--border);" style-hover="background:var(--surface-2);">
+            <td style="padding:14px;"><button onClick="{{ r.open }}" style="border:0; background:transparent; padding:0; font-weight:600; color:var(--primary-text); text-align:left;" style-hover="text-decoration:underline;">{{ r.name }}</button><div style="font-size:12.5px; color:var(--text-3); margin-top:2px;">{{ r.location }}</div></td>
+            <td style="padding:14px; color:var(--text-2);">{{ r.industry }}</td>
+            <td style="padding:14px;"><span style="font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; background:{{ r.lbg }}; color:{{ r.lfg }}; white-space:nowrap;">{{ r.lifecycle }}</span></td>
+            <td style="padding:14px; text-align:right;">{{ r.contacts }}</td>
+            <td style="padding:14px; color:var(--text-2);">{{ r.deals }}</td>
+            <td style="padding:14px;"><sc-if value="{{ can.reassign }}"><select value="{{ r.ownerId }}" onChange="{{ r.reassign }}" aria-label="Owner" style="height:36px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 8px; font-size:13.5px;"><sc-for list="{{ ownerOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></sc-if><sc-if value="{{ can.noReassign }}"><span style="display:inline-flex; align-items:center; gap:7px; font-size:13.5px;"><span style="width:24px; height:24px; border-radius:99px; background:var(--primary-soft); color:var(--primary-text); font-size:10px; font-weight:700; display:inline-flex; align-items:center; justify-content:center;">{{ r.ini }}</span>{{ r.owner }}</span></sc-if></td>
+            <td style="padding:14px; text-align:right; white-space:nowrap;"><sc-if value="{{ r.archived }}"><button onClick="{{ r.restore }}" style="height:32px; padding:0 12px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600; font-size:13px;">Restore</button></sc-if><sc-if value="{{ r.editable }}"><span style="display:inline-flex; gap:4px;"><button title="Merge duplicates" aria-label="Merge" onClick="{{ r.merge }}" style="width:32px; height:32px; border-radius:8px; border:0; background:transparent; color:var(--text-2); display:inline-flex; align-items:center; justify-content:center;" style-hover="background:var(--surface-3);"><fb-icon name="merge" size="15"></fb-icon></button><button title="Archive" aria-label="Archive" onClick="{{ r.archive }}" style="width:32px; height:32px; border-radius:8px; border:0; background:transparent; color:var(--text-2); display:inline-flex; align-items:center; justify-content:center;" style-hover="background:var(--surface-3);"><fb-icon name="archive" size="15"></fb-icon></button></span></sc-if></td>
+          </tr></sc-for></sc-if>
+          <sc-if value="{{ v.contacts }}"><sc-for list="{{ L.rows }}" as="r"><tr style="border-top:1px solid var(--border);" style-hover="background:var(--surface-2);">
+            <td style="padding:14px;"><button onClick="{{ r.open }}" style="border:0; background:transparent; padding:0; font-weight:600; color:var(--primary-text); text-align:left;">{{ r.name }}</button><div style="font-size:12.5px; color:var(--text-3); margin-top:2px;">{{ r.title }}</div></td>
+            <td style="padding:14px;"><sc-if value="{{ r.company }}"><button onClick="{{ r.openCompany }}" style="border:0; background:transparent; padding:0; color:var(--text); text-align:left;">{{ r.company }}</button></sc-if><sc-if value="{{ r.noCompany }}"><span style="color:var(--text-3);">No company</span></sc-if></td>
+            <td style="padding:14px;"><div>{{ r.email }}</div><div style="font-size:12.5px; color:var(--text-3);">{{ r.phone }}</div></td>
+            <td style="padding:14px;"><span style="display:inline-flex; align-items:center; gap:7px; font-size:13.5px;"><span style="width:24px; height:24px; border-radius:99px; background:var(--primary-soft); color:var(--primary-text); font-size:10px; font-weight:700; display:inline-flex; align-items:center; justify-content:center;">{{ r.ini }}</span>{{ r.owner }}</span></td>
+            <td style="padding:14px; text-align:right; white-space:nowrap;"><sc-if value="{{ r.canContact }}"><span style="display:inline-flex; gap:6px;"><a href="{{ r.tel }}" onClick="{{ r.call }}" title="Call" aria-label="Call" style="width:34px; height:34px; border-radius:9px; border:1px solid var(--border-strong); color:var(--primary-text); display:inline-flex; align-items:center; justify-content:center;"><fb-icon name="phone" size="15"></fb-icon></a><a href="{{ r.wa }}" onClick="{{ r.whatsapp }}" title="Open WhatsApp" aria-label="WhatsApp" style="width:34px; height:34px; border-radius:9px; border:1px solid var(--border-strong); color:var(--primary-text); display:inline-flex; align-items:center; justify-content:center;"><fb-icon name="whatsapp" size="15"></fb-icon></a></span></sc-if></td>
+          </tr></sc-for></sc-if>
+        </tbody>
+      </table></div>
+      <sc-if value="{{ L.none }}"><div style="padding:40px; text-align:center; color:var(--text-2);">{{ L.noneText }}</div></sc-if>
+      <div style="padding:12px 16px; border-top:1px solid var(--border); font-size:13px; color:var(--text-3);">Showing {{ L.count }}</div>
+    </section>
+  </div>
+</sc-if>
+
+<sc-if value="{{ v.company }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Customer 360" style="display:flex; flex-direction:column; gap:18px;">
+    <button onClick="{{ backCo }}" style="align-self:flex-start; display:flex; align-items:center; gap:6px; border:0; background:transparent; padding:0; color:var(--text-2); font-weight:600; font-size:13.5px;"><fb-icon name="arrow-left" size="15"></fb-icon>Companies</button>
+    <sc-if value="{{ c.archived }}"><div role="status" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:12px; background:var(--surface-3); border:1px solid var(--border-strong);"><fb-icon name="archive" size="17"></fb-icon><span style="flex:1; font-size:14px;"><strong>Archived.</strong> Everything on this customer is read-only until it’s restored.</span><sc-if value="{{ c.canEdit0 }}"><button onClick="{{ c.restore }}" style="height:34px; padding:0 14px; border-radius:8px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Restore</button></sc-if></div></sc-if>
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+      <div style="display:flex; gap:16px; align-items:center;">
+        <span style="flex:none; width:56px; height:56px; border-radius:16px; background:var(--side); color:#ffffff; font-weight:700; font-size:19px; display:flex; align-items:center; justify-content:center;">{{ c.ini }}</span>
+        <div><div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;"><h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">{{ c.name }}</h1><span style="font-size:12.5px; font-weight:600; padding:3px 10px; border-radius:999px; background:{{ c.lbg }}; color:{{ c.lfg }};">{{ c.lifecycle }}</span></div>
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:6px; font-size:13.5px; color:var(--text-2);"><span>{{ c.industry }} · {{ c.location }}</span><span style="display:inline-flex; align-items:center; gap:7px; padding:3px 10px; border-radius:999px; background:{{ dsc.bg }}; color:{{ dsc.fg }}; font-size:12px; font-weight:600;"><span style="width:6px; height:6px; border-radius:99px; background:{{ dsc.dot }};"></span>{{ dsc.label }}</span></div></div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <sc-for list="{{ c.actions }}" as="a"><button onClick="{{ a.go }}" title="{{ a.l }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:10px; border:1px solid {{ a.bd }}; background:{{ a.bg }}; color:{{ a.fg }}; font-weight:600;"><fb-icon name="{{ a.icon }}" size="16"></fb-icon>{{ a.l }}</button></sc-for>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px;">
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px;"><div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; color:var(--text-3);">LIFECYCLE</div><sc-if value="{{ c.canLife }}"><select value="{{ c.lifecycle }}" onChange="{{ c.setLife }}" aria-label="Lifecycle" style="margin-top:6px; width:100%; height:36px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 8px; font-weight:600;"><sc-for list="{{ lifeOpts }}" as="o"><option value="{{ o }}">{{ o }}</option></sc-for></select></sc-if><sc-if value="{{ c.noLife }}"><div style="font-weight:700; font-size:16px; margin-top:6px;">{{ c.lifecycle }}</div></sc-if></div>
+      <sc-for list="{{ c.summary }}" as="s"><div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px;"><div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; color:var(--text-3);">{{ s.k }}</div><div style="font-weight:700; font-size:16px; margin-top:8px; color:{{ s.col }};">{{ s.v }}</div><div style="font-size:12px; color:var(--text-3); margin-top:2px;">{{ s.sub }}</div></div></sc-for>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:16px; align-items:start;">
+      <div style="display:flex; flex-direction:column; gap:16px; grid-column:span 2; min-width:0;">
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px;">
+          <h2 style="margin:0 0 12px; font-size:16px;">Services and projects</h2>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;"><sc-for list="{{ c.services }}" as="s"><div style="border:1px solid var(--border); border-radius:12px; padding:12px 14px;"><div style="display:flex; justify-content:space-between; gap:8px;"><strong style="font-size:14px;">{{ s.name }}</strong><span style="font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:999px; background:{{ s.bg }}; color:{{ s.fg }}; white-space:nowrap;">{{ s.status }}</span></div><div style="font-size:13px; color:var(--text-2); margin-top:4px;">{{ s.label }}</div><div style="font-size:12px; color:var(--text-3); margin-top:6px;">Since {{ s.since }}</div></div></sc-for></div>
+          <sc-if value="{{ c.noServices }}"><div style="font-size:13.5px; color:var(--text-3);">No services yet. They appear here once a deal is won.</div></sc-if>
+        </section>
+        <sc-if value="{{ c.hasReq }}"><section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px;"><h2 style="margin:0 0 10px; font-size:16px;">Requirements</h2><ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;"><sc-for list="{{ c.req }}" as="q"><li>{{ q }}</li></sc-for></ul></section></sc-if>
+        <sc-if value="{{ c.showDeals }}">
+          <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+            <div style="padding:16px 18px;"><h2 style="margin:0; font-size:16px;">Deals, quotes and proposals</h2></div>
+            <sc-for list="{{ c.deals }}" as="d"><button onClick="{{ d.open }}" style="display:flex; gap:12px; align-items:center; width:100%; border:0; border-top:1px solid var(--border); background:transparent; padding:12px 18px; text-align:left;" style-hover="background:var(--surface-2);"><span style="width:8px; height:8px; border-radius:99px; background:{{ d.dot }};"></span><span style="flex:1;"><span style="display:block; font-weight:600;">{{ d.title }}</span><span style="display:block; font-size:12.5px; color:var(--text-3);">{{ d.stage }} · {{ d.owner }} · {{ d.props }}</span></span><span style="font-weight:700; color:{{ d.vcol }};">{{ d.value }}</span></button></sc-for>
+            <sc-if value="{{ c.noDeals }}"><div style="padding:16px 18px; border-top:1px solid var(--border); font-size:13.5px; color:var(--text-3);">No deals in your view.</div></sc-if>
+          </section>
+        </sc-if>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid var(--border);"><h2 style="margin:0; font-size:16px;">Communication and activity</h2><span style="font-size:12.5px; color:var(--text-3);">Company, deals and leads together</span></div>
+          <div style="padding:6px 18px 12px;"><sc-for list="{{ c.timeline }}" as="a"><div style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);"><span style="flex:none; width:32px; height:32px; border-radius:99px; background:{{ a.bg }}; color:{{ a.fg }}; display:flex; align-items:center; justify-content:center;"><fb-icon name="{{ a.icon }}" size="15"></fb-icon></span><div style="flex:1;"><div style="font-size:14px; line-height:1.45;">{{ a.text }}</div><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">{{ a.by }} · {{ a.when }} · {{ a.on }}</div></div></div></sc-for><sc-if value="{{ c.noTl }}"><div style="padding:20px 0; color:var(--text-3);">Nothing logged yet.</div></sc-if></div>
+        </section>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:16px; min-width:0;">
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 18px 8px;"><h2 style="margin:0; font-size:16px;">Contacts</h2><sc-if value="{{ c.canEdit }}"><button onClick="{{ c.addContact }}" style="border:0; background:transparent; color:var(--primary-text); font-weight:600; font-size:13px;">+ Add</button></sc-if></div>
+          <sc-for list="{{ c.contacts }}" as="p"><div style="display:flex; gap:10px; align-items:center; padding:10px 18px; border-top:1px solid var(--border);"><span style="flex:none; width:34px; height:34px; border-radius:99px; background:var(--primary-soft); color:var(--primary-text); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center;">{{ p.ini }}</span><button onClick="{{ p.open }}" style="flex:1; min-width:0; border:0; background:transparent; padding:0; text-align:left;"><span style="display:block; font-weight:600; font-size:14px;">{{ p.name }}</span><span style="display:block; font-size:12px; color:var(--text-3);">{{ p.title }}</span></button><sc-if value="{{ p.canContact }}"><a href="{{ p.tel }}" onClick="{{ p.call }}" aria-label="Call" style="width:32px; height:32px; border-radius:9px; border:1px solid var(--border-strong); color:var(--primary-text); display:flex; align-items:center; justify-content:center;"><fb-icon name="phone" size="14"></fb-icon></a><a href="{{ p.wa }}" onClick="{{ p.whatsapp }}" aria-label="WhatsApp" style="width:32px; height:32px; border-radius:9px; border:1px solid var(--border-strong); color:var(--primary-text); display:flex; align-items:center; justify-content:center;"><fb-icon name="whatsapp" size="14"></fb-icon></a></sc-if></div></sc-for>
+        </section>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px;">
+          <div style="padding:16px 18px 8px;"><h2 style="margin:0; font-size:16px;">Tasks</h2></div>
+          <sc-for list="{{ c.tasks }}" as="t"><div style="display:flex; gap:10px; padding:10px 18px; border-top:1px solid var(--border);"><span style="flex:none; margin-top:5px; width:8px; height:8px; border-radius:99px; background:{{ t.col }};"></span><div><div style="font-size:13.5px; font-weight:600;">{{ t.title }}</div><div style="font-size:12px; color:{{ t.col }}; font-weight:600;">{{ t.due }} · {{ t.who }}</div></div></div></sc-for>
+          <sc-if value="{{ c.noTasks }}"><div style="padding:14px 18px 18px; border-top:1px solid var(--border); font-size:13px; color:var(--text-3);">No open tasks.</div></sc-if>
+        </section>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px;"><h2 style="margin:0 0 10px; font-size:16px;">Outstanding issues</h2><sc-for list="{{ c.issues }}" as="i"><div style="display:flex; gap:8px; align-items:flex-start; font-size:13.5px; padding:6px 0; color:var(--text);"><span style="color:var(--orange-text); display:flex; margin-top:2px;"><fb-icon name="alert" size="14"></fb-icon></span>{{ i }}</div></sc-for><sc-if value="{{ c.noIssues }}"><div style="font-size:13px; color:var(--text-3);">Nothing outstanding.</div></sc-if></section>
+        <sc-if value="{{ c.showPay }}"><section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;"><div style="display:flex; justify-content:space-between; align-items:center; padding:16px 18px 10px;"><h2 style="margin:0; font-size:16px;">Payments</h2><span style="font-size:11.5px; color:var(--text-3);">Finance and Management</span></div><sc-for list="{{ c.payments }}" as="p"><div style="display:flex; gap:10px; padding:10px 18px; border-top:1px solid var(--border); align-items:center;"><div style="flex:1;"><div style="font-size:13.5px; font-weight:600;">{{ p.no }} · {{ p.label }}</div><div style="font-size:12px; color:var(--text-3);">Due {{ p.due }}</div></div><div style="text-align:right;"><div style="font-weight:700; font-size:13.5px;">{{ p.amount }}</div><span style="font-size:11.5px; font-weight:600; padding:1px 8px; border-radius:999px; background:{{ p.bg }}; color:{{ p.fg }};">{{ p.status }}</span></div></div></sc-for><sc-if value="{{ c.noPay }}"><div style="padding:14px 18px; border-top:1px solid var(--border); font-size:13px; color:var(--text-3);">No invoices tracked.</div></sc-if></section></sc-if>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ v.contact }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Contact detail" style="display:flex; flex-direction:column; gap:18px; max-width:980px;">
+    <button onClick="{{ backCt }}" style="align-self:flex-start; display:flex; align-items:center; gap:6px; border:0; background:transparent; padding:0; color:var(--text-2); font-weight:600; font-size:13.5px;"><fb-icon name="arrow-left" size="15"></fb-icon>Contacts</button>
+    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+      <span style="flex:none; width:64px; height:64px; border-radius:99px; background:var(--primary-soft); color:var(--primary-text); font-weight:700; font-size:22px; display:flex; align-items:center; justify-content:center;">{{ p.ini }}</span>
+      <div style="flex:1;"><h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">{{ p.name }}</h1><div style="font-size:14px; color:var(--text-2); margin-top:4px;">{{ p.title }}<sc-if value="{{ p.company }}"> at <button onClick="{{ p.openCompany }}" style="border:0; background:transparent; padding:0; color:var(--primary-text); font-weight:600; font-size:14px;">{{ p.company }}</button></sc-if></div></div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px;">
+      <sc-if value="{{ p.canContact }}"><a href="{{ p.tel }}" onClick="{{ p.call }}" style="display:flex; gap:10px; align-items:center; justify-content:center; height:52px; border-radius:14px; background:var(--primary-btn); color:#ffffff; font-weight:700; text-decoration:none; font-size:15px;"><fb-icon name="phone" size="18"></fb-icon>Call {{ p.first }}</a><a href="{{ p.wa }}" onClick="{{ p.whatsapp }}" style="display:flex; gap:10px; align-items:center; justify-content:center; height:52px; border-radius:14px; border:1px solid var(--border-strong); background:var(--surface); color:var(--text); font-weight:700; text-decoration:none; font-size:15px;"><fb-icon name="whatsapp" size="18"></fb-icon>Open WhatsApp</a></sc-if>
+      <a href="{{ p.mailto }}" style="display:flex; gap:10px; align-items:center; justify-content:center; height:52px; border-radius:14px; border:1px solid var(--border-strong); background:var(--surface); color:var(--text); font-weight:700; text-decoration:none; font-size:15px;"><fb-icon name="mail" size="18"></fb-icon>Email</a>
+    </div>
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px;"><dl style="margin:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;"><sc-for list="{{ p.facts }}" as="f"><div><dt style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; color:var(--text-3);">{{ f.k }}</dt><dd style="margin:5px 0 0; font-weight:600; font-size:14px;">{{ f.v }}</dd></div></sc-for></dl></section>
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px;"><div style="padding:14px 18px; border-bottom:1px solid var(--border);"><h2 style="margin:0; font-size:16px;">Recent conversations</h2></div><div style="padding:6px 18px 12px;"><sc-for list="{{ p.timeline }}" as="a"><div style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);"><span style="flex:none; width:32px; height:32px; border-radius:99px; background:var(--primary-soft); color:var(--primary-text); display:flex; align-items:center; justify-content:center;"><fb-icon name="{{ a.icon }}" size="15"></fb-icon></span><div style="flex:1;"><div style="font-size:14px;">{{ a.text }}</div><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">{{ a.by }} · {{ a.when }}</div></div></div></sc-for><sc-if value="{{ p.noTl }}"><div style="padding:20px 0; color:var(--text-3);">No conversations logged yet. Call or WhatsApp and you’ll be asked to log it.</div></sc-if></div></section>
+  </div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'all', q: '' };
+  componentDidMount() { const h = () => { this.un = FB.sub(() => this.forceUpdate()); FB.preview && FB.preview('company', { route: { id: 'c1' } }); this.forceUpdate(); }; if (window.FB) h(); else { const iv = setInterval(() => { if (window.FB) { clearInterval(iv); h(); } }, 40); } }
+  componentWillUnmount() { this.un && this.un(); }
+  comm(p, rt, rid) { return { tel: 'tel:' + p.phone, wa: 'https://wa.me/' + (p.phone || '').replace(/\D/g, ''), call: e => { e.preventDefault(); e.stopPropagation(); FB.modal('logPrompt', { kind: 'call', name: p.first, rt, rid }); }, whatsapp: e => { e.preventDefault(); e.stopPropagation(); FB.modal('logPrompt', { kind: 'whatsapp', name: p.first, rt, rid }); }, canContact: FB.can('activities.create') && !!p.phone }; }
+  renderVals() {
+    if (!window.FB) return { v: {} };
+    const S = FB.s, role = FB.role(), mgmt = role === 'management', pg = S.route.page, st0 = this.state;
+    const editRole = FB.can('customers.edit');
+    const can = { import: FB.can('customers.import'), export: FB.can('customers.export'), edit: editRole, reassign: FB.can('customers.reassign'), noReassign: !FB.can('customers.reassign') };
+    const ownerOpts = [{ v: '', l: 'Unassigned' }, ...FB.ownerOptions().map(o => ({ v: o.id, l: o.label }))];
+    const ro = !editRole;
+    const sc0 = FB.scopeStyle(mgmt ? 'org' : ro ? 'ro' : 'own');
+    const base = { can, ownerOpts, lifeOpts: FB.ref.lifecycle, v: { list: pg === 'companies' || pg === 'contacts', companies: pg === 'companies', contacts: pg === 'contacts', company: pg === 'company', contact: pg === 'contact' }, q: st0.q, setQ: e => this.setState({ q: e.target.value }), backCo: () => FB.go('companies'), backCt: () => FB.go('contacts') };
+    const tabsOf = defs => defs.map(t => ({ ...t, n: t.list.length, bg: t.id === st0.tab ? 'var(--surface)' : 'transparent', sh: t.id === st0.tab ? 'var(--shadow-sm)' : 'none', fg: t.id === st0.tab ? 'var(--text)' : 'var(--text-2)', go: () => this.setState({ tab: t.id }) }));
+    const q = st0.q.toLowerCase();
+    if (pg === 'companies') {
+      const all = S.companies;
+      const active = all.filter(c => !c.archived);
+      const custs = ['Customer', 'Onboarding', 'Active Customer', 'Renewal'];
+      const defs = [{ id: 'all', l: 'All', list: active }, ...(editRole ? [{ id: 'mine', l: 'My companies', list: active.filter(c => c.ownerId === S.userId) }] : []), { id: 'cust', l: 'Customers', list: active.filter(c => custs.includes(c.lifecycle)) }, { id: 'dormant', l: 'Dormant', list: active.filter(c => c.lifecycle === 'Dormant Customer') }, { id: 'archived', l: 'Archived', list: all.filter(c => c.archived) }];
+      const tab = defs.find(t => t.id === st0.tab) || defs[0];
+      const rows = tab.list.filter(c => !q || (c.name + c.industry + c.email + c.phone).toLowerCase().includes(q)).map(c => {
+        const lt = FB.lifeTone(c.lifecycle); const ds = FB.dealsVisible().filter(d => d.companyId === c.id && !d.stage.startsWith('Closed'));
+        const own = c.ownerId === S.userId;
+        return { name: c.name, location: c.location, industry: c.industry || '—', lifecycle: c.lifecycle, lbg: lt[0], lfg: lt[1], contacts: S.contacts.filter(p => p.companyId === c.id).length, deals: ds.length ? ds.length + ' open' : '—', ownerId: c.ownerId || '', owner: FB.uname(c.ownerId), ini: FB.initials(FB.uname(c.ownerId).replace('Dev ', '')), reassign: e => FB.reassign('company', c.id, e.target.value), open: () => FB.go('company', c.id), archived: !!c.archived && (mgmt || own), restore: () => FB.restore('company', c.id), editable: !c.archived && editRole && (mgmt || own), merge: () => FB.modal('merge', { id: c.id }), archive: () => FB.archive('company', c.id) };
+      });
+      return { ...base, sc: { ...sc0, label: mgmt ? 'All organisation companies · ' + active.length : ro ? 'Read-only · ' + active.length : 'Shared list · ' + active.length },
+        L: { label: 'Companies', title: 'Companies', sub: 'Every organisation you work with, in one shared list.', hint: mgmt ? 'You can add, edit, reassign, merge, archive, import and export any company.' : ro ? 'You can view companies. Ask Sales or Management to change details.' : 'You can add companies, and edit, merge or archive the ones you own.', ph: 'Search name, email, phone, industry', createLabel: 'New company', create: () => FB.drawer('company'), import: () => FB.modal('import', { kind: 'companies' }), export: () => FB.toast('Exporting companies… companies-2026-10-19.csv'),
+          stats: [{ l: 'Companies', n: active.length, sub: all.filter(c => c.archived).length + ' archived', dot: 'var(--blue)' }, { l: 'Customers', n: active.filter(c => custs.includes(c.lifecycle)).length, sub: 'onboarding or active', dot: 'var(--primary)' }, { l: 'Prospects', n: active.filter(c => c.lifecycle === 'Prospect').length, sub: 'not yet won', dot: 'var(--orange)' }, { l: 'Dormant', n: active.filter(c => c.lifecycle === 'Dormant Customer').length, sub: 'no contact in 90+ days', dot: 'var(--purple)' }],
+          tabs: tabsOf(defs), rows, none: !rows.length, noneText: tab.id === 'archived' ? 'No archived companies.' : 'No companies match.', count: rows.length + ' companies',
+          cols: [{ l: 'COMPANY', al: 'left' }, { l: 'INDUSTRY', al: 'left' }, { l: 'LIFECYCLE', al: 'left' }, { l: 'CONTACTS', al: 'right' }, { l: 'DEALS', al: 'left' }, { l: 'OWNER', al: 'left' }, { l: 'ACTIONS', al: 'right' }] } };
+    }
+    if (pg === 'contacts') {
+      const all = S.contacts;
+      const defs = [{ id: 'all', l: 'All', list: all }, ...(editRole ? [{ id: 'mine', l: 'My contacts', list: all.filter(p => p.ownerId === S.userId) }] : []), { id: 'noco', l: 'No company', list: all.filter(p => !p.companyId) }];
+      const tab = defs.find(t => t.id === st0.tab) || defs[0];
+      const rows = tab.list.filter(p => !q || (FB.cname(p) + p.email + p.phone + ((FB.company(p.companyId) || {}).name || '')).toLowerCase().includes(q)).map(p => { const c = FB.company(p.companyId); return { name: FB.cname(p), title: p.title, company: c ? c.name : '', noCompany: !c, openCompany: () => c && FB.go('company', c.id), email: p.email || '—', phone: p.phone, owner: FB.uname(p.ownerId), ini: FB.initials(FB.uname(p.ownerId).replace('Dev ', '')), open: () => FB.go('contact', p.id), ...this.comm(p, c ? 'company' : 'lead', c ? c.id : ((S.leads.find(l => l.contactId === p.id) || {}).id || null)) }; });
+      return { ...base, sc: { ...sc0, label: mgmt ? 'All organisation contacts · ' + all.length : ro ? 'Read-only · ' + all.length : 'Shared list · ' + all.length },
+        L: { label: 'Contacts', title: 'Contacts', sub: 'The people you work with, in one shared list.', hint: mgmt ? 'You can add, edit, reassign, merge, archive, import and export any contact.' : ro ? 'You can view contacts and reach them by phone or WhatsApp.' : 'Tap call or WhatsApp; you’ll be asked to log the conversation after.', ph: 'Search name, email, phone, company', createLabel: 'New contact', create: () => FB.drawer('contact'), import: () => FB.modal('import', { kind: 'contacts' }), export: () => FB.toast('Exporting contacts… contacts-2026-10-19.csv'),
+          stats: [{ l: 'Contacts', n: all.length, sub: '0 archived', dot: 'var(--blue)' }, { l: 'Mine', n: all.filter(p => p.ownerId === S.userId).length, sub: 'contacts you own', dot: 'var(--primary)' }, { l: 'No company', n: all.filter(p => !p.companyId).length, sub: 'standalone contacts', dot: 'var(--orange)' }, { l: 'Missing email', n: all.filter(p => !p.email).length, sub: 'can’t be emailed yet', dot: 'var(--purple)' }],
+          tabs: tabsOf(defs), rows, none: !rows.length, noneText: 'No contacts match.', count: rows.length + ' contacts',
+          cols: [{ l: 'CONTACT', al: 'left' }, { l: 'COMPANY', al: 'left' }, { l: 'EMAIL / PHONE', al: 'left' }, { l: 'OWNER', al: 'left' }, { l: 'REACH', al: 'right' }] } };
+    }
+    if (pg === 'company') {
+      const c = FB.company(S.route.id); if (!c) return base;
+      const own = c.ownerId === S.userId, canEdit = editRole && (mgmt || own) && !c.archived;
+      const lt = FB.lifeTone(c.lifecycle);
+      const allDeals = S.deals.filter(d => d.companyId === c.id);
+      const deals = FB.dealsVisible().filter(d => d.companyId === c.id);
+      const valRole = FB.can('deals.values') || role === 'sales';
+      const openD = deals.filter(d => !d.stage.startsWith('Closed')), wonD = allDeals.filter(d => d.stage === 'Closed Won');
+      const pays = S.payments.filter(p => allDeals.some(d => d.id === p.dealId)).flatMap(p => p.invoices);
+      const outstanding = pays.filter(i => i.status !== 'Paid').reduce((a, i) => a + i.amount, 0);
+      const tasks = S.tasks.filter(t => t.status !== 'Completed' && t.link && ((t.link.type === 'company' && t.link.id === c.id) || (t.link.type === 'deal' && allDeals.some(d => d.id === t.link.id)) || (t.link.type === 'lead' && FB.lead(t.link.id) && FB.lead(t.link.id).companyId === c.id))).filter(t => mgmt || t.assigneeId === S.userId || role === 'delivery' || role === 'finance' || role === 'sales');
+      const next = tasks.filter(t => t.due).sort((a, b) => a.due - b.due)[0];
+      const leadIds = S.leads.filter(l => l.companyId === c.id && FB.can('leads')).map(l => l.id);
+      const acts = S.activities.filter(a => (a.rt === 'company' && a.rid === c.id) || (a.rt === 'deal' && deals.some(d => d.id === a.rid)) || (a.rt === 'lead' && leadIds.includes(a.rid))).sort((a, b) => b.at - a.at);
+      const req = allDeals.flatMap(d => d.handoff ? d.handoff.requirements : []);
+      const sc = FB.scopeStyle(canEdit ? (mgmt ? 'org' : 'own') : 'ro');
+      const acts2 = [];
+      if (FB.can('activities.create') && !c.archived) acts2.push({ l: 'Log activity', icon: 'phone', go: () => FB.drawer('note', { rt: 'company', rid: c.id }) });
+      if (canEdit && FB.can('deals.edit')) acts2.push({ l: 'New deal', icon: 'briefcase', go: () => FB.drawer('deal', { companyId: c.id }) });
+      if (canEdit && FB.can('customers.merge')) acts2.push({ l: 'Merge', icon: 'merge', go: () => FB.modal('merge', { id: c.id }) });
+      if (canEdit) acts2.push({ l: 'Archive', icon: 'archive', go: () => FB.archive('company', c.id) });
+      return { ...base, dsc: { ...sc, label: canEdit ? (mgmt ? 'Organisation' : 'Own') : 'Read-only' }, c: {
+        name: c.name, ini: FB.initials(c.name), lifecycle: c.lifecycle, lbg: lt[0], lfg: lt[1], industry: c.industry, location: c.location, archived: !!c.archived, canEdit0: editRole && (mgmt || own), restore: () => FB.restore('company', c.id), canEdit,
+        canLife: canEdit, noLife: !canEdit, setLife: e => { const old = c.lifecycle; c.lifecycle = e.target.value; FB.log('company', c.id, 'status', 'Lifecycle changed from ' + old + ' to ' + c.lifecycle); FB.toast('Lifecycle: ' + c.lifecycle, () => { c.lifecycle = old; FB.emit(); }); FB.emit(); },
+        actions: acts2.map((a, i) => ({ ...a, bg: i === 0 ? 'var(--primary-btn)' : 'var(--surface)', fg: i === 0 ? '#ffffff' : 'var(--text)', bd: i === 0 ? 'var(--primary-btn)' : 'var(--border-strong)' })),
+        summary: [
+          { k: 'NEXT FOLLOW-UP', v: next ? FB.dueLabel(next.due) : 'None set', sub: next ? next.title : 'Add a task so it isn’t forgotten', col: next && FB.dueState(next.due) === 'overdue' ? 'var(--red)' : 'var(--text)' },
+          { k: 'OPEN DEALS', v: openD.length + (FB.can('deals.open') ? '' : ''), sub: valRole ? FB.kes(openD.filter(FB.valueVisible).reduce((a, d) => a + d.value, 0)) : 'Values hidden', col: 'var(--text)' },
+          { k: 'WON TO DATE', v: valRole && (FB.can('deals.values') || wonD.every(FB.valueVisible)) ? FB.kes(wonD.reduce((a, d) => a + d.value, 0)) : 'Values hidden', sub: wonD.length + ' won deal' + (wonD.length === 1 ? '' : 's'), col: valRole ? 'var(--text)' : 'var(--text-3)' },
+          { k: 'OUTSTANDING', v: FB.can('customers.payments') ? FB.kes(outstanding) : 'Finance only', sub: FB.can('customers.payments') ? pays.filter(i => i.status === 'Overdue').length + ' overdue invoice(s)' : 'Ask Finance', col: FB.can('customers.payments') ? (outstanding ? 'var(--orange-text)' : 'var(--text)') : 'var(--text-3)' },
+          { k: 'OWNER', v: FB.uname(c.ownerId), sub: c.phone, col: 'var(--text)' },
+        ],
+        services: c.services.map(s => ({ ...s, bg: s.status === 'Live' ? 'var(--primary-soft)' : s.status.startsWith('Renewal') ? 'var(--purple-soft)' : 'var(--blue-soft)', fg: s.status === 'Live' ? 'var(--primary-text)' : s.status.startsWith('Renewal') ? 'var(--purple)' : 'var(--blue)' })), noServices: !c.services.length,
+        req, hasReq: req.length > 0,
+        showDeals: FB.can('deals'), deals: deals.map(d => ({ title: d.title, stage: d.stage, dot: FB.stageTone(d.stage), owner: FB.uname(d.ownerId), props: d.proposals.length ? d.proposals.length + ' proposal' + (d.proposals.length > 1 ? 's' : '') + ' · latest ' + d.proposals[d.proposals.length - 1].no : 'no proposals', value: FB.dealValue(d), vcol: FB.valueVisible(d) ? 'var(--text)' : 'var(--text-3)', open: () => FB.go('deal', d.id) })), noDeals: !deals.length,
+        timeline: acts.map(a => ({ text: a.text, icon: FB.actIcon(a.kind), by: a.byId ? FB.uname(a.byId) : 'Figbloom automation', when: FB.when(a.at), on: a.rt === 'company' ? 'Customer' : a.rt === 'deal' ? 'Deal' : 'Lead', bg: ['call', 'whatsapp', 'email', 'meeting'].includes(a.kind) ? 'var(--primary-soft)' : a.kind === 'handoff' ? 'var(--blue-soft)' : 'var(--surface-3)', fg: ['call', 'whatsapp', 'email', 'meeting'].includes(a.kind) ? 'var(--primary-text)' : a.kind === 'handoff' ? 'var(--blue)' : 'var(--text-2)' })), noTl: !acts.length,
+        contacts: S.contacts.filter(p => p.companyId === c.id).map(p => ({ name: FB.cname(p), ini: FB.initials(FB.cname(p)), title: p.title, open: () => FB.go('contact', p.id), ...this.comm(p, 'company', c.id) })), addContact: () => FB.drawer('contact', { companyId: c.id }),
+        tasks: tasks.map(t => { const s = FB.dueState(t.due); return { title: t.title, due: FB.dueLabel(t.due), who: FB.uname(t.assigneeId), col: s === 'overdue' ? 'var(--red)' : 'var(--text-2)' }; }), noTasks: !tasks.length,
+        issues: c.issues, noIssues: !c.issues.length,
+        showPay: FB.can('customers.payments'), payments: pays.map(i => { const t = FB.invTone(i.status); return { ...i, amount: FB.kes(i.amount), bg: t[0], fg: t[1] }; }), noPay: !pays.length,
+      } };
+    }
+    if (pg === 'contact') {
+      const p = FB.contact(S.route.id); if (!p) return base;
+      const c = FB.company(p.companyId);
+      const acts = S.activities.filter(a => ['call', 'whatsapp', 'email', 'meeting'].includes(a.kind) && ((c && a.rt === 'company' && a.rid === c.id) || (a.rt === 'deal' && FB.deal(a.rid) && FB.deal(a.rid).contactId === p.id) || (a.rt === 'lead' && FB.lead(a.rid) && FB.lead(a.rid).contactId === p.id))).sort((a, b) => b.at - a.at).slice(0, 8);
+      return { ...base, p: { name: FB.cname(p), first: p.first, ini: FB.initials(FB.cname(p)), title: p.title, company: c ? c.name : '', openCompany: () => FB.go('company', c.id), mailto: 'mailto:' + p.email, ...this.comm(p, c ? 'company' : 'lead', c ? c.id : ((S.leads.find(l => l.contactId === p.id) || {}).id || null)),
+        facts: [{ k: 'PHONE', v: p.phone || '—' }, { k: 'EMAIL', v: p.email || '—' }, { k: 'DEPARTMENT', v: p.department || '—' }, { k: 'SOCIAL PROFILE', v: p.social || '—' }, { k: 'OWNER', v: FB.uname(p.ownerId) }, { k: 'COMPANY', v: c ? c.name : 'Standalone contact' }],
+        timeline: acts.map(a => ({ text: a.text, icon: FB.actIcon(a.kind), by: FB.uname(a.byId), when: FB.when(a.at) })), noTl: !acts.length } };
+    }
+    return base;
+  }
+}
+</script>
+</body>
+</html>
