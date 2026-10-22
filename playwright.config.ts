@@ -38,5 +38,22 @@ export default defineConfig({
     url: `${process.env.E2E_BASE_URL ?? "http://localhost:3100"}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // The production build refuses to boot while a dev account exists
+    // (src/auth/devAccountGuard.ts, FIG-1196), but these specs log in as the
+    // seeded dev users. This override is for this server only, and works only
+    // together with ALLOW_DEV_ACCOUNTS=true; nothing else sets it.
+    env: {
+      E2E_ALLOW_DEV_ACCOUNTS: "true",
+      ALLOW_DEV_ACCOUNTS: "true",
+      // Every spec signs in through the real /login, and the suite as a whole
+      // signs in far more often than the production limit (5 per email per 15
+      // minutes) allows. Raised for this server only; the limiter itself is
+      // covered by tests/authRateLimiting.test.ts.
+      LOGIN_RATE_LIMIT_MAX_PER_EMAIL: "1000",
+      LOGIN_RATE_LIMIT_MAX_PER_IP: "1000",
+      // Notification emails and bell links are built from this; without it
+      // they point at the default dev port and a clicked notification dead-ends.
+      APP_BASE_URL: process.env.E2E_BASE_URL ?? "http://localhost:3100",
+    },
   },
 });

@@ -23,20 +23,20 @@ rest of the foundation on every run (see "What the smoke test guards").
 
 | Measure | Value |
 |---|---|
-| Test files | 54 (44 integration, 10 component) |
-| Tests | 521, all passing |
+| Test files | 64 (54 integration, 10 component) |
+| Tests | 698, all passing (as of FIG-801/802; 661 at FIG-1016, 521 at the original baseline) |
 | Duration | 150 to 200 s (the last two runs: 189 s with coverage, 175 s without) |
 | Failing / skipped | 0 / 0 |
 | Lint, typecheck | clean |
-| e2e (Playwright) | 4 tests, all passing (run separately, `npm run e2e`) |
+| e2e (Playwright) | 20 tests, all passing (run separately, `npm run e2e`) |
 
 Coverage (`npm run test:coverage`, Vitest v8):
 
 | Metric | Value | CI floor (`vitest.config.ts`) |
 |---|---|---|
-| Lines and statements | 35.98 % | 35 % |
-| Branches | 79.07 % | 65 % |
-| Functions | 64.74 % | 55 % |
+| Lines and statements | 42.37 % (41.83 % at FIG-1016, 35.98 % at the original baseline) | 42 % |
+| Branches | 81.28 % | 80 % |
+| Functions | 69.76 % | 69 % |
 
 By area (lines):
 
@@ -55,8 +55,8 @@ By area (lines):
 
 - **UI is mostly untested at unit level.** `src/app` holds about 15,800 of
   the 24,000 measured lines and is at 9.9 %. Route handlers and pages are
-  exercised only through the 4 Playwright tests, and v8 coverage cannot see
-  code run by the separate server process. The 35 % floor is therefore held
+  exercised only through the 20 Playwright tests, and v8 coverage cannot see
+  code run by the separate server process. The 42 % floor is therefore held
   up by the service and repository layers; adding untested UI lowers it.
   This is the main risk to the floor during the makeover: new screens need
   component tests (see `tests/components/GlobalSearch.test.tsx` and

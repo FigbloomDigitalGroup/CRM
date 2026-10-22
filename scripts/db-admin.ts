@@ -118,11 +118,17 @@ async function grantRole(): Promise<void> {
     await client.query(
       `REVOKE SELECT, INSERT, UPDATE, DELETE ON "auth_rate_limit_attempts" FROM ${ident(APP_ROLE)}`,
     );
+    // FIG-1196: platform identities (the Platform Super Admin, dev fixture
+    // today) are never touched by the tenant-facing role: revoked outright,
+    // with row-level security on and no policy as the second wall.
+    await client.query(
+      `REVOKE SELECT, INSERT, UPDATE, DELETE ON "platform_identities" FROM ${ident(APP_ROLE)}`,
+    );
     await client.query(
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${ident(APP_ROLE)}`,
     );
     console.log(
-      `Granted table privileges to "${APP_ROLE}" (audit_events remains append-only; website_lead_request_log and auth_rate_limit_attempts are restricted).`,
+      `Granted table privileges to "${APP_ROLE}" (audit_events remains append-only; website_lead_request_log, auth_rate_limit_attempts and platform_identities are restricted).`,
     );
   } finally {
     await client.end();

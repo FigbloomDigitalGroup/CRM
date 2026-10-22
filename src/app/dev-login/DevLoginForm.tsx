@@ -29,7 +29,8 @@ export function DevLoginForm({ options }: { options: Option[] }) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? "Login failed.");
       }
-      router.push("/o/figbloom");
+      const signedIn = await res.json().catch(() => ({}));
+      router.push(signedIn.landing ?? "/o/figbloom");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed.");

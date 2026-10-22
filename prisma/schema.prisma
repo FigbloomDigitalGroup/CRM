@@ -470,6 +470,24 @@ model DealHandoff {
   @@map("deal_handoffs")
 }
 
+/// The identity a Platform Super Admin signs in with (FIG-1196). Separate from
+/// `User`: no memberships, no organization, no tenant permissions, and no
+/// access for the tenant-facing database role (RLS on with no policy, and its
+/// privileges revoked). Today it only holds the dev-only Super Admin fixture
+/// (`isDev`), created by `npm run seed:dev`; B6.03 adopts it for real platform
+/// admins.
+model PlatformIdentity {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String?  @map("password_hash")
+  isDev        Boolean  @default(false) @map("is_dev")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_identities")
+}
+
 /// A create request already seen, keyed by the client's Idempotency-Key header
 /// (FIG-1014). Replaying the same key with the same body returns the stored
 /// response instead of creating the record again.

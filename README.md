@@ -38,8 +38,11 @@ docker compose up -d
 
 cp .env.example .env   # adjust APP_DB_PASSWORD if you want a non-default one
 
-# Apply migrations, create the least-privilege app role, grant it table
-# privileges, and seed roles/permissions + a dev FigBloom organization.
+# Fresh database to demo-ready in one command (needs ALLOW_DEV_ACCOUNTS="true",
+# which .env.example sets): applies migrations, creates the least-privilege app
+# role and grants it table privileges, then runs the dev seed -- the roles and
+# permissions, two organizations ("figbloom" and "figbloom-sandbox"), six dev
+# accounts and the design prototype's sample data. See "Seeds" below.
 npm run db:setup
 ```
 
@@ -65,9 +68,64 @@ npm run dev   # http://localhost:3000, then visit /login
 ```
 
 Sign in with any seeded dev user's email and the shared local-dev password
-`figbloom-dev-local` (set in `prisma/seed.ts`). `/dev-login` also still
+`figbloom-dev-local` (set in `src/auth/devAccounts.ts`). `/dev-login` also still
 works in local development for quickly switching between roles without
 typing a password each time — see "Authentication" below.
+
+### Seeds
+
+| Command | What it does | Where |
+|---|---|---|
+| `npm run seed` | Reference data only: the role and permission catalogue. Creates no organization, user or sample data. | Every environment, production included |
+| `npm run seed:dev` | Everything `seed` does, plus the dev organizations, the dev accounts and the sample data. Safe to run again. | Development only: refuses when `NODE_ENV=production` or without `ALLOW_DEV_ACCOUNTS="true"` |
+
+The dev seed creates **Figbloom Digital Group** (`figbloom`, every account's
+first organization, the full prototype data set) and **Figbloom Sandbox**
+(`figbloom-sandbox`, Management and one Sales user, a small slice of data, for
+the organization switcher). Accounts, all with the password
+`figbloom-dev-local`: `dev.management@`, `dev.sales@`, `dev.sales2@`,
+`dev.delivery@`, `dev.finance@` and `dev.tech@figbloom.local`. Dates in the
+sample data are shifted to the day the seed runs, so "overdue" and "renewal due
+in 27 days" always look right. The seed also creates the **Dev Super Admin**
+(`dev.superadmin@platform.figbloom.local`), a platform identity kept apart from
+tenant users (see "Dev accounts and production" below). Not seeded yet because
+the models do not exist: the Customer Support account and payments, tags and
+templates; they join the seed with their issues. If the
+organization already has records (an older dev database) the sample data is
+skipped rather than duplicated; run `npm run migrate:reset` for a clean demo
+database. The sample data lives in `prisma/sampleData.ts` (from
+`design-spec/crm-store.js`) and the seed in `prisma/devSeed.ts`.
+
+### Dev accounts and production
+
+Dev accounts (the `@figbloom.local` users and the Dev Super Admin) must never
+exist or be usable outside development. Three guards, all required
+(`CLAUDE.md` rule 10, FIG-1196):
+
+1. **The dev seed refuses to run** when `NODE_ENV=production` or without
+   `ALLOW_DEV_ACCOUNTS="true"`. The production seed (`npm run seed`) and the
+   migrations never create a dev account.
+2. **The dev sign-in is closed** unless `NODE_ENV=development` and
+   `ALLOW_DEV_ACCOUNTS=true` (`devAccountsAllowed()` in `src/auth/devAccounts.ts`):
+   `/dev-login`, `POST/DELETE /api/dev-session` and the platform holding page
+   `/platform` answer 404 otherwise, and no dev account chip is offered. A
+   production build is checked by `e2e/dev-accounts-closed.spec.ts`.
+3. **Production refuses to boot** while any dev account exists
+   (`src/auth/devAccountGuard.ts`, run from `src/instrumentation.ts`): it
+   counts users whose email ends `@figbloom.local` and platform identities
+   flagged `is_dev`, and stops the server with a message naming what it found.
+   It also refuses when it cannot check. The only override is
+   `E2E_ALLOW_DEV_ACCOUNTS=true` together with `ALLOW_DEV_ACCOUNTS=true`, which
+   `playwright.config.ts` sets for its own server, because the e2e suite drives
+   the production build against a seeded development database.
+
+The Dev Super Admin signs in through the dev sign-in (`/dev-login`, or the dev
+chip once F1.07 builds it), gets its own cookie, is audited
+(`platform.dev_signin`) and lands on a "Platform console arrives in V1.1"
+holding page. It has no organization, membership or tenant permission, the
+tenant request path never reads its cookie, and the tenant-facing database role
+has no privileges on its table (`platform_identities`, row-level security on
+with no policy).
 
 Other scripts: `npm run typecheck`, `npm run lint`, `npm run format`,
 `npm run migrate:dev` (interactive, for authoring new migrations),

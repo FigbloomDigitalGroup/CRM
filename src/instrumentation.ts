@@ -22,6 +22,15 @@ export async function register() {
   };
 
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // FIG-1196: production must never boot with a dev account in the database.
+    // A throw here would leave `next start` listening and answering every
+    // request with a 500, so the process exits instead: an orchestrator sees a
+    // crash, not a server that is merely unhealthy.
+    const { enforceNoDevAccountsInProduction } = await import(
+      "./auth/devAccountGuard"
+    );
+    await enforceNoDevAccountsInProduction();
+
     const { scrubSentryEvent } = await import("./lib/sentryScrub");
     Sentry.init({
       ...sharedOptions,
