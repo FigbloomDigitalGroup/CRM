@@ -9,6 +9,7 @@ import {
   createCompany as createCompanyRecord,
   findPossibleDuplicateCompanies,
   getCompanyById,
+  countCompanies as countCompaniesRecords,
   listCompanies as listCompaniesRecords,
   mergeCompanies as mergeCompaniesRecord,
   restoreCompany as restoreCompanyRecord,
@@ -29,6 +30,7 @@ import {
   assertEligibleAccountOwner,
   listAccountOwnerCandidates,
 } from "./ownerEligibility";
+import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 
 /** Beyond ownership (audited separately, below): identity and lifecycle changes (FIG-600 AC). */
 const AUDITED_COMPANY_FIELDS = ["name", "lifecycleStateId"] as const;
@@ -240,12 +242,41 @@ export async function getCompany(ctx: AuthContext, companyId: string) {
   return company;
 }
 
+/** Every matching company, unpaged -- internal use; list screens and the API use `listCompaniesPage` (FIG-789). */
 export async function listCompanies(
   ctx: AuthContext,
   filters: ListCompaniesFilters = {},
 ) {
   requirePermission(ctx, "companies.view");
   return listCompaniesRecords(ctx.organizationId, filters);
+}
+
+/** One page of companies plus the total (FIG-789). */
+export async function listCompaniesPage(
+  ctx: AuthContext,
+  filters: ListCompaniesFilters = {},
+  request: PageRequest = {},
+) {
+  requirePermission(ctx, "companies.view");
+  const paging = resolvePaging(request);
+  const [items, total] = await Promise.all([
+    listCompaniesRecords(ctx.organizationId, {
+      ...filters,
+      take: paging.take,
+      skip: paging.skip,
+    }),
+    countCompaniesRecords(ctx.organizationId, filters),
+  ]);
+  return buildPage(items, total, paging);
+}
+
+/** How many companies match `filters` -- a COUNT, never a row fetch (FIG-789). */
+export async function countCompanies(
+  ctx: AuthContext,
+  filters: ListCompaniesFilters = {},
+) {
+  requirePermission(ctx, "companies.view");
+  return countCompaniesRecords(ctx.organizationId, filters);
 }
 
 export async function checkDuplicateCompanies(

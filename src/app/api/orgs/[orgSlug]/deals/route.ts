@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { pageQueryShape, toPageRequest } from "@/app/api/_lib/pageQuery";
 import { parseJsonBody, parseQueryParams, requiredString } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
-import { createDeal, listDeals } from "@/services/dealService";
+import { createDeal, listDealsPage } from "@/services/dealService";
 
 const OutcomeEnum = z.enum(["OPEN", "WON", "LOST"]);
 
@@ -13,6 +14,7 @@ const ListDealsQuerySchema = z.object({
   outcome: OutcomeEnum.optional(),
   companyId: z.string().optional(),
   includeArchived: z.enum(["true", "false"]).optional(),
+  ...pageQueryShape,
 });
 
 const CreateDealSchema = z.object({
@@ -39,14 +41,18 @@ export async function GET(
     const ctx = await resolveRequestContext(orgSlug);
     const { searchParams } = new URL(request.url);
     const query = parseQueryParams(searchParams, ListDealsQuerySchema);
-    return listDeals(ctx, {
-      query: query.q,
-      ownerMembershipId: query.ownerMembershipId,
-      pipelineStageId: query.pipelineStageId,
-      outcome: query.outcome,
-      companyId: query.companyId,
-      includeArchived: query.includeArchived === "true",
-    });
+    return listDealsPage(
+      ctx,
+      {
+        query: query.q,
+        ownerMembershipId: query.ownerMembershipId,
+        pipelineStageId: query.pipelineStageId,
+        outcome: query.outcome,
+        companyId: query.companyId,
+        includeArchived: query.includeArchived === "true",
+      },
+      toPageRequest(query),
+    );
   });
 }
 

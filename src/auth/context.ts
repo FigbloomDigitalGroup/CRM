@@ -23,7 +23,10 @@ export function requirePermission(
   permissionKey: string,
 ): void {
   if (!hasPermission(ctx, permissionKey)) {
-    throw new ForbiddenError(permissionKey);
+    throw new ForbiddenError(permissionKey, {
+      roleKey: ctx.roleKey,
+      permissionKeys: [permissionKey],
+    });
   }
 }
 
@@ -63,6 +66,10 @@ export function requireOwnedRecordPermission(
   ) {
     throw new ForbiddenError(
       `${ownPermissionKey} (own) or ${allPermissionKey} (all)`,
+      {
+        roleKey: ctx.roleKey,
+        permissionKeys: [ownPermissionKey, allPermissionKey],
+      },
     );
   }
 }

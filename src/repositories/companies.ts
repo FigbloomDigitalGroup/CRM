@@ -35,6 +35,8 @@ export interface ListCompaniesFilters {
   includeArchived?: boolean;
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
   take?: number;
+  /** Rows to skip before `take` -- set by the paged list functions (FIG-789), not by callers. */
+  skip?: number;
 }
 
 /**
@@ -105,35 +107,54 @@ export async function getCompanyById(
  * names aren't unique (FIG-438 -- they may legitimately repeat), so this is
  * search, not exact lookup.
  */
+/** Shared by the list and count queries so a page and its total can never disagree (FIG-789). */
+function companiesWhere(
+  organizationId: string,
+  filters: ListCompaniesFilters,
+): Prisma.CompanyWhereInput {
+  return {
+    organizationId,
+    ownerMembershipId: filters.ownerMembershipId,
+    lifecycleStateId: filters.lifecycleStateId,
+    ...(filters.includeArchived ? {} : { archivedAt: null }),
+    ...(filters.query
+      ? {
+          OR: [
+            { name: { contains: filters.query, mode: "insensitive" } },
+            { email: { contains: filters.query, mode: "insensitive" } },
+            { phone: { contains: filters.query, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+}
+
 export async function listCompanies(
   organizationId: string,
   filters: ListCompaniesFilters = {},
 ) {
   return withOrgContext(organizationId, (tx) =>
     tx.company.findMany({
-      where: {
-        organizationId,
-        ownerMembershipId: filters.ownerMembershipId,
-        lifecycleStateId: filters.lifecycleStateId,
-        ...(filters.includeArchived ? {} : { archivedAt: null }),
-        ...(filters.query
-          ? {
-              OR: [
-                { name: { contains: filters.query, mode: "insensitive" } },
-                { email: { contains: filters.query, mode: "insensitive" } },
-                { phone: { contains: filters.query, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
+      where: companiesWhere(organizationId, filters),
       include: {
         lifecycleState: true,
         owner: OWNER_SUMMARY,
         _count: { select: { contacts: { where: { archivedAt: null } } } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: filters.take,
+      skip: filters.skip,
     }),
+  );
+}
+
+/** Rows matching `filters` across all pages (FIG-789) -- ignores `take`/`skip`. */
+export async function countCompanies(
+  organizationId: string,
+  filters: ListCompaniesFilters = {},
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.company.count({ where: companiesWhere(organizationId, filters) }),
   );
 }
 

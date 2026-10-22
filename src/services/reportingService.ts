@@ -23,7 +23,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * -- the repository windows are end-exclusive, so without this a user
  * choosing today as the end date would silently lose today's records.
  */
-function resolveRange(filters: { dateFrom?: string; dateTo?: string }) {
+export function resolveRange(filters: { dateFrom?: string; dateTo?: string }) {
   const parse = (value?: string) => {
     if (!value) return undefined;
     const d = new Date(value);

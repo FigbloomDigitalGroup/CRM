@@ -4,6 +4,7 @@ import { requirePermission } from "../auth/context";
 import { adminDb } from "../db/adminClient";
 import { logger } from "../lib/logger";
 import {
+  sendDealWonHandoffEmail,
   sendLeadAssignedEmail,
   sendTaskDueEmail,
   sendTaskOverdueEmail,
@@ -72,6 +73,11 @@ async function dispatch(
     switch (templateKey) {
       case "lead-assigned":
         return sendLeadAssignedEmail(recipient.email, payload as { leadLabel: string; link: string });
+      case "deal-won-handoff":
+        return sendDealWonHandoffEmail(
+          recipient.email,
+          payload as { dealLabel: string; taskCount: number; link: string },
+        );
       case "task-due":
         return sendTaskDueEmail(recipient.email, payload as { taskTitle: string; link: string });
       case "task-overdue":
@@ -219,6 +225,35 @@ export async function notifyLeadAssigned(
     });
   } catch (err) {
     logger.error({ err, organizationId, membershipId }, "Failed to notify lead assignment");
+  }
+}
+
+/**
+ * Tells the Delivery owner a won deal has been handed to them (FIG-792,
+ * DEAL_WON_HANDOFF). Same best-effort contract as `notifyLeadAssigned`.
+ */
+export async function notifyDealWonHandoff(
+  organizationId: string,
+  membershipId: string,
+  deal: { id: string; label: string; taskCount: number },
+): Promise<void> {
+  try {
+    const org = await getOrganizationBasics(organizationId);
+    const link = `${appBaseUrl()}/o/${org.slug}/deals/${deal.id}`;
+    await notify({
+      organizationId,
+      membershipId,
+      type: "DEAL_WON_HANDOFF",
+      title: `Deal won, handed off to you: ${deal.label}`,
+      body: `${deal.taskCount} onboarding task${deal.taskCount === 1 ? "" : "s"} assigned to you`,
+      entityType: "Deal",
+      entityId: deal.id,
+      link,
+      templateKey: "deal-won-handoff",
+      emailPayload: { dealLabel: deal.label, taskCount: deal.taskCount, link },
+    });
+  } catch (err) {
+    logger.error({ err, organizationId, membershipId }, "Failed to notify deal won handoff");
   }
 }
 

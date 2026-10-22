@@ -8,6 +8,7 @@ import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
 import {
   createTask as createTaskRecord,
   getTaskById,
+  countTasks as countTasksRecords,
   listTasks as listTasksRecords,
   updateTask as updateTaskRecord,
   type CreateTaskInput,
@@ -22,6 +23,7 @@ import {
   listTaskAssigneeCandidates,
 } from "./ownerEligibility";
 import { assertCanAccessLinkedRecords } from "./recordAccess";
+import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 
 function parseDueDate(value: string | null | undefined): Date | null | undefined {
   if (value === undefined) return undefined;
@@ -116,22 +118,50 @@ export async function getTask(ctx: AuthContext, taskId: string) {
  * Same "own filter is server-enforced, never client-trusted" rule as
  * leadService.listLeads/dealService.listDeals.
  */
+function scopeTaskFilters(
+  ctx: AuthContext,
+  filters: ListTasksFilters,
+): ListTasksFilters {
+  if (hasPermission(ctx, "tasks.view.all")) return filters;
+  requirePermission(ctx, "tasks.view.own");
+  return { ...filters, assigneeMembershipId: ctx.membershipId };
+}
+
+/** Every matching task, unpaged -- internal use; list screens and the API use `listTasksPage` (FIG-789). */
 export async function listTasks(
   ctx: AuthContext,
   filters: ListTasksFilters = {},
 ) {
-  if (hasPermission(ctx, "tasks.view.all")) {
-    return (await listTasksRecords(ctx.organizationId, filters)).map(
-      withAssigneeName,
-    );
-  }
-  requirePermission(ctx, "tasks.view.own");
   return (
-    await listTasksRecords(ctx.organizationId, {
-      ...filters,
-      assigneeMembershipId: ctx.membershipId,
-    })
+    await listTasksRecords(ctx.organizationId, scopeTaskFilters(ctx, filters))
   ).map(withAssigneeName);
+}
+
+/** One page of tasks plus the total, with the same own/all scoping as `listTasks` (FIG-789). */
+export async function listTasksPage(
+  ctx: AuthContext,
+  filters: ListTasksFilters = {},
+  request: PageRequest = {},
+) {
+  const scoped = scopeTaskFilters(ctx, filters);
+  const paging = resolvePaging(request);
+  const [tasks, total] = await Promise.all([
+    listTasksRecords(ctx.organizationId, {
+      ...scoped,
+      take: paging.take,
+      skip: paging.skip,
+    }),
+    countTasksRecords(ctx.organizationId, scoped),
+  ]);
+  return buildPage(tasks.map(withAssigneeName), total, paging);
+}
+
+/** How many tasks this caller can see for `filters` -- a COUNT, never a row fetch (FIG-789). */
+export async function countTasks(
+  ctx: AuthContext,
+  filters: ListTasksFilters = {},
+) {
+  return countTasksRecords(ctx.organizationId, scopeTaskFilters(ctx, filters));
 }
 
 /** Who a task can be handed to: active members whose role can view tasks. Needs `tasks.assign.any`. */
