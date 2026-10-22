@@ -113,6 +113,39 @@ export interface ListDealsFilters {
   includeArchived?: boolean;
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
   take?: number;
+  /** Rows to skip before `take` -- set by the paged list functions (FIG-789), not by callers. */
+  skip?: number;
+}
+
+/** Shared by the list and count queries so a page and its total can never disagree (FIG-789). */
+function dealsWhere(
+  organizationId: string,
+  filters: ListDealsFilters,
+): Prisma.DealWhereInput {
+  return {
+    organizationId,
+    ownerMembershipId: filters.ownerMembershipId,
+    pipelineStageId: filters.pipelineStageId,
+    outcome: filters.outcome,
+    companyId: filters.companyId,
+    serviceId: filters.serviceId,
+    ...(filters.includeArchived ? {} : { archivedAt: null }),
+    ...(filters.stalledOnly
+      ? { outcome: "OPEN", expectedCloseDate: { lt: new Date() } }
+      : {}),
+    ...(filters.query
+      ? {
+          OR: [
+            { notes: { contains: filters.query, mode: "insensitive" } },
+            {
+              company: {
+                name: { contains: filters.query, mode: "insensitive" },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
 }
 
 export async function listDeals(
@@ -121,35 +154,85 @@ export async function listDeals(
 ) {
   return withOrgContext(organizationId, (tx) =>
     tx.deal.findMany({
-      where: {
-        organizationId,
-        ownerMembershipId: filters.ownerMembershipId,
-        pipelineStageId: filters.pipelineStageId,
-        outcome: filters.outcome,
-        companyId: filters.companyId,
-        serviceId: filters.serviceId,
-        ...(filters.includeArchived ? {} : { archivedAt: null }),
-        ...(filters.stalledOnly
-          ? { outcome: "OPEN", expectedCloseDate: { lt: new Date() } }
-          : {}),
-        ...(filters.query
-          ? {
-              OR: [
-                { notes: { contains: filters.query, mode: "insensitive" } },
-                {
-                  company: {
-                    name: { contains: filters.query, mode: "insensitive" },
-                  },
-                },
-              ],
-            }
-          : {}),
-      },
+      where: dealsWhere(organizationId, filters),
       include: DEAL_INCLUDE,
-      orderBy: [{ pipelineStage: { sequence: "asc" } }, { createdAt: "desc" }],
+      orderBy: [
+        { pipelineStage: { sequence: "asc" } },
+        { createdAt: "desc" },
+        { id: "asc" },
+      ],
       take: filters.take,
+      skip: filters.skip,
     }),
   );
+}
+
+/** Rows matching `filters` across all pages (FIG-789) -- ignores `take`/`skip`. */
+export async function countDeals(
+  organizationId: string,
+  filters: ListDealsFilters = {},
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.deal.count({ where: dealsWhere(organizationId, filters) }),
+  );
+}
+
+/**
+ * COUNT/SUM aggregates for the dashboard (FIG-789), so it never loads every
+ * deal just to count them. `filters` carries the caller's own/all scope.
+ * `openNotOwnedByViewer` lets the service decide whether every open deal's
+ * value is visible to the viewer (see `getDealSummary`).
+ */
+export async function summarizeDeals(
+  organizationId: string,
+  filters: ListDealsFilters,
+  viewerMembershipId: string,
+) {
+  const base = dealsWhere(organizationId, {
+    ...filters,
+    outcome: undefined,
+    stalledOnly: undefined,
+  });
+
+  return withOrgContext(organizationId, async (tx) => {
+    const byOutcome = await tx.deal.groupBy({
+      by: ["outcome"],
+      where: base,
+      _count: { _all: true },
+    });
+    const openByCurrency = await tx.deal.groupBy({
+      by: ["currency"],
+      where: { AND: [base, { outcome: "OPEN" }] },
+      _count: { _all: true, value: true },
+      _sum: { value: true },
+    });
+    const openNotOwnedByViewer = await tx.deal.count({
+      where: {
+        AND: [
+          base,
+          { outcome: "OPEN" },
+          { ownerMembershipId: { not: viewerMembershipId } },
+        ],
+      },
+    });
+
+    const countOf = (outcome: "OPEN" | "WON" | "LOST") =>
+      byOutcome.find((r) => r.outcome === outcome)?._count._all ?? 0;
+
+    return {
+      total: byOutcome.reduce((sum, r) => sum + r._count._all, 0),
+      open: countOf("OPEN"),
+      won: countOf("WON"),
+      lost: countOf("LOST"),
+      openByCurrency: openByCurrency.map((r) => ({
+        currency: r.currency,
+        count: r._count._all,
+        valuedCount: r._count.value,
+        sum: Number(r._sum.value ?? 0),
+      })),
+      openNotOwnedByViewer,
+    };
+  });
 }
 
 /** Sets `archivedAt` (FIG-601) -- never a hard delete; see the model's doc comment. */

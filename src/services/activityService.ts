@@ -3,13 +3,16 @@ import { hasPermission, requirePermission } from "../auth/context";
 import { adminDb } from "../db/adminClient";
 import {
   createActivity as createActivityRecord,
+  countActivities as countActivitiesRecord,
   listActivities as listActivitiesRecord,
+  countActivitiesForTimeline as countActivitiesForTimelineRecord,
   listActivitiesForTimeline as listActivitiesForTimelineRecord,
   type CreateActivityInput,
 } from "../repositories/activities";
 import { getCompany } from "./companyService";
 import { getContact } from "./contactService";
 import { assertCanAccessLinkedRecords, type LinkedRecordIds } from "./recordAccess";
+import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 
 export type CreateActivityServiceInput = Omit<
   CreateActivityInput,
@@ -42,6 +45,26 @@ export function listActivitiesForLead(ctx: AuthContext, leadId: string) {
 
 export function listActivitiesForDeal(ctx: AuthContext, dealId: string) {
   return listActivitiesFor(ctx, { dealId });
+}
+
+/** One page of a lead's or deal's activity log, oldest first, plus the total (FIG-789). */
+export async function listActivitiesPage(
+  ctx: AuthContext,
+  ids: LinkedRecordIds,
+  request: PageRequest = {},
+) {
+  await assertCanAccessLinkedRecords(ctx, ids);
+  requirePermission(ctx, "activities.view");
+  const paging = resolvePaging(request);
+  const [items, total] = await Promise.all([
+    listActivitiesRecord(ctx.organizationId, {
+      ...ids,
+      take: paging.take,
+      skip: paging.skip,
+    }),
+    countActivitiesRecord(ctx.organizationId, ids),
+  ]);
+  return buildPage(items, total, paging);
 }
 
 /**
@@ -98,4 +121,30 @@ export async function listActivitiesForContact(ctx: AuthContext, contactId: stri
   requirePermission(ctx, "activities.view");
   const { leadIds, dealIds } = await visibleLeadAndDealIds(ctx, { contactId });
   return listActivitiesForTimelineRecord(ctx.organizationId, { contactId, leadIds, dealIds });
+}
+
+/**
+ * One page of a Company's or Contact's cross-record timeline, plus the total
+ * (FIG-789). Visibility is resolved exactly as in `listActivitiesForCompany`/
+ * `listActivitiesForContact`, before any paging.
+ */
+export async function listTimelineActivitiesPage(
+  ctx: AuthContext,
+  scope: { companyId: string } | { contactId: string },
+  request: PageRequest = {},
+) {
+  if ("companyId" in scope) await getCompany(ctx, scope.companyId);
+  else await getContact(ctx, scope.contactId);
+  requirePermission(ctx, "activities.view");
+  const { leadIds, dealIds } = await visibleLeadAndDealIds(ctx, scope);
+  const filter = { ...scope, leadIds, dealIds };
+  const paging = resolvePaging(request);
+  const [items, total] = await Promise.all([
+    listActivitiesForTimelineRecord(ctx.organizationId, filter, {
+      take: paging.take,
+      skip: paging.skip,
+    }),
+    countActivitiesForTimelineRecord(ctx.organizationId, filter),
+  ]);
+  return buildPage(items, total, paging);
 }

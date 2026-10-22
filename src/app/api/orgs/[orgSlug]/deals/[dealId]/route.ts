@@ -2,6 +2,8 @@ import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
+import { DealSchema, toDealDto } from "@/api/dto/deals";
+import { respond } from "@/api/respond";
 import { getDeal, updateDeal } from "@/services/dealService";
 
 const UpdateDealSchema = z.object({
@@ -13,6 +15,10 @@ const UpdateDealSchema = z.object({
   currency: z.string().optional(),
   expectedCloseDate: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  // Used only when this update moves the deal to a won stage (FIG-792).
+  handoff: z
+    .object({ deliveryOwnerMembershipId: z.string().optional() })
+    .optional(),
 });
 
 type RouteParams = { params: Promise<{ orgSlug: string; dealId: string }> };
@@ -21,7 +27,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   return handleRoute(async () => {
     const { orgSlug, dealId } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    return getDeal(ctx, dealId);
+    return respond(DealSchema, toDealDto(ctx, await getDeal(ctx, dealId)));
   });
 }
 

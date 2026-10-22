@@ -24,6 +24,26 @@ export async function sendLeadAssignedEmail(
   );
 }
 
+export async function sendDealWonHandoffEmail(
+  to: string,
+  args: { dealLabel: string; taskCount: number; link: string },
+  transportOverride?: MailTransport,
+): Promise<void> {
+  const tasks = `${args.taskCount} onboarding task${args.taskCount === 1 ? "" : "s"}`;
+  await deliverOrLog(
+    "deal-won-handoff",
+    {
+      to,
+      subject: `Deal won, handed off to you: ${args.dealLabel}`,
+      text: `${args.dealLabel} was won and handed off to you, with ${tasks} assigned.
+
+View it here: ${args.link}`,
+      html: `<p><strong>${args.dealLabel}</strong> was won and handed off to you, with ${tasks} assigned.</p><p><a href="${args.link}">View it here</a></p>`,
+    },
+    transportOverride,
+  );
+}
+
 export async function sendTaskDueEmail(
   to: string,
   args: { taskTitle: string; link: string },

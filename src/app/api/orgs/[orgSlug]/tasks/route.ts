@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { pageQueryShape, toPageRequest } from "@/app/api/_lib/pageQuery";
 import { parseJsonBody, parseQueryParams, requiredString } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
-import { createTask, listTasks } from "@/services/taskService";
+import { createTask, listTasksPage } from "@/services/taskService";
 
 const StatusEnum = z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]);
 const PriorityEnum = z.enum(["LOW", "MEDIUM", "HIGH"]);
@@ -14,6 +15,7 @@ const ListTasksQuerySchema = z.object({
   leadId: z.string().optional(),
   dealId: z.string().optional(),
   overdueOnly: z.enum(["true", "false"]).optional(),
+  ...pageQueryShape,
 });
 
 const CreateTaskSchema = z.object({
@@ -39,14 +41,18 @@ export async function GET(
     const ctx = await resolveRequestContext(orgSlug);
     const { searchParams } = new URL(request.url);
     const query = parseQueryParams(searchParams, ListTasksQuerySchema);
-    return listTasks(ctx, {
-      status: query.status,
-      companyId: query.companyId,
-      contactId: query.contactId,
-      leadId: query.leadId,
-      dealId: query.dealId,
-      overdueOnly: query.overdueOnly === "true",
-    });
+    return listTasksPage(
+      ctx,
+      {
+        status: query.status,
+        companyId: query.companyId,
+        contactId: query.contactId,
+        leadId: query.leadId,
+        dealId: query.dealId,
+        overdueOnly: query.overdueOnly === "true",
+      },
+      toPageRequest(query),
+    );
   });
 }
 

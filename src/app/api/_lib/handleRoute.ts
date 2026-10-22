@@ -1,37 +1,24 @@
+import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import {
-  ForbiddenError,
-  NoActiveMembershipError,
-  NotFoundError,
-  RateLimitedError,
-  UnauthorizedError,
-  ValidationError,
-} from "@/auth/errors";
-import { logger } from "@/lib/logger";
+import { buildErrorResponse, newRequestId } from "@/lib/apiErrors";
 
-/** Typed service/auth errors -> HTTP error response, shared by `handleRoute` and `handleCsvRoute` below. */
-function mapErrorToResponse(err: unknown): NextResponse {
-  if (err instanceof UnauthorizedError) {
-    return NextResponse.json({ error: err.message }, { status: 401 });
+/** The caller's `x-request-id` when it sent a usable one, otherwise a fresh id. Outside a request (unit tests) it is always fresh. */
+async function currentRequestId(): Promise<string> {
+  try {
+    return newRequestId((await headers()).get("x-request-id"));
+  } catch {
+    return newRequestId();
   }
-  if (err instanceof ForbiddenError || err instanceof NoActiveMembershipError) {
-    return NextResponse.json({ error: err.message }, { status: 403 });
-  }
-  if (err instanceof NotFoundError) {
-    return NextResponse.json({ error: err.message }, { status: 404 });
-  }
-  if (err instanceof ValidationError) {
-    return NextResponse.json(
-      { error: err.message, ...(err.issues ? { issues: err.issues } : {}) },
-      { status: 400 },
-    );
-  }
-  if (err instanceof RateLimitedError) {
-    return NextResponse.json({ error: err.message }, { status: 429 });
-  }
+}
 
-  logger.error({ err }, "Unhandled route error");
-  return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+/** Typed service/auth errors -> the standard error envelope (`src/lib/apiErrors.ts`), shared by `handleRoute` and `handleCsvRoute` below. */
+async function mapErrorToResponse(err: unknown): Promise<NextResponse> {
+  const requestId = await currentRequestId();
+  const { status, body } = await buildErrorResponse(err, requestId);
+  return NextResponse.json(body, {
+    status,
+    headers: { "x-request-id": requestId },
+  });
 }
 
 /**
@@ -52,9 +39,11 @@ export async function handleRoute(
   try {
     const result = await fn();
     if (result instanceof NextResponse) return result;
-    return NextResponse.json(result ?? {});
+    return NextResponse.json(result ?? {}, {
+      headers: { "x-request-id": await currentRequestId() },
+    });
   } catch (err) {
-    return mapErrorToResponse(err);
+    return await mapErrorToResponse(err);
   }
 }
 
@@ -69,6 +58,6 @@ export async function handleCsvRoute(
   try {
     return await fn();
   } catch (err) {
-    return mapErrorToResponse(err);
+    return await mapErrorToResponse(err);
   }
 }

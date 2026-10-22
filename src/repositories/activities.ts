@@ -44,6 +44,9 @@ export interface ListActivitiesFilters {
   contactId?: string;
   leadId?: string;
   dealId?: string;
+  /** Page window (FIG-789) -- set by the paged service function. */
+  take?: number;
+  skip?: number;
 }
 
 /** Oldest first (FIG-441): reads as history, not a "recent activity" feed. */
@@ -60,7 +63,27 @@ export async function listActivities(
         leadId: filters.leadId,
         dealId: filters.dealId,
       },
-      orderBy: { occurredAt: "asc" },
+      orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+      take: filters.take,
+      skip: filters.skip,
+    }),
+  );
+}
+
+/** Activities matching `filters` across all pages (FIG-789). */
+export async function countActivities(
+  organizationId: string,
+  filters: ListActivitiesFilters,
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.activity.count({
+      where: {
+        organizationId,
+        companyId: filters.companyId,
+        contactId: filters.contactId,
+        leadId: filters.leadId,
+        dealId: filters.dealId,
+      },
     }),
   );
 }
@@ -82,22 +105,60 @@ export interface TimelineActivitiesFilter {
   dealIds?: string[];
 }
 
+function timelineWhere(organizationId: string, filter: TimelineActivitiesFilter) {
+  return {
+    organizationId,
+    OR: [
+      ...(filter.companyId ? [{ companyId: filter.companyId }] : []),
+      ...(filter.contactId ? [{ contactId: filter.contactId }] : []),
+      ...(filter.leadIds?.length ? [{ leadId: { in: filter.leadIds } }] : []),
+      ...(filter.dealIds?.length ? [{ dealId: { in: filter.dealIds } }] : []),
+    ],
+  };
+}
+
+/** `window` pages the result (FIG-789); omit it for the whole timeline. */
 export async function listActivitiesForTimeline(
   organizationId: string,
   filter: TimelineActivitiesFilter,
+  window: { take?: number; skip?: number } = {},
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.activity.findMany({
+      where: timelineWhere(organizationId, filter),
+      orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+      take: window.take,
+      skip: window.skip,
+    }),
+  );
+}
+
+/** Calls and meetings whose time falls in [from, to) -- the calendar feed (FIG-794). */
+export async function listCalendarActivities(
+  organizationId: string,
+  range: { from: Date; to: Date; authorMembershipId?: string; take: number },
 ) {
   return withOrgContext(organizationId, (tx) =>
     tx.activity.findMany({
       where: {
         organizationId,
-        OR: [
-          ...(filter.companyId ? [{ companyId: filter.companyId }] : []),
-          ...(filter.contactId ? [{ contactId: filter.contactId }] : []),
-          ...(filter.leadIds?.length ? [{ leadId: { in: filter.leadIds } }] : []),
-          ...(filter.dealIds?.length ? [{ dealId: { in: filter.dealIds } }] : []),
-        ],
+        type: { in: ["CALL", "MEETING"] },
+        occurredAt: { gte: range.from, lt: range.to },
+        authorMembershipId: range.authorMembershipId,
       },
-      orderBy: { occurredAt: "asc" },
+      include: { author: { include: { user: true } } },
+      orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+      take: range.take,
     }),
+  );
+}
+
+/** Timeline activities across all pages (FIG-789). */
+export async function countActivitiesForTimeline(
+  organizationId: string,
+  filter: TimelineActivitiesFilter,
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.activity.count({ where: timelineWhere(organizationId, filter) }),
   );
 }

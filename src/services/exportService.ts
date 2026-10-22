@@ -8,10 +8,16 @@ import type { ListContactsFilters } from "../repositories/contacts";
 import type { ListLeadsFilters } from "../repositories/leads";
 import type { ListDealsFilters } from "../repositories/deals";
 import { recordAuditEvent } from "../repositories/auditEvents";
-import { listCompanies } from "./companyService";
-import { listContacts } from "./contactService";
-import { listLeads } from "./leadService";
-import { listDeals } from "./dealService";
+import { iterateInBatches } from "../lib/pagination";
+import { countCompanies, listCompanies } from "./companyService";
+import { countContacts, listContacts } from "./contactService";
+import { countLeads, listLeads } from "./leadService";
+import { countDeals, listDeals } from "./dealService";
+import {
+  getCustomerReport,
+  getSalesBySalesperson,
+  getUpcomingRenewals,
+} from "./customerReportService";
 import { getFormReferenceData } from "./referenceDataService";
 import { buildReportNameResolvers } from "./reportingNames";
 import {
@@ -24,8 +30,17 @@ export interface CsvExport {
   rows: AsyncIterable<Record<string, unknown>>;
 }
 
-async function* toAsyncIterable<T>(items: T[]): AsyncIterable<T> {
-  for (const item of items) yield item;
+/**
+ * Maps rows lazily as they stream out. Together with `iterateInBatches`
+ * this keeps an export's memory flat while still covering the full
+ * filtered set (FIG-789): rows are fetched a batch at a time, in the same
+ * total order the paged lists use, and never all held at once.
+ */
+async function* mapRows<T, R>(
+  source: AsyncIterable<T>,
+  fn: (item: T) => R,
+): AsyncIterable<R> {
+  for await (const item of source) yield fn(item);
 }
 
 async function membershipLookup(organizationId: string) {
@@ -43,8 +58,8 @@ export async function exportCompaniesCsv(
 ): Promise<CsvExport> {
   requirePermission(ctx, "companies.export");
 
-  const [companies, lifecycleStates, ownerOf] = await Promise.all([
-    listCompanies(ctx, filters),
+  const [total, lifecycleStates, ownerOf] = await Promise.all([
+    countCompanies(ctx, filters),
     adminDb.customerLifecycleState.findMany({
       where: { organizationId: ctx.organizationId },
       select: { id: true, name: true },
@@ -58,7 +73,7 @@ export async function exportCompaniesCsv(
     actorMembershipId: ctx.membershipId,
     action: "companies.exported",
     entityType: "Company",
-    metadata: { count: companies.length },
+    metadata: { count: total },
   });
 
   const columns = [
@@ -76,8 +91,11 @@ export async function exportCompaniesCsv(
   ];
   return {
     columns,
-    rows: toAsyncIterable(
-      companies.map((c) => ({
+    rows: mapRows(
+      iterateInBatches((skip, take) =>
+        listCompanies(ctx, { ...filters, skip, take }),
+      ),
+      (c) => ({
         id: c.id,
         name: c.name,
         industry: c.industry ?? "",
@@ -91,7 +109,7 @@ export async function exportCompaniesCsv(
         owner: ownerOf(c.ownerMembershipId),
         notes: c.notes ?? "",
         createdAt: dateOrEmpty(c.createdAt),
-      })),
+      }),
     ),
   };
 }
@@ -102,8 +120,8 @@ export async function exportContactsCsv(
 ): Promise<CsvExport> {
   requirePermission(ctx, "contacts.export");
 
-  const [contacts, ownerOf] = await Promise.all([
-    listContacts(ctx, filters),
+  const [total, ownerOf] = await Promise.all([
+    countContacts(ctx, filters),
     membershipLookup(ctx.organizationId),
   ]);
 
@@ -112,7 +130,7 @@ export async function exportContactsCsv(
     actorMembershipId: ctx.membershipId,
     action: "contacts.exported",
     entityType: "Contact",
-    metadata: { count: contacts.length },
+    metadata: { count: total },
   });
 
   const columns = [
@@ -130,8 +148,11 @@ export async function exportContactsCsv(
   ];
   return {
     columns,
-    rows: toAsyncIterable(
-      contacts.map((c) => ({
+    rows: mapRows(
+      iterateInBatches((skip, take) =>
+        listContacts(ctx, { ...filters, skip, take }),
+      ),
+      (c) => ({
         id: c.id,
         firstName: c.firstName,
         lastName: c.lastName ?? "",
@@ -143,7 +164,7 @@ export async function exportContactsCsv(
         owner: ownerOf(c.ownerMembershipId),
         notes: c.notes ?? "",
         createdAt: dateOrEmpty(c.createdAt),
-      })),
+      }),
     ),
   };
 }
@@ -154,8 +175,8 @@ export async function exportLeadsCsv(
 ): Promise<CsvExport> {
   requirePermission(ctx, "leads.export");
 
-  const [leads, services, ownerOf] = await Promise.all([
-    listLeads(ctx, filters),
+  const [total, services, ownerOf] = await Promise.all([
+    countLeads(ctx, filters),
     adminDb.service.findMany({
       where: { organizationId: ctx.organizationId },
       select: { id: true, name: true },
@@ -169,7 +190,7 @@ export async function exportLeadsCsv(
     actorMembershipId: ctx.membershipId,
     action: "leads.exported",
     entityType: "Lead",
-    metadata: { count: leads.length },
+    metadata: { count: total },
   });
 
   const columns = [
@@ -190,8 +211,11 @@ export async function exportLeadsCsv(
   ];
   return {
     columns,
-    rows: toAsyncIterable(
-      leads.map((l) => ({
+    rows: mapRows(
+      iterateInBatches((skip, take) =>
+        listLeads(ctx, { ...filters, skip, take }),
+      ),
+      (l) => ({
         id: l.id,
         company: l.company?.name ?? "",
         contact: l.contact
@@ -210,7 +234,7 @@ export async function exportLeadsCsv(
         convertedAt: dateOrEmpty(l.convertedAt),
         notes: l.notes ?? "",
         createdAt: dateOrEmpty(l.createdAt),
-      })),
+      }),
     ),
   };
 }
@@ -221,8 +245,8 @@ export async function exportDealsCsv(
 ): Promise<CsvExport> {
   requirePermission(ctx, "deals.export");
 
-  const [deals, ownerOf] = await Promise.all([
-    listDeals(ctx, filters),
+  const [total, ownerOf] = await Promise.all([
+    countDeals(ctx, filters),
     membershipLookup(ctx.organizationId),
   ]);
 
@@ -231,7 +255,7 @@ export async function exportDealsCsv(
     actorMembershipId: ctx.membershipId,
     action: "deals.exported",
     entityType: "Deal",
-    metadata: { count: deals.length },
+    metadata: { count: total },
   });
 
   const columns = [
@@ -251,8 +275,11 @@ export async function exportDealsCsv(
   ];
   return {
     columns,
-    rows: toAsyncIterable(
-      deals.map((d) => ({
+    rows: mapRows(
+      iterateInBatches((skip, take) =>
+        listDeals(ctx, { ...filters, skip, take }),
+      ),
+      (d) => ({
         id: d.id,
         company: d.company?.name ?? "",
         primaryContact: d.primaryContact
@@ -271,7 +298,7 @@ export async function exportDealsCsv(
         expectedCloseDate: dateOrEmpty(d.expectedCloseDate),
         owner: ownerOf(d.ownerMembershipId),
         createdAt: dateOrEmpty(d.createdAt),
-      })),
+      }),
     ),
   };
 }
@@ -348,6 +375,95 @@ export async function exportReportsCsv(
     metrics.followUpBreakdown.map((r) => ({
       status: r.status,
       count: r._count._all,
+    })),
+  );
+
+  return sections.join("\n");
+}
+
+/**
+ * CSV of the customer reports (FIG-793): customers by segment, won by
+ * salesperson, and upcoming renewals. Every figure comes from the same
+ * service functions as the screens, so permissions and value masking match.
+ */
+export async function exportCustomerReportsCsv(
+  ctx: AuthContext,
+  filters: {
+    dormantAfterDays?: number;
+    withinDays?: number;
+    dateFrom?: string;
+    dateTo?: string;
+    period?: "total" | "month";
+  } = {},
+): Promise<string> {
+  requirePermission(ctx, "export.bulk");
+
+  const pageAll = async <P extends { items: unknown[]; pageCount: number }>(
+    fetchPage: (page: number) => Promise<P>,
+  ) => {
+    const first = await fetchPage(1);
+    const items = [...first.items] as P["items"];
+    for (let p = 2; p <= first.pageCount; p++) items.push(...(await fetchPage(p)).items);
+    return { first, items };
+  };
+
+  const [customers, renewals, sales] = await Promise.all([
+    pageAll((page) =>
+      getCustomerReport(ctx, { dormantAfterDays: filters.dormantAfterDays }, { page, pageSize: 100 }),
+    ),
+    pageAll((page) =>
+      getUpcomingRenewals(ctx, { withinDays: filters.withinDays }, { page, pageSize: 100 }),
+    ),
+    getSalesBySalesperson(ctx, filters),
+  ]);
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "reports.exported",
+    entityType: "Report",
+    metadata: { report: "customer-reports" },
+  });
+
+  const sections: string[] = [];
+  const section = (title: string, rows: Record<string, unknown>[]) => {
+    sections.push(title);
+    sections.push(rows.length === 0 ? "(no data)\n" : stringify(rows, { header: true }));
+  };
+  const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "");
+
+  section("Customer summary", [
+    { dormancyDays: customers.first.dormancyDays, ...customers.first.summary },
+  ]);
+  section(
+    "Customers",
+    customers.items.map((r) => ({
+      company: r.companyName,
+      segment: r.segment,
+      repeat: r.repeat ? "yes" : "no",
+      wonCount: r.wonCount,
+      wonValue: r.wonValue?.toString() ?? "",
+      lastWonAt: day(r.lastWonAt),
+      activeServices: r.activeServices,
+    })),
+  );
+  section(
+    "Won by salesperson",
+    sales.rows.map((r) => ({
+      salesperson: r.ownerName ?? "",
+      month: r.month ?? "",
+      wonCount: r.wonCount,
+      wonValue: r.wonValue?.toString() ?? "",
+    })),
+  );
+  section(
+    "Upcoming renewals",
+    renewals.items.map((r) => ({
+      company: r.companyName,
+      service: r.serviceName,
+      endDate: r.endDate,
+      daysLeft: r.daysLeft,
+      lapsed: r.lapsed ? "yes" : "no",
     })),
   );
 

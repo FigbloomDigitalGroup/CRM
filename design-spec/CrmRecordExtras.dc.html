@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="crm-theme.css"><script src="icons.js"></script><script src="crm-store.js"></script></helmet>
+<div data-screen-label="Record extras" style="display:flex; flex-direction:column; gap:16px;">
+  <sc-if value="{{ hasTop }}">
+    <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:stretch;">
+      <sc-if value="{{ score }}">
+        <section style="flex:1 1 320px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px;">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;"><span style="display:inline-flex; align-items:center; gap:8px; padding:4px 12px 4px 4px; border-radius:999px; background:{{ score.bg }}; color:{{ score.fg }}; font-weight:700;"><span style="width:30px; height:30px; border-radius:99px; background:{{ score.fg }}; color:#ffffff; font-size:12.5px; display:flex; align-items:center; justify-content:center;">{{ score.n }}</span>{{ score.band }}</span><strong style="font-size:14px;">{{ score.title }}</strong><sc-if value="{{ score.over }}"><span style="font-size:11.5px; font-weight:600; color:var(--orange-text);">Overridden · auto {{ score.auto }}</span></sc-if><span style="flex:1;"></span><span style="font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--blue-soft); color:var(--blue);">V1.1</span></div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;"><sc-for list="{{ score.reasons }}" as="r"><span style="font-size:12px; font-weight:600; padding:3px 9px; border-radius:999px; background:var(--surface-2); color:var(--text-2);">{{ r.l }}<sc-if value="{{ r.d }}"><span style="margin-left:5px; color:{{ r.col }};">{{ r.ds }}</span></sc-if></span></sc-for></div>
+          <sc-if value="{{ score.canOver }}"><div style="display:flex; gap:8px; align-items:center; margin-top:10px; font-size:12.5px; color:var(--text-2);">Disagree?<select onChange="{{ score.override }}" aria-label="Override score" style="height:30px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 8px; font-size:12.5px;"><option value="">Set my own…</option><option value="80">Hot (80)</option><option value="55">Warm (55)</option><option value="25">Cold (25)</option><option value="clear">Use automatic score</option></select><span>Overrides are logged.</span></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ health }}">
+        <section style="flex:1 1 320px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px;">
+          <div style="display:flex; align-items:center; gap:10px;"><span style="width:12px; height:12px; border-radius:99px; background:{{ health.dot }};"></span><strong style="font-size:14px; flex:1;">Customer health: {{ health.label }}</strong><span style="font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--purple-soft); color:var(--purple);">V2</span></div>
+          <div style="display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px 14px; margin-top:10px; font-size:12.5px;"><sc-for list="{{ health.parts }}" as="p"><div style="display:flex; justify-content:space-between; gap:8px;"><span style="color:var(--text-2);">{{ p.l }}</span><strong style="color:{{ p.col }};">{{ p.v }}</strong></div></sc-for></div>
+          <sc-if value="{{ health.nps }}"><div style="margin-top:10px; font-size:12.5px; color:var(--text-2);">Last survey: <strong style="color:var(--text);">{{ health.nps }}</strong></div></sc-if>
+        </section>
+      </sc-if>
+      <sc-if value="{{ follow }}"><section style="flex:0 1 260px; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px; display:flex; flex-direction:column; gap:8px;"><div style="display:flex; justify-content:space-between;"><strong style="font-size:14px;">Follow this record</strong><span style="font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--blue-soft); color:var(--blue);">V1.1</span></div><div style="font-size:12.5px; color:var(--text-2);">{{ follow.n }} following. Get notified of changes even if you don’t own it.</div><button onClick="{{ follow.toggle }}" style="height:34px; border-radius:9px; border:1px solid {{ follow.bd }}; background:{{ follow.bg }}; color:{{ follow.fg }}; font-weight:700; font-size:13px; display:flex; gap:6px; align-items:center; justify-content:center;"><fb-icon name="{{ follow.icon }}" size="14"></fb-icon>{{ follow.label }}</button><sc-if value="{{ cadence }}"><div style="padding-top:8px; border-top:1px solid var(--border); font-size:12.5px;"><div style="font-weight:700;">Cadence · {{ cadence.name }}</div><div style="color:var(--text-2); margin-top:2px;">Next: {{ cadence.next }}</div><div style="color:var(--text-3); margin-top:2px;">Prepares tasks and drafts. Pauses on reply or stage change.</div></div></sc-if></section></sc-if>
+    </div>
+  </sc-if>
+
+  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:16px; align-items:start;">
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;"><h2 style="margin:0; font-size:16px; display:flex; gap:8px; align-items:center;"><fb-icon name="tag" size="16"></fb-icon>Tags</h2><span style="font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--primary-soft); color:var(--primary-text);">V1</span></div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:12px;"><sc-for list="{{ tags }}" as="t"><span style="display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600; padding:3px 6px 3px 10px; border-radius:999px; background:{{ t.bg }}; color:{{ t.fg }}; white-space:nowrap;">{{ t.name }}<sc-if value="{{ canEdit }}"><button aria-label="Remove tag" onClick="{{ t.remove }}" style="width:18px; height:18px; border:0; border-radius:99px; background:transparent; color:{{ t.fg }}; display:flex; align-items:center; justify-content:center; padding:0;"><fb-icon name="x" size="11"></fb-icon></button></sc-if></span></sc-for><sc-if value="{{ noTags }}"><span style="font-size:13px; color:var(--text-3);">No tags yet.</span></sc-if></div>
+      <sc-if value="{{ canEdit }}"><select onChange="{{ addTag }}" aria-label="Add tag" style="margin-top:10px; height:34px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 8px; font-size:13px;"><option value="">+ Add tag…</option><sc-for list="{{ tagOpts }}" as="o"><option value="{{ o.id }}">{{ o.name }}</option></sc-for></select></sc-if>
+    </section>
+
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;"><h2 style="margin:0; font-size:16px;">Custom fields</h2><span style="font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--primary-soft); color:var(--primary-text);">V1</span></div>
+      <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;"><sc-for list="{{ fields }}" as="f"><label style="display:flex; flex-direction:column; gap:5px;"><span style="font-size:12.5px; font-weight:600;">{{ f.label }}<span style="font-weight:500; color:var(--text-3);"> · {{ f.note }}</span></span><input type="{{ f.input }}" value="{{ f.v }}" onChange="{{ f.on }}" readOnly="{{ f.ro }}" placeholder="{{ f.ph }}" style="height:36px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:13.5px;"></label></sc-for><sc-if value="{{ noFields }}"><span style="font-size:13px; color:var(--text-3);">No custom fields for this record type. Management adds them in Settings › Custom fields.</span></sc-if></div>
+    </section>
+
+    <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; grid-column:1 / -1;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:14px 18px; flex-wrap:wrap;"><h2 style="margin:0; font-size:16px; display:flex; gap:8px; align-items:center;"><fb-icon name="paperclip" size="16"></fb-icon>Attachments<span style="font-size:12.5px; color:var(--text-3); font-weight:500;">{{ files.length }}</span></h2><div style="display:flex; gap:8px; align-items:center;"><span style="font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--primary-soft); color:var(--primary-text);">V1</span><sc-if value="{{ canUpload }}"><button onClick="{{ upload }}" style="height:34px; padding:0 12px; border-radius:9px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700; font-size:13px; display:flex; gap:6px; align-items:center;"><fb-icon name="upload" size="14"></fb-icon>Upload</button><button onClick="{{ uploadFail }}" title="Show the failure state" style="height:34px; padding:0 10px; border-radius:9px; border:1px dashed var(--border-strong); background:var(--surface); font-size:12px; color:var(--text-2);">Try a 40 MB file</button></sc-if></div></div>
+      <sc-if value="{{ upErr }}"><div role="alert" style="display:flex; gap:10px; align-items:center; margin:0 18px 10px; padding:10px 12px; border-radius:10px; background:var(--red-soft); color:var(--red); font-size:13px;"><fb-icon name="alert" size="15"></fb-icon><span style="flex:1;">Drone-survey.mov wasn’t uploaded: files can be up to 25 MB. Nothing else changed.</span><button onClick="{{ clearErr }}" style="border:0; background:transparent; color:var(--red); font-weight:700;">Dismiss</button></div></sc-if>
+      <sc-for list="{{ files }}" as="f"><div style="display:flex; gap:12px; align-items:center; padding:11px 18px; border-top:1px solid var(--border);"><span style="flex:none; width:36px; height:36px; border-radius:10px; background:{{ f.ibg }}; color:{{ f.ifg }}; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700;">{{ f.ext }}</span><div style="flex:1; min-width:0;"><div style="font-weight:600; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ f.name }}</div><div style="font-size:12px; color:var(--text-3);">{{ f.size }} · {{ f.by }} · {{ f.when }}<sc-if value="{{ f.restricted }}"> · <span style="color:var(--orange-text); font-weight:600;">Management and Finance only</span></sc-if></div></div><sc-if value="{{ f.scan }}"><span style="font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; background:var(--orange-soft); color:var(--orange-text); display:flex; gap:5px; align-items:center;"><fb-icon name="shield" size="12"></fb-icon>Scanning…</span></sc-if><sc-if value="{{ f.ready }}"><button onClick="{{ f.preview }}" style="height:30px; padding:0 10px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); font-size:12.5px; font-weight:600;">Preview</button></sc-if><sc-if value="{{ f.canDel }}"><button aria-label="Delete file" onClick="{{ f.del }}" style="width:30px; height:30px; border:0; border-radius:8px; background:transparent; color:var(--text-2); display:flex; align-items:center; justify-content:center;" style-hover="background:var(--red-soft); color:var(--red);"><fb-icon name="archive" size="14"></fb-icon></button></sc-if></div></sc-for>
+      <sc-if value="{{ noFiles }}"><div style="padding:18px; border-top:1px solid var(--border); font-size:13px; color:var(--text-3);">No files yet. Contracts, site photos and briefs live here, visible to the roles that can see this record.</div></sc-if>
+      <sc-if value="{{ hidden }}"><div style="padding:10px 18px; border-top:1px solid var(--border); font-size:12.5px; color:var(--text-3); display:flex; gap:6px; align-items:center;"><fb-icon name="lock" size="12"></fb-icon>{{ hidden }} file(s) restricted to Management and Finance.</div></sc-if>
+    </section>
+
+    <sc-if value="{{ showComments }}">
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; grid-column:1 / -1;">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2 style="margin:0; font-size:16px;">Internal comments</h2><div style="display:flex; gap:6px;"><span style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; background:var(--surface-3); color:var(--text-2);">Internal only · never sent to the customer</span><span style="font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--blue-soft); color:var(--blue);">V1.1</span></div></div>
+        <sc-for list="{{ comments }}" as="c"><div style="display:flex; gap:10px; padding:12px 0; border-bottom:1px solid var(--border);"><span style="flex:none; width:30px; height:30px; border-radius:99px; background:var(--primary-soft); color:var(--primary-text); font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">{{ c.ini }}</span><div><div style="font-size:12.5px;"><strong>{{ c.by }}</strong> <span style="color:var(--text-3);">· {{ c.when }}</span></div><div style="font-size:13.5px; margin-top:3px; line-height:1.5;">{{ c.text }}</div></div></div></sc-for>
+        <div style="display:flex; gap:8px; margin-top:12px;"><input value="{{ draft }}" onChange="{{ setDraft }}" onKeyDown="{{ draftKey }}" placeholder="Comment, or @mention a teammate" style="flex:1; height:40px; border-radius:999px; border:1px solid var(--border-strong); background:var(--surface); padding:0 14px; font-size:13.5px;"><button onClick="{{ post }}" style="height:40px; padding:0 16px; border-radius:999px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Post</button></div>
+        <sc-if value="{{ mentionHint }}"><div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;"><sc-for list="{{ mentionOpts }}" as="m"><button onClick="{{ m.pick }}" style="height:28px; padding:0 10px; border-radius:999px; border:1px solid var(--border-strong); background:var(--surface); font-size:12px; font-weight:600;">@{{ m.name }}</button></sc-for></div></sc-if>
+      </section>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ pv }}">
+    <div onClick="{{ closePv }}" style="position:fixed; inset:0; z-index:600; background:var(--overlay); display:flex; align-items:center; justify-content:center; padding:24px;"><div onClick="{{ stop }}" role="dialog" aria-modal="true" style="width:min(640px,100%); background:var(--surface); border-radius:18px; box-shadow:var(--shadow-lg); overflow:hidden;"><div style="display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--border);"><strong style="flex:1;">{{ pv.name }}</strong><button onClick="{{ closePv }}" aria-label="Close preview" style="width:32px; height:32px; border-radius:99px; border:1px solid var(--border); background:var(--surface); display:flex; align-items:center; justify-content:center;"><fb-icon name="x" size="14"></fb-icon></button></div><div style="height:360px; background:var(--surface-2); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--text-3);"><span style="font-family:'IBM Plex Mono',monospace; font-size:28px; font-weight:700;">{{ pv.ext }}</span><span style="font-size:13px;">Preview of {{ pv.name }} · {{ pv.size }}</span></div><div style="display:flex; justify-content:flex-end; gap:8px; padding:12px 18px;"><button onClick="{{ dl }}" style="height:36px; padding:0 14px; border-radius:9px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600; display:flex; gap:6px; align-items:center;"><fb-icon name="download" size="14"></fb-icon>Download</button></div></div></div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { draft: '', upErr: false, pv: null };
+  componentDidMount() { const h = () => { this.un = FB.sub(() => this.forceUpdate()); FB.preview && FB.preview('deal', { route: { id: 'd3' } }); this.forceUpdate(); }; if (window.FB) h(); else { const iv = setInterval(() => { if (window.FB) { clearInterval(iv); h(); } }, 40); } }
+  componentWillUnmount() { this.un && this.un(); }
+  renderVals() {
+    if (!window.FB) return { files: [], tags: [], fields: [], comments: [] };
+    const S = FB.s, r = S.route, role = FB.role(), mgmt = role === 'management';
+    const rt = { lead: 'lead', deal: 'deal', company: 'company', contact: 'contact' }[r.page]; const rid = r.id;
+    const rec = rt && FB[rt](rid); if (!rec) return { files: [], tags: [], fields: [], comments: [] };
+    const ownerOk = mgmt || rec.ownerId === S.userId;
+    const canEdit = !rec.archived && (rt === 'lead' ? FB.canEditLead(rec) : rt === 'deal' ? FB.canEditDeal(rec) : FB.can('customers.edit') && ownerOk);
+    const v11 = FB.rel('v11'), v2 = FB.rel('v2');
+    const out = { canEdit };
+    // score
+    if (v11 && (rt === 'lead' || rt === 'deal')) { const sc = FB.score(rt, rid); const t = FB.tempTone(sc.band);
+      out.score = { ...sc, bg: t[0], fg: t[1], title: rt === 'lead' ? 'Lead score' : 'Win likelihood', reasons: sc.reasons.map(x => ({ l: x.l, d: x.d, ds: (x.d > 0 ? '+' : '') + x.d, col: x.d > 0 ? 'var(--primary-text)' : 'var(--red)' })), canOver: canEdit && rt === 'lead',
+        override: e => { const v = e.target.value; if (!v) return; rec.scoreOverride = v === 'clear' ? null : +v; FB.log('lead', rid, 'system', v === 'clear' ? 'Score override removed' : 'Score overridden to ' + v + ' by ' + FB.me().name); FB.auditAdd('Lead score overridden', rec.name, v); FB.emit(); } }; }
+    if (v2 && rt === 'company') { const deals = S.deals.filter(d => d.companyId === rid); const last = S.activities.filter(a => a.rt === 'company' && a.rid === rid).sort((a, b) => b.at - a.at)[0]; const days = last ? FB.daysSince(last.at) : 999; const issues = S.tickets.filter(t => t.companyId === rid && t.status !== 'Closed').length + (rec.issues || []).length; const ren = S.recurring.find(x => x.companyId === rid); const od = S.payments.filter(p => deals.some(d => d.id === p.dealId)).flatMap(p => p.invoices).some(i => i.status === 'Overdue');
+      const pts = (days < 30 ? 2 : days < 90 ? 1 : 0) + (issues < 2 ? 1 : 0) + (od ? 0 : 1); const sv = S.surveys.find(s => s.companyId === rid);
+      out.health = { label: pts >= 3 ? 'Good' : pts === 2 ? 'Needs attention' : 'At risk', dot: pts >= 3 ? 'var(--primary)' : pts === 2 ? 'var(--orange)' : 'var(--red)', parts: [{ l: 'Last contact', v: days === 999 ? 'none' : days + ' days', col: days < 30 ? 'var(--primary-text)' : 'var(--orange-text)' }, { l: 'Open issues', v: issues, col: issues < 2 ? 'var(--text)' : 'var(--orange-text)' }, { l: 'Next renewal', v: ren ? FB.dshort(ren.renews) : 'none', col: 'var(--text)' }, { l: 'Payments', v: FB.can('customers.payments') ? (od ? 'Overdue' : 'Up to date') : 'Hidden', col: od ? 'var(--red)' : 'var(--text)' }], nps: sv ? sv.score + '/10 · “' + sv.comment + '”' : '' }; }
+    if (v11) { const k = rt + ':' + rid; const f = S.follows[k] || []; const on = f.includes(S.userId); const en = S.enrolled[k];
+      out.follow = { n: f.length, label: on ? 'Following' : 'Follow', icon: on ? 'check' : 'bell', bg: on ? 'var(--primary-soft)' : 'var(--surface)', fg: on ? 'var(--primary-text)' : 'var(--text)', bd: on ? 'var(--primary)' : 'var(--border-strong)', toggle: () => { S.follows[k] = on ? f.filter(x => x !== S.userId) : [...f, S.userId]; FB.toast(on ? 'Unfollowed' : 'You’ll be notified of changes'); FB.emit(); } };
+      out.cadence = en ? (() => { const c = S.cadences.find(x => x.id === en.cad); return { name: c.name + ' · step ' + (en.step + 1) + ' of ' + c.steps.length, next: c.steps[en.step] }; })() : null; }
+    out.hasTop = !!(out.score || out.health || out.follow);
+    // tags
+    const tg = FB.tagsOf(rt, rid); out.tags = tg.map(t => { const tn = FB.tagTone(t.color); return { name: t.name, bg: tn[0], fg: tn[1], remove: () => FB.toggleTag(rt, rid, t.id) }; }); out.noTags = !tg.length;
+    out.tagOpts = S.tagDefs.filter(t => !tg.includes(t)); out.addTag = e => { if (e.target.value) FB.toggleTag(rt, rid, e.target.value); };
+    // custom fields
+    const RT = { lead: 'Lead', deal: 'Deal', company: 'Company', contact: 'Contact' }[rt];
+    S.cfv = S.cfv || { 'lead:l2:x1': '210', 'company:c1:x3': 'P051234567Q', 'deal:d3:x4': '2026-11-10' };
+    const visOk = v => v === 'All roles' || (v.includes('Management') && mgmt) || (v.includes('Finance') && role === 'finance');
+    const fl = S.customFields.filter(f => f.rt === RT && (f.service === 'Any' || f.service === rec.service || rt === 'company' || rt === 'contact'));
+    out.fields = fl.filter(f => visOk(f.vis)).map(f => { const key = rt + ':' + rid + ':' + f.id; return { label: f.label, note: f.service === 'Any' ? f.type : f.type + ' · ' + f.service, v: S.cfv[key] || '', input: f.type === 'Number' ? 'number' : f.type === 'Date' ? 'date' : 'text', ph: f.type === 'Dropdown' ? 'WhatsApp, Call or Email' : '', ro: !canEdit, on: e => { S.cfv[key] = e.target.value; this.forceUpdate(); } }; });
+    out.noFields = !out.fields.length;
+    // attachments
+    const all = S.attachments.filter(a => a.rt === rt && a.rid === rid);
+    const seeRestricted = mgmt || role === 'finance';
+    const vis = all.filter(a => a.vis !== 'mgmt' || seeRestricted);
+    const ext = n => (n.split('.').pop() || '').toUpperCase().slice(0, 4);
+    const tone = { pdf: ['var(--red-soft)', 'var(--red)'], sheet: ['var(--primary-soft)', 'var(--primary-text)'], image: ['var(--blue-soft)', 'var(--blue)'], zip: ['var(--surface-3)', 'var(--text-2)'] };
+    out.files = vis.map(a => { const t = tone[a.type] || tone.zip; return { name: a.name, ext: ext(a.name), size: a.size, by: FB.uname(a.by), when: FB.when(a.at), ibg: t[0], ifg: t[1], scan: !!a.scan, ready: !a.scan, restricted: a.vis === 'mgmt', canDel: FB.can('attachments.manage') && !rec.archived && (mgmt || a.by === S.userId), preview: () => this.setState({ pv: { name: a.name, ext: ext(a.name), size: a.size } }), del: () => { const i = S.attachments.indexOf(a); S.attachments.splice(i, 1); FB.toast(a.name + ' deleted', () => { S.attachments.splice(i, 0, a); FB.emit(); }); FB.emit(); } }; });
+    out.noFiles = !vis.length; out.hidden = all.length - vis.length;
+    out.canUpload = FB.can('attachments.manage') && !rec.archived;
+    out.upload = () => { const a = { id: 'f' + Date.now(), rt, rid, name: ['Site-visit-notes.pdf', 'Quote-signed.pdf', 'Requirements.xlsx'][S.attachments.length % 3], type: 'pdf', size: '420 KB', by: S.userId, at: new Date(FB.now), vis: 'all', scan: true }; S.attachments.unshift(a); FB.emit(); setTimeout(() => { a.scan = false; FB.toast(a.name + ' uploaded and scanned'); FB.emit(); }, 1600); };
+    out.uploadFail = () => this.setState({ upErr: true }); out.upErr = this.state.upErr; out.clearErr = () => this.setState({ upErr: false });
+    out.pv = this.state.pv; out.closePv = () => this.setState({ pv: null }); out.stop = e => e.stopPropagation(); out.dl = () => FB.toast('Download started');
+    // comments
+    out.showComments = v11 && role !== 'technical';
+    out.comments = S.comments.filter(c => c.rt === rt && c.rid === rid).map(c => ({ by: FB.uname(c.by), ini: FB.initials(FB.uname(c.by).replace('Dev ', '')), when: FB.when(c.at), text: c.text }));
+    out.draft = this.state.draft; out.setDraft = e => this.setState({ draft: e.target.value });
+    out.mentionHint = /@\w*$/.test(this.state.draft);
+    out.mentionOpts = FB.users.filter(u => u.id !== S.userId && u.role !== 'technical').slice(0, 5).map(u => ({ name: u.name, pick: () => this.setState({ draft: this.state.draft.replace(/@\w*$/, '@' + u.name + ' ') }) }));
+    const post = () => { const t = this.state.draft.trim(); if (!t) return; S.comments.push({ id: 'k' + Date.now(), rt, rid, by: S.userId, at: new Date(FB.now), text: t }); FB.users.filter(u => t.includes('@' + u.name)).forEach(u => S.notifications.unshift({ id: 'n' + Date.now() + u.id, type: 'Mention', to: [u.id], text: FB.me().name + ' mentioned you: “' + t.slice(0, 70) + '”', at: new Date(FB.now), read: false, link: [rt, rid] })); this.setState({ draft: '' }); FB.toast('Comment posted'); FB.emit(); };
+    out.post = post; out.draftKey = e => { if (e.key === 'Enter') post(); };
+    return out;
+  }
+}
+</script>
+</body>
+</html>

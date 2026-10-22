@@ -35,6 +35,8 @@ export interface ListContactsFilters {
   includeArchived?: boolean;
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
   take?: number;
+  /** Rows to skip before `take` -- set by the paged list functions (FIG-789), not by callers. */
+  skip?: number;
 }
 
 /** See `OWNER_SUMMARY` in `companies.ts` -- a name, never the whole user row. */
@@ -100,37 +102,56 @@ export async function listContactsByCompany(
   );
 }
 
+/** Shared by the list and count queries so a page and its total can never disagree (FIG-789). */
+function contactsWhere(
+  organizationId: string,
+  filters: ListContactsFilters,
+): Prisma.ContactWhereInput {
+  return {
+    organizationId,
+    companyId: filters.companyId,
+    ownerMembershipId: filters.ownerMembershipId,
+    ...(filters.includeArchived ? {} : { archivedAt: null }),
+    ...(filters.query
+      ? {
+          OR: [
+            { firstName: { contains: filters.query, mode: "insensitive" } },
+            { lastName: { contains: filters.query, mode: "insensitive" } },
+            { email: { contains: filters.query, mode: "insensitive" } },
+            { phone: { contains: filters.query, mode: "insensitive" } },
+            {
+              company: {
+                name: { contains: filters.query, mode: "insensitive" },
+              },
+            },
+          ],
+        }
+      : {}),
+  };
+}
+
 export async function listContacts(
   organizationId: string,
   filters: ListContactsFilters = {},
 ) {
   return withOrgContext(organizationId, (tx) =>
     tx.contact.findMany({
-      where: {
-        organizationId,
-        companyId: filters.companyId,
-        ownerMembershipId: filters.ownerMembershipId,
-        ...(filters.includeArchived ? {} : { archivedAt: null }),
-        ...(filters.query
-          ? {
-              OR: [
-                { firstName: { contains: filters.query, mode: "insensitive" } },
-                { lastName: { contains: filters.query, mode: "insensitive" } },
-                { email: { contains: filters.query, mode: "insensitive" } },
-                { phone: { contains: filters.query, mode: "insensitive" } },
-                {
-                  company: {
-                    name: { contains: filters.query, mode: "insensitive" },
-                  },
-                },
-              ],
-            }
-          : {}),
-      },
+      where: contactsWhere(organizationId, filters),
       include: { company: true, owner: OWNER_SUMMARY },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: filters.take,
+      skip: filters.skip,
     }),
+  );
+}
+
+/** Rows matching `filters` across all pages (FIG-789) -- ignores `take`/`skip`. */
+export async function countContacts(
+  organizationId: string,
+  filters: ListContactsFilters = {},
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.contact.count({ where: contactsWhere(organizationId, filters) }),
   );
 }
 

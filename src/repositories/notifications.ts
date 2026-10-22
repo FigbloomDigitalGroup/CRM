@@ -4,7 +4,7 @@ import { withOrgContext } from "../db/orgScopedClient";
 export interface CreateNotificationInput {
   organizationId: string;
   membershipId: string;
-  type: "LEAD_ASSIGNED" | "TASK_DUE" | "TASK_OVERDUE";
+  type: "LEAD_ASSIGNED" | "TASK_DUE" | "TASK_OVERDUE" | "DEAL_WON_HANDOFF";
   title: string;
   body: string;
   entityType?: string;

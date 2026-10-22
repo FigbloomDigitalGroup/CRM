@@ -9,6 +9,7 @@ import {
   createContact as createContactRecord,
   findPossibleDuplicateContacts,
   getContactById,
+  countContacts as countContactsRecords,
   listContacts as listContactsRecords,
   mergeContacts as mergeContactsRecord,
   restoreContact as restoreContactRecord,
@@ -29,6 +30,7 @@ import {
   assertEligibleAccountOwner,
   listAccountOwnerCandidates,
 } from "./ownerEligibility";
+import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 
 /** Beyond ownership (audited separately, below): identity and re-parenting (FIG-600 AC). */
 const AUDITED_CONTACT_FIELDS = ["firstName", "lastName", "companyId"] as const;
@@ -248,12 +250,41 @@ export async function getContact(ctx: AuthContext, contactId: string) {
   return contact;
 }
 
+/** Every matching contact, unpaged -- internal use; list screens and the API use `listContactsPage` (FIG-789). */
 export async function listContacts(
   ctx: AuthContext,
   filters: ListContactsFilters = {},
 ) {
   requirePermission(ctx, "contacts.view");
   return listContactsRecords(ctx.organizationId, filters);
+}
+
+/** One page of contacts plus the total (FIG-789). */
+export async function listContactsPage(
+  ctx: AuthContext,
+  filters: ListContactsFilters = {},
+  request: PageRequest = {},
+) {
+  requirePermission(ctx, "contacts.view");
+  const paging = resolvePaging(request);
+  const [items, total] = await Promise.all([
+    listContactsRecords(ctx.organizationId, {
+      ...filters,
+      take: paging.take,
+      skip: paging.skip,
+    }),
+    countContactsRecords(ctx.organizationId, filters),
+  ]);
+  return buildPage(items, total, paging);
+}
+
+/** How many contacts match `filters` -- a COUNT, never a row fetch (FIG-789). */
+export async function countContacts(
+  ctx: AuthContext,
+  filters: ListContactsFilters = {},
+) {
+  requirePermission(ctx, "contacts.view");
+  return countContactsRecords(ctx.organizationId, filters);
 }
 
 export async function checkDuplicateContacts(

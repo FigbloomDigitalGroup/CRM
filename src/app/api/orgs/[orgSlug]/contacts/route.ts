@@ -1,14 +1,16 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { pageQueryShape, toPageRequest } from "@/app/api/_lib/pageQuery";
 import { parseJsonBody, parseQueryParams, requiredString } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
-import { createContact, listContacts } from "@/services/contactService";
+import { createContact, listContactsPage } from "@/services/contactService";
 
 const ListContactsQuerySchema = z.object({
   q: z.string().optional(),
   companyId: z.string().optional(),
   ownerMembershipId: z.string().optional(),
   includeArchived: z.enum(["true", "false"]).optional(),
+  ...pageQueryShape,
 });
 
 const CreateContactSchema = z.object({
@@ -32,12 +34,16 @@ export async function GET(
     const ctx = await resolveRequestContext(orgSlug);
     const { searchParams } = new URL(request.url);
     const query = parseQueryParams(searchParams, ListContactsQuerySchema);
-    return listContacts(ctx, {
-      query: query.q,
-      companyId: query.companyId,
-      ownerMembershipId: query.ownerMembershipId,
-      includeArchived: query.includeArchived === "true",
-    });
+    return listContactsPage(
+      ctx,
+      {
+        query: query.q,
+        companyId: query.companyId,
+        ownerMembershipId: query.ownerMembershipId,
+        includeArchived: query.includeArchived === "true",
+      },
+      toPageRequest(query),
+    );
   });
 }
 

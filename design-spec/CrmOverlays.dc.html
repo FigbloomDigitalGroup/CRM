@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="crm-theme.css"><script src="icons.js"></script><script src="crm-store.js"></script></helmet>
+<div>
+<sc-if value="{{ hasDrawer }}">
+  <div onClick="{{ close }}" style="position:fixed; inset:0; background:var(--overlay); z-index:400; animation:fbFade .15s ease;"></div>
+  <aside role="dialog" aria-modal="true" aria-label="{{ dTitle }}" data-screen-label="{{ dLabel }}" style="position:fixed; top:0; right:0; bottom:0; width:min(480px,100vw); background:var(--surface); color:var(--text); z-index:401; box-shadow:var(--shadow-lg); display:flex; flex-direction:column; animation:fbSlide .2s ease;">
+    <div style="flex:none; display:flex; align-items:flex-start; gap:12px; padding:22px 24px 16px; border-bottom:1px solid var(--border);">
+      <div style="flex:1;"><h2 style="margin:0; font-size:20px; letter-spacing:-0.02em;">{{ dTitle }}</h2><p style="margin:4px 0 0; font-size:13px; color:var(--text-2);">{{ dSub }}</p></div>
+      <button aria-label="Close" onClick="{{ close }}" style="width:34px; height:34px; border-radius:999px; border:1px solid var(--border); background:var(--surface); color:var(--text-2); display:flex; align-items:center; justify-content:center;"><fb-icon name="x" size="16"></fb-icon></button>
+    </div>
+    <div style="flex:1; overflow:auto; padding:20px 24px; display:flex; flex-direction:column; gap:16px;">
+
+      <sc-if value="{{ dw.lead }}">
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Company or person <span style="color:var(--red);">*</span></span>
+          <input value="{{ f.name }}" onChange="{{ on.name }}" placeholder="e.g. Sarova Hotels or Amara Osei" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;" style-focus="border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-soft);"></label>
+        <sc-if value="{{ dup.show }}">
+          <div role="status" style="display:flex; gap:10px; padding:12px 14px; border-radius:12px; background:var(--orange-soft); color:var(--orange-text); font-size:13px; line-height:1.45;"><fb-icon name="alert" size="17"></fb-icon><div style="flex:1;"><strong>Possible duplicate.</strong> {{ dup.text }} You can still save this lead.<div style="margin-top:6px;"><a href="#" onClick="{{ dup.open }}" style="font-weight:600; color:var(--orange-text); text-decoration:underline;">Open existing record</a></div></div></div>
+        </sc-if>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Phone</span><input value="{{ f.phone }}" onChange="{{ on.phone }}" placeholder="+254 7…" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;" style-focus="border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-soft);"></label>
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Source</span><select value="{{ f.source }}" onChange="{{ on.source }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ sources }}" as="o"><option value="{{ o }}">{{ o }}</option></sc-for></select></label>
+        </div>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Service interest</span><select value="{{ f.service }}" onChange="{{ on.service }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ services }}" as="o"><option value="{{ o }}">{{ o }}</option></sc-for></select></label>
+        <div style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Temperature</span>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;"><sc-for list="{{ tempOpts }}" as="o"><button type="button" onClick="{{ o.pick }}" style="height:40px; border-radius:8px; border:1px solid {{ o.bd }}; background:{{ o.bg }}; color:{{ o.fg }}; font-weight:600; font-size:14px;">{{ o.l }}</button></sc-for></div></div>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Owner</span>
+          <select value="{{ f.ownerId }}" onChange="{{ on.ownerId }}" disabled="{{ ownerLocked }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ ownerOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select>
+          <sc-if value="{{ ownerLocked }}"><span style="font-size:12px; color:var(--text-3); display:flex; gap:6px; align-items:center;"><fb-icon name="lock" size="12"></fb-icon>Leads you create are yours. Management can reassign them.</span></sc-if></label>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Next follow-up</span><input type="date" value="{{ f.nextStr }}" onChange="{{ on.nextStr }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Notes</span><textarea value="{{ f.notes }}" onChange="{{ on.notes }}" rows="3" placeholder="What do they need?" style="width:100%; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:10px 12px; font-size:14px; resize:vertical; outline:none;" style-focus="border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-soft);"></textarea></label>
+        <p style="margin:0; font-size:12.5px; color:var(--text-3);">Only the name is required. Qualification details can be added on the lead once you know more.</p>
+      </sc-if>
+
+      <sc-if value="{{ dw.task }}">
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Title <span style="color:var(--red);">*</span></span><input value="{{ f.title }}" onChange="{{ on.title }}" placeholder="What needs doing?" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;" style-focus="border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-soft);"></label>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Description</span><textarea value="{{ f.desc }}" onChange="{{ on.desc }}" rows="3" placeholder="Details, links, next steps..." style="width:100%; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:10px 12px; font-size:14px; resize:vertical; outline:none;"></textarea></label>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Due</span><input type="datetime-local" value="{{ f.dueStr }}" onChange="{{ on.dueStr }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label>
+        <div style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Priority</span><div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;"><sc-for list="{{ prioOpts }}" as="o"><button type="button" onClick="{{ o.pick }}" style="height:40px; border-radius:8px; border:1px solid {{ o.bd }}; background:{{ o.bg }}; color:{{ o.fg }}; font-weight:600; font-size:14px;">{{ o.l }}</button></sc-for></div></div>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Assignee</span><select value="{{ f.assigneeId }}" onChange="{{ on.assigneeId }}" disabled="{{ assignLocked }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ assigneeOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select>
+          <sc-if value="{{ assignLocked }}"><span style="font-size:12px; color:var(--text-3); display:flex; gap:6px; align-items:center;"><fb-icon name="lock" size="12"></fb-icon>You can assign tasks to yourself. Management can assign to anyone.</span></sc-if></label>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Linked record</span><select value="{{ f.linkKey }}" onChange="{{ on.linkKey }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ recordOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></label>
+      </sc-if>
+
+      <sc-if value="{{ dw.note }}">
+        <div style="display:flex; flex-direction:column; gap:8px;"><span style="font-size:13px; font-weight:600;">What happened?</span><div style="display:flex; flex-wrap:wrap; gap:8px;"><sc-for list="{{ kindOpts }}" as="o"><button type="button" onClick="{{ o.pick }}" style="display:flex; align-items:center; gap:7px; height:38px; padding:0 14px; border-radius:999px; border:1px solid {{ o.bd }}; background:{{ o.bg }}; color:{{ o.fg }}; font-weight:600; font-size:13.5px;"><fb-icon name="{{ o.icon }}" size="15"></fb-icon>{{ o.l }}</button></sc-for></div></div>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">About</span><select value="{{ f.linkKey }}" onChange="{{ on.linkKey }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ recordOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></label>
+        <div style="display:flex; flex-direction:column; gap:8px;"><span style="font-size:13px; font-weight:600;">Outcome</span><div style="display:flex; flex-wrap:wrap; gap:8px;"><sc-for list="{{ outcomeOpts }}" as="o"><button type="button" onClick="{{ o.pick }}" style="height:34px; padding:0 13px; border-radius:999px; border:1px solid {{ o.bd }}; background:{{ o.bg }}; color:{{ o.fg }}; font-weight:600; font-size:13px;">{{ o.l }}</button></sc-for></div></div>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Note</span><textarea value="{{ f.text }}" onChange="{{ on.text }}" rows="3" placeholder="One line is enough." style="width:100%; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:10px 12px; font-size:14px; resize:vertical; outline:none;" style-focus="border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-soft);"></textarea></label>
+        <div style="padding:14px; border-radius:12px; background:var(--surface-2); display:flex; flex-direction:column; gap:10px;"><span style="font-size:13px; font-weight:700; display:flex; gap:8px; align-items:center;"><span style="color:#ff9400; display:flex;"><fb-icon name="arrow-circle" size="16"></fb-icon></span>One next action</span>
+          <input value="{{ f.nextTitle }}" onChange="{{ on.nextTitle }}" placeholder="e.g. Send revised quote" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;">
+          <div style="display:flex; flex-wrap:wrap; gap:6px;"><sc-for list="{{ whenOpts }}" as="o"><button type="button" onClick="{{ o.pick }}" style="height:32px; padding:0 12px; border-radius:999px; border:1px solid {{ o.bd }}; background:{{ o.bg }}; color:{{ o.fg }}; font-weight:600; font-size:12.5px;">{{ o.l }}</button></sc-for></div></div>
+      </sc-if>
+
+      <sc-if value="{{ dw.contact }}">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">First name <span style="color:var(--red);">*</span></span><input value="{{ f.first }}" onChange="{{ on.first }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;"></label>
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Last name</span><input value="{{ f.last }}" onChange="{{ on.last }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;"></label>
+        </div>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Company</span><select value="{{ f.companyId }}" onChange="{{ on.companyId }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ companyOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></label>
+        <sc-if value="{{ newCompany }}"><label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">New company name</span><input value="{{ f.newCompany }}" onChange="{{ on.newCompany }}" placeholder="Created when you save" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;"></label></sc-if>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Job title</span><input value="{{ f.title }}" onChange="{{ on.title }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;"></label>
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Department</span><input value="{{ f.department }}" onChange="{{ on.department }}" placeholder="e.g. Finance" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;"></label>
+        </div>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Social profile</span><input value="{{ f.social }}" onChange="{{ on.social }}" placeholder="LinkedIn, Instagram or Facebook link" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;"></label>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Phone</span><input value="{{ f.phone }}" onChange="{{ on.phone }}" placeholder="+254 7…" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;"></label>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Email</span><input value="{{ f.email }}" onChange="{{ on.email }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;"></label>
+      </sc-if>
+
+      <sc-if value="{{ dw.deal }}">
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Company <span style="color:var(--red);">*</span></span><select value="{{ f.companyId }}" onChange="{{ on.companyId }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ companyOptsReq }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></label>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">What are we selling?</span><input value="{{ f.title }}" onChange="{{ on.title }}" placeholder="e.g. CCTV for 3 branches" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;"></label>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Service</span><select value="{{ f.service }}" onChange="{{ on.service }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ services }}" as="o"><option value="{{ o }}">{{ o }}</option></sc-for></select></label>
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Stage</span><select value="{{ f.stage }}" onChange="{{ on.stage }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ openStages }}" as="o"><option value="{{ o }}">{{ o }}</option></sc-for></select></label>
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Value (KES)</span><input type="number" value="{{ f.value }}" onChange="{{ on.value }}" placeholder="0" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;"></label>
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Expected close</span><input type="date" value="{{ f.closeStr }}" onChange="{{ on.closeStr }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ dw.company }}">
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Name <span style="color:var(--red);">*</span></span><input value="{{ f.name }}" onChange="{{ on.name }}" placeholder="e.g. Kenol Kobil" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px; outline:none;" style-focus="border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-soft);"></label>
+        <sc-if value="{{ dup.show }}"><div role="status" style="display:flex; gap:10px; padding:12px 14px; border-radius:12px; background:var(--orange-soft); color:var(--orange-text); font-size:13px;"><fb-icon name="alert" size="17"></fb-icon><span><strong>Possible duplicate.</strong> {{ dup.text }} You can still save.</span></div></sc-if>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Industry</span><input value="{{ f.industry }}" onChange="{{ on.industry }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label>
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Lifecycle</span><select value="{{ f.lifecycle }}" onChange="{{ on.lifecycle }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ lifeOpts }}" as="o"><option value="{{ o }}">{{ o }}</option></sc-for></select></label>
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Phone</span><input value="{{ f.phone }}" onChange="{{ on.phone }}" placeholder="+254 7…" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label>
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Email</span><input value="{{ f.email }}" onChange="{{ on.email }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label>
+        </div>
+        <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Location</span><input value="{{ f.location }}" onChange="{{ on.location }}" placeholder="e.g. Westlands, Nairobi" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label>
+      </sc-if>
+    </div>
+    <div style="flex:none; display:flex; justify-content:flex-end; gap:10px; padding:16px 24px; border-top:1px solid var(--border); background:var(--surface);">
+      <button onClick="{{ close }}" style="height:40px; padding:0 18px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;" style-hover="background:var(--surface-2);">Cancel</button>
+      <button onClick="{{ dSave }}" disabled="{{ dInvalid }}" style="height:40px; padding:0 20px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700; display:flex; align-items:center; gap:8px; opacity:{{ dOpacity }};" style-hover="background:var(--primary-hover);"><fb-icon name="plus" size="16" stroke="2.2"></fb-icon>{{ dCta }}</button>
+    </div>
+  </aside>
+</sc-if>
+
+<sc-if value="{{ hasModal }}">
+  <div style="position:fixed; inset:0; z-index:500; background:var(--overlay); display:flex; align-items:center; justify-content:center; padding:24px; animation:fbFade .15s ease;" onClick="{{ backdrop }}">
+    <div role="dialog" aria-modal="true" data-screen-label="{{ mLabel }}" onClick="{{ stop }}" style="width:min(560px,100%); max-height:calc(100vh - 48px); overflow:auto; background:var(--surface); color:var(--text); border-radius:20px; box-shadow:var(--shadow-lg); animation:fbIn .18s ease;">
+
+      <sc-if value="{{ md.handoff }}">
+        <div style="padding:26px 28px 0;">
+          <div style="display:inline-flex; gap:7px; align-items:center; padding:5px 11px; border-radius:999px; background:var(--primary-soft); color:var(--primary-text); font-size:12.5px; font-weight:700;"><fb-icon name="check-circle" size="14"></fb-icon>Closed Won</div>
+          <h2 style="margin:12px 0 6px; font-size:24px; letter-spacing:-0.025em;">Hand off {{ h.company }} to Delivery</h2>
+          <p style="margin:0; color:var(--text-2); font-size:14px; line-height:1.5;">{{ h.title }} · {{ h.value }}. You’re confirming this deal is won. Nothing moves stages on its own.</p>
+        </div>
+        <div style="padding:20px 28px; display:flex; flex-direction:column; gap:16px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Delivery owner</span><select value="{{ f.ownerId }}" onChange="{{ on.ownerId }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-size:14px;"><sc-for list="{{ deliveryOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></label>
+            <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Start date</span><input type="date" value="{{ f.startStr }}" onChange="{{ on.startStr }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label>
+          </div>
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Scope for Delivery</span><textarea value="{{ f.scope }}" onChange="{{ on.scope }}" rows="2" style="width:100%; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:10px 12px; font-size:14px; resize:vertical;"></textarea></label>
+          <div style="border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+            <sc-for list="{{ h.checks }}" as="c">
+              <label style="display:flex; gap:12px; padding:13px 14px; border-bottom:1px solid var(--border); cursor:pointer;">
+                <input type="checkbox" checked="{{ c.on }}" onChange="{{ c.toggle }}" style="width:18px; height:18px; accent-color:var(--primary); margin-top:1px;">
+                <span style="flex:1;"><span style="display:block; font-weight:600; font-size:14px;">{{ c.l }}</span><span style="display:block; font-size:12.5px; color:var(--text-2); margin-top:2px;">{{ c.d }}</span></span>
+              </label>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 28px 24px;">
+          <button onClick="{{ close }}" style="height:42px; padding:0 18px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Not yet, keep in {{ h.stage }}</button>
+          <button onClick="{{ h.confirm }}" style="height:42px; padding:0 20px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700; display:flex; gap:8px; align-items:center;" style-hover="background:var(--primary-hover);"><fb-icon name="package" size="16"></fb-icon>Mark won and hand off</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ md.lost }}">
+        <div style="padding:26px 28px 0;"><h2 style="margin:0 0 6px; font-size:22px; letter-spacing:-0.02em;">Why was {{ lo.name }} lost?</h2><p style="margin:0; color:var(--text-2); font-size:14px;">A reason keeps the lost-reasons report honest. Pick one.</p></div>
+        <div style="padding:18px 28px; display:flex; flex-direction:column; gap:14px;">
+          <div style="display:flex; flex-wrap:wrap; gap:8px;"><sc-for list="{{ reasonOpts }}" as="o"><button type="button" onClick="{{ o.pick }}" style="height:36px; padding:0 14px; border-radius:999px; border:1px solid {{ o.bd }}; background:{{ o.bg }}; color:{{ o.fg }}; font-weight:600; font-size:13px;">{{ o.l }}</button></sc-for></div>
+          <textarea value="{{ f.note }}" onChange="{{ on.note }}" rows="2" placeholder="Anything worth remembering? (optional)" style="width:100%; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:10px 12px; font-size:14px; resize:vertical;"></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 28px 24px;">
+          <button onClick="{{ close }}" style="height:42px; padding:0 18px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Cancel</button>
+          <button onClick="{{ lo.confirm }}" disabled="{{ lo.invalid }}" style="height:42px; padding:0 20px; border-radius:10px; border:0; background:var(--red); color:#ffffff; font-weight:700; opacity:{{ lo.op }};">Mark lost</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ md.convert }}">
+        <div style="padding:26px 28px 0;"><h2 style="margin:0 0 6px; font-size:22px; letter-spacing:-0.02em;">Convert {{ cv.name }} to a deal</h2><p style="margin:0; color:var(--text-2); font-size:14px; line-height:1.5;">The deal starts in <strong>Solution Presented</strong>. {{ cv.history }}</p></div>
+        <div style="padding:18px 28px; display:flex; flex-direction:column; gap:14px;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--surface-2);"><div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.07em; color:var(--text-3);">COMPANY</div><div style="font-weight:600; margin-top:4px;">{{ cv.company }}</div><div style="font-size:12px; color:{{ cv.companyTone }}; margin-top:2px;">{{ cv.companyNote }}</div></div>
+            <div style="padding:12px 14px; border-radius:12px; border:1px solid var(--border); background:var(--surface-2);"><div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.07em; color:var(--text-3);">CONTACT</div><div style="font-weight:600; margin-top:4px;">{{ cv.contact }}</div><div style="font-size:12px; color:var(--text-3); margin-top:2px;">{{ cv.contactNote }}</div></div>
+          </div>
+          <sc-if value="{{ cv.needsCompany }}"><label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Company name (created on convert)</span><input value="{{ f.companyName }}" onChange="{{ on.companyName }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label></sc-if>
+          <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Deal title</span><input value="{{ f.title }}" onChange="{{ on.title }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Value (KES)</span><input type="number" value="{{ f.value }}" onChange="{{ on.value }}" placeholder="Can be added later" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label>
+            <label style="display:flex; flex-direction:column; gap:6px;"><span style="font-size:13px; font-weight:600;">Expected close</span><input type="date" value="{{ f.closeStr }}" onChange="{{ on.closeStr }}" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;"></label>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 28px 24px;">
+          <button onClick="{{ close }}" style="height:42px; padding:0 18px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Cancel</button>
+          <button onClick="{{ cv.confirm }}" style="height:42px; padding:0 20px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700; display:flex; gap:8px; align-items:center;"><fb-icon name="arrow-circle" size="16"></fb-icon>Convert to deal</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ md.moveTo }}">
+        <div style="padding:24px 24px 8px;"><h2 style="margin:0 0 4px; font-size:20px;">Move {{ mv.name }} to…</h2><p style="margin:0; color:var(--text-2); font-size:13.5px;">Touch-friendly alternative to dragging.</p></div>
+        <div style="padding:10px 16px 20px; display:flex; flex-direction:column; gap:4px;">
+          <sc-for list="{{ mv.stages }}" as="s"><button onClick="{{ s.go }}" disabled="{{ s.cur }}" style="display:flex; align-items:center; gap:12px; height:48px; padding:0 14px; border:0; border-radius:12px; background:{{ s.bg }}; text-align:left; font-size:15px; font-weight:600;" style-hover="background:var(--surface-2);"><span style="width:10px; height:10px; border-radius:99px; background:{{ s.dot }};"></span><span style="flex:1;">{{ s.l }}</span><span style="font-size:12px; color:var(--text-3); font-weight:500;">{{ s.note }}</span></button></sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ md.import }}">
+        <div style="padding:26px 28px 0;"><h2 style="margin:0 0 6px; font-size:22px; letter-spacing:-0.02em;">Import {{ im.kind }} from CSV</h2><p style="margin:0; color:var(--text-2); font-size:14px;">Duplicates are flagged, never silently merged.</p></div>
+        <div style="padding:18px 28px 24px;">
+          <sc-if value="{{ im.pick }}">
+            <div style="border:1.5px dashed var(--border-strong); border-radius:16px; padding:30px; text-align:center; background:var(--surface-2);"><div style="color:var(--primary-text); display:flex; justify-content:center;"><fb-icon name="upload" size="26"></fb-icon></div><div style="font-weight:600; margin-top:10px;">Drop a .csv file here</div><div style="font-size:13px; color:var(--text-3); margin-top:4px;">Columns: name, phone, email, source, service, owner</div>
+              <div style="display:flex; justify-content:center; gap:8px; margin-top:16px;"><button onClick="{{ im.start }}" style="height:38px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Use sample file (8 rows)</button><button onClick="{{ im.fail }}" style="height:38px; padding:0 16px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Try a broken file</button></div></div>
+          </sc-if>
+          <sc-if value="{{ im.running }}">
+            <div style="font-weight:600;">Importing figbloom-leads.csv…</div>
+            <div style="height:8px; border-radius:99px; background:var(--surface-3); margin-top:12px; overflow:hidden;"><div style="height:8px; width:{{ im.pct }}; background:var(--primary); border-radius:99px; transition:width .25s;"></div></div>
+            <div style="font-size:13px; color:var(--text-3); margin-top:8px;">{{ im.progress }}</div>
+          </sc-if>
+          <sc-if value="{{ im.done }}">
+            <div style="display:flex; gap:12px; align-items:flex-start; padding:14px; border-radius:14px; background:var(--primary-soft); color:var(--primary-text);"><fb-icon name="check-circle" size="20"></fb-icon><div><strong>6 of 8 rows imported.</strong><div style="font-size:13px; margin-top:3px;">2 rows need a look before they can come in.</div></div></div>
+            <div style="margin-top:12px; border:1px solid var(--border); border-radius:12px; font-size:13px;">
+              <div style="display:flex; gap:10px; padding:10px 12px; border-bottom:1px solid var(--border);"><span style="font-family:'IBM Plex Mono',monospace; color:var(--text-3);">Row 4</span><span style="flex:1;">Possible duplicate of <strong>Twiga Foods</strong>. Skipped.</span></div>
+              <div style="display:flex; gap:10px; padding:10px 12px;"><span style="font-family:'IBM Plex Mono',monospace; color:var(--text-3);">Row 7</span><span style="flex:1; color:var(--red);">Missing name. Not imported.</span></div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;"><button style="height:40px; padding:0 16px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600; display:flex; gap:8px; align-items:center;"><fb-icon name="download" size="15"></fb-icon>Download error report</button><button onClick="{{ close }}" style="height:40px; padding:0 18px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Done</button></div>
+          </sc-if>
+          <sc-if value="{{ im.failed }}">
+            <div style="display:flex; gap:12px; padding:14px; border-radius:14px; background:var(--red-soft); color:var(--red);"><fb-icon name="alert" size="20"></fb-icon><div><strong>We couldn’t read that file.</strong><div style="font-size:13px; margin-top:3px;">It doesn’t look like a CSV with a header row. Nothing was imported.</div></div></div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;"><button onClick="{{ close }}" style="height:40px; padding:0 16px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Close</button><button onClick="{{ im.retry }}" style="height:40px; padding:0 18px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Choose another file</button></div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ md.merge }}">
+        <div style="padding:26px 28px 0;"><h2 style="margin:0 0 6px; font-size:22px;">Merge duplicates</h2><p style="margin:0; color:var(--text-2); font-size:14px;">Contacts, deals, tasks and timelines move to the record you keep. The other is archived, not deleted.</p></div>
+        <div style="padding:18px 28px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <sc-for list="{{ mg.opts }}" as="o"><button onClick="{{ o.pick }}" style="text-align:left; padding:14px; border-radius:14px; border:2px solid {{ o.bd }}; background:var(--surface);"><div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-3);">{{ o.tag }}</div><div style="font-weight:700; margin-top:4px;">{{ o.name }}</div><div style="font-size:12.5px; color:var(--text-2); margin-top:4px;">{{ o.meta }}</div></button></sc-for>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 28px 24px;"><button onClick="{{ close }}" style="height:42px; padding:0 18px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Cancel</button><button onClick="{{ mg.confirm }}" style="height:42px; padding:0 20px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Merge into selected</button></div>
+      </sc-if>
+
+      <sc-if value="{{ md.logPrompt }}">
+        <div style="padding:26px 28px 0;"><div style="display:inline-flex; gap:7px; align-items:center; padding:5px 11px; border-radius:999px; background:var(--primary-soft); color:var(--primary-text); font-size:12.5px; font-weight:700;"><fb-icon name="{{ lp.icon }}" size="14"></fb-icon>{{ lp.kind }} with {{ lp.name }}</div><h2 style="margin:12px 0 6px; font-size:22px;">How did it go?</h2><p style="margin:0; color:var(--text-2); font-size:14px;">Log it now, while you remember. It takes a few seconds.</p></div>
+        <div style="padding:18px 28px; display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; flex-wrap:wrap; gap:8px;"><sc-for list="{{ outcomeOpts }}" as="o"><button type="button" onClick="{{ o.pick }}" style="height:36px; padding:0 14px; border-radius:999px; border:1px solid {{ o.bd }}; background:{{ o.bg }}; color:{{ o.fg }}; font-weight:600; font-size:13px;">{{ o.l }}</button></sc-for></div>
+          <textarea value="{{ f.text }}" onChange="{{ on.text }}" rows="2" placeholder="One line is enough." style="width:100%; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:10px 12px; font-size:14px;"></textarea>
+          <input value="{{ f.nextTitle }}" onChange="{{ on.nextTitle }}" placeholder="Next action (optional)" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px; font-size:14px;">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; padding:0 28px 24px;"><button onClick="{{ close }}" style="height:42px; padding:0 18px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Skip</button><button onClick="{{ lp.save }}" style="height:42px; padding:0 20px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Log it</button></div>
+      </sc-if>
+
+    </div>
+  </div>
+</sc-if>
+
+<div aria-live="polite" style="position:fixed; right:20px; bottom:96px; z-index:8000; display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+  <sc-for list="{{ toasts }}" as="t">
+    <div style="display:flex; align-items:center; gap:12px; min-width:280px; max-width:420px; padding:12px 12px 12px 16px; border-radius:14px; background:#17241b; color:#f2f5f1; box-shadow:0 14px 40px rgba(0,0,0,.25); font-size:13.5px; animation:fbIn .2s ease;">
+      <span style="display:flex; color:#9bd3a8;"><fb-icon name="check-circle" size="17"></fb-icon></span>
+      <span style="flex:1; line-height:1.4;">{{ t.text }}</span>
+      <sc-if value="{{ t.hasUndo }}"><button onClick="{{ t.undoIt }}" style="border:0; background:transparent; color:#ffb347; font-weight:700; font-size:13px; padding:4px 6px;">Undo</button></sc-if>
+      <button aria-label="Dismiss" onClick="{{ t.dismiss }}" style="border:0; background:transparent; color:#9aa39c; display:flex; padding:4px;"><fb-icon name="x" size="14"></fb-icon></button>
+    </div>
+  </sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  f = {}; key = null; imp = 'pick'; pct = 0;
+  componentDidMount() { const h = () => { this.un = FB.sub(() => this.forceUpdate()); FB.preview && FB.preview('dashboard', { bare: true, set: { drawer: { type: 'lead', data: {} } } }); this.forceUpdate(); }; if (window.FB) h(); else { const iv = setInterval(() => { if (window.FB) { clearInterval(iv); h(); } }, 40); } }
+  componentWillUnmount() { this.un && this.un(); clearInterval(this.iv); }
+  iso(d) { if (!d) return ''; const p = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+  isoT(d) { const p = n => String(n).padStart(2, '0'); return this.iso(d) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes()); }
+  init(S) {
+    const d = S.drawer, m = S.modal, data = (d || m || {}).data || {};
+    const now = FB.now, me = S.userId;
+    const rk = data.linkKey || (data.rt ? data.rt + ':' + data.rid : '');
+    const base = {
+      lead: () => { const l = data.id ? FB.lead(data.id) : null; return l ? { ...l, phone: (FB.contact(l.contactId) || {}).phone || '', nextStr: this.iso(l.next) } : { name: '', phone: '', source: 'Phone', service: 'Web Development', temp: 'Warm', ownerId: FB.role() === 'management' ? '' : me, nextStr: this.iso(new Date(now.getTime() + 864e5)), notes: '' }; },
+      task: () => ({ title: '', desc: '', dueStr: this.isoT(data.due || new Date(now.getTime() + 864e5)), priority: 'Medium', assigneeId: me, linkKey: rk }),
+      note: () => ({ kind: data.kind || 'call', linkKey: rk, outcome: '', text: '', nextTitle: '', when: 'tomorrow' }),
+      contact: () => ({ first: '', last: '', companyId: data.companyId || '', title: '', phone: '', email: '', newCompany: '' }),
+      deal: () => ({ companyId: data.companyId || '', title: '', service: 'Web Development', stage: 'Solution Presented', value: '', closeStr: this.iso(new Date(now.getTime() + 30 * 864e5)) }),
+      handoff: () => { const dl = FB.deal(data.id); return { ownerId: 'dl', startStr: this.iso(new Date(now.getTime() + 2 * 864e5)), scope: dl ? dl.title : '', template: true, lifecycle: true, notify: true }; },
+      lost: () => ({ reason: '', note: '' }),
+      convert: () => { const l = FB.lead(data.id); return { title: l ? l.service + (l.companyId ? '' : ' for ' + l.name) : '', value: '', closeStr: this.iso(new Date(now.getTime() + 30 * 864e5)), companyName: l ? l.name : '' }; },
+      merge: () => ({ keep: 0 }),
+      logPrompt: () => ({ outcome: '', text: '', nextTitle: '' }),
+      import: () => ({}), moveTo: () => ({}),
+    };
+    const t = (d || m).type;
+    this.f = (base[t] || (() => ({})))();
+    this.imp = 'pick'; this.pct = 0;
+  }
+  set(k) { return e => { this.f[k] = e && e.target ? (e.target.type === 'checkbox' ? e.target.checked : e.target.value) : e; this.forceUpdate(); }; }
+  chips(list, k, toneFn) { return list.map(o => { const v = typeof o === 'string' ? o : o.v, l = typeof o === 'string' ? o : o.l; const on = this.f[k] === v; const t = on ? (toneFn ? toneFn(v) : ['var(--primary-soft)', 'var(--primary-text)']) : ['var(--surface)', 'var(--text)']; return { v, l, icon: o.icon, pick: () => { this.f[k] = v; this.forceUpdate(); }, bg: t[0], fg: t[1], bd: on ? t[1] : 'var(--border-strong)' }; }); }
+  recordOpts() {
+    const o = [{ v: '', l: '(none)' }];
+    FB.leadsVisible().filter(l => !l.archived).forEach(l => o.push({ v: 'lead:' + l.id, l: 'Lead · ' + l.name }));
+    FB.dealsVisible().forEach(d => o.push({ v: 'deal:' + d.id, l: 'Deal · ' + FB.company(d.companyId).name + ' · ' + d.title }));
+    if (FB.can('customers')) FB.s.companies.forEach(c => o.push({ v: 'company:' + c.id, l: 'Customer · ' + c.name }));
+    return o;
+  }
+  runImport(fail) {
+    if (fail) { this.imp = 'failed'; return this.forceUpdate(); }
+    this.imp = 'running'; this.pct = 0; this.forceUpdate();
+    clearInterval(this.iv);
+    this.iv = setInterval(() => { this.pct += 14; if (this.pct >= 100) { clearInterval(this.iv); this.imp = 'done'; FB.toast('Import finished: 6 rows added'); } this.forceUpdate(); }, 220);
+  }
+  renderVals() {
+    if (!window.FB) return { hasDrawer: false, hasModal: false, toasts: [] };
+    const S = FB.s;
+    const k = S.drawer ? 'd:' + S.drawer.type + JSON.stringify(S.drawer.data) : S.modal ? 'm:' + S.modal.type + JSON.stringify(S.modal.data) : null;
+    if (k !== this.key) { this.key = k; if (k) this.init(S); }
+    const f = this.f, on = {};
+    ['department', 'social', 'industry', 'lifecycle', 'location', 'name', 'phone', 'source', 'service', 'ownerId', 'nextStr', 'notes', 'title', 'desc', 'dueStr', 'assigneeId', 'linkKey', 'text', 'nextTitle', 'first', 'last', 'companyId', 'email', 'newCompany', 'stage', 'value', 'closeStr', 'startStr', 'scope', 'note', 'companyName'].forEach(x => on[x] = this.set(x));
+    const role = FB.role(), mgmt = role === 'management';
+    const toasts = S.toasts.map(t => ({ ...t, hasUndo: !!t.undo, undoIt: () => { t.undo(); FB.dismissToast(t.id); }, dismiss: () => FB.dismissToast(t.id) }));
+    const base = { toasts, close: () => FB.close(), backdrop: () => FB.close(), stop: e => e.stopPropagation(), f, on, hasDrawer: !!S.drawer, hasModal: !!S.modal };
+    const parseLink = lk => { if (!lk) return null; const [type, id] = lk.split(':'); return { type, id }; };
+    const when = { tomorrow: 1, '3days': 3, week: 7 };
+    if (S.drawer) {
+      const t = S.drawer.type, dw = { [t]: true };
+      let dTitle = '', dSub = '', dCta = 'Save', dSave = () => {}, dInvalid = false;
+      let dup = { show: false };
+      if (t === 'lead') {
+        dTitle = S.drawer.data.id ? 'Edit lead' : 'New lead'; dSub = 'Capture now, qualify later.'; dCta = S.drawer.data.id ? 'Save changes' : 'Create lead';
+        const nm = (f.name || '').trim().toLowerCase();
+        if (nm.length > 2) {
+          const c = S.companies.find(c => c.name.toLowerCase().includes(nm)); const l = S.leads.find(l => l.id !== S.drawer.data.id && l.name.toLowerCase().includes(nm) && !l.archived);
+          if (c || l) dup = { show: true, text: c ? c.name + ' already exists as a company (owner ' + FB.uname(c.ownerId) + ')' + (l ? ' and has an open lead.' : '.') : l.name + ' is already an open lead.', open: e => { e.preventDefault(); c ? FB.go('company', c.id) : FB.go('lead', l.id); } };
+        }
+        dInvalid = !f.name;
+        dSave = () => { const c = S.companies.find(c => c.name.toLowerCase() === (f.name || '').trim().toLowerCase()); FB.saveLead({ ...(S.drawer.data.id ? { id: S.drawer.data.id } : {}), companyName: f.name, name: f.name, companyId: c ? c.id : (S.drawer.data.id ? FB.lead(S.drawer.data.id).companyId : null), source: f.source, service: f.service, temp: f.temp, ownerId: mgmt ? (f.ownerId || null) : S.userId, next: f.nextStr ? new Date(f.nextStr + 'T10:00') : null, notes: f.notes }); };
+      }
+      if (t === 'task') { dTitle = 'New task'; dSub = 'Who does what, by when.'; dCta = 'Create task'; dInvalid = !f.title; dSave = () => FB.saveTask({ title: f.title, desc: f.desc, due: f.dueStr ? new Date(f.dueStr) : null, priority: f.priority, assigneeId: f.assigneeId, link: parseLink(f.linkKey) }); }
+      if (t === 'note') { dTitle = 'Log a call or note'; dSub = 'A line and one next action. That’s it.'; dCta = 'Log it'; dInvalid = !f.linkKey; dSave = () => { const l = parseLink(f.linkKey); FB.logComm(l.type, l.id, f.kind, f.text, f.outcome, f.nextTitle ? { title: f.nextTitle, due: new Date(FB.now.getTime() + (when[f.when] || 1) * 864e5) } : null); }; }
+      if (t === 'contact') { dTitle = 'New contact'; dSub = 'Phone or email is enough to start.'; dCta = 'Create contact'; dInvalid = !f.first; dSave = () => { let cid = f.companyId; if (cid === '__new' && f.newCompany) cid = FB.saveCompany({ name: f.newCompany }).id; FB.saveContact({ first: f.first, last: f.last, companyId: cid && cid !== '__new' ? cid : null, title: f.title, department: f.department, social: f.social, phone: f.phone, email: f.email }); }; }
+      if (t === 'company') { dTitle = 'New company'; dSub = 'A name is enough to start.'; dCta = 'Create company'; dInvalid = !f.name; const nm = (f.name || '').trim().toLowerCase(); const c = nm.length > 2 && S.companies.find(c => c.name.toLowerCase().includes(nm)); if (c) dup = { show: true, text: c.name + ' already exists (owner ' + FB.uname(c.ownerId) + ').' }; dSave = () => FB.saveCompany({ name: f.name, industry: f.industry, lifecycle: f.lifecycle || 'Prospect', phone: f.phone, email: f.email, location: f.location, website: '' }); }
+      if (t === 'deal') { dTitle = 'New deal'; dSub = 'Most deals come from converting a lead. Use this for direct opportunities.'; dCta = 'Create deal'; dInvalid = !f.companyId; dSave = () => FB.saveDeal({ companyId: f.companyId, title: f.title || f.service, service: f.service, stage: f.stage, value: +f.value || 0, close: f.closeStr ? new Date(f.closeStr) : null }); }
+      const assignees = mgmt ? FB.users : [FB.me()];
+      return { ...base, dw, dTitle, dSub, dCta, dSave, dInvalid, dOpacity: dInvalid ? 0.5 : 1, dLabel: 'Drawer · ' + dTitle, dup,
+        sources: FB.ref.sources, services: FB.ref.services, openStages: FB.ref.stages.slice(0, 3),
+        tempOpts: this.chips(FB.ref.temps, 'temp', FB.tempTone), prioOpts: this.chips(['High', 'Medium', 'Low'], 'priority', FB.prioTone),
+        ownerLocked: !mgmt, ownerOpts: mgmt ? [{ v: '', l: 'Unassigned (shared pool)' }, ...FB.ownerOptions().map(o => ({ v: o.id, l: o.label }))] : [{ v: S.userId, l: FB.me().name + ' (you)' }],
+        assignLocked: !mgmt, assigneeOpts: assignees.map(u => ({ v: u.id, l: u.name + ' (' + FB.ROLES[u.role] + ')' })),
+        recordOpts: this.recordOpts(),
+        kindOpts: this.chips([{ v: 'call', l: 'Call', icon: 'phone' }, { v: 'whatsapp', l: 'WhatsApp', icon: 'whatsapp' }, { v: 'email', l: 'Email', icon: 'mail' }, { v: 'meeting', l: 'Meeting', icon: 'users' }, { v: 'social', l: 'Social DM', icon: 'message' }, { v: 'note', l: 'Note', icon: 'note' }], 'kind'),
+        outcomeOpts: this.chips(['Reached', 'No answer', 'Interested', 'Not now', 'Asked for quote'], 'outcome'),
+        whenOpts: this.chips([{ v: 'tomorrow', l: 'Tomorrow' }, { v: '3days', l: 'In 3 days' }, { v: 'week', l: 'Next week' }], 'when'),
+        companyOpts: [{ v: '', l: '(none / standalone contact)' }, { v: '__new', l: '+ Create a new company' }, ...S.companies.map(c => ({ v: c.id, l: c.name }))],
+        companyOptsReq: [{ v: '', l: 'Choose a company' }, ...S.companies.map(c => ({ v: c.id, l: c.name }))],
+        newCompany: f.companyId === '__new', lifeOpts: FB.ref.lifecycle,
+      };
+    }
+    if (S.modal) {
+      const t = S.modal.type, md = { [t]: true }, data = S.modal.data;
+      const out = { ...base, md, mLabel: 'Modal · ' + t, outcomeOpts: this.chips(['Reached', 'No answer', 'Interested', 'Not now', 'Asked for quote'], 'outcome') };
+      if (t === 'handoff') {
+        const d = FB.deal(data.id), c = FB.company(d.companyId);
+        out.h = { company: c.name, title: d.title, value: FB.dealValue(d), stage: d.stage,
+          checks: [{ k: 'template', l: 'Apply the onboarding task template', d: FB.ref.onboarding.join(' · ') }, { k: 'lifecycle', l: 'Move ' + c.name + ' to Onboarding', d: 'Customer lifecycle: ' + c.lifecycle + ' → Onboarding' }, { k: 'notify', l: 'Notify Delivery', d: 'In-app and email, per each person’s preferences' }].map(x => ({ ...x, on: !!f[x.k], toggle: () => { f[x.k] = !f[x.k]; this.forceUpdate(); } })),
+          confirm: () => FB.confirmWon(d.id, { ownerId: f.ownerId || null, start: f.startStr ? new Date(f.startStr) : null, scope: f.scope, template: f.template, lifecycle: f.lifecycle, notify: f.notify }) };
+        out.deliveryOpts = [{ v: 'dl', l: 'Dev Delivery' }, { v: '', l: 'Decide later (Delivery picks an owner)' }];
+      }
+      if (t === 'lost') {
+        const rec = data.kind === 'lead' ? FB.lead(data.id) : FB.deal(data.id);
+        out.lo = { name: data.kind === 'lead' ? rec.name : FB.company(rec.companyId).name, invalid: !f.reason, op: f.reason ? 1 : 0.5, confirm: () => FB.markLost(data.kind, data.id, f.reason, f.note) };
+        out.reasonOpts = this.chips(FB.ref.lostReasons, 'reason', () => ['var(--red-soft)', 'var(--red)']);
+      }
+      if (t === 'convert') {
+        const l = FB.lead(data.id), c = l.companyId && FB.company(l.companyId), p = l.contactId && FB.contact(l.contactId);
+        const n = FB.activitiesFor('lead', l.id).length;
+        out.cv = { name: l.name, history: n + ' timeline item' + (n === 1 ? '' : 's') + ' and open tasks come with it.', company: c ? c.name : (f.companyName || l.name), companyNote: c ? 'Existing company found · linked' : 'No match found · will be created', companyTone: c ? 'var(--primary-text)' : 'var(--orange-text)', needsCompany: !c, contact: p ? FB.cname(p) : 'No contact yet', contactNote: p ? 'Existing contact · becomes primary contact' : 'Add one later from the deal', confirm: () => FB.convertLead(l.id, { companyName: f.companyName, title: f.title, value: f.value, close: f.closeStr ? new Date(f.closeStr) : null }) };
+      }
+      if (t === 'moveTo') {
+        const d = FB.deal(data.id);
+        out.mv = { name: FB.company(d.companyId).name, stages: FB.ref.stages.map(s => ({ l: s, cur: s === d.stage, bg: s === d.stage ? 'var(--surface-2)' : 'transparent', dot: FB.stageTone(s), note: s === d.stage ? 'Current' : s === 'Closed Won' ? 'Opens handoff' : s === 'Closed Lost' ? 'Asks for a reason' : '', go: () => { FB.close(); setTimeout(() => FB.moveDeal(d.id, s), 0); } })) };
+      }
+      if (t === 'import') out.im = { kind: data.kind || 'leads', pick: this.imp === 'pick', running: this.imp === 'running', done: this.imp === 'done', failed: this.imp === 'failed', pct: Math.min(100, this.pct) + '%', progress: Math.min(8, Math.round(this.pct / 12.5)) + ' of 8 rows checked', start: () => this.runImport(false), fail: () => this.runImport(true), retry: () => { this.imp = 'pick'; this.forceUpdate(); } };
+      if (t === 'merge') {
+        const c = FB.company(data.id);
+        const opts = [{ tag: 'THIS RECORD', name: c.name, meta: c.industry + ' · ' + S.contacts.filter(p => p.companyId === c.id).length + ' contacts · owner ' + FB.uname(c.ownerId) }, { tag: 'POSSIBLE DUPLICATE', name: c.name + (c.name.endsWith('Ltd') ? '' : ' Ltd'), meta: 'Imported 3 Oct · 1 contact · no owner' }];
+        out.mg = { opts: opts.map((o, i) => ({ ...o, bd: f.keep === i ? 'var(--primary)' : 'var(--border)', pick: () => { f.keep = i; this.forceUpdate(); } })), confirm: () => { FB.close(); FB.toast('Merged. Duplicate archived and its history moved to ' + c.name); } };
+      }
+      if (t === 'logPrompt') {
+        out.lp = { name: data.name, kind: data.kind === 'whatsapp' ? 'WhatsApp' : 'Call', icon: data.kind === 'whatsapp' ? 'whatsapp' : 'phone', save: () => FB.logComm(data.rt, data.rid, data.kind, f.text, f.outcome, f.nextTitle ? { title: f.nextTitle, due: new Date(FB.now.getTime() + 864e5) } : null) };
+      }
+      return out;
+    }
+    return base;
+  }
+}
+</script>
+</body>
+</html>

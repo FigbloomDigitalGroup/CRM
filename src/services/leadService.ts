@@ -19,6 +19,7 @@ import {
   createLead as createLeadRecord,
   findPossibleDuplicateLeads,
   getLeadById,
+  countLeads as countLeadsRecords,
   listLeads as listLeadsRecords,
   reassignLeadOwner,
   restoreLead as restoreLeadRecord,
@@ -35,6 +36,7 @@ import {
   loadActiveMemberWithPermissions,
 } from "./ownerEligibility";
 import { notifyLeadAssigned } from "./notificationService";
+import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 
 /** Beyond ownership (audited separately via `assignLead`): qualification/status changes (FIG-600 AC). */
 const AUDITED_LEAD_FIELDS = [
@@ -244,18 +246,52 @@ export async function updateLead(
  * `filters.ownerMembershipId` they pass -- it's forced to their own
  * membership, never trusted from the client.
  */
+function scopeLeadFilters(
+  ctx: AuthContext,
+  filters: ListLeadsFilters,
+): ListLeadsFilters {
+  if (hasPermission(ctx, "leads.view.all")) return filters;
+  requirePermission(ctx, "leads.view.own");
+  return { ...filters, ownerMembershipId: ctx.membershipId };
+}
+
+/**
+ * Every matching lead, unpaged. Only for internal callers that genuinely
+ * need the whole set or pass `take` themselves (search, the dashboard's
+ * "latest" list); list screens and the API use `listLeadsPage` (FIG-789).
+ */
 export async function listLeads(
   ctx: AuthContext,
   filters: ListLeadsFilters = {},
 ) {
-  if (hasPermission(ctx, "leads.view.all")) {
-    return listLeadsRecords(ctx.organizationId, filters);
-  }
-  requirePermission(ctx, "leads.view.own");
-  return listLeadsRecords(ctx.organizationId, {
-    ...filters,
-    ownerMembershipId: ctx.membershipId,
-  });
+  return listLeadsRecords(ctx.organizationId, scopeLeadFilters(ctx, filters));
+}
+
+/** One page of leads plus the total, with the same own/all scoping as `listLeads` (FIG-789). */
+export async function listLeadsPage(
+  ctx: AuthContext,
+  filters: ListLeadsFilters = {},
+  request: PageRequest = {},
+) {
+  const scoped = scopeLeadFilters(ctx, filters);
+  const paging = resolvePaging(request);
+  const [items, total] = await Promise.all([
+    listLeadsRecords(ctx.organizationId, {
+      ...scoped,
+      take: paging.take,
+      skip: paging.skip,
+    }),
+    countLeadsRecords(ctx.organizationId, scoped),
+  ]);
+  return buildPage(items, total, paging);
+}
+
+/** How many leads this caller can see for `filters` -- a COUNT, never a row fetch (FIG-789). */
+export async function countLeads(
+  ctx: AuthContext,
+  filters: ListLeadsFilters = {},
+) {
+  return countLeadsRecords(ctx.organizationId, scopeLeadFilters(ctx, filters));
 }
 
 /**

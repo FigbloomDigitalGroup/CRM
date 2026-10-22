@@ -152,6 +152,70 @@ role may already see (`getMyMetrics` / `getReportScope` in
   `deals.view.value`; otherwise counts are shown instead.
 - No owner filter, page usage or CSV export (Management only).
 
+## Customer reports (FIG-793)
+
+Three reports for the customer base, built as service functions in
+`src/services/customerReportService.ts` (queries in
+`src/repositories/customerReports.ts`). They feed the Reports v2 screens
+(B3.09 / F3.07). API: `GET /api/orgs/<org>/reports/customers`,
+`.../sales-by-salesperson`, `.../renewals`, CSV at
+`.../reports/customers-export`, and the dormancy default at
+`.../reports/settings`.
+
+### Active, repeat and dormant customers
+
+- **Scope:** live snapshot -- not affected by the date range.
+- **Customer:** a non-archived company with at least one won deal (not
+  archived), or a running service.
+- **Active:** the company has a service that is `ACTIVE` and not past its end
+  date, **or** it won a deal within the dormancy threshold.
+- **Dormant:** a customer that is not active.
+- **Repeat:** two or more won deals. Independent of active/dormant, so a
+  customer can be "active and repeat" or "dormant and repeat".
+- **Dormancy threshold:** default 90 days. Each organisation can save its own
+  (`PUT .../reports/settings`, 1 to 3650 days, Management only, audited as
+  `report_settings.updated`), and a request can override it with
+  `dormantAfterDays`.
+- **Output:** a summary (`customers`, `active`, `repeat`, `dormant`; always
+  the whole customer base) and a paged list (`segment` filter), most recent
+  win first, with won count, won value, last won date, running services.
+- **Chart:** donut or bar of active / dormant with the repeat share.
+- **Permission and masking:** `reporting.view.all`. `wonValue` is hidden
+  without `deals.view.value`.
+
+### Won value and count by salesperson
+
+- **Scope:** range-scoped, by `Deal.wonAt` (same window rules as above), with
+  optional `ownerMembershipId`, `serviceId` filters and `period=month`
+  (calendar months, UTC) to split each salesperson by month of the win.
+- **Definition:** won deals in the window per deal owner: count and total value.
+- **Chart:** bar per salesperson (value, or count when masked); grouped bars
+  by month for `period=month`.
+- **Permission and masking:** every role with report access, scoped like
+  personal reports. Management sees everyone. An own-only role (Sales) sees
+  only their own row, and an owner filter cannot widen it. Roles that view
+  every deal (Delivery, Finance) see all rows. Values are shown on your own
+  deals, otherwise only with `deals.view.value` (so Delivery sees counts only).
+
+### Upcoming renewals / service end dates
+
+- **Scope:** live snapshot of company services (`CompanyService`).
+- **Definition:** services with status `ACTIVE` and an end date within the
+  next `withinDays` days (default 90, 1 to 365), soonest first. Services past
+  their end date but still `ACTIVE` are included and flagged `lapsed`.
+  Open-ended services (no end date), completed and cancelled ones, and
+  archived companies are excluded.
+- **Output:** summary (`renewing`, `lapsed`) and a paged list with company,
+  service, end date, days left.
+- **Permission:** `reporting.view.all` and `company_services.view`.
+
+### CSV
+
+`GET .../reports/customers-export` (needs `export.bulk`, so Management)
+writes four sections: customer summary, customers, won by salesperson,
+upcoming renewals. It calls the same service functions, so scope and masking
+are identical to the screens. Each export is audited (`reports.exported`).
+
 ## Date range and integrity notes
 
 - A date-only "to" includes that whole day; unreadable dates fall back to

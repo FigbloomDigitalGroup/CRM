@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 
-type NotificationType = "LEAD_ASSIGNED" | "TASK_DUE" | "TASK_OVERDUE";
+type NotificationType =
+  | "LEAD_ASSIGNED"
+  | "TASK_DUE"
+  | "TASK_OVERDUE"
+  | "DEAL_WON_HANDOFF";
 
 const LABELS: Record<NotificationType, string> = {
   LEAD_ASSIGNED: "A new lead is assigned to me",
   TASK_DUE: "One of my tasks is due today",
   TASK_OVERDUE: "One of my tasks is overdue",
+  DEAL_WON_HANDOFF: "A won deal is handed off to me",
 };
 
 export interface NotificationPreferenceRow {

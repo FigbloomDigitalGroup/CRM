@@ -10,10 +10,22 @@ export class UnauthorizedError extends Error {
   }
 }
 
+export interface ForbiddenDetail {
+  /** The caller's role key, so the response can say who is asking. */
+  roleKey?: string;
+  /** Permission keys any one of which would have allowed the action; defaults to the message's key. */
+  permissionKeys?: string[];
+}
+
 export class ForbiddenError extends Error {
-  constructor(permissionKey: string) {
+  readonly permissionKey: string;
+  readonly detail: ForbiddenDetail;
+
+  constructor(permissionKey: string, detail: ForbiddenDetail = {}) {
     super(`Missing required permission: ${permissionKey}`);
     this.name = "ForbiddenError";
+    this.permissionKey = permissionKey;
+    this.detail = detail;
   }
 }
 
