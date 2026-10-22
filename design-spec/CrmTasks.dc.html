@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="crm-theme.css"><script src="icons.js"></script><script src="crm-store.js"></script></helmet>
+<div data-screen-label="{{ label }}" style="display:flex; flex-direction:column; gap:18px;">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+    <div>
+      <h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">{{ title }}</h1>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; background:{{ sc.bg }}; color:{{ sc.fg }}; font-size:12.5px; font-weight:600; white-space:nowrap;"><span style="width:6px; height:6px; border-radius:99px; background:{{ sc.dot }};"></span>{{ sc.label }}</span><span style="font-size:13.5px; color:var(--text-2);">{{ hint }}</span></div>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <sc-if value="{{ hasCal }}"><div style="display:inline-flex; gap:2px; padding:3px; border-radius:10px; background:var(--surface-3); border:1px solid var(--border);"><sc-for list="{{ views }}" as="v"><button onClick="{{ v.go }}" style="display:flex; gap:6px; align-items:center; border:0; padding:6px 12px; border-radius:8px; background:{{ v.bg }}; box-shadow:{{ v.sh }}; font-size:13.5px; font-weight:600; color:{{ v.fg }};"><fb-icon name="{{ v.icon }}" size="15"></fb-icon>{{ v.l }}</button></sc-for></div></sc-if>
+      <button onClick="{{ newTask }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;" style-hover="background:var(--primary-hover);"><fb-icon name="plus" size="16" stroke="2.2"></fb-icon>New task</button>
+    </div>
+  </div>
+
+  <sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px;">
+      <sc-for list="{{ stats }}" as="s"><button onClick="{{ s.go }}" style="text-align:left; background:var(--surface); border:1px solid {{ s.bd }}; border-radius:14px; padding:16px 18px; box-shadow:var(--shadow-sm);"><div style="display:flex; align-items:center; gap:7px; font-size:14px; color:var(--text-2);"><span style="width:7px; height:7px; border-radius:99px; background:{{ s.dot }};"></span>{{ s.l }}</div><div style="font-size:26px; font-weight:700; margin-top:8px; color:{{ s.col }};">{{ s.n }}</div><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">{{ s.sub }}</div></button></sc-for>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; padding:12px; border-radius:14px; background:var(--surface); border:1px solid var(--border);">
+      <div style="position:relative; flex:1 1 240px;"><span style="position:absolute; left:12px; top:11px; color:var(--text-3); display:flex;"><fb-icon name="search" size="16"></fb-icon></span><input value="{{ q }}" onChange="{{ setQ }}" placeholder="Search tasks" style="width:100%; height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 12px 0 36px; font-size:14px; outline:none;"></div>
+      <select value="{{ prio }}" onChange="{{ setPrio }}" aria-label="Priority" style="height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px;"><option value="">Any priority</option><option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option></select>
+      <sc-if value="{{ mgmt }}"><select value="{{ who }}" onChange="{{ setWho }}" aria-label="Assignee" style="height:40px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px;"><sc-for list="{{ whoOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></sc-if>
+    </div>
+
+    <sc-if value="{{ st.loading }}"><div style="display:flex; flex-direction:column; gap:10px;"><sc-for list="{{ skel }}" as="s"><div style="height:64px; border-radius:12px; background:linear-gradient(90deg,var(--skel) 0%,var(--skel-2) 50%,var(--skel) 100%); background-size:1200px 100%; animation:fbShimmer 1.4s linear infinite;"></div></sc-for></div></sc-if>
+    <sc-if value="{{ st.error }}"><div role="alert" style="padding:40px; text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:14px;"><div style="font-weight:700;">Tasks didn’t load</div><button onClick="{{ retry }}" style="margin-top:12px; height:38px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Retry</button></div></sc-if>
+    <sc-if value="{{ st.empty }}"><div style="padding:52px 24px; text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:14px;"><div style="display:flex; justify-content:center; color:var(--orange-text);"><fb-icon name="tasks" size="26"></fb-icon></div><div style="font-weight:700; font-size:18px; margin-top:10px;">No tasks yet</div><div style="color:var(--text-2); margin-top:6px; font-size:14px;">Every follow-up you log can create one. Or add one now.</div><button onClick="{{ newTask }}" style="margin-top:14px; height:40px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">New task</button></div></sc-if>
+
+    <sc-if value="{{ st.ok }}">
+      <sc-for list="{{ groups }}" as="g">
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+          <button onClick="{{ g.toggle }}" style="display:flex; align-items:center; gap:10px; width:100%; border:0; background:var(--surface-2); padding:12px 18px; text-align:left;"><span style="width:8px; height:8px; border-radius:99px; background:{{ g.dot }};"></span><strong style="font-size:14px; color:{{ g.col }};">{{ g.l }}</strong><span style="font-size:12.5px; color:var(--text-3);">{{ g.n }}</span><span style="flex:1;"></span><fb-icon name="{{ g.chev }}" size="15"></fb-icon></button>
+          <sc-if value="{{ g.open }}">
+            <sc-for list="{{ g.rows }}" as="t">
+              <div style="display:grid; grid-template-columns:28px minmax(0,1fr) 170px 150px 90px 140px 36px; gap:12px; align-items:center; padding:12px 18px; border-top:1px solid var(--border);" style-hover="background:var(--surface-2);">
+                <button aria-label="Toggle done" onClick="{{ t.toggle }}" style="width:22px; height:22px; border-radius:7px; border:1.5px solid {{ t.cbd }}; background:{{ t.cbg }}; color:#ffffff; display:flex; align-items:center; justify-content:center;"><sc-if value="{{ t.isDone }}"><fb-icon name="check" size="13" stroke="3"></fb-icon></sc-if></button>
+                <div style="min-width:0;"><div style="font-weight:600; font-size:14px; text-decoration:{{ t.strike }}; color:{{ t.tcol }};">{{ t.title }}</div><sc-if value="{{ t.desc }}"><div style="font-size:12.5px; color:var(--text-3); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ t.desc }}</div></sc-if><sc-if value="{{ t.link }}"><button onClick="{{ t.open }}" style="margin-top:5px; border:1px solid var(--border); background:var(--surface-2); border-radius:999px; padding:1px 9px; font-size:12px; color:var(--text-2);">{{ t.link }} ↗</button></sc-if></div>
+                <span style="display:flex; align-items:center; gap:8px; font-size:13.5px; min-width:0;"><span style="flex:none; width:24px; height:24px; border-radius:99px; background:var(--primary-soft); color:var(--primary-text); font-size:10px; font-weight:700; display:inline-flex; align-items:center; justify-content:center;">{{ t.ini }}</span><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ t.who }}</span></span>
+                <span style="font-size:13px; font-weight:600; color:{{ t.dcol }};">{{ t.due }}</span>
+                <span><span style="font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; background:{{ t.pbg }}; color:{{ t.pfg }};">{{ t.priority }}</span></span>
+                <select value="{{ t.status }}" onChange="{{ t.setStatus }}" aria-label="Status" disabled="{{ t.ro }}" style="height:34px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 8px; font-size:13px;"><option value="Pending">Pending</option><option value="In progress">In progress</option><option value="Completed">Completed</option><option value="Cancelled">Cancelled</option></select>
+                <button aria-label="Log activity" title="Log a call or note" onClick="{{ t.log }}" style="width:32px; height:32px; border-radius:8px; border:0; background:transparent; color:var(--text-2); display:flex; align-items:center; justify-content:center;" style-hover="background:var(--surface-3);"><fb-icon name="phone" size="15"></fb-icon></button>
+              </div>
+            </sc-for>
+            <sc-if value="{{ g.none }}"><div style="padding:16px 18px; border-top:1px solid var(--border); font-size:13.5px; color:var(--text-3);">{{ g.noneText }}</div></sc-if>
+          </sc-if>
+        </section>
+      </sc-for>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ isCal }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:12px; border-radius:14px; background:var(--surface); border:1px solid var(--border);">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button aria-label="Previous" onClick="{{ prev }}" style="width:36px; height:36px; border-radius:9px; border:1px solid var(--border-strong); background:var(--surface); display:flex; align-items:center; justify-content:center;"><fb-icon name="chevron-left" size="16"></fb-icon></button>
+        <button onClick="{{ today }}" style="height:36px; padding:0 14px; border-radius:9px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Today</button>
+        <button aria-label="Next" onClick="{{ next }}" style="width:36px; height:36px; border-radius:9px; border:1px solid var(--border-strong); background:var(--surface); display:flex; align-items:center; justify-content:center;"><fb-icon name="chevron-right" size="16"></fb-icon></button>
+        <strong style="font-size:18px; letter-spacing:-0.02em; margin-left:8px;">{{ calTitle }}</strong>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <select value="{{ who }}" onChange="{{ setWho }}" disabled="{{ teamLocked }}" title="{{ teamTip }}" aria-label="Whose calendar" style="height:36px; border-radius:9px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px;"><sc-for list="{{ whoOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select>
+        <div style="display:inline-flex; gap:2px; padding:3px; border-radius:10px; background:var(--surface-3);"><sc-for list="{{ modes }}" as="m"><button onClick="{{ m.go }}" style="border:0; padding:6px 12px; border-radius:8px; background:{{ m.bg }}; box-shadow:{{ m.sh }}; font-size:13px; font-weight:600; color:{{ m.fg }};">{{ m.l }}</button></sc-for></div>
+      </div>
+    </div>
+    <sc-if value="{{ teamLocked }}"><div style="font-size:12.5px; color:var(--text-3); display:flex; gap:6px; align-items:center; margin-top:-8px;"><fb-icon name="lock" size="12"></fb-icon>{{ teamTip }}</div></sc-if>
+
+    <sc-if value="{{ m.month }}">
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+        <div style="display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); background:var(--surface-2); border-bottom:1px solid var(--border);"><sc-for list="{{ dows }}" as="d"><div style="padding:9px 10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; color:var(--text-3);">{{ d }}</div></sc-for></div>
+        <div style="display:grid; grid-template-columns:repeat(7,minmax(0,1fr));">
+          <sc-for list="{{ cells }}" as="c">
+            <div onClick="{{ c.create }}" title="Click to add a task" style="min-height:112px; padding:8px; border-right:1px solid var(--border); border-bottom:1px solid var(--border); background:{{ c.bg }}; cursor:copy; display:flex; flex-direction:column; gap:4px;" style-hover="background:var(--surface-2);">
+              <span style="align-self:flex-start; min-width:24px; height:24px; padding:0 6px; border-radius:99px; background:{{ c.nbg }}; color:{{ c.nfg }}; font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center;">{{ c.d }}</span>
+              <sc-for list="{{ c.items }}" as="t"><button onClick="{{ t.open }}" style="display:flex; align-items:center; gap:5px; width:100%; border:0; border-radius:6px; padding:3px 6px; background:{{ t.bg }}; color:{{ t.fg }}; font-size:11.5px; font-weight:600; text-align:left; white-space:nowrap; overflow:hidden;"><sc-if value="{{ t.overdue }}"><span style="flex:none; width:6px; height:6px; border-radius:99px; background:var(--red);"></span></sc-if><span style="overflow:hidden; text-overflow:ellipsis;">{{ t.time }} {{ t.title }}</span></button></sc-for>
+              <sc-if value="{{ c.more }}"><span style="font-size:11.5px; color:var(--text-3); padding-left:4px;">+{{ c.more }} more</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+    <sc-if value="{{ m.week }}">
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;"><div style="display:grid; grid-template-columns:repeat(7,minmax(0,1fr));">
+        <sc-for list="{{ week }}" as="c"><div style="border-right:1px solid var(--border); min-height:360px; display:flex; flex-direction:column;"><div onClick="{{ c.create }}" style="padding:10px; border-bottom:1px solid var(--border); background:{{ c.hbg }}; cursor:copy;"><div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-3);">{{ c.dow }}</div><div style="font-size:18px; font-weight:700; color:{{ c.hfg }};">{{ c.d }}</div></div><div style="padding:8px; display:flex; flex-direction:column; gap:6px;"><sc-for list="{{ c.items }}" as="t"><button onClick="{{ t.open }}" style="border:0; border-left:3px solid {{ t.fg }}; border-radius:6px; padding:6px 8px; background:{{ t.bg }}; text-align:left; font-size:12px;"><div style="font-weight:700; color:{{ t.fg }};">{{ t.time }}</div><div style="color:var(--text); margin-top:2px; line-height:1.3;">{{ t.title }}</div></button></sc-for></div></div></sc-for>
+      </div></section>
+    </sc-if>
+    <sc-if value="{{ m.day }}">
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;"><sc-for list="{{ hours }}" as="h"><div onClick="{{ h.create }}" style="display:grid; grid-template-columns:72px 1fr; min-height:52px; border-bottom:1px solid var(--border); cursor:copy;" style-hover="background:var(--surface-2);"><div style="padding:10px 12px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--text-3); border-right:1px solid var(--border);">{{ h.l }}</div><div style="padding:6px 10px; display:flex; flex-direction:column; gap:4px;"><sc-for list="{{ h.items }}" as="t"><button onClick="{{ t.open }}" style="border:0; border-left:3px solid {{ t.fg }}; border-radius:6px; padding:7px 10px; background:{{ t.bg }}; text-align:left; font-size:13px; font-weight:600;">{{ t.time }} · {{ t.title }} <span style="font-weight:500; color:var(--text-2);">· {{ t.who }}</span></button></sc-for></div></div></sc-for></section>
+    </sc-if>
+    <sc-if value="{{ m.agenda }}">
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px;"><sc-for list="{{ agenda }}" as="g"><div style="padding:12px 18px; background:var(--surface-2); border-bottom:1px solid var(--border); font-weight:700; font-size:13.5px; color:{{ g.col }};">{{ g.l }}</div><sc-for list="{{ g.items }}" as="t"><button onClick="{{ t.open }}" style="display:flex; gap:14px; width:100%; border:0; border-bottom:1px solid var(--border); background:transparent; padding:12px 18px; text-align:left;"><span style="width:70px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-3);">{{ t.time }}</span><span style="flex:1; font-weight:600; font-size:14px;">{{ t.title }}</span><span style="font-size:12.5px; color:var(--text-2);">{{ t.who }}</span></button></sc-for></sc-for></section>
+    </sc-if>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { q: '', prio: '', who: '', closed: { done: true }, mode: 'month', anchor: null };
+  componentDidMount() { const h = () => { this.un = FB.sub(() => this.forceUpdate()); FB.preview && FB.preview('tasks'); this.forceUpdate(); }; if (window.FB) h(); else { const iv = setInterval(() => { if (window.FB) { clearInterval(iv); h(); } }, 40); } }
+  componentWillUnmount() { this.un && this.un(); }
+  renderVals() {
+    if (!window.FB) return {};
+    const S = FB.s, role = FB.role(), mgmt = role === 'management', st0 = this.state, now = FB.now;
+    const isCal = S.route.page === 'calendar' && FB.can('calendar');
+    const anchor = st0.anchor || new Date(2026, 9, 19);
+    let tasks = FB.tasksVisible();
+    if (st0.who) tasks = tasks.filter(t => t.assigneeId === st0.who);
+    const q = st0.q.toLowerCase();
+    const listTasks = tasks.filter(t => (!q || t.title.toLowerCase().includes(q)) && (!st0.prio || t.priority === st0.prio));
+    const open = t => t.status !== 'Completed' && t.status !== 'Cancelled';
+    const tone = t => { const ds = FB.dueState(t.due, !open(t)); return ds === 'overdue' ? ['var(--red-soft)', 'var(--red)'] : t.priority === 'High' ? ['var(--orange-soft)', 'var(--orange-text)'] : ['var(--primary-soft)', 'var(--primary-text)']; };
+    const row = t => { const ds = FB.dueState(t.due, !open(t)); const pt = FB.prioTone(t.priority); const done = t.status === 'Completed';
+      return { title: t.title, desc: t.desc || '', link: FB.linkAllowed(t.link) ? FB.linkLabel(t.link) : '', open: () => FB.openLink(t.link.type, t.link.id), who: FB.uname(t.assigneeId), ini: FB.initials(FB.uname(t.assigneeId).replace('Dev ', '')), due: done ? 'Done ' + (t.doneAt ? FB.dshort(t.doneAt) : '') : FB.dueLabel(t.due), dcol: ds === 'overdue' ? 'var(--red)' : ds === 'today' ? 'var(--orange-text)' : 'var(--text-2)', priority: t.priority, pbg: pt[0], pfg: pt[1], status: t.status, isDone: done, cbg: done ? 'var(--primary)' : 'var(--surface)', cbd: done ? 'var(--primary)' : 'var(--border-strong)', strike: done || t.status === 'Cancelled' ? 'line-through' : 'none', tcol: done ? 'var(--text-3)' : 'var(--text)', ro: !mgmt && t.assigneeId !== S.userId, toggle: () => FB.toggleTask(t.id), setStatus: e => FB.setTaskStatus(t.id, e.target.value), log: () => FB.drawer('note', t.link ? { rt: t.link.type, rid: t.link.id } : {}) }; };
+    const g = [
+      { id: 'overdue', l: 'Overdue', dot: 'var(--red)', col: 'var(--red)', list: listTasks.filter(t => open(t) && t.due && t.due < now), noneText: 'Nothing overdue.' },
+      { id: 'today', l: 'Today', dot: 'var(--orange)', col: 'var(--text)', list: listTasks.filter(t => open(t) && t.due && t.due >= now && FB.sameDay(t.due, now)), noneText: 'Nothing else due today.' },
+      { id: 'upcoming', l: 'Upcoming', dot: 'var(--blue)', col: 'var(--text)', list: listTasks.filter(t => open(t) && t.due && t.due > now && !FB.sameDay(t.due, now)), noneText: 'Nothing scheduled.' },
+      { id: 'none', l: 'No due date', dot: 'var(--text-3)', col: 'var(--text)', list: listTasks.filter(t => open(t) && !t.due), noneText: '' },
+      { id: 'done', l: 'Done', dot: 'var(--primary)', col: 'var(--text)', list: listTasks.filter(t => !open(t)), noneText: 'Nothing completed yet.' },
+    ].filter(x => x.id !== 'none' || x.list.length).map(x => { const op = !st0.closed[x.id]; return { ...x, n: x.list.length, rows: x.list.sort((a, b) => (a.due || 0) - (b.due || 0)).map(row), none: !x.list.length, open: op, chev: op ? 'chevron-up' : 'chevron-down', toggle: () => this.setState({ closed: { ...st0.closed, [x.id]: op } }) }; });
+    const sim = S.sim; const st = { loading: sim === 'loading', error: sim === 'error', empty: sim === 'empty', ok: !['loading', 'error', 'empty'].includes(sim) };
+    const vis = FB.tasksVisible();
+    const stats = [
+      { l: 'Open tasks', n: vis.filter(open).length, sub: 'pending or in progress', dot: 'var(--blue)' },
+      { l: 'Overdue', n: vis.filter(t => open(t) && t.due < now).length, sub: 'past their due time', dot: 'var(--red)', red: true },
+      { l: 'Due today', n: vis.filter(t => open(t) && t.due >= now && FB.sameDay(t.due, now)).length, sub: 'still to do before midnight', dot: 'var(--orange)' },
+      { l: 'Completed', n: vis.filter(t => t.status === 'Completed').length, sub: 'in the last 7 days', dot: 'var(--primary)' },
+    ].map(s => ({ ...s, col: s.red && s.n ? 'var(--red)' : 'var(--text)', bd: 'var(--border)', go: () => {} }));
+    const whoOpts = mgmt ? [{ v: '', l: 'Everyone' }, ...FB.users.filter(u => ['management', 'sales', 'delivery', 'technical'].includes(u.role)).map(u => ({ v: u.id, l: u.name }))] : [{ v: '', l: 'Just me' }];
+    const sc = FB.scopeStyle(mgmt ? 'org' : 'own');
+    const out = { label: isCal ? 'Calendar' : 'Tasks', title: isCal ? 'Calendar' : 'Tasks', isList: !isCal, isCal, mgmt, st, stats, groups: g, skel: [1, 2, 3, 4], retry: () => FB.simulate('normal'),
+      sc: { ...sc, label: (mgmt ? 'All organisation tasks · ' : 'My tasks · ') + vis.filter(open).length },
+      hint: mgmt ? 'You can create, assign, edit and complete any task.' : 'You can create tasks for yourself and complete your own.',
+      hasCal: FB.can('calendar'), views: [['tasks', 'List', 'list'], ['calendar', 'Calendar', 'calendar']].map(([id, l, icon]) => { const on = (id === 'calendar') === isCal; return { l, icon, bg: on ? 'var(--surface)' : 'transparent', sh: on ? 'var(--shadow-sm)' : 'none', fg: on ? 'var(--text)' : 'var(--text-2)', go: () => FB.go(id) }; }),
+      newTask: () => FB.drawer('task'), q: st0.q, setQ: e => this.setState({ q: e.target.value }), prio: st0.prio, setPrio: e => this.setState({ prio: e.target.value }), who: st0.who, setWho: e => this.setState({ who: e.target.value }), whoOpts,
+      teamLocked: !FB.can('calendar.team'), teamTip: FB.can('calendar.team') ? '' : 'The team calendar is visible to Management. You see your own tasks.' };
+    if (!isCal) return out;
+    const mode = st0.mode, MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const item = t => { const tn = tone(t); return { title: t.title, time: FB.time(t.due).replace(':00', ''), who: FB.uname(t.assigneeId), bg: tn[0], fg: tn[1], overdue: FB.dueState(t.due, !open(t)) === 'overdue', open: e => { e.stopPropagation(); t.link ? FB.openLink(t.link.type, t.link.id) : FB.go('tasks'); } }; };
+    const dayTasks = d => tasks.filter(t => t.due && FB.sameDay(t.due, d) && t.status !== 'Cancelled').sort((a, b) => a.due - b.due);
+    const create = d => e => { if (e && e.target !== e.currentTarget) return; const x = new Date(d); x.setHours(10, 0); FB.drawer('task', { due: x }); };
+    const shift = n => { const a = new Date(anchor); if (mode === 'month') a.setMonth(a.getMonth() + n); else if (mode === 'week') a.setDate(a.getDate() + 7 * n); else a.setDate(a.getDate() + n); this.setState({ anchor: a }); };
+    const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1); const startOff = (first.getDay() + 6) % 7; const gridStart = new Date(first); gridStart.setDate(1 - startOff);
+    const cells = Array.from({ length: 42 }, (_, i) => { const d = new Date(gridStart); d.setDate(gridStart.getDate() + i); const ts = dayTasks(d); const isT = FB.sameDay(d, now); const inM = d.getMonth() === anchor.getMonth(); return { d: d.getDate(), items: ts.slice(0, 3).map(item), more: ts.length > 3 ? ts.length - 3 : 0, bg: inM ? 'var(--surface)' : 'var(--surface-2)', nbg: isT ? '#ff9400' : 'transparent', nfg: isT ? '#1b1d1a' : inM ? 'var(--text)' : 'var(--text-3)', create: create(d) }; });
+    const wkStart = new Date(anchor); wkStart.setDate(anchor.getDate() - ((anchor.getDay() + 6) % 7));
+    const dowS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    const week = dowS.map((dw, i) => { const d = new Date(wkStart); d.setDate(wkStart.getDate() + i); const isT = FB.sameDay(d, now); return { dow: dw, d: d.getDate(), items: dayTasks(d).map(item), hbg: isT ? 'var(--orange-soft)' : 'var(--surface-2)', hfg: isT ? 'var(--orange-text)' : 'var(--text)', create: create(d) }; });
+    const hours = Array.from({ length: 11 }, (_, i) => { const h = 8 + i; const d = new Date(anchor); d.setHours(h, 0); return { l: String(h).padStart(2, '0') + ':00', items: dayTasks(anchor).filter(t => t.due.getHours() === h || (i === 0 && t.due.getHours() < 8) || (i === 10 && t.due.getHours() > 18)).map(item), create: e => { if (e.target !== e.currentTarget) return; FB.drawer('task', { due: d }); } }; });
+    const agendaDays = {}; tasks.filter(t => t.due && open(t)).sort((a, b) => a.due - b.due).forEach(t => { const k = t.due.toDateString(); (agendaDays[k] = agendaDays[k] || []).push(t); });
+    const agenda = Object.values(agendaDays).map(ts => { const d = ts[0].due; const ov = d < now && !FB.sameDay(d, now); return { l: (FB.sameDay(d, now) ? 'Today · ' : ov ? 'Overdue · ' : '') + d.toDateString().slice(0, 10), col: ov ? 'var(--red)' : 'var(--text)', items: ts.map(item) }; });
+    const titleFor = mode === 'month' ? MON[anchor.getMonth()] + ' ' + anchor.getFullYear() : mode === 'week' ? 'Week of ' + FB.dshort(wkStart) : mode === 'day' ? anchor.toDateString() : 'Upcoming and overdue';
+    return { ...out, calTitle: titleFor, prev: () => shift(-1), next: () => shift(1), today: () => this.setState({ anchor: new Date(2026, 9, 19) }), dows: dowS, cells, week, hours, agenda,
+      m: { month: mode === 'month', week: mode === 'week', day: mode === 'day', agenda: mode === 'list' },
+      modes: [['month', 'Month'], ['week', 'Week'], ['day', 'Day'], ['list', 'List']].map(([id, l]) => ({ l, bg: mode === id ? 'var(--surface)' : 'transparent', sh: mode === id ? 'var(--shadow-sm)' : 'none', fg: mode === id ? 'var(--text)' : 'var(--text-2)', go: () => this.setState({ mode: id }) })) };
+  }
+}
+</script>
+</body>
+</html>
