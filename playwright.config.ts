@@ -38,5 +38,16 @@ export default defineConfig({
     url: `${process.env.E2E_BASE_URL ?? "http://localhost:3100"}/api/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      // Every spec signs in through the real /login, and the suite as a whole
+      // signs in far more often than the production limit (5 per email per 15
+      // minutes) allows. Raised for this server only; the limiter itself is
+      // covered by tests/authRateLimiting.test.ts.
+      LOGIN_RATE_LIMIT_MAX_PER_EMAIL: "1000",
+      LOGIN_RATE_LIMIT_MAX_PER_IP: "1000",
+      // Notification emails and bell links are built from this; without it
+      // they point at the default dev port and a clicked notification dead-ends.
+      APP_BASE_URL: process.env.E2E_BASE_URL ?? "http://localhost:3100",
+    },
   },
 });
