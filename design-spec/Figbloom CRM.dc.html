@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>Figbloom CRM · Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="icons.js"></script>
+<script src="crm-store.js"></script>
+<style>
+:root,[data-theme="light"]{--bg:#faf9f7;--surface:#ffffff;--surface-2:#f6f5f1;--surface-3:#f1f0ec;--border:#e9e7e1;--border-strong:#dcd9d1;--text:#1b1d1a;--text-2:#5f625c;--text-3:#878a83;--side:#203e2a;--side-2:#2b4b35;--side-text:#ffffff;--primary:#275b3a;--primary-btn:#275b3a;--primary-hover:#1f4d30;--primary-soft:#e9f1eb;--primary-text:#275b3a;--orange:#ff9400;--orange-text:#a95a06;--orange-soft:#fdf2e3;--red:#c0403b;--red-soft:#fbeceb;--blue:#3a69a8;--blue-soft:#eaf0f8;--purple:#7650b0;--purple-soft:#f1ecf8;--overlay:rgba(24,30,25,.38);--shadow-sm:0 1px 2px rgba(25,35,27,.04),0 1px 3px rgba(25,35,27,.05);--shadow-md:0 10px 30px rgba(25,35,27,.08),0 2px 6px rgba(25,35,27,.04);--shadow-lg:0 30px 80px rgba(25,35,27,.22);--skel:#efede8;--skel-2:#f7f6f2;color:var(--text)}
+[data-theme="dark"]{--bg:#0f1512;--surface:#161e19;--surface-2:#1a241e;--surface-3:#202c24;--border:#26332b;--border-strong:#33443a;--text:#edf1ec;--text-2:#a9b3ab;--text-3:#808b83;--side:#0c1810;--side-2:#183022;--side-text:#ffffff;--primary:#5aa877;--primary-btn:#2f7449;--primary-hover:#38855a;--primary-soft:#1b3024;--primary-text:#8fd2a6;--orange:#ff9f1f;--orange-text:#f4b062;--orange-soft:#33261a;--red:#ec8580;--red-soft:#3a1f1e;--blue:#8db0e3;--blue-soft:#1b2636;--purple:#b99ae6;--purple-soft:#2a2238;--overlay:rgba(0,0,0,.55);--shadow-sm:0 1px 2px rgba(0,0,0,.3);--shadow-md:0 10px 30px rgba(0,0,0,.35);--shadow-lg:0 30px 80px rgba(0,0,0,.6);--skel:#202b24;--skel-2:#26332b;color:var(--text)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:'Instrument Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-size:14px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--primary-text);text-decoration:none}
+a:hover{color:var(--primary-hover);text-decoration:underline}
+:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+::selection{background:#ffd9a8;color:#1b1d1a}
+::placeholder{color:var(--text-3)}
+@keyframes fbIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fbSlide{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes fbFade{from{opacity:0}to{opacity:1}}
+@keyframes fbShimmer{0%{background-position:-600px 0}100%{background-position:600px 0}}
+*{scrollbar-width:thin;scrollbar-color:var(--border-strong) transparent}
+@keyframes fbBar{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+</style>
+</helmet>
+
+<div data-fb-root="1" style="height:100vh; width:100%; overflow:hidden; background:var(--bg); color:var(--text);">
+
+<sc-if value="{{ showAuth }}" hint-placeholder-val="{{ true }}">
+  <div data-theme="light" data-screen-label="{{ authLabel }}" style="display:flex; height:100vh; background:#ffffff; color:#1b1d1a;">
+    <div style="flex:0 0 45.75%; position:relative; overflow:hidden; background:#203e2a;">
+      <sc-if value="{{ auth.signup }}" hint-placeholder-val="{{ false }}"><img src="assets/auth-panel-signup.png" alt="Figbloom CRM: Every relationship, in full bloom." style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:left top; display:block;"></sc-if>
+      <sc-if value="{{ notSignup }}" hint-placeholder-val="{{ true }}"><img src="assets/auth-panel-login.png" alt="Figbloom CRM: Every relationship, in full bloom." style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:left top; display:block;"></sc-if>
+    </div>
+    <div style="flex:1; position:relative; display:flex; flex-direction:column; overflow:auto; background:radial-gradient(520px 420px at 100% 0%, #fdf0df 0%, rgba(255,255,255,0) 70%), #ffffff;">
+      <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:48px 32px;">
+        <div style="width:100%; max-width:440px;">
+
+          <sc-if value="{{ auth.login }}" hint-placeholder-val="{{ true }}">
+            <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 12px; background:#eef3ef; border-radius:999px; font-size:12.5px; font-weight:600; color:#203e2a;"><fb-icon name="shield" size="14" stroke="2"></fb-icon>Secure workspace sign-in</div>
+            <h1 style="margin:16px 0 10px; font-size:40px; line-height:1.05; font-weight:700; letter-spacing:-0.035em; color:#1a1c19;">Welcome back</h1>
+            <p style="margin:0 0 30px; font-size:15px; line-height:1.5; color:#6b6e68;">Sign in to pick up your leads, deals and tasks right where you left off.</p>
+            <div style="display:flex; flex-direction:column; gap:22px;">
+              <label style="display:flex; flex-direction:column; gap:8px;">
+                <span style="font-size:13px; font-weight:600; padding-left:4px;">Email address</span>
+                <span style="position:relative; display:block;">
+                  <span style="position:absolute; left:18px; top:15px; color:#9a9c95; display:flex;"><fb-icon name="mail" size="18"></fb-icon></span>
+                  <input type="email" placeholder="name@company.com" value="{{ form.email }}" onChange="{{ on.email }}" style="width:100%; height:50px; border-radius:999px; background:#faf9f7; border:1px solid #ecebe6; padding:0 18px 0 48px; font-size:14.5px; outline:none; color:#1a1c19;" style-focus="border-color:#1a1c19; background:#ffffff; box-shadow:0 0 0 4px rgba(32,62,42,.08);">
+                </span>
+              </label>
+              <label style="display:flex; flex-direction:column; gap:8px;">
+                <span style="display:flex; justify-content:space-between; font-size:13px; font-weight:600; padding:0 0 0 4px;"><span>Password</span><a href="#" onClick="{{ goForgot }}" style="font-weight:500; color:#5f625c;">Forgot password?</a></span>
+                <span style="position:relative; display:block;">
+                  <span style="position:absolute; left:18px; top:15px; color:#9a9c95; display:flex;"><fb-icon name="lock" size="18"></fb-icon></span>
+                  <input type="{{ pwType }}" placeholder="••••••••" value="{{ form.password }}" onChange="{{ on.password }}" onKeyDown="{{ onEnterLogin }}" style="width:100%; height:50px; border-radius:999px; background:#faf9f7; border:1px solid #ecebe6; padding:0 50px 0 48px; font-size:14.5px; outline:none; color:#1a1c19;" style-focus="border-color:#1a1c19; background:#ffffff; box-shadow:0 0 0 4px rgba(32,62,42,.08);">
+                  <button type="button" aria-label="Show password" onClick="{{ togglePw }}" style="position:absolute; right:12px; top:10px; width:30px; height:30px; border:0; background:transparent; color:#7b7e77; display:flex; align-items:center; justify-content:center; border-radius:999px;"><fb-icon name="{{ pwIcon }}" size="17"></fb-icon></button>
+                </span>
+              </label>
+            </div>
+            <sc-if value="{{ authErr }}"><div role="alert" style="margin-top:14px; display:flex; gap:8px; align-items:center; padding:10px 14px; border-radius:12px; background:#fbeceb; color:#a3332f; font-size:13px; font-weight:500;"><fb-icon name="alert" size="15"></fb-icon>{{ authErr }}</div></sc-if>
+            <button onClick="{{ doLogin }}" style="margin-top:26px; width:100%; height:54px; border:0; border-radius:999px; background:#203e2a; color:#ffffff; font-size:15.5px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 12px 26px rgba(32,62,42,.22);" style-hover="background:#18321f;">Sign in <fb-icon name="arrow-right" size="17" stroke="2.2"></fb-icon></button>
+            <div style="display:flex; align-items:center; gap:14px; margin:30px 0 22px; color:#a3a59e; font-size:12px;"><span style="flex:1; height:1px; background:#ecebe6;"></span>or<span style="flex:1; height:1px; background:#ecebe6;"></span></div>
+            <p style="margin:0; text-align:center; font-size:14px; color:#5f625c;">New to Figbloom CRM? <a href="#" onClick="{{ goSignup }}" style="font-weight:700; color:#1a1c19; text-decoration:underline; text-underline-offset:3px;">Create an account</a></p>
+            <div style="margin-top:28px; border:1px dashed #f0d1a3; background:#fffaf2; border-radius:14px; padding:14px 14px 15px;">
+              <div style="font-size:11.5px; font-weight:700; letter-spacing:.06em; color:#bd7417;">DEV ACCOUNTS · LOCAL ONLY</div>
+              <div style="display:flex; flex-wrap:wrap; gap:7px; margin-top:10px;">
+                <sc-for list="{{ devAccounts }}" as="a" hint-placeholder-count="6">
+                  <button onClick="{{ a.signIn }}" style="border:0; background:#203e2a; color:#ffffff; font-size:12.5px; font-weight:700; padding:6px 12px; border-radius:999px; letter-spacing:-0.01em;" style-hover="background:#2f5a3d;">{{ a.name }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ auth.signup }}" hint-placeholder-val="{{ false }}">
+            <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 12px; background:#eef3ef; border-radius:999px; font-size:12.5px; font-weight:600; color:#203e2a;"><fb-icon name="shield" size="14" stroke="2"></fb-icon>Secure workspace sign-up</div>
+            <h1 style="margin:16px 0 10px; font-size:40px; line-height:1.05; font-weight:700; letter-spacing:-0.035em; color:#1a1c19;">Create your account</h1>
+            <p style="margin:0 0 30px; font-size:15px; line-height:1.5; color:#6b6e68;">Creating an account doesn’t grant access to an organization on its own — an admin still needs to add you to one before you can see any CRM data.</p>
+            <div style="display:flex; flex-direction:column; gap:22px;">
+              <label style="display:flex; flex-direction:column; gap:8px;"><span style="font-size:13px; font-weight:600; padding-left:4px;">Full name</span>
+                <span style="position:relative; display:block;"><span style="position:absolute; left:18px; top:15px; color:#9a9c95; display:flex;"><fb-icon name="user" size="18"></fb-icon></span>
+                <input placeholder="Jane Doe" value="{{ form.name }}" onChange="{{ on.name }}" style="width:100%; height:50px; border-radius:999px; background:#faf9f7; border:1px solid #ecebe6; padding:0 18px 0 48px; font-size:14.5px; outline:none; color:#1a1c19;" style-focus="border-color:#1a1c19; background:#ffffff; box-shadow:0 0 0 4px rgba(32,62,42,.08);"></span></label>
+              <label style="display:flex; flex-direction:column; gap:8px;"><span style="font-size:13px; font-weight:600; padding-left:4px;">Email address</span>
+                <span style="position:relative; display:block;"><span style="position:absolute; left:18px; top:15px; color:#9a9c95; display:flex;"><fb-icon name="mail" size="18"></fb-icon></span>
+                <input type="email" placeholder="name@company.com" value="{{ form.email }}" onChange="{{ on.email }}" style="width:100%; height:50px; border-radius:999px; background:#faf9f7; border:1px solid #ecebe6; padding:0 18px 0 48px; font-size:14.5px; outline:none; color:#1a1c19;" style-focus="border-color:#1a1c19; background:#ffffff; box-shadow:0 0 0 4px rgba(32,62,42,.08);"></span></label>
+              <label style="display:flex; flex-direction:column; gap:8px;"><span style="font-size:13px; font-weight:600; padding-left:4px;">Password</span>
+                <span style="position:relative; display:block;"><span style="position:absolute; left:18px; top:15px; color:#9a9c95; display:flex;"><fb-icon name="lock" size="18"></fb-icon></span>
+                <input type="{{ pwType }}" placeholder="••••••••" value="{{ form.password }}" onChange="{{ on.password }}" style="width:100%; height:50px; border-radius:999px; background:#faf9f7; border:1px solid #ecebe6; padding:0 50px 0 48px; font-size:14.5px; outline:none; color:#1a1c19;" style-focus="border-color:#1a1c19; background:#ffffff; box-shadow:0 0 0 4px rgba(32,62,42,.08);">
+                <button type="button" aria-label="Show password" onClick="{{ togglePw }}" style="position:absolute; right:12px; top:10px; width:30px; height:30px; border:0; background:transparent; color:#7b7e77; display:flex; align-items:center; justify-content:center; border-radius:999px;"><fb-icon name="{{ pwIcon }}" size="17"></fb-icon></button></span></label>
+            </div>
+            <sc-if value="{{ authErr }}"><div role="alert" style="margin-top:14px; display:flex; gap:8px; align-items:center; padding:10px 14px; border-radius:12px; background:#fbeceb; color:#a3332f; font-size:13px; font-weight:500;"><fb-icon name="alert" size="15"></fb-icon>{{ authErr }}</div></sc-if>
+            <button onClick="{{ doSignup }}" style="margin-top:26px; width:100%; height:54px; border:0; border-radius:999px; background:#203e2a; color:#ffffff; font-size:15.5px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 12px 26px rgba(32,62,42,.22);" style-hover="background:#18321f;">Sign up <fb-icon name="arrow-right" size="17" stroke="2.2"></fb-icon></button>
+            <div style="display:flex; align-items:center; gap:14px; margin:30px 0 22px; color:#a3a59e; font-size:12px;"><span style="flex:1; height:1px; background:#ecebe6;"></span>or<span style="flex:1; height:1px; background:#ecebe6;"></span></div>
+            <p style="margin:0; text-align:center; font-size:14px; color:#5f625c;">Already have an account? <a href="#" onClick="{{ goLogin }}" style="font-weight:700; color:#1a1c19; text-decoration:underline; text-decoration-color:#ff9400; text-decoration-thickness:2px; text-underline-offset:3px;">Log in</a></p>
+          </sc-if>
+
+          <sc-if value="{{ auth.generic }}" hint-placeholder-val="{{ false }}">
+            <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 12px; background:{{ g.pillBg }}; border-radius:999px; font-size:12.5px; font-weight:600; color:{{ g.pillFg }};"><fb-icon name="{{ g.pillIcon }}" size="14" stroke="2"></fb-icon>{{ g.pill }}</div>
+            <sc-if value="{{ g.proposed }}"><div style="margin-top:10px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.06em; color:#bd7417;">PROPOSED ADDITION · NOT PART OF THE FROZEN SET</div></sc-if>
+            <h1 style="margin:16px 0 10px; font-size:40px; line-height:1.05; font-weight:700; letter-spacing:-0.035em; color:#1a1c19;">{{ g.title }}</h1>
+            <p style="margin:0 0 30px; font-size:15px; line-height:1.5; color:#6b6e68;">{{ g.body }}</p>
+            <div style="display:flex; flex-direction:column; gap:22px;">
+              <sc-for list="{{ g.fields }}" as="f" hint-placeholder-count="1">
+                <label style="display:flex; flex-direction:column; gap:8px;"><span style="font-size:13px; font-weight:600; padding-left:4px;">{{ f.label }}</span>
+                  <span style="position:relative; display:block;"><span style="position:absolute; left:18px; top:15px; color:#9a9c95; display:flex;"><fb-icon name="{{ f.icon }}" size="18"></fb-icon></span>
+                  <input type="{{ f.type }}" placeholder="{{ f.ph }}" value="{{ f.value }}" onChange="{{ f.onChange }}" readOnly="{{ f.ro }}" style="width:100%; height:50px; border-radius:999px; background:#faf9f7; border:1px solid #ecebe6; padding:0 18px 0 48px; font-size:14.5px; outline:none; color:#1a1c19;" style-focus="border-color:#1a1c19; background:#ffffff; box-shadow:0 0 0 4px rgba(32,62,42,.08);"></span></label>
+              </sc-for>
+            </div>
+            <sc-if value="{{ g.alt }}"><button type="button" onClick="{{ g.altGo }}" style="align-self:flex-start; margin-top:12px; border:0; background:transparent; padding:0; color:#203e2a; font-weight:700; font-size:13.5px; text-decoration:underline; text-underline-offset:3px;">{{ g.alt }}</button></sc-if>
+            <sc-if value="{{ g.notice }}"><div style="margin-top:4px; display:flex; gap:10px; align-items:flex-start; padding:14px 16px; border-radius:14px; background:#eef3ef; color:#203e2a; font-size:13.5px; line-height:1.45;"><fb-icon name="check-circle" size="17"></fb-icon><span>{{ g.notice }}</span></div></sc-if>
+            <sc-if value="{{ authErr }}"><div role="alert" style="margin-top:14px; display:flex; gap:8px; align-items:center; padding:10px 14px; border-radius:12px; background:#fbeceb; color:#a3332f; font-size:13px; font-weight:500;"><fb-icon name="alert" size="15"></fb-icon>{{ authErr }}</div></sc-if>
+            <sc-if value="{{ g.hasCta }}"><button onClick="{{ g.cta }}" style="margin-top:26px; width:100%; height:54px; border:0; border-radius:999px; background:#203e2a; color:#ffffff; font-size:15.5px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 12px 26px rgba(32,62,42,.22);" style-hover="background:#18321f;">{{ g.ctaLabel }} <fb-icon name="arrow-right" size="17" stroke="2.2"></fb-icon></button></sc-if>
+            <div style="display:flex; align-items:center; gap:14px; margin:30px 0 22px; color:#a3a59e; font-size:12px;"><span style="flex:1; height:1px; background:#ecebe6;"></span>or<span style="flex:1; height:1px; background:#ecebe6;"></span></div>
+            <p style="margin:0; text-align:center; font-size:14px; color:#5f625c;">{{ g.foot }} <a href="#" onClick="{{ goLogin }}" style="font-weight:700; color:#1a1c19; text-decoration:underline; text-underline-offset:3px;">Log in</a></p>
+          </sc-if>
+
+        </div>
+      </div>
+      <div style="padding:0 0 30px; text-align:center; font-size:12.5px; color:#8b8d86;">Protected by role-based access · Figbloom Digital Group</div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ showPlatform }}" hint-placeholder-val="{{ false }}"><dc-import name="CrmPlatform" hint-size="100%,100vh"></dc-import></sc-if>
+<sc-if value="{{ showPlatformMobile }}" hint-placeholder-val="{{ false }}"><div style="height:100vh; overflow:auto; background:#e7e5df; display:flex; align-items:flex-start; justify-content:center; gap:40px; padding:36px 24px 120px;"><div style="flex:none; width:395px; height:832px; border-radius:52px; background:#121412; padding:10px; box-shadow:0 30px 80px rgba(0,0,0,.25);"><div style="width:375px; height:812px; border-radius:42px; overflow:hidden; position:relative; background:var(--bg);"><dc-import name="CrmPlatform" mobile="{{ true }}" hint-size="375px,812px"></dc-import></div></div><div style="flex:none; width:300px; padding-top:30px; color:#3c3f3a; font-size:13.5px; line-height:1.55;"><div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em; color:#7650b0;">PLATFORM · MOBILE 375 PX</div><h2 style="margin:8px 0 10px; font-size:24px; letter-spacing:-0.03em; color:#1b1d1a;">See an incident, approve a request.</h2><p style="margin:0;">Only Home, Health and Approvals exist on the phone. Provisioning, suspension and everything else stay on desktop.</p></div></div></sc-if>
+<sc-if value="{{ showSuspended }}" hint-placeholder-val="{{ false }}"><div data-screen-label="OS1 Suspended organisation" style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; background:var(--bg);"><div style="max-width:520px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:36px; display:flex; flex-direction:column; gap:12px;"><img src="assets/logo-mark.png" alt="" style="width:30px; height:38px; object-fit:contain;"><span style="align-self:flex-start; font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:2px 7px; border-radius:6px; background:var(--blue-soft); color:var(--blue);">V1.1</span><h1 style="margin:0; font-size:26px; letter-spacing:-0.03em;">This workspace is paused</h1><p style="margin:0; font-size:15px; line-height:1.55; color:var(--text-2);">FigBloom Digital Group’s Figbloom CRM workspace has been suspended. Your data is safe and nothing has been deleted, but nobody can sign in until it’s reactivated.</p><p style="margin:0; font-size:14px; color:var(--text-2);">If you think this is a mistake, contact your organisation’s Management or {{ suspContact }}.</p><button onClick="{{ signOut }}" style="align-self:flex-start; margin-top:8px; height:42px; padding:0 18px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Sign out</button></div></div></sc-if>
+<sc-if value="{{ showApp }}" hint-placeholder-val="{{ false }}">
+  <div data-fb-shell="1" style="display:flex; height:100vh; background:var(--bg);">
+    <aside data-screen-label="Sidebar" style="flex:none; width:{{ sideW }}; background:var(--side); color:#ffffff; display:flex; flex-direction:column; transition:width .2s ease; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:10px; padding:20px 16px 14px 18px; min-height:76px;">
+        <img src="assets/logo-mark.png" alt="" style="width:34px; height:42px; object-fit:contain; flex:none;">
+        <sc-if value="{{ expanded }}"><div style="flex:1; font-size:23px; font-weight:700; letter-spacing:-0.035em; white-space:nowrap;">Figbloom <span style="font-weight:400; color:#ff9400;">CRM</span></div></sc-if>
+        <button aria-label="Collapse sidebar" onClick="{{ toggleSide }}" style="flex:none; width:28px; height:28px; border:0; background:transparent; color:rgba(255,255,255,.7); border-radius:8px; display:flex; align-items:center; justify-content:center;" style-hover="background:rgba(255,255,255,.08); color:#ffffff;"><fb-icon name="{{ sideIcon }}" size="17"></fb-icon></button>
+      </div>
+      <sc-if value="{{ expanded }}">
+        <div style="padding:0 12px 6px; position:relative;">
+          <span style="position:absolute; left:24px; top:10px; color:rgba(255,255,255,.6); display:flex;"><fb-icon name="search" size="15"></fb-icon></span>
+          <input placeholder="Search..." value="{{ navQ }}" onChange="{{ setNavQ }}" aria-label="Filter navigation" style="width:100%; height:36px; border-radius:10px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.1); color:#ffffff; padding:0 12px 0 36px; font-size:13.5px; outline:none;" style-focus="border-color:rgba(255,255,255,.4);">
+        </div>
+      </sc-if>
+      <nav aria-label="Main" style="flex:1 1 0; min-height:0; overflow-y:auto; padding:4px 8px 18px; -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 26px),transparent); mask-image:linear-gradient(to bottom,#000 calc(100% - 26px),transparent);">
+        <sc-for list="{{ navTop }}" as="sec" hint-placeholder-count="3">
+          <div style="padding:16px 12px 7px; font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:rgba(255,255,255,.6); white-space:nowrap; min-height:38px;">{{ sec.label }}</div>
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <sc-for list="{{ sec.items }}" as="it">
+              <button onClick="{{ it.go }}" title="{{ it.label }}" aria-current="{{ it.cur }}" style="display:flex; align-items:center; gap:12px; width:100%; text-align:left; border:0; padding:10px 12px; border-radius:10px; background:{{ it.bg }}; color:{{ it.fg }}; font-size:15px; font-weight:{{ it.fw }}; white-space:nowrap;" style-hover="background:{{ it.hov }};">
+                <span style="display:flex; color:{{ it.ic }};"><fb-icon name="{{ it.icon }}" size="18"></fb-icon></span>
+                <sc-if value="{{ expanded }}"><span style="flex:1;">{{ it.label }}</span></sc-if>
+                <sc-if value="{{ it.badge }}"><span style="font-size:11px; font-weight:700; min-width:20px; text-align:center; padding:1px 6px; border-radius:999px; background:#ff9400; color:#1b1d1a;">{{ it.badge }}</span></sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </sc-for>
+      </nav>
+      <div style="flex:none; border-top:1px solid rgba(255,255,255,.16); background:rgba(0,0,0,.16); padding:0 8px 6px;">
+        <sc-for list="{{ navBottom }}" as="sec">
+          <div style="padding:16px 12px 7px; font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:rgba(255,255,255,.6); white-space:nowrap; min-height:38px;">{{ sec.label }}</div>
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <sc-for list="{{ sec.items }}" as="it">
+              <button onClick="{{ it.go }}" title="{{ it.label }}" style="display:flex; align-items:center; gap:12px; width:100%; text-align:left; border:0; padding:10px 12px; border-radius:10px; background:{{ it.bg }}; color:{{ it.fg }}; font-size:15px; font-weight:{{ it.fw }}; white-space:nowrap;" style-hover="background:{{ it.hov }};">
+                <span style="display:flex; color:{{ it.ic }};"><fb-icon name="{{ it.icon }}" size="18"></fb-icon></span>
+                <sc-if value="{{ expanded }}"><span>{{ it.label }}</span></sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin:4px 10px 12px; padding:10px; border-radius:14px; background:rgba(255,255,255,.08); display:flex; align-items:center; gap:10px;">
+        <div style="flex:none; width:34px; height:34px; border-radius:999px; background:#ffffff; color:#203e2a; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;">{{ me.letter }}</div>
+        <sc-if value="{{ expanded }}"><div style="flex:1; min-width:0;"><div style="font-size:14px; font-weight:700; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ me.name }}</div><div style="font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:rgba(255,255,255,.62); white-space:nowrap;">{{ me.role }}</div></div>
+        <button aria-label="Sign out" onClick="{{ signOut }}" style="flex:none; width:32px; height:32px; border-radius:9px; border:1px solid rgba(255,255,255,.18); background:transparent; color:#ffffff; display:flex; align-items:center; justify-content:center;" style-hover="background:rgba(255,255,255,.1);"><fb-icon name="logout" size="16"></fb-icon></button></sc-if>
+      </div>
+    </aside>
+
+    <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+      <header style="flex:none; height:66px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; padding:0 22px 0 30px; position:relative; z-index:30;">
+        <div data-screen-label="TB1 Identity block" style="flex:0 1 320px; min-width:{{ idMin }}; position:relative;">
+          <button onClick="{{ toggleId }}" aria-haspopup="dialog" aria-expanded="{{ idOpen }}" title="{{ idTitle }}" style="display:flex; align-items:center; gap:10px; border:0; background:transparent; padding:4px 10px 4px 4px; border-radius:12px; max-width:100%; text-align:left;" style-hover="background:var(--surface-2);">
+            <span style="flex:none; width:36px; height:36px; border-radius:10px; background:{{ idn.logoBg }}; color:#ffffff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; overflow:hidden;"><sc-if value="{{ idn.mark }}"><img src="assets/logo-mark.png" alt="" style="width:18px; height:23px; object-fit:contain;"></sc-if><sc-if value="{{ idn.letters }}">{{ idn.letters }}</sc-if></span>
+            <sc-if value="{{ idn.wide }}"><span style="min-width:0; display:flex; flex-direction:column;"><span style="font-size:14.5px; font-weight:700; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ idn.org }}</span><span style="font-size:12px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ idn.label }}Signed in <time datetime="{{ idn.iso }}">{{ idn.time }}</time></span></span></sc-if>
+            <sc-if value="{{ idn.multi }}"><span style="flex:none; display:flex; color:var(--text-3);"><fb-icon name="chevron-down" size="15"></fb-icon></span></sc-if>
+          </button>
+          <sc-if value="{{ idOpen }}">
+            <div role="dialog" aria-label="Organisation and session" data-screen-label="TB2 Identity popover" style="position:absolute; top:52px; left:0; width:360px; max-width:92vw; z-index:40; background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-md); overflow:hidden; animation:fbIn .16s ease;">
+              <div style="display:flex; gap:12px; align-items:center; padding:16px;"><span style="flex:none; width:44px; height:44px; border-radius:12px; background:{{ idn.logoBg }}; color:#ffffff; display:flex; align-items:center; justify-content:center; font-weight:700;"><sc-if value="{{ idn.mark }}"><img src="assets/logo-mark.png" alt="" style="width:22px; height:28px; object-fit:contain;"></sc-if><sc-if value="{{ idn.letters }}">{{ idn.letters }}</sc-if></span><div style="min-width:0;"><div style="font-weight:700; font-size:15px;">{{ idn.org }}</div><div style="font-size:12.5px; color:var(--text-2);">You’re <strong>{{ idn.role }}</strong> here</div></div></div>
+              <sc-if value="{{ idn.support }}"><div style="margin:0 16px 10px; padding:8px 10px; border-radius:10px; background:#ff9400; color:#1b1d1a; font-size:12.5px; font-weight:700; display:flex; gap:6px; align-items:center;"><fb-icon name="eye" size="14"></fb-icon>{{ idn.support }}</div></sc-if>
+              <dl style="margin:0; padding:12px 16px; border-top:1px solid var(--border); display:grid; grid-template-columns:auto 1fr; gap:7px 14px; font-size:13px;"><dt style="color:var(--text-3);">Signed in</dt><dd style="margin:0; font-weight:600;"><time datetime="{{ idn.iso }}">{{ idn.full }}</time></dd><dt style="color:var(--text-3);">Device</dt><dd style="margin:0;">Chrome, Nairobi</dd><dt style="color:var(--text-3);">Session</dt><dd style="margin:0;">{{ idn.remaining }}</dd><sc-if value="{{ idn.tzNote }}"><dt style="color:var(--text-3);">Time zone</dt><dd style="margin:0; color:var(--orange-text);">{{ idn.tzNote }}</dd></sc-if></dl>
+              <sc-if value="{{ idn.multi }}"><div data-screen-label="TB4 Organisation switcher" style="border-top:1px solid var(--border); padding:10px 8px;"><div style="display:flex; justify-content:space-between; align-items:center; padding:0 8px 6px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; color:var(--text-3);">SWITCH ORGANISATION · ALT+O</span><span style="font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--blue-soft); color:var(--blue);">V1.1</span></div>
+                <sc-if value="{{ idn.search }}"><input value="{{ orgQ }}" onChange="{{ setOrgQ }}" placeholder="Find an organisation" style="width:calc(100% - 16px); margin:0 8px 6px; height:34px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px;"></sc-if>
+                <sc-for list="{{ idn.orgs }}" as="o"><button onClick="{{ o.go }}" disabled="{{ o.dis }}" style="display:flex; align-items:center; gap:10px; width:100%; padding:8px; border:0; border-radius:10px; background:{{ o.bg }}; text-align:left; opacity:{{ o.op }};" style-hover="background:var(--surface-2);"><span style="flex:none; width:30px; height:30px; border-radius:8px; background:{{ o.lbg }}; color:#ffffff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">{{ o.ini }}</span><span style="flex:1; min-width:0;"><span style="display:block; font-weight:600; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ o.name }}</span><span style="display:block; font-size:12px; color:var(--text-3);">{{ o.meta }}</span></span><sc-if value="{{ o.unread }}"><span style="font-size:11px; font-weight:700; padding:1px 7px; border-radius:999px; background:#ff9400; color:#1b1d1a;">{{ o.unread }}</span></sc-if><sc-if value="{{ o.cur }}"><fb-icon name="check" size="15"></fb-icon></sc-if><sc-if value="{{ o.invite }}"><span style="font-size:12px; font-weight:700; padding:4px 10px; border-radius:8px; background:var(--primary-btn); color:#ffffff;">Accept</span></sc-if></button></sc-for></div></sc-if>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:2px; padding:8px; border-top:1px solid var(--border);"><sc-for list="{{ idn.links }}" as="l"><button onClick="{{ l.go }}" style="display:flex; gap:8px; align-items:center; border:0; background:transparent; padding:9px 10px; border-radius:9px; font-size:13.5px; text-align:left; color:{{ l.col }};" style-hover="background:var(--surface-2);"><fb-icon name="{{ l.icon }}" size="15"></fb-icon>{{ l.l }}</button></sc-for></div>
+            </div>
+          </sc-if>
+        </div>
+        <div style="position:relative; flex:1 1 240px; min-width:44px; max-width:460px; margin:0 auto; overflow:hidden; border-radius:10px;">
+          <span style="position:absolute; left:13px; top:10px; color:var(--text-3); display:flex;"><fb-icon name="search" size="17"></fb-icon></span>
+          <input placeholder="Search Figbloom CRM" value="{{ q }}" onChange="{{ setQ }}" onFocus="{{ openSearch }}" onKeyDown="{{ searchKey }}" aria-label="Search records" style="width:100%; height:38px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); padding:0 60px 0 40px; font-size:14px; outline:none;" style-focus="border-color:var(--primary); background:var(--surface);">
+          <span style="position:absolute; right:10px; top:9px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-3); border:1px solid var(--border); border-radius:6px; padding:1px 6px; background:var(--surface);">Enter</span>
+          <sc-if value="{{ searchOpen }}">
+            <div style="position:absolute; top:46px; left:0; right:0; background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-md); padding:8px; animation:fbIn .16s ease;">
+              <sc-for list="{{ quickResults }}" as="r">
+                <button onClick="{{ r.go }}" style="display:flex; align-items:center; gap:10px; width:100%; border:0; background:transparent; text-align:left; padding:9px 10px; border-radius:10px;" style-hover="background:var(--surface-2);">
+                  <span style="width:28px; height:28px; border-radius:8px; background:var(--surface-3); color:var(--text-2); display:flex; align-items:center; justify-content:center;"><fb-icon name="{{ r.icon }}" size="15"></fb-icon></span>
+                  <span style="flex:1; min-width:0;"><span style="display:block; font-weight:600; font-size:13.5px;">{{ r.title }}</span><span style="display:block; font-size:12px; color:var(--text-3);">{{ r.sub }}</span></span>
+                  <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-3); text-transform:uppercase;">{{ r.kind }}</span>
+                </button>
+              </sc-for>
+              <sc-if value="{{ noQuick }}"><div style="padding:14px 10px; font-size:13px; color:var(--text-3);">No matches in records you can access.</div></sc-if>
+              <button onClick="{{ seeAll }}" style="margin-top:4px; width:100%; border:0; border-top:1px solid var(--border); background:transparent; padding:10px; font-size:13px; font-weight:600; color:var(--primary-text); text-align:left;">See all results for “{{ q }}”</button>
+            </div>
+          </sc-if>
+        </div>
+        <div style="flex:1 0 auto; display:flex; justify-content:flex-end; align-items:center; gap:10px;">
+          <sc-if value="{{ createItems.length }}">
+            <button aria-label="Add new" title="Add new" onClick="{{ openCreate }}" style="width:36px; height:36px; border-radius:999px; border:0; background:var(--primary-btn); color:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-sm);" style-hover="background:var(--primary-hover);"><fb-icon name="plus" size="18" stroke="2.2"></fb-icon></button>
+          </sc-if>
+          <sc-if value="{{ relV11 }}"><button aria-label="Command palette (Ctrl+K)" title="Command palette · Ctrl/Cmd+K" onClick="{{ openPalette }}" style="height:36px; padding:0 10px; border-radius:999px; border:1px solid var(--border); background:var(--surface); color:var(--text-2); display:flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:11.5px;" style-hover="background:var(--surface-2);"><fb-icon name="command" size="14"></fb-icon>K</button></sc-if>
+          <button aria-label="Help and what's new" title="Help and what's new" onClick="{{ openHelp }}" style="position:relative; width:36px; height:36px; border-radius:999px; border:1px solid var(--border); background:var(--surface); color:var(--text-2); display:flex; align-items:center; justify-content:center;" style-hover="background:var(--surface-2); color:var(--text);"><fb-icon name="help" size="17"></fb-icon></button>
+          <button aria-label="Notifications" title="Notifications" onClick="{{ openNotif }}" style="position:relative; width:36px; height:36px; border-radius:999px; border:1px solid var(--border); background:var(--surface); color:var(--text-2); display:flex; align-items:center; justify-content:center;" style-hover="background:var(--surface-2); color:var(--text);"><fb-icon name="bell" size="17"></fb-icon>
+            <sc-if value="{{ unread }}"><span style="position:absolute; top:-3px; right:-3px; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:#ff9400; color:#1b1d1a; font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center; border:2px solid var(--surface);">{{ unread }}</span></sc-if></button>
+          <button aria-label="Toggle dark mode" title="Toggle dark mode" onClick="{{ toggleTheme }}" style="position:relative; width:36px; height:36px; border-radius:999px; border:1px solid var(--border); background:var(--surface); color:var(--text-2); display:flex; align-items:center; justify-content:center;" style-hover="background:var(--surface-2); color:var(--text);"><fb-icon name="{{ themeIcon }}" size="17"></fb-icon></button>
+          <button onClick="{{ openUser }}" style="display:flex; align-items:center; gap:8px; height:38px; padding:0 12px 0 4px; border-radius:999px; border:1px solid var(--border); background:var(--surface-2); white-space:nowrap;" style-hover="background:var(--surface-3);">
+            <span style="width:28px; height:28px; border-radius:999px; background:var(--side); color:#ffffff; font-weight:700; font-size:12.5px; display:flex; align-items:center; justify-content:center;">{{ me.letter }}</span>
+            <sc-if value="{{ wideUser }}"><span style="display:flex; flex-direction:column; line-height:1.15; text-align:left;"><span style="font-size:13.5px; font-weight:600;">{{ me.name }}</span><span style="font-size:11px; color:var(--text-3);">{{ me.role }}</span></span></sc-if>
+            <fb-icon name="chevron-down" size="15"></fb-icon>
+          </button>
+        </div>
+
+        <sc-if value="{{ menuCreate }}">
+          <div style="position:absolute; top:58px; right:180px; width:260px; background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-md); padding:6px; animation:fbIn .16s ease;">
+            <div style="padding:8px 10px 6px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; color:var(--text-3);">QUICK CREATE</div>
+            <sc-for list="{{ createItems }}" as="c">
+              <button onClick="{{ c.go }}" style="display:flex; align-items:center; gap:10px; width:100%; border:0; background:transparent; text-align:left; padding:10px; border-radius:10px; font-size:14px; font-weight:500;" style-hover="background:var(--surface-2);"><span style="display:flex; color:var(--primary-text);"><fb-icon name="{{ c.icon }}" size="17"></fb-icon></span><span style="flex:1;">{{ c.label }}</span><span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-3);">{{ c.key }}</span></button>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ menuNotif }}">
+          <div style="position:absolute; top:58px; right:120px; width:380px; background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow-md); overflow:hidden; animation:fbIn .16s ease;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border);"><strong style="font-size:15px;">Notifications</strong><button onClick="{{ readAll }}" style="border:0; background:transparent; color:var(--primary-text); font-size:13px; font-weight:600;">Mark all read</button></div>
+            <div style="max-height:380px; overflow:auto;">
+              <sc-for list="{{ notifs }}" as="n">
+                <button onClick="{{ n.go }}" style="display:flex; gap:12px; width:100%; border:0; border-bottom:1px solid var(--border); background:{{ n.bg }}; text-align:left; padding:12px 16px;" style-hover="background:var(--surface-2);">
+                  <span style="flex:none; width:8px; height:8px; margin-top:6px; border-radius:99px; background:{{ n.dot }};"></span>
+                  <span style="flex:1;"><span style="display:block; font-size:11px; font-family:'IBM Plex Mono',monospace; letter-spacing:.05em; color:var(--text-3); text-transform:uppercase;">{{ n.type }} · {{ n.ago }}</span><span style="display:block; font-size:13.5px; margin-top:3px; line-height:1.4;">{{ n.text }}</span></span>
+                </button>
+              </sc-for>
+              <sc-if value="{{ noNotifs }}"><div style="padding:28px 16px; text-align:center; color:var(--text-3); font-size:13.5px;">You’re all caught up.</div></sc-if>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:10px 16px;"><button onClick="{{ goNotifs }}" style="border:0; background:transparent; color:var(--primary-text); font-weight:600; font-size:13px;">Open notification centre</button><button onClick="{{ goProfile }}" style="border:0; background:transparent; color:var(--text-2); font-size:13px;">Preferences</button></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ menuUser }}">
+          <div style="position:absolute; top:58px; right:22px; width:250px; background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow-md); padding:6px; animation:fbIn .16s ease;">
+            <div style="padding:10px 10px 12px; border-bottom:1px solid var(--border); margin-bottom:4px;"><div style="font-weight:700;">{{ me.name }}</div><div style="font-size:12.5px; color:var(--text-3);">{{ me.email }}</div><div style="margin-top:8px; display:inline-flex; padding:2px 9px; border-radius:999px; background:var(--primary-soft); color:var(--primary-text); font-size:11.5px; font-weight:600;">{{ me.role }}</div></div>
+            <sc-if value="{{ orgSwitch }}"><div style="padding:6px 6px 8px; border-bottom:1px solid var(--border); margin-bottom:4px;"><div style="display:flex; justify-content:space-between; align-items:center; padding:0 4px;"><span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; color:var(--text-3);">ORGANISATIONS</span><span style="font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; background:var(--blue-soft); color:var(--blue);">V1.1</span></div><sc-for list="{{ orgs }}" as="o"><button onClick="{{ o.go }}" style="display:flex; align-items:center; gap:8px; width:100%; margin-top:5px; padding:8px; border:0; border-radius:9px; background:{{ o.bg }}; text-align:left;" style-hover="background:var(--surface-2);"><span style="width:24px; height:24px; border-radius:7px; background:{{ o.chip }}; color:#ffffff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">{{ o.ini }}</span><span style="flex:1; min-width:0;"><span style="display:block; font-size:13px; font-weight:600;">{{ o.name }}</span><span style="display:block; font-size:11.5px; color:var(--text-3);">{{ o.role }}</span></span><sc-if value="{{ o.cur }}"><fb-icon name="check" size="14"></fb-icon></sc-if></button></sc-for></div></sc-if>
+            <button onClick="{{ goProfile }}" style="display:flex; gap:10px; width:100%; border:0; background:transparent; padding:10px; border-radius:9px; font-size:14px; text-align:left;" style-hover="background:var(--surface-2);"><fb-icon name="user" size="16"></fb-icon>Profile</button>
+            <button onClick="{{ goProfile }}" style="display:flex; gap:10px; width:100%; border:0; background:transparent; padding:10px; border-radius:9px; font-size:14px; text-align:left;" style-hover="background:var(--surface-2);"><fb-icon name="bell" size="16"></fb-icon>Notifications</button>
+            <button onClick="{{ goAppearance }}" style="display:flex; gap:10px; width:100%; border:0; background:transparent; padding:10px; border-radius:9px; font-size:14px; text-align:left;" style-hover="background:var(--surface-2);"><fb-icon name="sliders" size="16"></fb-icon>Appearance</button>
+            <button onClick="{{ toggleTheme }}" style="display:flex; gap:10px; width:100%; border:0; background:transparent; padding:10px; border-radius:9px; font-size:14px; text-align:left;" style-hover="background:var(--surface-2);"><fb-icon name="{{ themeIcon }}" size="16"></fb-icon>{{ themeLabel }}</button>
+            <button onClick="{{ signOut }}" style="display:flex; gap:10px; width:100%; border:0; background:transparent; padding:10px; border-radius:9px; font-size:14px; text-align:left; color:var(--red);" style-hover="background:var(--red-soft);"><fb-icon name="logout" size="16"></fb-icon>Sign out</button>
+          </div>
+        </sc-if>
+      </header>
+      <sc-if value="{{ menuAny }}"><div onClick="{{ closeMenu }}" style="position:fixed; inset:0; z-index:20;"></div></sc-if>
+
+      <sc-if value="{{ offline }}"><div role="status" style="flex:none; display:flex; align-items:center; justify-content:center; gap:10px; padding:9px 16px; background:var(--orange-soft); color:var(--orange-text); font-size:13.5px; font-weight:600; border-bottom:1px solid var(--border);"><fb-icon name="wifi-off" size="16"></fb-icon>You’re offline. You can keep reading; anything you save is queued and syncs when you’re back.</div></sc-if>
+      <sc-if value="{{ slow }}"><div style="flex:none; height:3px; background:var(--surface-3); overflow:hidden;"><div style="width:40%; height:3px; background:#ff9400; animation:fbBar 1.2s ease-in-out infinite;"></div></div></sc-if>
+
+      <sc-if value="{{ expiring }}"><div role="alert" data-screen-label="TB3 Session expiring" style="flex:none; display:flex; align-items:center; justify-content:center; gap:12px; padding:9px 16px; background:var(--blue-soft); color:var(--blue); font-size:13.5px; font-weight:600;"><fb-icon name="clock" size="16"></fb-icon><span>Your session ends in 5 minutes. Anything unsaved stays in this tab.</span><button onClick="{{ staySigned }}" style="height:30px; padding:0 12px; border-radius:8px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Stay signed in</button><button onClick="{{ signOut }}" style="height:30px; padding:0 12px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Sign out</button></div></sc-if>
+      <sc-if value="{{ supportBanner }}"><div role="status" data-screen-label="OS3 Support access banner" style="flex:none; display:flex; align-items:center; justify-content:center; gap:10px; padding:8px 16px; background:#ff9400; color:#1b1d1a; font-size:13.5px; font-weight:700;"><fb-icon name="eye" size="16"></fb-icon><span>{{ supportBanner }}</span><sc-if value="{{ canEndSupport }}"><button onClick="{{ endSupport }}" style="height:28px; padding:0 10px; border-radius:7px; border:1.5px solid #1b1d1a; background:transparent; color:#1b1d1a; font-weight:700; font-size:12.5px;">End now</button></sc-if></div></sc-if>
+      <sc-if value="{{ announce }}"><div role="status" data-screen-label="OS5 Announcement banner" style="flex:none; display:flex; align-items:center; gap:10px; padding:9px 18px; background:var(--blue-soft); color:var(--blue); font-size:13.5px; border-bottom:1px solid var(--border);"><fb-icon name="info" size="16"></fb-icon><span style="flex:1;"><strong>{{ announce.title }}</strong> {{ announce.body }}</span><button aria-label="Dismiss" onClick="{{ dismissAnn }}" style="width:28px; height:28px; border:0; border-radius:7px; background:transparent; color:var(--blue); display:flex; align-items:center; justify-content:center;"><fb-icon name="x" size="14"></fb-icon></button></div></sc-if>
+      <main id="fb-main" style="flex:1; overflow:auto; position:relative;">
+        <div style="max-width:1300px; margin:0 auto; padding:32px 40px 140px;">
+          <sc-if value="{{ notFound }}"><div data-screen-label="PL15 Not found" style="padding:80px 0; text-align:center;"><div style="font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--text-3);">404</div><h1 style="margin:8px 0 6px; font-size:26px;">Page not found</h1><p style="margin:0; color:var(--text-2);">The page you’re looking for doesn’t exist.</p><button onClick="{{ goHome }}" style="margin-top:16px; height:40px; padding:0 16px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Go to dashboard</button></div></sc-if>
+          <sc-if value="{{ supportCard }}"><section data-screen-label="OS2 Support access approval" style="margin-bottom:18px; background:var(--surface); border:2px solid #ff9400; border-radius:16px; padding:18px 20px; display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;"><span style="flex:none; width:42px; height:42px; border-radius:12px; background:var(--orange-soft); color:var(--orange-text); display:flex; align-items:center; justify-content:center;"><fb-icon name="eye" size="20"></fb-icon></span><div style="flex:1; min-width:260px;"><div style="display:flex; gap:8px; align-items:center;"><strong style="font-size:15.5px;">Figbloom Support asks to view your workspace</strong><span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:2px 7px; border-radius:6px; background:var(--purple-soft); color:var(--purple);">V2</span></div><div style="font-size:13.5px; color:var(--text-2); margin-top:4px; line-height:1.5;">{{ supportCard.reason }}</div><div style="font-size:12.5px; color:var(--text-3); margin-top:6px;">{{ supportCard.scope }} · {{ supportCard.mins }} minutes · customer values masked · ticket {{ supportCard.ticket }} · request expires {{ supportCard.expires }}</div></div><div style="display:flex; gap:8px;"><button onClick="{{ supportCard.deny }}" style="height:40px; padding:0 16px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Deny</button><button onClick="{{ supportCard.approve }}" style="height:40px; padding:0 18px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Approve</button></div></section></sc-if>
+          <sc-if value="{{ pg.prefs }}"><dc-import name="CrmPrefs" hint-size="100%,900px"></dc-import></sc-if>
+          <sc-if value="{{ pg.dashboard }}"><dc-import name="CrmDashboard" hint-size="100%,900px"></dc-import></sc-if>
+          <sc-if value="{{ pg.leads }}"><dc-import name="CrmLeads" hint-size="100%,900px"></dc-import></sc-if>
+          <sc-if value="{{ pg.deals }}"><dc-import name="CrmDeals" hint-size="100%,900px"></dc-import></sc-if>
+          <sc-if value="{{ pg.tasks }}"><dc-import name="CrmTasks" hint-size="100%,900px"></dc-import></sc-if>
+          <sc-if value="{{ pg.customers }}"><dc-import name="CrmCustomers" hint-size="100%,900px"></dc-import></sc-if>
+          <sc-if value="{{ pg.reports }}"><dc-import name="CrmReports" hint-size="100%,900px"></dc-import></sc-if>
+          <sc-if value="{{ pg.workspaces }}"><dc-import name="CrmWorkspaces" hint-size="100%,900px"></dc-import></sc-if>
+          <sc-if value="{{ pg.engage }}"><dc-import name="CrmEngage" hint-size="100%,900px"></dc-import></sc-if>
+          <sc-if value="{{ pg.growth }}"><dc-import name="CrmGrowth" hint-size="100%,900px"></dc-import></sc-if>
+          <sc-if value="{{ pg.system }}"><dc-import name="CrmSystem" hint-size="100%,900px"></dc-import></sc-if>
+        </div>
+      </main>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ showMobile }}" hint-placeholder-val="{{ false }}">
+  <div style="height:100vh; overflow:auto; background:#e7e5df; display:flex; align-items:flex-start; justify-content:center; gap:40px; padding:36px 24px 120px;">
+    <div style="flex:none; width:395px; height:832px; border-radius:52px; background:#121412; padding:10px; box-shadow:0 30px 80px rgba(0,0,0,.25);">
+      <div style="width:375px; height:812px; border-radius:42px; overflow:hidden; position:relative; background:var(--bg);">
+        <dc-import name="CrmMobile" hint-size="375px,812px"></dc-import>
+      </div>
+    </div>
+    <div style="flex:none; width:300px; padding-top:30px; color:#3c3f3a; font-size:13.5px; line-height:1.55;">
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em; color:#8a6a3a;">MOBILE · 375 PX</div>
+      <h2 style="margin:8px 0 10px; font-size:24px; letter-spacing:-0.03em; color:#1b1d1a;">The phone is for doing, not configuring.</h2>
+      <p style="margin:0 0 12px;">Today, quick capture, customer lookup, call and WhatsApp with a log prompt, tasks and notifications. Pipeline and Settings open as read-friendly desktop pages.</p>
+      <p style="margin:0;">Switch the account in the review bar to see each role’s phone. Set state to Offline to see the queued-save banner.</p>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ showToasts }}"><dc-import name="CrmOverlays" hint-size="0px,0px"></dc-import></sc-if>
+<sc-if value="{{ fabShow }}"><button aria-label="Ask Figbloom assistant" title="Ask Figbloom" onClick="{{ openAsk }}" style="position:fixed; right:24px; bottom:24px; z-index:380; width:56px; height:56px; border-radius:999px; border:0; background:var(--primary-btn); color:#ffffff; display:flex; align-items:center; justify-content:center; box-shadow:0 12px 28px rgba(32,62,42,.32);" style-hover="background:var(--primary-hover); transform:scale(1.05);"><fb-icon name="sparkles" size="24" stroke="2"></fb-icon></button></sc-if>
+<sc-if value="{{ showApp }}"><dc-import name="CrmAssistant" hint-size="0px,0px"></dc-import></sc-if>
+<sc-if value="{{ sandbox }}"><div style="position:fixed; top:0; left:50%; transform:translateX(-50%); z-index:8500; padding:4px 14px; border-radius:0 0 10px 10px; background:#7650b0; color:#ffffff; font-size:12px; font-weight:700; letter-spacing:.04em;">SANDBOX · test organisation · imports and automations are safe to try</div></sc-if>
+
+<sc-if value="{{ reviewOpen }}" hint-placeholder-val="{{ true }}">
+  <div data-theme="light" role="toolbar" aria-label="Review tools" style="position:fixed; left:50%; bottom:16px; transform:translateX(-50%); z-index:9000; display:flex; align-items:center; gap:8px; padding:7px 8px 7px 14px; background:#151b17; color:#e9ece7; border-radius:999px; box-shadow:0 14px 40px rgba(0,0,0,.35); font-size:12.5px; white-space:nowrap; max-width:calc(100vw - 24px); overflow-x:auto;">
+    <span style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.1em; color:#ffb347;">REVIEW</span>
+    <sc-if value="{{ authedAny }}">
+      <label style="display:flex; align-items:center; gap:6px;"><span style="color:#9aa39c;">Account</span>
+        <select value="{{ userId }}" onChange="{{ switchUser }}" style="height:30px; border-radius:999px; border:1px solid #3a463e; background:#212a24; color:#ffffff; padding:0 10px; font-size:12.5px;">
+          <sc-for list="{{ accountOpts }}" as="o"><option value="{{ o.id }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for>
+        </select></label>
+    </sc-if>
+    <sc-if value="{{ notAuthed }}">
+      <label style="display:flex; align-items:center; gap:6px;"><span style="color:#9aa39c;">Screen</span>
+        <select onChange="{{ switchAuth }}" style="height:30px; border-radius:999px; border:1px solid #3a463e; background:#212a24; color:#ffffff; padding:0 10px; font-size:12.5px;">
+          <sc-for list="{{ authOpts }}" as="o"><option value="{{ o.id }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for>
+        </select></label>
+    </sc-if>
+    <sc-if value="{{ orgUser }}"><span style="color:#9aa39c;">Orgs</span><div style="display:flex; background:#212a24; border-radius:999px; padding:2px;"><sc-for list="{{ orgModeOpts }}" as="o"><button onClick="{{ o.go }}" style="border:0; border-radius:999px; padding:5px 11px; background:{{ o.bg }}; color:{{ o.fg }}; font-size:12px; font-weight:600;">{{ o.l }}</button></sc-for></div></sc-if>
+    <div style="display:flex; background:#212a24; border-radius:999px; padding:2px;">
+      <sc-for list="{{ deviceOpts }}" as="o"><button onClick="{{ o.go }}" style="border:0; border-radius:999px; padding:5px 11px; background:{{ o.bg }}; color:{{ o.fg }}; font-size:12px; font-weight:600; display:flex; align-items:center; gap:5px;"><fb-icon name="{{ o.icon }}" size="13"></fb-icon>{{ o.label }}</button></sc-for>
+    </div>
+    <div style="display:flex; background:#212a24; border-radius:999px; padding:2px;">
+      <sc-for list="{{ relOpts }}" as="o"><button onClick="{{ o.go }}" title="{{ o.tip }}" style="border:0; border-radius:999px; padding:5px 11px; background:{{ o.bg }}; color:{{ o.fg }}; font-size:12px; font-weight:600;">{{ o.label }}</button></sc-for>
+    </div>
+    <div style="display:flex; background:#212a24; border-radius:999px; padding:2px;">
+      <sc-for list="{{ themeOpts }}" as="o"><button onClick="{{ o.go }}" style="border:0; border-radius:999px; padding:5px 11px; background:{{ o.bg }}; color:{{ o.fg }}; font-size:12px; font-weight:600;">{{ o.label }}</button></sc-for>
+    </div>
+    <label style="display:flex; align-items:center; gap:6px;"><span style="color:#9aa39c;">State</span>
+      <select onChange="{{ switchSim }}" style="height:30px; border-radius:999px; border:1px solid #3a463e; background:#212a24; color:#ffffff; padding:0 10px; font-size:12.5px;">
+        <sc-for list="{{ simOpts }}" as="o"><option value="{{ o.id }}" selected="{{ o.sel }}">{{ o.label }}</option></sc-for>
+      </select></label>
+    <sc-if value="{{ orgUser }}"><button onClick="{{ tryPlatformUrl }}" title="What an organisation user sees at the platform address" style="border:1px solid #3a463e; background:transparent; color:#e9ece7; padding:5px 10px; border-radius:999px; font-weight:600; font-size:12.5px;">/platform</button></sc-if>
+    <a href="Figbloom Design System.dc.html" target="_blank" style="color:#e9ece7; padding:5px 10px; border-radius:999px; border:1px solid #3a463e; font-weight:600;">Design system</a>
+    <a href="Figbloom Screen Checklist.dc.html" target="_blank" style="color:#e9ece7; padding:5px 10px; border-radius:999px; border:1px solid #3a463e; font-weight:600;">Checklist</a>
+    <button aria-label="Hide review tools" onClick="{{ hideReview }}" style="width:28px; height:28px; border-radius:999px; border:0; background:#2a342d; color:#ffffff; display:flex; align-items:center; justify-content:center;"><fb-icon name="x" size="14"></fb-icon></button>
+  </div>
+</sc-if>
+<sc-if value="{{ reviewClosed }}">
+  <button onClick="{{ showReview }}" style="position:fixed; left:16px; bottom:16px; z-index:9000; border:0; border-radius:999px; padding:8px 14px; background:#151b17; color:#ffb347; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em; box-shadow:0 10px 30px rgba(0,0,0,.3);">REVIEW TOOLS</button>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { ready: !!window.FB, navQ: '', q: '', form: { email: '', password: '', name: '', password2: '' }, authErr: '', showPw: false, sent: false };
+  componentDidMount() {
+    const hook = () => { this.un = FB.sub(() => this.forceUpdate()); this.setState({ ready: true }); };
+    if (window.FB && customElements.get('fb-icon')) hook();
+    else { const iv = setInterval(() => { if (window.FB && customElements.get('fb-icon')) { clearInterval(iv); hook(); } }, 40); }
+    this.onKey = e => { if (e.key === 'Escape' && window.FB) FB.close(); };
+    window.addEventListener('keydown', this.onKey);
+    this.onRs = () => this.setState({ vw: window.innerWidth }); window.addEventListener('resize', this.onRs); this.setState({ vw: window.innerWidth });
+    this.onKo = e => { if (e.altKey && (e.key === 'o' || e.key === 'ø') && window.FB && FB.s.multiOrg) { e.preventDefault(); FB.set({ menu: 'id' }); } }; window.addEventListener('keydown', this.onKo);
+  }
+  componentWillUnmount() { this.un && this.un(); window.removeEventListener('keydown', this.onKey); }
+  setF(k) { return e => this.setState({ form: { ...this.state.form, [k]: e.target.value }, authErr: '' }); }
+  renderVals() {
+    if (!this.state.ready || !window.FB) return { showAuth: false, showApp: false, showMobile: false, reviewOpen: false };
+    const S = FB.s, st = this.state;
+    document.documentElement.setAttribute('data-theme', S.theme);
+    const mobile = S.device === 'mobile';
+    const authPages = ['login', 'signup', 'forgot', 'reset', 'invite', 'expired', 'noorg', 'twofa', 'pverify'];
+    if (!S.authed && !authPages.includes(S.route.page)) S.route = { page: 'login' };
+    if (S.authed && authPages.includes(S.route.page)) S.route = { page: 'dashboard' };
+    const ap = S.route.page;
+    const go = p => e => { e && e.preventDefault && e.preventDefault(); this.setState({ authErr: '', sent: false }); FB.go(p); };
+    const me = FB.me(), role = me.role;
+    const findUser = em => FB.users.find(u => u.email.toLowerCase() === (em || '').toLowerCase().trim());
+    const doLogin = () => {
+      const f = st.form;
+      if (!f.email || !f.password) return this.setState({ authErr: 'Enter your email address and password.' });
+      const u = findUser(f.email);
+      if (!u) return this.setState({ authErr: 'That email and password don’t match an account. Try a dev account below.' });
+      if (u.role === 'platform') { this.setState({ pending: u.id, authErr: '', attempts: 5, form: { ...f, code: '' } }); return FB.go('pverify'); }
+      if (FB.rel('v11') && ['management', 'finance'].includes(u.role)) { this.setState({ pending: u.id, authErr: '', form: { ...f, code: '' } }); return FB.go('twofa'); }
+      FB.signIn(u.id);
+    };
+    // generic auth screens
+    const G = {
+      forgot: { pill: 'Secure password reset', pillIcon: 'shield', title: st.sent ? 'Check your inbox' : 'Reset your password', body: st.sent ? 'If an account exists for ' + (st.form.email || 'that address') + ', a reset link is on its way. It expires in 30 minutes.' : 'Enter the email you sign in with and we’ll send you a link to choose a new password.', fields: st.sent ? [] : [{ label: 'Email address', icon: 'mail', type: 'email', ph: 'name@company.com', k: 'email' }], ctaLabel: st.sent ? 'Open reset link (demo)' : 'Send reset link', cta: () => { if (st.sent) return FB.go('reset'); if (!st.form.email) return this.setState({ authErr: 'Enter the email you sign in with.' }); this.setState({ sent: true }); }, foot: 'Remembered it?' },
+      reset: { pill: 'Secure password reset', pillIcon: 'shield', title: 'Choose a new password', body: 'Use at least 10 characters. You’ll be signed in on this device once it’s saved.', fields: [{ label: 'New password', icon: 'lock', type: 'password', ph: '••••••••', k: 'password' }, { label: 'Confirm new password', icon: 'lock', type: 'password', ph: '••••••••', k: 'password2' }], ctaLabel: 'Update password', cta: () => { if (!st.form.password || st.form.password !== st.form.password2) return this.setState({ authErr: 'The two passwords need to match.' }); FB.toast('Password updated'); FB.signIn('mg'); }, foot: 'Changed your mind?' },
+      invite: { pill: 'Workspace invitation', pillIcon: 'user-plus', title: 'Join Figbloom Digital Group', body: 'Dev Management invited wanjiru@figbloom.co.ke to join as Sales. Set your name and a password to accept.', fields: [{ label: 'Email address', icon: 'mail', type: 'email', ph: '', k: '_inv', value: 'wanjiru@figbloom.co.ke', ro: true }, { label: 'Full name', icon: 'user', type: 'text', ph: 'Jane Doe', k: 'name' }, { label: 'Password', icon: 'lock', type: 'password', ph: '••••••••', k: 'password' }], ctaLabel: 'Accept invite', cta: () => { if (!st.form.name || !st.form.password) return this.setState({ authErr: 'Add your name and a password.' }); FB.signIn('s1'); FB.toast('Welcome to Figbloom Digital Group'); }, foot: 'Already a member?' },
+      expired: { proposed: true, pill: 'Session expired', pillIcon: 'clock', pillBg: '#fdf2e3', pillFg: '#a95a06', title: 'You’ve been signed out', body: 'For your security we sign you out after 12 hours without activity. Sign in again to continue where you left off; nothing you saved was lost.', fields: [{ label: 'Email address', icon: 'mail', type: 'email', ph: 'name@company.com', k: '_exp', value: me.email, ro: true }, { label: 'Password', icon: 'lock', type: 'password', ph: '••••••••', k: 'password' }], ctaLabel: 'Sign in again', cta: () => { if (!st.form.password) return this.setState({ authErr: 'Enter your password.' }); FB.signIn(S.userId); }, foot: 'Not you?' },
+      pverify: { proposed: true, pill: 'Platform · Verify it’s you · V1.1', pillIcon: 'shield', pillBg: '#f1ecf8', pillFg: '#7650b0', title: 'Verify it’s you', body: (st.attempts || 5) <= 0 ? 'Too many wrong codes. Platform sign-in is locked for 30 minutes and the other platform admins were alerted.' : 'Enter the 6-digit code from your authenticator app, or one of your backup codes. Platform admins always verify; this device won’t be remembered.', fields: (st.attempts || 5) <= 0 ? [] : [{ label: st.useBackup ? 'Backup code' : 'Authenticator code', icon: 'key', type: 'text', ph: st.useBackup ? 'XXXX-XXXX' : '123 456', k: 'code' }], ctaLabel: (st.attempts || 5) <= 0 ? '' : 'Verify', cta: (st.attempts || 5) <= 0 ? null : () => { const c = (st.form.code || '').replace(/\s/g, ''); const ok = st.useBackup ? /^[A-Z0-9]{4}-?[A-Z0-9]{4}$/i.test(c) : /^\d{6}$/.test(c); if (!ok || c === '000000') { const a = (st.attempts || 5) - 1; return this.setState({ attempts: a, authErr: a > 0 ? 'That code didn’t work. ' + a + ' attempt' + (a === 1 ? '' : 's') + ' left.' : '' }); } FB.signIn(st.pending || 'pa', { verified: true }); }, alt: (st.attempts || 5) <= 0 ? '' : st.useBackup ? 'Use my authenticator code' : 'Use a backup code', altGo: () => this.setState({ useBackup: !st.useBackup, authErr: '', form: { ...st.form, code: '' } }), notice: st.useBackup ? 'Each backup code works once. Lost them all? Another platform admin can start a recovery.' : 'Lost your phone? Use a backup code instead.', foot: 'Not a platform admin?' },
+      twofa: { proposed: true, pill: 'Two-step sign-in · V1.1', pillIcon: 'shield', title: 'Enter your 6-digit code', body: 'We sent a code to your authenticator app. This step appears after the frozen sign-in page, only when two-step sign-in is on for your organisation.', fields: [{ label: 'Code', icon: 'key', type: 'text', ph: '123 456', k: 'code' }], ctaLabel: 'Verify and continue', cta: () => { if (!(st.form.code || '').replace(/\s/g, '').match(/^\d{6}$/)) return this.setState({ authErr: 'Enter the 6 digits from your app.' }); FB.signIn(st.pending || 'mg'); FB.toast('Signed in. This device is now trusted for 30 days.'); }, notice: 'Lost your phone? Use a backup code or ask Dev Management to reset two-step sign-in.', foot: 'Use a different account?' },
+      noorg: { proposed: true, pill: 'Account created', pillIcon: 'check-circle', title: 'You’re almost in', body: 'Your account is ready, but no organisation has added you yet. Ask your admin to invite ' + (st.form.email || 'your email') + ' from Settings › Members. We’ll email you the moment you’re added.', fields: [], notice: 'Nothing to do here for now. You can close this tab.', foot: 'Got your invite?' },
+    }[ap];
+    const g = G ? { pillBg: '#eef3ef', pillFg: '#203e2a', proposed: false, notice: '', hasCta: !!G.cta, ...G, fields: (G.fields || []).map(f => ({ ...f, value: f.value != null ? f.value : st.form[f.k] || '', onChange: f.ro ? () => {} : this.setF(f.k), ro: !!f.ro })) } : { fields: [] };
+
+    // nav
+    const r = S.route.page;
+    const isAct = keys => keys.includes(r);
+    const item = (label, icon, page, keys, tint, badge) => ({ label, icon, page, go: () => FB.go(page), active: isAct(keys || [page]), tint, badge: badge || 0 });
+    const tasksDue = FB.tasksVisible().filter(t => t.status !== 'Completed' && t.due && t.due < new Date(FB.now.getTime() + 864e5) && (t.due < FB.now || FB.sameDay(t.due, FB.now))).length;
+    let top = [
+      { label: 'Overview', items: [item(role === 'technical' ? 'My work' : 'Dashboard', 'dashboard', 'dashboard', ['dashboard'], 'w')] },
+      { label: role === 'delivery' || role === 'finance' ? 'Pipeline' : 'Sales workspace', items: [
+        FB.can('leads') && item('Leads', 'users', 'leads', ['leads', 'lead'], 'g'),
+        FB.can('deals') && item(role === 'delivery' || role === 'finance' ? 'Won deals' : 'Deals', 'briefcase', 'deals', ['deals', 'deal'], 'g'),
+        FB.can('tasks') && item('Tasks', 'tasks', 'tasks', ['tasks'], 'g', tasksDue),
+        FB.can('calendar') && item('Calendar', 'calendar', 'calendar', ['calendar'], 'g'),
+      ].filter(Boolean) },
+      ...(FB.rel('v11') && FB.can('leads') ? [{ label: 'Saved views', items: (S.savedViews || []).filter(v => v.pinned && (v.shared || v.by === S.userId)).map(v => ({ ...item(v.name, 'bookmark', 'leads', ['__none'], 'g'), go: () => { S.activeView = v.id; FB.go('leads'); } })) }] : []),
+      { label: 'Customers', items: [FB.can('customers') && item('Companies', 'building', 'companies', ['companies', 'company'], 'o'), FB.can('customers') && item('Contacts', 'contact', 'contacts', ['contacts', 'contact'], 'o'), FB.can('comms') && item('Conversations', 'message', 'conversations', ['conversations'], 'o', FB.can('comms.create') ? S.inbox.filter(m => !m.link).length : 0)].filter(Boolean) },
+      { label: 'After the sale', items: [FB.can('delivery') && item('Handoffs', 'package', 'delivery', ['delivery'], 'o'), FB.can('retention') && item('Renewals', 'refresh', 'retention', ['retention'], 'o'), FB.can('payments') && item('Payments', 'wallet', 'finance', ['finance'], 'o')].filter(Boolean) },
+    ];
+    let bottom = [{ label: 'Insights & settings', items: [FB.rel('v11') && FB.can('reports') && item('Forecast & targets', 'target', 'forecast', ['forecast'], 'o'), FB.rel('v11') && FB.can('quotes.approve') && item('Approvals', 'check-circle', 'approvals', ['approvals'], 'o', S.approvals.filter(a => a.status === 'Pending').length),FB.can('reports') && item(FB.can('reports.org') ? 'Reports' : 'My metrics', 'chart', 'reports', ['reports'], 'o'), item('Preferences', 'user', 'prefs', ['prefs'], 'o'), FB.role() === 'management' && item('Settings', 'sliders', 'settings', ['settings', 'audit'], 'o')].filter(Boolean) }];
+    const nq = st.navQ.toLowerCase();
+    const style = sec => ({ ...sec, label: S.collapsed ? '·' : sec.label, items: sec.items.filter(i => !nq || i.label.toLowerCase().includes(nq)).map(i => ({ ...i, bg: i.active ? '#ffffff' : 'transparent', fg: i.active ? '#203e2a' : '#ffffff', fw: i.active ? 600 : 500, hov: i.active ? '#ffffff' : 'rgba(255,255,255,.07)', ic: i.active ? '#275b3a' : i.tint === 'o' ? '#ffa733' : i.tint === 'g' ? '#9bd3a8' : '#ffffff', cur: i.active ? 'page' : undefined, badge: S.collapsed ? 0 : i.badge })) });
+    top = top.filter(s => s.items.length).map(style).filter(s => s.items.length);
+    bottom = bottom.map(style);
+
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'], mons = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const n = FB.now;
+    const allowed = FB.pageAllowed(r);
+    const plat = FB.isPlatform(); const o1 = (S.porgs || []).find(o => o.id === 'o1') || {}; const suspended = o1.status === 'Suspended';
+    const supportReq = FB.rel('v2') && !plat ? (S.support || []).find(s => s.org === 'o1' && s.status === 'Pending organisation approval') : null;
+    const activeSupport = FB.rel('v2') && S.supportActive ? (S.support || []).find(s => s.id === S.supportActive && s.org === 'o1' && s.status === 'Active') : null;
+    const ann0 = (S.announcements || [])[0]; const ann = FB.rel('v2') && !plat && ann0 && ann0.status === 'Live' && ann0.orgs.includes('o1') && !S.announceDismissed ? ann0 : null;
+    const pgKey = !allowed ? 'system' : { dashboard: 'dashboard', work: 'dashboard', leads: 'leads', lead: 'leads', deals: 'deals', deal: 'deals', tasks: 'tasks', calendar: 'tasks', companies: 'customers', company: 'customers', contacts: 'customers', contact: 'customers', reports: 'reports', finance: 'workspaces', delivery: 'workspaces', quote: 'growth', approvals: 'growth', forecast: 'growth', conversations: 'engage', retention: 'engage', prefs: 'prefs', notifications: 'system', search: 'system', settings: 'system', audit: 'system' }[r] || 'dashboard';
+    const pg = /^p-/.test(r) ? {} : { [pgKey]: true };
+
+    const res = FB.search(st.q);
+    const quick = [
+      ...res.leads.slice(0, 2).map(l => ({ title: l.name, sub: l.status + ' · ' + l.service, kind: 'Lead', icon: 'users', go: () => { this.setState({ q: '' }); FB.go('lead', l.id); } })),
+      ...res.companies.slice(0, 2).map(c => ({ title: c.name, sub: c.lifecycle + ' · ' + c.industry, kind: 'Company', icon: 'building', go: () => { this.setState({ q: '' }); FB.go('company', c.id); } })),
+      ...res.contacts.slice(0, 2).map(p => ({ title: FB.cname(p), sub: p.title || p.phone, kind: 'Contact', icon: 'contact', go: () => { this.setState({ q: '' }); FB.go('contact', p.id); } })),
+      ...res.deals.slice(0, 2).map(d => ({ title: FB.company(d.companyId).name, sub: d.title + ' · ' + d.stage, kind: 'Deal', icon: 'briefcase', go: () => { this.setState({ q: '' }); FB.go('deal', d.id); } })),
+      ...res.tasks.slice(0, 2).map(t => ({ title: t.title, sub: FB.dueLabel(t.due, t.status === 'Completed'), kind: 'Task', icon: 'tasks', go: () => { this.setState({ q: '' }); FB.go('tasks'); } })),
+    ].slice(0, 7);
+    const notifs = FB.notifsMine().slice(0, 7).map(x => ({ ...x, ago: FB.ago(x.at), bg: x.read ? 'var(--surface)' : 'var(--orange-soft)', dot: x.read ? 'var(--border-strong)' : '#ff9400', go: () => { FB.readNotif(x.id); FB.openLink(x.link[0], x.link[1]); } }));
+    const createItems = [
+      FB.can('leads') && { label: 'New lead', icon: 'user-plus', key: 'L', go: () => FB.drawer('lead') },
+      FB.can('tasks') && { label: 'New task', icon: 'tasks', key: 'T', go: () => FB.drawer('task') },
+      FB.can('activities.create') && { label: 'Log a call or note', icon: 'phone', key: 'N', go: () => FB.drawer('note') },
+      FB.can('customers.edit') && { label: 'New contact', icon: 'contact', key: 'C', go: () => FB.drawer('contact') },
+    ].filter(Boolean);
+    const seg = (cur, opts) => opts.map(o => ({ ...o, bg: cur === o.id ? '#ffffff' : 'transparent', fg: cur === o.id ? '#151b17' : '#c9cfc9' }));
+    return {
+      showAuth: !S.authed && !mobile, showApp: S.authed && !mobile && !plat && !suspended, showMobile: mobile && !(S.authed && plat), showPlatform: S.authed && plat && !mobile, showPlatformMobile: S.authed && plat && mobile, showSuspended: S.authed && !plat && suspended && !mobile, notFound: !plat && /^p-/.test(S.route.page),
+      supportCard: supportReq && FB.role() === 'management' ? { reason: supportReq.reason, scope: supportReq.scope, mins: supportReq.mins, ticket: supportReq.ticket, expires: FB.time(supportReq.expires || new Date(FB.now.getTime() + 2 * 36e5)), approve: () => { supportReq.status = 'Active'; supportReq.endsAt = Date.now() + supportReq.mins * 60000; supportReq.pages = []; S.supportActive = supportReq.id; FB.plog('Support access approved', 'FigBloom Digital Group', supportReq.scope, 'Approved by ' + FB.me().name); FB.auditAdd('Support access approved', 'Figbloom Support', supportReq.reason); FB.toast('Approved. Figbloom Support can view ' + supportReq.scope.toLowerCase() + ' for ' + supportReq.mins + ' minutes.'); FB.emit(); }, deny: () => { supportReq.status = 'Denied'; FB.plog('Support access denied', 'FigBloom Digital Group', supportReq.scope, 'Denied by ' + FB.me().name); FB.toast('Denied. Figbloom Support was told.'); FB.emit(); } } : null,
+      supportBanner: activeSupport && !plat ? 'Figbloom Support is viewing ' + activeSupport.scope.replace(' (read-only)', '').toLowerCase() + ' (read-only) until ' + FB.time(new Date(activeSupport.endsAt)) + '.' : '', endSupport: () => { activeSupport.status = 'Ended'; activeSupport.endedBy = FB.me().name; S.supportActive = null; FB.plog('Support view ended', 'FigBloom Digital Group', (activeSupport.pages || []).length + ' pages viewed', 'Ended by ' + FB.me().name); FB.toast('Support view ended'); FB.emit(); }, canEndSupport: FB.role() === 'management',
+      announce: ann ? { title: ann.title, body: ann.body, kind: ann.kind } : null, dismissAnn: () => FB.set({ announceDismissed: true }), goHome: () => FB.go('dashboard'), suspContact: 'Dev Super Admin at superadmin@platform.figbloom.co.ke',
+      notSignup: ap !== 'signup',
+      authLabel: 'Auth · ' + ap,
+      auth: { login: ap === 'login', signup: ap === 'signup', generic: !!G },
+      g, form: st.form, on: { email: this.setF('email'), password: this.setF('password'), name: this.setF('name') },
+      authErr: st.authErr, pwType: st.showPw ? 'text' : 'password', pwIcon: st.showPw ? 'eye-off' : 'eye', togglePw: () => this.setState({ showPw: !st.showPw }),
+      doLogin, onEnterLogin: e => { if (e.key === 'Enter') doLogin(); },
+      doSignup: () => { const f = st.form; if (!f.name || !f.email || !f.password) return this.setState({ authErr: 'Fill in your name, email and a password.' }); FB.go('noorg'); },
+      goForgot: go('forgot'), goSignup: go('signup'), goLogin: go('login'),
+      devAccounts: ['dl', 'fn', 'mg', 's2', 's1', 'tc', 'cs', 'pa'].map(id => ({ name: FB.user(id).name, signIn: () => FB.signIn(id) })),
+      expanded: !S.collapsed, sideW: S.collapsed ? '76px' : '272px', sideIcon: S.collapsed ? 'chevron-right' : 'chevron-left', toggleSide: () => FB.set({ collapsed: !S.collapsed }),
+      navQ: st.navQ, setNavQ: e => this.setState({ navQ: e.target.value }), navTop: top, navBottom: bottom,
+      me: { name: me.name, letter: me.name.replace('Dev ', '')[0], role: FB.roleLabel(), email: me.email },
+      signOut: () => FB.signOut(),
+      dateStr: days[n.getDay()] + ', ' + n.getDate() + ' ' + mons[n.getMonth()] + ' · 15:12',
+      q: st.q, setQ: e => { this.setState({ q: e.target.value }); if (S.menu !== 'search') FB.set({ menu: 'search' }); },
+      openSearch: () => { if (st.q) FB.set({ menu: 'search' }); },
+      searchKey: e => { if (e.key === 'Enter' && st.q) { FB.set({ qs: st.q }); FB.go('search'); } },
+      searchOpen: S.menu === 'search' && !!st.q, quickResults: quick, noQuick: quick.length === 0,
+      seeAll: () => { FB.set({ qs: st.q }); FB.go('search'); },
+      createItems, openCreate: () => FB.set({ menu: S.menu === 'create' ? null : 'create' }),
+      unread: FB.unread(), openNotif: () => FB.set({ menu: S.menu === 'notif' ? null : 'notif' }), openUser: () => FB.set({ menu: S.menu === 'user' ? null : 'user' }),
+      menuCreate: S.menu === 'create', menuNotif: S.menu === 'notif', menuUser: S.menu === 'user', menuAny: !!S.menu, closeMenu: () => FB.set({ menu: null }),
+      notifs, noNotifs: notifs.length === 0, readAll: () => FB.readAll(), goNotifs: () => FB.go('notifications'), goPrefs: () => FB.go('prefs', null, { tab: 'notifications' }), goProfile: () => FB.go('prefs', null, { tab: 'profile' }), goAppearance: () => FB.go('prefs', null, { tab: 'appearance' }),
+      toggleTheme: () => FB.toggleDark(), themeIcon: S.theme === 'dark' ? 'sun' : 'moon', themeLabel: S.theme === 'dark' ? 'Light theme' : 'Dark theme',
+      offline: S.sim === 'offline', slow: S.sim === 'slow' || S.sim === 'loading',
+      pg,
+      reviewOpen: S.review, reviewClosed: !S.review, hideReview: () => FB.set({ review: false }), showReview: () => FB.set({ review: true }),
+      authedAny: S.authed, notAuthed: !S.authed, userId: S.userId,
+      accountOpts: FB.users.map(u => ({ id: u.id, sel: u.id === S.userId, label: u.role === 'platform' ? 'Super Admin · Platform' : u.name.replace('Dev ', '') + ' · ' + FB.ROLES[u.role] })),
+      switchUser: e => { const id = e.target.value; const pl = (FB.user(id) || {}).role === 'platform'; const was = FB.isPlatform(); FB.set({ userId: id, menu: null, drawer: null, modal: null, devSkip: true, ...(pl !== was ? { route: { page: pl ? 'p-home' : 'dashboard' } } : {}) }); },
+      authPage: ap,
+      authOpts: [{ id: 'login', label: 'Sign in (frozen)' }, { id: 'signup', label: 'Sign up (frozen)' }, { id: 'forgot', label: 'Forgot password' }, { id: 'reset', label: 'Reset password' }, { id: 'invite', label: 'Accept invite' }, { id: 'expired', label: 'Session expired (proposed)' }, { id: 'noorg', label: 'Awaiting access (proposed)' }, { id: 'twofa', label: 'Two-step code (proposed)' }, { id: 'pverify', label: 'Platform · Verify it’s you (proposed)' }, { id: 'twofa', label: 'Two-step code (V1.1, proposed)' }].map(o => ({ ...o, sel: o.id === ap })),
+      switchAuth: e => { this.setState({ authErr: '', sent: false }); FB.go(e.target.value); },
+      deviceOpts: seg(S.device, [{ id: 'desktop', label: 'Desktop', icon: 'monitor' }, { id: 'mobile', label: 'Mobile', icon: 'smartphone' }]).map(o => ({ ...o, go: () => FB.set({ device: o.id }) })),
+      relOpts: seg(S.release, [{ id: 'v1', label: 'V1 only' }, { id: 'v11', label: '+ V1.1' }, { id: 'v2', label: '+ V2' }]).map(o => ({ ...o, tip: { v1: 'Ships by 22 Nov 2026', v11: 'Post-launch', v2: 'Strategic edge' }[o.id], go: () => FB.set({ release: o.id }) })),
+      idOpen: S.menu === 'id', toggleId: () => FB.set({ menu: S.menu === 'id' ? null : 'id' }), orgQ: st.orgQ || '', setOrgQ: e => this.setState({ orgQ: e.target.value }), expiring: !!S.expiring, staySigned: () => { FB.set({ expiring: false }); FB.toast('You’re signed in for another ' + S.sessionHours + ' hours'); },
+      idn: (() => { const P = S.prefs; const cur = S.curOrg ? S.memberships.find(m => m.id === S.curOrg) : null; const org = cur ? cur.name : 'FigBloom Digital Group'; const role = FB.role(); const RL = { management: 'Management dashboard', sales: 'Sales workspace', delivery: 'Delivery workspace', finance: 'Finance workspace', technical: 'Technical workspace (My work)', support: 'Support workspace (proposed)' }[role] || 'Workspace'; const w = st.vw || 1400; const t = S.signedInAt; const h24 = P.clock === '24'; const tm = h24 ? String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') : ((t.getHours() % 12) || 12) + ':' + String(t.getMinutes()).padStart(2, '0') + (t.getHours() < 12 ? ' AM' : ' PM'); const used = Math.max(0, (FB.now - t) / 36e5); const left = Math.max(0, S.sessionHours - used); const multi = S.multiOrg && FB.rel('v11'); const q = (st.orgQ || '').toLowerCase(); const lg = S.orgLogo && !cur;
+        const orgs = S.memberships.filter(m => !q || m.name.toLowerCase().includes(q)).map(m => { const isCur = (S.curOrg || 'o1') === m.id; const ini = m.name.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase(); return { name: m.name, ini, lbg: m.id === 'o1' ? '#203e2a' : m.suspended ? '#878a83' : ['#3a69a8', '#7650b0', '#a95a06', '#275b3a'][m.name.length % 4], meta: m.suspended ? m.suspended : m.invite ? 'Pending invitation · ' + m.role : (m.id === 'o1' ? (S.homeRole || FB.roleLabel()) : m.role) + ' · ' + (isCur ? 'here now' : 'last visited ' + m.last), unread: isCur || m.invite ? 0 : m.unread, cur: isCur, invite: !!m.invite, dis: !!m.suspended || isCur, op: m.suspended ? 0.5 : 1, bg: isCur ? 'var(--primary-soft)' : 'transparent', go: () => { if (m.invite) { m.invite = false; m.last = 'Just now'; FB.toast('Joined ' + m.name + ' as ' + m.role); return FB.emit(); } if (S.sim === 'offline') return FB.toast('Couldn’t switch: you’re offline. You’re still in ' + org + '.'); const map = { Sales: 's1', Management: 'mg', Delivery: 'dl', Finance: 'fn' }; if (m.id === 'o1') { FB.set({ curOrg: null, userId: S.homeUser || S.userId, menu: null, route: { page: 'dashboard' } }); } else { if (!S.curOrg) { S.homeUser = S.userId; S.homeRole = FB.roleLabel(); } FB.set({ curOrg: m.id, userId: map[m.role] || 's1', menu: null, route: { page: 'dashboard' } }); } FB.toast(S.sim === 'slow' ? 'Switching… loading ' + m.name : 'Now in ' + m.name + ' as ' + (m.id === 'o1' ? (S.homeRole || FB.roleLabel()) : m.role)); } }; });
+        return { org, role: FB.roleLabel(), logoBg: lg ? S.orgLogo.bg : cur ? '#3a69a8' : 'var(--side)', mark: !lg && !cur, letters: lg ? S.orgLogo.ini : cur ? org.split(' ').map(x => x[0]).join('').slice(0, 2) : '', label: w < 1100 ? '' : RL + ' · ', time: tm, iso: t.toISOString(), full: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][t.getDay()] + ' ' + t.getDate() + ' Oct, ' + tm.replace(/(\d+:\d+)/, '$1:' + String(t.getSeconds()).padStart(2, '0')) + ' EAT', remaining: Math.floor(left) + ' h ' + Math.round((left % 1) * 60) + ' min left of ' + S.sessionHours + ' h', tzNote: P.tz !== 'Africa/Nairobi' ? 'You use ' + P.tz + '; the organisation uses Africa/Nairobi' : '', wide: w >= 760, multi, search: multi && S.memberships.length > 6, orgs, support: S.supportActive ? 'Figbloom Support is viewing settings (read-only)' : '',
+          links: [{ l: 'Preferences', icon: 'sliders', go: () => FB.go('prefs', null, { tab: 'appearance' }) }, { l: 'My sessions', icon: 'monitor', go: () => FB.go('prefs', null, { tab: 'security' }) }, { l: 'Session warning', icon: 'clock', go: () => FB.set({ expiring: true, menu: null }) }, { l: 'Sign out other devices', icon: 'logout', go: () => { FB.set({ menu: null }); FB.toast('Signed out of 2 other devices'); } }, { l: 'Sign out', icon: 'logout', col: 'var(--red)', go: () => FB.signOut() }].map(x => ({ col: 'var(--text)', ...x })) }; })(),
+      idTitle: 'Organisation, session and switching', idMin: (st.vw || 1400) < 760 ? '44px' : '170px', wideUser: (st.vw || 1400) >= 1200,
+      orgModeOpts: [['one', 'One'], ['several', 'Several']].map(([id, l]) => { const on = (S.multiOrg ? 'several' : 'one') === id; return { l, bg: on ? '#ffffff' : 'transparent', fg: on ? '#151b17' : '#c9cfc9', go: () => FB.set({ multiOrg: id === 'several', ...(id === 'one' && S.curOrg ? { curOrg: null, userId: S.homeUser || S.userId } : {}) }) }; }),
+      relV11: FB.rel('v11'), orgUser: S.authed && !plat, tryPlatformUrl: () => FB.go('p-home'), showToasts: (S.authed && !mobile && !suspended), fabShow: !plat && !suspended && S.authed && S.device !== 'mobile' && FB.rel('v11') && !S.assistant && !S.drawer && !S.modal, openAsk: () => FB.set({ assistant: { q: '' }, menu: null }), openPalette: () => FB.set({ palette: true, menu: null }), openHelp: () => FB.set({ help: !S.help, menu: null }),
+      orgSwitch: FB.rel('v11') && FB.role() === 'management', sandbox: FB.rel('v2') && S.org === 'o2',
+      orgs: S.orgs.map(o => { const cur = (S.org || 'o1') === o.id; return { ...o, cur, ini: o.name[0] + (o.sandbox ? 'S' : ''), chip: o.sandbox ? '#7650b0' : 'var(--side)', role: o.role + (o.sandbox ? ' · Sandbox (V2)' : ''), bg: cur ? 'var(--surface-2)' : 'transparent', go: () => { if (o.sandbox && !FB.rel('v2')) return FB.toast('Sandbox organisations arrive in V2'); FB.set({ org: o.id, menu: null }); FB.toast('Switched to ' + o.name); } }; }),
+      themeOpts: seg(S.theme, [{ id: 'light', label: 'Light' }, { id: 'dark', label: 'Dark' }]).map(o => ({ ...o, go: () => { if (o.id !== FB.s.theme) FB.toggleDark(); } })),
+      sim: S.sim, simOpts: [{ id: 'normal', label: 'Normal' }, { id: 'loading', label: 'Loading' }, { id: 'empty', label: 'Empty (first run)' }, { id: 'error', label: 'Error' }, { id: 'offline', label: 'Offline' }, { id: 'slow', label: 'Slow connection' }].map(o => ({ ...o, sel: o.id === S.sim })),
+      switchSim: e => FB.simulate(e.target.value),
+    };
+  }
+}
+</script>
+</body>
+</html>

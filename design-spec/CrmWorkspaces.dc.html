@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="crm-theme.css"><script src="icons.js"></script><script src="crm-store.js"></script></helmet>
+<div style="display:flex; flex-direction:column; gap:18px;">
+<sc-if value="{{ isFinance }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Payments" style="display:flex; flex-direction:column; gap:18px;">
+    <div>
+      <h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">Payments</h1>
+      <div style="font-size:13.5px; color:var(--text-2); margin-top:4px;">Won-deal values, contract amounts and where each payment stands.</div>
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; background:{{ sc.bg }}; color:{{ sc.fg }}; font-size:12.5px; font-weight:600; white-space:nowrap;"><span style="width:6px; height:6px; border-radius:99px; background:{{ sc.dot }};"></span>{{ sc.label }}</span><span style="font-size:13.5px; color:var(--text-2);">{{ fHint }}</span></div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:flex-start; padding:12px 16px; border-radius:12px; background:var(--surface-2); color:var(--text-2); font-size:13.5px; line-height:1.45;"><fb-icon name="lock" size="16"></fb-icon><span>A light tracker. Invoices are raised and payments received in your accounting system; bank and M-Pesa details are never stored here.</span></div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px;">
+      <sc-for list="{{ fk }}" as="k"><div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px;"><div style="display:flex; align-items:center; gap:7px; font-size:14px; color:var(--text-2);"><span style="width:7px; height:7px; border-radius:99px; background:{{ k.dot }};"></span>{{ k.l }}</div><div style="font-size:24px; font-weight:700; margin-top:8px; color:{{ k.col }};">{{ k.v }}</div><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">{{ k.sub }}</div></div></sc-for>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <sc-for list="{{ accounts }}" as="a">
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+          <button onClick="{{ a.toggle }}" style="display:grid; grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr)) 150px 24px; gap:14px; align-items:center; width:100%; border:0; background:transparent; padding:16px 18px; text-align:left;" style-hover="background:var(--surface-2);">
+            <span><span style="display:block; font-weight:700; font-size:14.5px;">{{ a.company }}</span><span style="display:block; font-size:12.5px; color:var(--text-3); margin-top:2px;">{{ a.title }} · won {{ a.won }}</span></span>
+            <span><span style="display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-3);">CONTRACT</span><span style="font-weight:600;">{{ a.contract }}</span></span>
+            <span><span style="display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-3);">PAID</span><span style="font-weight:600;">{{ a.paid }}</span></span>
+            <span><span style="display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-3);">BALANCE</span><span style="font-weight:600; color:{{ a.balCol }};">{{ a.balance }}</span></span>
+            <span><span style="font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; background:{{ a.sbg }}; color:{{ a.sfg }};">{{ a.status }}</span></span>
+            <fb-icon name="{{ a.chev }}" size="16"></fb-icon>
+          </button>
+          <sc-if value="{{ a.open }}">
+            <div style="border-top:1px solid var(--border); padding:6px 18px 16px;">
+              <table style="width:100%; border-collapse:collapse; font-size:13.5px;"><thead><tr><sc-for list="{{ invHead }}" as="h"><th style="text-align:left; padding:10px 8px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; color:var(--text-3);">{{ h }}</th></sc-for></tr></thead>
+                <tbody><sc-for list="{{ a.invoices }}" as="i"><tr style="border-top:1px solid var(--border);"><td style="padding:10px 8px; font-family:'IBM Plex Mono',monospace; font-size:12.5px;">{{ i.no }}</td><td style="padding:10px 8px;">{{ i.label }}</td><td style="padding:10px 8px; font-weight:600;">{{ i.amount }}</td><td style="padding:10px 8px; color:var(--text-2);">{{ i.due }}</td><td style="padding:10px 8px;"><sc-if value="{{ canManage }}"><select value="{{ i.status }}" onChange="{{ i.set }}" aria-label="Invoice status" style="height:32px; border-radius:8px; border:1px solid var(--border-strong); background:{{ i.bg }}; color:{{ i.fg }}; font-weight:600; padding:0 8px; font-size:12.5px;"><option>Not invoiced</option><option>Sent</option><option>Paid</option><option>Overdue</option></select></sc-if><sc-if value="{{ viewOnly }}"><span style="font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; background:{{ i.bg }}; color:{{ i.fg }};">{{ i.status }}</span></sc-if></td></tr></sc-for></tbody></table>
+              <div style="display:flex; gap:10px; align-items:center; margin-top:12px; flex-wrap:wrap;"><span style="flex:1; font-size:13px; color:var(--text-2);"><strong>Next:</strong> {{ a.next }}</span><sc-if value="{{ canManage }}"><button onClick="{{ a.followUp }}" style="height:36px; padding:0 14px; border-radius:9px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600; font-size:13px; display:flex; gap:6px; align-items:center;"><fb-icon name="clock" size="14"></fb-icon>Add payment follow-up</button></sc-if><button onClick="{{ a.openCo }}" style="height:36px; padding:0 14px; border-radius:9px; border:0; background:transparent; color:var(--primary-text); font-weight:600; font-size:13px;">Open customer</button></div>
+            </div>
+          </sc-if>
+        </section>
+      </sc-for>
+      <sc-if value="{{ noAccounts }}"><div style="padding:48px; text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:14px; color:var(--text-2);">No won deals yet. When Sales closes one, it appears here with its contract amount.</div></sc-if>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isDelivery }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Delivery handoffs" style="display:flex; flex-direction:column; gap:18px;">
+    <div>
+      <h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">Handoffs</h1>
+      <div style="font-size:13.5px; color:var(--text-2); margin-top:4px;">Won work handed from Sales: scope, requirements, team and start date. Just enough to begin; it isn’t a project tool.</div>
+      <div style="margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; background:{{ sc.bg }}; color:{{ sc.fg }}; font-size:12.5px; font-weight:600; white-space:nowrap;"><span style="width:6px; height:6px; border-radius:99px; background:{{ sc.dot }};"></span>{{ sc.label }}</span></div>
+    </div>
+    <div style="display:grid; grid-template-columns:minmax(260px,320px) minmax(0,1fr); gap:16px; align-items:start;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <sc-for list="{{ handoffs }}" as="h"><button onClick="{{ h.pick }}" style="text-align:left; padding:14px 16px; border-radius:14px; border:1.5px solid {{ h.bd }}; background:var(--surface);"><div style="display:flex; justify-content:space-between; gap:8px;"><strong style="display:block; flex:1; min-width:0; font-size:14.5px; line-height:1.3;">{{ h.company }}</strong><span style="font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:999px; background:{{ h.sbg }}; color:{{ h.sfg }}; white-space:nowrap;">{{ h.status }}</span></div><div style="font-size:12.5px; color:var(--text-2); margin-top:4px;">{{ h.title }}</div><div style="font-size:12px; color:var(--text-3); margin-top:6px;">Starts {{ h.start }} · {{ h.owner }}</div></button></sc-for>
+      </div>
+      <sc-if value="{{ hx }}">
+        <section data-screen-label="Delivery receiving view" style="background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px; display:flex; flex-direction:column; gap:18px;">
+          <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+            <div><div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; color:var(--text-3);">WON {{ hx.won }} · FROM {{ hx.from }}</div><h2 style="margin:6px 0 2px; font-size:22px; letter-spacing:-0.02em;">{{ hx.company }}</h2><div style="color:var(--text-2);">{{ hx.title }} · <span style="color:var(--text-3);">{{ hx.value }}</span></div></div>
+            <div style="display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap;"><sc-if value="{{ hx.needsOwner }}"><button onClick="{{ hx.take }}" style="height:40px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Take ownership</button></sc-if><select value="{{ hx.status }}" onChange="{{ hx.setStatus }}" aria-label="Delivery status" style="height:40px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); padding:0 10px; font-weight:600;"><option>Awaiting owner</option><option>Onboarding</option><option>In delivery</option><option>Delivered</option></select></div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px;"><sc-for list="{{ hx.facts }}" as="f"><div style="padding:12px 14px; border-radius:12px; background:var(--surface-2);"><div style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; color:var(--text-3);">{{ f.k }}</div><div style="font-weight:600; margin-top:4px;">{{ f.v }}</div></div></sc-for></div>
+          <div><h3 style="margin:0 0 6px; font-size:14.5px;">Scope</h3><p style="margin:0; font-size:14px; line-height:1.55; color:var(--text-2);">{{ hx.scope }}</p></div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px;">
+            <div><h3 style="margin:0 0 8px; font-size:14.5px;">Requirements</h3><ul style="margin:0; padding-left:18px; font-size:14px; line-height:1.8;"><sc-for list="{{ hx.req }}" as="q"><li>{{ q }}</li></sc-for></ul><sc-if value="{{ hx.noReq }}"><div style="font-size:13px; color:var(--text-3);">Sales didn’t attach requirements. Capture them at kickoff.</div></sc-if></div>
+            <div><h3 style="margin:0 0 8px; font-size:14.5px;">Deliverables</h3><sc-for list="{{ hx.deliverables }}" as="d"><label style="display:flex; gap:10px; align-items:center; padding:6px 0; font-size:14px; cursor:pointer;"><input type="checkbox" checked="{{ d.done }}" onChange="{{ d.toggle }}" style="width:17px; height:17px; accent-color:var(--primary);"><span style="text-decoration:{{ d.strike }}; color:{{ d.col }};">{{ d.t }}</span></label></sc-for><button onClick="{{ hx.addDeliverable }}" style="margin-top:4px; border:0; background:transparent; color:var(--primary-text); font-weight:600; font-size:13px; padding:0;">+ Add deliverable</button></div>
+          </div>
+          <div><h3 style="margin:0 0 8px; font-size:14.5px;">Assigned team</h3><div style="display:flex; gap:8px; flex-wrap:wrap;"><sc-for list="{{ hx.team }}" as="t"><span style="display:inline-flex; align-items:center; gap:7px; padding:5px 12px 5px 5px; border-radius:999px; background:var(--surface-2); font-size:13px; font-weight:600;"><span style="width:24px; height:24px; border-radius:99px; background:var(--primary-soft); color:var(--primary-text); font-size:10px; font-weight:700; display:inline-flex; align-items:center; justify-content:center;">{{ t.ini }}</span>{{ t.name }}</span></sc-for></div></div>
+          <div><h3 style="margin:0 0 8px; font-size:14.5px;">Onboarding tasks</h3><sc-for list="{{ hx.tasks }}" as="t"><div style="display:flex; gap:10px; padding:8px 0; border-top:1px solid var(--border); font-size:13.5px;"><span style="flex:1; font-weight:600; text-decoration:{{ t.strike }};">{{ t.title }}</span><span style="color:{{ t.col }}; font-weight:600;">{{ t.due }}</span><span style="color:var(--text-3);">{{ t.who }}</span></div></sc-for></div>
+          <div><h3 style="margin:0 0 6px; font-size:14.5px;">Notes from Sales</h3><p style="margin:0; padding:12px 14px; border-radius:12px; background:var(--surface-2); font-size:13.5px; line-height:1.5; color:var(--text-2);">{{ hx.notes }}</p></div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;"><button onClick="{{ hx.openCo }}" style="height:38px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Open Customer 360</button><button onClick="{{ hx.log }}" style="height:38px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;">Log a note</button></div>
+        </section>
+      </sc-if>
+    </div>
+  </div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { open: { d4: true }, pick: null };
+  componentDidMount() { const h = () => { this.un = FB.sub(() => this.forceUpdate()); FB.preview && FB.preview('delivery', { route: { id: 'd4' } }); this.forceUpdate(); }; if (window.FB) h(); else { const iv = setInterval(() => { if (window.FB) { clearInterval(iv); h(); } }, 40); } }
+  componentWillUnmount() { this.un && this.un(); }
+  renderVals() {
+    if (!window.FB) return {};
+    const S = FB.s, role = FB.role(), pg = S.route.page;
+    if (pg === 'finance') {
+      const manage = FB.can('payments.manage');
+      const inv = S.payments.flatMap(p => p.invoices);
+      const sum = f => inv.filter(f).reduce((a, i) => a + i.amount, 0);
+      const contracted = S.payments.reduce((a, p) => a + p.contract, 0);
+      const accounts = S.payments.map(p => { const d = FB.deal(p.dealId), c = FB.company(d.companyId); const paid = p.invoices.filter(i => i.status === 'Paid').reduce((a, i) => a + i.amount, 0); const bal = p.contract - paid; const worst = p.invoices.find(i => i.status === 'Overdue') ? 'Overdue' : p.invoices.find(i => i.status === 'Sent') ? 'Sent' : p.invoices.find(i => i.status === 'Not invoiced') ? 'Not invoiced' : 'Paid'; const t = FB.invTone(worst); const op = !!this.state.open[p.dealId];
+        return { company: c.name, title: d.title, won: FB.date(d.wonAt), contract: FB.kes(p.contract), paid: FB.kes(paid), balance: FB.kes(bal), balCol: worst === 'Overdue' ? 'var(--red)' : 'var(--text)', status: { Overdue: 'Overdue', Sent: 'Awaiting payment', 'Not invoiced': 'To invoice', Paid: 'Paid in full' }[worst], sbg: t[0], sfg: t[1], open: op, chev: op ? 'chevron-up' : 'chevron-down', toggle: () => this.setState({ open: { ...this.state.open, [p.dealId]: !op } }), next: p.next || 'Nothing pending', openCo: () => FB.go('company', c.id),
+          followUp: () => { p.next = 'Follow up on payment · ' + FB.dshort(new Date(FB.now.getTime() + 2 * 864e5)); FB.toast('Payment follow-up set for ' + c.name); FB.emit(); },
+          invoices: p.invoices.map(i => { const tn = FB.invTone(i.status); return { ...i, amount: FB.kes(i.amount), bg: tn[0], fg: tn[1], set: e => { const old = i.status; i.status = e.target.value; FB.auditAdd('Invoice status changed', c.name + ' · ' + i.no, old + ' → ' + i.status); FB.toast(i.no + ' marked ' + i.status, () => { i.status = old; FB.emit(); }); FB.emit(); } }; }) }; });
+      return { isFinance: true, canManage: manage, viewOnly: !manage, sc: { ...FB.scopeStyle(manage ? 'own' : 'org'), label: manage ? 'Finance · view and update status' : 'Organisation · view only' }, fHint: manage ? 'You can update invoice status and set payment follow-ups.' : 'Finance updates these. You can view everything.',
+        fk: [{ l: 'Contracted', v: FB.kesShort(contracted), sub: S.payments.length + ' won deals', dot: 'var(--primary)' }, { l: 'Invoiced', v: FB.kesShort(sum(i => i.status !== 'Not invoiced')), sub: inv.filter(i => i.status !== 'Not invoiced').length + ' invoices', dot: 'var(--blue)' }, { l: 'Collected', v: FB.kesShort(sum(i => i.status === 'Paid')), sub: 'paid', dot: 'var(--primary)' }, { l: 'Awaiting', v: FB.kesShort(sum(i => i.status === 'Sent')), sub: 'sent, not yet paid', dot: 'var(--orange)' }, { l: 'Overdue', v: FB.kesShort(sum(i => i.status === 'Overdue')), sub: 'past due date', dot: 'var(--red)', col: 'var(--red)' }].map(k => ({ col: 'var(--text)', ...k })),
+        accounts, noAccounts: !accounts.length || S.sim === 'empty', invHead: ['INVOICE', 'FOR', 'AMOUNT', 'DUE', 'STATUS'] };
+    }
+    // delivery
+    const hs = S.deals.filter(d => d.stage === 'Closed Won' && d.handoff).sort((a, b) => b.wonAt - a.wonAt);
+    const pickId = S.route.id || this.state.pick || (hs[0] && hs[0].id);
+    const tone = s => s === 'Delivered' ? ['var(--primary-soft)', 'var(--primary-text)'] : s === 'Awaiting owner' ? ['var(--orange-soft)', 'var(--orange-text)'] : ['var(--blue-soft)', 'var(--blue)'];
+    const handoffs = hs.map(d => { const h = d.handoff; const s = h.ownerId ? h.status : 'Awaiting owner'; const t = tone(s); return { company: FB.company(d.companyId).name, title: d.title, start: FB.dshort(h.start), owner: h.ownerId ? FB.uname(h.ownerId) : 'No owner yet', status: s, sbg: t[0], sfg: t[1], bd: d.id === pickId ? 'var(--primary)' : 'var(--border)', pick: () => FB.go('delivery', d.id) }; });
+    const d = FB.deal(pickId);
+    let hx = null;
+    if (d && d.handoff) { const h = d.handoff, c = FB.company(d.companyId);
+      const ts = S.tasks.filter(t => t.onboarding && t.link && t.link.id === c.id);
+      hx = { company: c.name, title: d.title, won: FB.dshort(d.wonAt).toUpperCase(), from: FB.uname(d.ownerId).toUpperCase(), value: FB.can('deals.values') ? FB.kes(d.value) : 'Pricing not shown for Delivery', status: h.ownerId ? h.status : 'Awaiting owner', needsOwner: !h.ownerId,
+        take: () => { h.ownerId = S.userId === 'mg' ? 'dl' : S.userId; h.status = 'Onboarding'; h.team = [...new Set([...(h.team || []), h.ownerId])]; FB.toast('You own the ' + c.name + ' handoff'); FB.emit(); },
+        setStatus: e => { h.status = e.target.value; if (h.status === 'Delivered') c.lifecycle = 'Active Customer'; FB.log('company', c.id, 'handoff', 'Delivery status: ' + h.status); FB.toast('Status: ' + h.status + (h.status === 'Delivered' ? ' · customer is now Active' : '')); FB.emit(); },
+        facts: [{ k: 'DELIVERY OWNER', v: h.ownerId ? FB.uname(h.ownerId) : 'Not assigned' }, { k: 'START DATE', v: FB.date(h.start) }, { k: 'PRIMARY CONTACT', v: FB.cname(FB.contact(d.contactId)) }, { k: 'LIFECYCLE', v: c.lifecycle }],
+        scope: h.scope, req: h.requirements, noReq: !h.requirements.length,
+        deliverables: h.deliverables.map(x => ({ t: x.t, done: x.done, strike: x.done ? 'line-through' : 'none', col: x.done ? 'var(--text-3)' : 'var(--text)', toggle: () => { x.done = !x.done; FB.emit(); } })), addDeliverable: () => { h.deliverables.push({ t: 'New deliverable ' + (h.deliverables.length + 1), done: false }); FB.toast('Deliverable added'); FB.emit(); },
+        team: (h.team || []).map(id => ({ name: FB.uname(id), ini: FB.initials(FB.uname(id).replace('Dev ', '')) })),
+        tasks: ts.map(t => { const s = FB.dueState(t.due, t.status === 'Completed'); return { title: t.title, due: t.status === 'Completed' ? 'Done' : FB.dueLabel(t.due), who: FB.uname(t.assigneeId), col: s === 'overdue' ? 'var(--red)' : 'var(--text-2)', strike: t.status === 'Completed' ? 'line-through' : 'none' }; }),
+        notes: h.notes || 'No notes.', openCo: () => FB.go('company', c.id), log: () => FB.drawer('note', { rt: 'company', rid: c.id, kind: 'note' }) };
+    }
+    return { isDelivery: true, handoffs, hx, sc: { ...FB.scopeStyle(role === 'management' ? 'org' : 'own'), label: role === 'management' ? 'Organisation' : 'Delivery team' } };
+  }
+}
+</script>
+</body>
+</html>

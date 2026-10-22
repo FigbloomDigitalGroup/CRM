@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="crm-theme.css"><script src="icons.js"></script><script src="crm-store.js"></script></helmet>
+<div style="display:flex; flex-direction:column; gap:20px;">
+<sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Deals board" style="display:flex; flex-direction:column; gap:18px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+      <div>
+        <h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">{{ title }}</h1>
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;">
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; background:{{ sc.bg }}; color:{{ sc.fg }}; font-size:12.5px; font-weight:600; white-space:nowrap;"><span style="width:6px; height:6px; border-radius:99px; background:{{ sc.dot }};"></span>{{ sc.label }}</span>
+          <span style="font-size:13.5px; color:var(--text-2);">{{ hint }}</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <div style="display:inline-flex; gap:2px; padding:3px; border-radius:10px; background:var(--surface-3); border:1px solid var(--border);"><sc-for list="{{ views }}" as="v"><button onClick="{{ v.go }}" aria-pressed="{{ v.on }}" style="display:flex; gap:6px; align-items:center; border:0; padding:6px 12px; border-radius:8px; background:{{ v.bg }}; box-shadow:{{ v.sh }}; font-size:13.5px; font-weight:600; color:{{ v.fg }};"><fb-icon name="{{ v.icon }}" size="15"></fb-icon>{{ v.l }}</button></sc-for></div>
+        <label style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-size:13.5px; font-weight:500; cursor:pointer;"><input type="checkbox" checked="{{ showArchived }}" onChange="{{ toggleArchived }}" style="accent-color:var(--primary);">Show archived</label>
+        <sc-if value="{{ can.import }}"><button onClick="{{ doImport }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;"><fb-icon name="upload" size="16"></fb-icon>Import CSV</button></sc-if>
+        <sc-if value="{{ can.export }}"><button onClick="{{ doExport }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;"><fb-icon name="download" size="16"></fb-icon>Export CSV</button></sc-if>
+        <sc-if value="{{ can.create }}"><button onClick="{{ newDeal }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;" style-hover="background:var(--primary-hover);"><fb-icon name="plus" size="16" stroke="2.2"></fb-icon>New deal</button></sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{ provisional }}"><div style="display:flex; gap:10px; align-items:flex-start; padding:12px 16px; border-radius:12px; border:1px dashed var(--orange); background:var(--orange-soft); color:var(--orange-text); font-size:13.5px; line-height:1.45;"><fb-icon name="info" size="17"></fb-icon><span><strong>Provisional access.</strong> {{ provisional }}</span></div></sc-if>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px;">
+      <sc-for list="{{ stats }}" as="s"><div style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow-sm);"><div style="display:flex; align-items:center; gap:7px; font-size:14px; color:var(--text-2);"><span style="width:7px; height:7px; border-radius:99px; background:{{ s.dot }};"></span>{{ s.l }}</div><div style="font-size:26px; font-weight:700; letter-spacing:-0.03em; margin-top:8px; color:{{ s.col }};">{{ s.v }}</div><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">{{ s.sub }}</div></div></sc-for>
+    </div>
+
+    <sc-if value="{{ st.loading }}"><div style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;"><sc-for list="{{ skel }}" as="s"><div style="height:280px; border-radius:14px; background:linear-gradient(90deg,var(--skel) 0%,var(--skel-2) 50%,var(--skel) 100%); background-size:1200px 100%; animation:fbShimmer 1.4s linear infinite;"></div></sc-for></div></sc-if>
+    <sc-if value="{{ st.error }}"><div role="alert" style="padding:40px; text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:14px;"><div style="color:var(--red); display:flex; justify-content:center;"><fb-icon name="alert" size="24"></fb-icon></div><div style="font-weight:700; margin-top:8px;">The board didn’t load</div><button onClick="{{ retry }}" style="margin-top:12px; height:38px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Retry</button></div></sc-if>
+    <sc-if value="{{ st.empty }}"><div style="padding:52px 24px; text-align:center; background:var(--surface); border:1px solid var(--border); border-radius:14px;"><div style="display:flex; justify-content:center; color:var(--orange-text);"><fb-icon name="briefcase" size="26"></fb-icon></div><div style="font-weight:700; font-size:18px; margin-top:10px;">No deals yet</div><div style="color:var(--text-2); margin-top:6px; font-size:14px;">Deals start when you convert a qualified lead.</div><sc-if value="{{ can.create }}"><button onClick="{{ goLeads }}" style="margin-top:14px; height:40px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Go to leads</button></sc-if></div></sc-if>
+
+    <sc-if value="{{ showBoard }}">
+      <sc-for list="{{ groups }}" as="g">
+        <div style="display:flex; align-items:center; gap:12px; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.1em; color:var(--text-3);">{{ g.label }}<span style="flex:1; height:1px; background:var(--border);"></span><sc-if value="{{ g.tip }}"><span style="font-family:'Instrument Sans',sans-serif; letter-spacing:0; font-size:12px;">{{ g.tip }}</span></sc-if></div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; align-items:start;">
+          <sc-for list="{{ g.cols }}" as="c">
+            <div onDragOver="{{ c.over }}" onDragLeave="{{ c.leave }}" onDrop="{{ c.drop }}" style="background:{{ c.bg }}; border:1.5px {{ c.bs }} {{ c.bd }}; border-radius:14px; padding:14px; min-height:150px; transition:border-color .15s, background .15s;">
+              <div style="display:flex; align-items:center; gap:8px; padding:0 2px;"><span style="width:8px; height:8px; border-radius:99px; background:{{ c.dot }};"></span><strong style="font-size:15px;">{{ c.name }}</strong><span style="font-size:11.5px; font-weight:600; padding:1px 8px; border-radius:999px; background:var(--surface); border:1px solid var(--border);">{{ c.n }}</span></div>
+              <div style="font-size:13px; color:var(--text-2); margin:4px 0 12px 18px;">{{ c.total }}</div>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <sc-for list="{{ c.cards }}" as="d">
+                  <div draggable="{{ d.drag }}" onDragStart="{{ d.start }}" onDragEnd="{{ d.end }}" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow-sm); cursor:{{ d.cursor }}; opacity:{{ d.op }};" style-hover="border-color:var(--border-strong); box-shadow:var(--shadow-md);">
+                    <div style="display:flex; gap:8px; align-items:flex-start;"><button onClick="{{ d.open }}" style="flex:1; text-align:left; border:0; background:transparent; padding:0; font-weight:600; font-size:15px; color:var(--text);" style-hover="color:var(--primary-text);">{{ d.company }}</button>
+                      <sc-if value="{{ d.canMove }}"><button aria-label="Move to stage" title="Move to…" onClick="{{ d.move }}" style="flex:none; width:28px; height:28px; border-radius:8px; border:0; background:transparent; color:var(--text-3); display:flex; align-items:center; justify-content:center;" style-hover="background:var(--surface-3); color:var(--text);"><fb-icon name="swap" size="15"></fb-icon></button></sc-if></div>
+                    <div style="font-size:12.5px; color:var(--text-3); margin-top:2px;">{{ d.title }}</div>
+                    <div style="margin-top:8px; font-size:{{ d.vsize }}; font-weight:700; letter-spacing:-0.02em; color:{{ d.vcol }};"><sc-if value="{{ d.showCur }}"><span style="font-size:12px; font-weight:600; color:var(--text-2); margin-right:4px;">KES</span></sc-if>{{ d.value }}</div>
+                    <sc-if value="{{ d.hasFlags }}"><div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;"><sc-for list="{{ d.flags }}" as="fl"><span style="display:inline-flex; gap:4px; align-items:center; font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:999px; background:{{ fl.bg }}; color:{{ fl.fg }};"><fb-icon name="{{ fl.icon }}" size="11"></fb-icon>{{ fl.l }}</span></sc-for></div></sc-if>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:12px; padding-top:10px; border-top:1px solid var(--border); font-size:12.5px; color:var(--text-2);"><span style="width:24px; height:24px; border-radius:99px; background:var(--primary-soft); color:var(--primary-text); font-size:10px; font-weight:700; display:inline-flex; align-items:center; justify-content:center;">{{ d.ini }}</span><span style="flex:1;">{{ d.owner }}</span><fb-icon name="calendar" size="13"></fb-icon>{{ d.close }}</div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ c.empty }}"><div style="padding:22px 10px; border:1px dashed var(--border-strong); border-radius:10px; text-align:center; font-size:13px; color:var(--text-3);">{{ c.emptyText }}</div></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </sc-if>
+
+    <sc-if value="{{ showTable }}">
+      <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;"><div style="overflow-x:auto; overflow-y:hidden;"><table style="width:100%; border-collapse:collapse; min-width:900px; font-size:14px;">
+        <thead><tr style="background:var(--surface-2);"><sc-for list="{{ cols }}" as="c"><th style="text-align:{{ c.al }}; padding:12px 14px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; letter-spacing:.08em; color:var(--text-3);">{{ c.l }}</th></sc-for></tr></thead>
+        <tbody><sc-for list="{{ allCards }}" as="d"><tr style="border-top:1px solid var(--border);" style-hover="background:var(--surface-2);"><td style="padding:14px;"><button onClick="{{ d.open }}" style="border:0; background:transparent; padding:0; font-weight:600; color:var(--primary-text); text-align:left;">{{ d.company }}</button><div style="font-size:12.5px; color:var(--text-3);">{{ d.title }}</div></td><td style="padding:14px;"><span style="display:inline-flex; gap:6px; align-items:center; font-size:13px;"><span style="width:7px; height:7px; border-radius:99px; background:{{ d.dot }};"></span>{{ d.stage }}</span></td><td style="padding:14px; text-align:right; font-weight:600; color:{{ d.vcol }};">{{ d.valueFull }}</td><td style="padding:14px;">{{ d.owner }}</td><td style="padding:14px; color:var(--text-2);">{{ d.close }}</td><td style="padding:14px; color:var(--text-2);">{{ d.last }}</td><td style="padding:14px;"><div style="display:flex; gap:6px; flex-wrap:wrap;"><sc-for list="{{ d.flags }}" as="fl"><span style="font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:999px; background:{{ fl.bg }}; color:{{ fl.fg }};">{{ fl.l }}</span></sc-for></div></td></tr></sc-for></tbody>
+      </table></div></section>
+    </sc-if>
+  </div>
+</sc-if>
+
+<sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+  <div data-screen-label="Deal detail" style="display:flex; flex-direction:column; gap:18px;">
+    <button onClick="{{ back }}" style="align-self:flex-start; display:flex; align-items:center; gap:6px; border:0; background:transparent; padding:0; color:var(--text-2); font-weight:600; font-size:13.5px;"><fb-icon name="arrow-left" size="15"></fb-icon>{{ backLabel }}</button>
+    <sc-if value="{{ x.archived }}"><div role="status" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:12px; background:var(--surface-3); border:1px solid var(--border-strong);"><fb-icon name="archive" size="17"></fb-icon><span style="flex:1; font-size:14px;"><strong>Archived.</strong> This deal is read-only until it’s restored.</span><sc-if value="{{ x.editRole }}"><button onClick="{{ x.restore }}" style="height:34px; padding:0 14px; border-radius:8px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;">Restore</button></sc-if></div></sc-if>
+    <sc-if value="{{ x.stalled }}"><div role="status" style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-radius:12px; background:var(--orange-soft); color:var(--orange-text); font-size:13.5px;"><fb-icon name="clock" size="17"></fb-icon><span style="flex:1;"><strong>Stalled: no activity for {{ x.days }} days.</strong> It stays in {{ x.stage }} until someone moves it.</span><sc-if value="{{ x.editable }}"><button onClick="{{ x.log }}" style="height:34px; padding:0 14px; border-radius:8px; border:1px solid var(--orange-text); background:transparent; color:var(--orange-text); font-weight:700;">Log activity</button></sc-if></div></sc-if>
+
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+      <div>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;"><h1 style="margin:0; font-size:28px; font-weight:700; letter-spacing:-0.03em;">{{ x.company }}</h1><span style="display:inline-flex; gap:6px; align-items:center; font-size:12.5px; font-weight:600; padding:3px 10px; border-radius:999px; background:var(--surface-3);"><span style="width:7px; height:7px; border-radius:99px; background:{{ x.dot }};"></span>{{ x.stage }}</span></div>
+        <div style="font-size:15px; color:var(--text-2); margin-top:4px;">{{ x.title }} · <strong style="color:{{ x.vcol }};">{{ x.value }}</strong></div>
+        <div style="margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:7px; padding:4px 11px; border-radius:999px; background:{{ dsc.bg }}; color:{{ dsc.fg }}; font-size:12.5px; font-weight:600; white-space:nowrap;"><span style="width:6px; height:6px; border-radius:99px; background:{{ dsc.dot }};"></span>{{ dsc.label }}</span></div>
+      </div>
+      <sc-if value="{{ x.editable }}">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button onClick="{{ x.log }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;"><fb-icon name="phone" size="16"></fb-icon>Log activity</button>
+          <button onClick="{{ x.move }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;"><fb-icon name="swap" size="16"></fb-icon>Move to…</button>
+          <sc-if value="{{ x.canQuote }}"><button onClick="{{ x.quote }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600;"><fb-icon name="file" size="16"></fb-icon>{{ x.quoteLabel }}</button></sc-if>
+          <button onClick="{{ x.archive }}" aria-label="Archive" title="Archive" style="width:40px; height:40px; border-radius:10px; border:1px solid var(--border-strong); background:var(--surface); display:flex; align-items:center; justify-content:center;"><fb-icon name="archive" size="16"></fb-icon></button>
+          <sc-if value="{{ x.isOpen }}"><button onClick="{{ x.won }}" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:10px; border:0; background:var(--primary-btn); color:#ffffff; font-weight:700;"><fb-icon name="check-circle" size="16"></fb-icon>Mark won</button></sc-if>
+        </div>
+      </sc-if>
+    </div>
+
+    <section aria-label="Deal stages" style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px;">
+      <div style="display:flex; gap:6px; overflow-x:auto;"><sc-for list="{{ x.steps }}" as="s"><button onClick="{{ s.go }}" disabled="{{ s.dis }}" style="flex:1 0 auto; height:38px; padding:0 14px; border-radius:999px; border:1px solid {{ s.bd }}; background:{{ s.bg }}; color:{{ s.fg }}; font-weight:600; font-size:13.5px; white-space:nowrap;">{{ s.l }}</button></sc-for></div>
+      <div style="font-size:12.5px; color:var(--text-3); margin-top:10px;">Figbloom never moves a deal on its own. Won opens the Delivery handoff; Lost asks for a reason.</div>
+    </section>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:16px; align-items:start;">
+      <div style="display:flex; flex-direction:column; gap:16px; grid-column:span 2; min-width:0;">
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px;">
+          <h2 style="margin:0 0 14px; font-size:16px;">Summary</h2>
+          <dl style="margin:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px;">
+            <sc-for list="{{ x.facts }}" as="f"><div><dt style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; color:var(--text-3);">{{ f.k }}</dt><dd style="margin:5px 0 0; font-weight:600; font-size:14px; color:{{ f.col }};">{{ f.v }}</dd></div></sc-for>
+          </dl>
+          <sc-if value="{{ x.canReassign }}"><label style="display:flex; align-items:center; gap:10px; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); font-size:13.5px;"><span style="font-weight:600;">Owner</span><select value="{{ x.ownerId }}" onChange="{{ x.reassign }}" style="height:36px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); padding:0 8px; font-size:13.5px;"><sc-for list="{{ ownerOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select></label></sc-if>
+        </section>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 18px;"><h2 style="margin:0; font-size:16px;">Proposals</h2><sc-if value="{{ x.editable }}"><button onClick="{{ x.addProposal }}" style="border:0; background:transparent; color:var(--primary-text); font-weight:600; font-size:13px;">+ Add proposal reference</button></sc-if></div>
+          <div style="overflow-x:auto; overflow-y:hidden;"><table style="width:100%; border-collapse:collapse; min-width:620px; font-size:13.5px;"><thead><tr style="background:var(--surface-2);"><sc-for list="{{ pcols }}" as="c"><th style="text-align:left; padding:10px 18px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:500; letter-spacing:.08em; color:var(--text-3);">{{ c }}</th></sc-for></tr></thead>
+          <tbody><sc-for list="{{ x.proposals }}" as="p"><tr style="border-top:1px solid var(--border);"><td style="padding:12px 18px; font-family:'IBM Plex Mono',monospace; font-size:12.5px;">{{ p.no }}</td><td style="padding:12px 18px;"><span style="font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; background:var(--surface-3);">{{ p.status }}</span></td><td style="padding:12px 18px; font-weight:600; color:{{ p.acol }};">{{ p.amount }}</td><td style="padding:12px 18px; color:var(--text-2);">{{ p.sent }}</td><td style="padding:12px 18px; color:var(--text-2);">{{ p.approval }}</td><td style="padding:12px 18px; font-size:12.5px; color:var(--primary-text);">{{ p.doc }}</td></tr></sc-for></tbody></table></div>
+          <sc-if value="{{ x.noProposals }}"><div style="padding:18px; border-top:1px solid var(--border); font-size:13.5px; color:var(--text-3);">No proposals yet. Documents live in Drive; store the reference here.</div></sc-if>
+        </section>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; gap:10px;"><div style="display:inline-flex; gap:2px; padding:3px; border-radius:10px; background:var(--surface-3);"><sc-for list="{{ tlTabs }}" as="t"><button onClick="{{ t.go }}" style="border:0; padding:6px 12px; border-radius:8px; background:{{ t.bg }}; box-shadow:{{ t.sh }}; font-size:13px; font-weight:600; color:{{ t.fg }};">{{ t.l }}</button></sc-for></div></div>
+          <div style="padding:6px 18px 12px;"><sc-for list="{{ timeline }}" as="a"><div style="display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);"><span style="flex:none; width:32px; height:32px; border-radius:99px; background:{{ a.bg }}; color:{{ a.fg }}; display:flex; align-items:center; justify-content:center;"><fb-icon name="{{ a.icon }}" size="15"></fb-icon></span><div style="flex:1;"><div style="font-size:14px; line-height:1.45;">{{ a.text }}</div><div style="font-size:12.5px; color:var(--text-3); margin-top:3px;">{{ a.by }} · {{ a.when }}<sc-if value="{{ a.carried }}"> · carried over from lead</sc-if></div></div></div></sc-for><sc-if value="{{ tlEmpty }}"><div style="padding:20px 0; color:var(--text-3);">Nothing logged yet.</div></sc-if></div>
+        </section>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:16px; min-width:0;">
+        <sc-if value="{{ x.handoff }}">
+          <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px;">
+            <div style="display:flex; align-items:center; gap:10px;"><span style="width:34px; height:34px; border-radius:10px; background:var(--blue-soft); color:var(--blue); display:flex; align-items:center; justify-content:center;"><fb-icon name="package" size="17"></fb-icon></span><h2 style="margin:0; font-size:16px; flex:1;">Delivery handoff</h2><span style="font-size:12px; font-weight:600; padding:2px 9px; border-radius:999px; background:var(--blue-soft); color:var(--blue);">{{ x.handoff.status }}</span></div>
+            <dl style="margin:14px 0 0; display:grid; grid-template-columns:auto 1fr; gap:8px 14px; font-size:13.5px;"><dt style="color:var(--text-3);">Owner</dt><dd style="margin:0; font-weight:600;">{{ x.handoff.owner }}</dd><dt style="color:var(--text-3);">Starts</dt><dd style="margin:0; font-weight:600;">{{ x.handoff.start }}</dd></dl>
+            <p style="margin:12px 0 0; font-size:13.5px; color:var(--text-2); line-height:1.5;">{{ x.handoff.scope }}</p>
+            <sc-if value="{{ x.handoff.canOpen }}"><button onClick="{{ x.handoff.open }}" style="margin-top:12px; height:36px; padding:0 14px; border-radius:9px; border:1px solid var(--border-strong); background:var(--surface); font-weight:600; font-size:13px;">Open delivery view</button></sc-if>
+          </section>
+        </sc-if>
+        <sc-if value="{{ x.contact }}">
+          <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px;">
+            <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.08em; color:var(--text-3);">PRIMARY CONTACT</div>
+            <div style="display:flex; gap:12px; align-items:center; margin-top:10px;"><span style="width:40px; height:40px; border-radius:99px; background:var(--primary-soft); color:var(--primary-text); font-weight:700; display:flex; align-items:center; justify-content:center;">{{ x.contact.ini }}</span><div><button onClick="{{ x.contact.open }}" style="border:0; background:transparent; padding:0; font-weight:700; color:var(--text); font-size:14px;">{{ x.contact.name }}</button><div style="font-size:12.5px; color:var(--text-3);">{{ x.contact.title }}</div></div></div>
+            <div style="font-size:13.5px; margin-top:10px; color:var(--text-2);">{{ x.contact.phone }}</div>
+            <sc-if value="{{ x.canContact }}"><div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;"><a href="{{ x.contact.tel }}" onClick="{{ x.contact.call }}" style="display:flex; gap:7px; align-items:center; justify-content:center; height:40px; border-radius:10px; background:var(--primary-btn); color:#ffffff; font-weight:700; text-decoration:none;"><fb-icon name="phone" size="15"></fb-icon>Call</a><a href="{{ x.contact.wa }}" onClick="{{ x.contact.whatsapp }}" style="display:flex; gap:7px; align-items:center; justify-content:center; height:40px; border-radius:10px; border:1px solid var(--border-strong); color:var(--text); font-weight:700; text-decoration:none;"><fb-icon name="whatsapp" size="15"></fb-icon>WhatsApp</a></div></sc-if>
+          </section>
+        </sc-if>
+        <section style="background:var(--surface); border:1px solid var(--border); border-radius:14px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 18px 8px;"><h2 style="margin:0; font-size:16px;">Tasks</h2><sc-if value="{{ x.editable }}"><button onClick="{{ x.addTask }}" style="border:0; background:transparent; color:var(--primary-text); font-weight:600; font-size:13px;">+ Add task</button></sc-if></div>
+          <sc-for list="{{ x.tasks }}" as="t"><div style="display:flex; gap:10px; padding:10px 18px; border-top:1px solid var(--border);"><span style="flex:none; margin-top:5px; width:8px; height:8px; border-radius:99px; background:{{ t.col }};"></span><div><div style="font-size:13.5px; font-weight:600;">{{ t.title }}</div><div style="font-size:12px; color:{{ t.col }}; font-weight:600;">{{ t.due }} · {{ t.who }}</div></div></div></sc-for>
+          <sc-if value="{{ x.noTasks }}"><div style="padding:14px 18px 18px; border-top:1px solid var(--border); font-size:13px; color:var(--text-3);">No tasks.</div></sc-if>
+        </section>
+      </div>
+    </div>
+  </div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { view: 'board', archived: false, over: null, dragId: null, tl: 'all' };
+  componentDidMount() { const h = () => { this.un = FB.sub(() => this.forceUpdate()); FB.preview && FB.preview('deals'); this.forceUpdate(); }; if (window.FB) h(); else { const iv = setInterval(() => { if (window.FB) { clearInterval(iv); h(); } }, 40); } }
+  componentWillUnmount() { this.un && this.un(); }
+  card(d) {
+    const S = FB.s, vis = FB.valueVisible(d), c = FB.company(d.companyId);
+    const flags = [];
+    if (FB.stalled(d)) flags.push({ l: 'Stalled · ' + FB.daysSince(d.lastActivity) + 'd', icon: 'clock', bg: 'var(--orange-soft)', fg: 'var(--orange-text)' });
+    if (!d.stage.startsWith('Closed') && d.close && d.close < FB.now) flags.push({ l: 'Close date passed', icon: 'alert', bg: 'var(--red-soft)', fg: 'var(--red)' });
+    const lp = d.proposals[d.proposals.length - 1];
+    if (d.stage === 'Proposal Sent' && lp && lp.sentAt && FB.daysSince(lp.sentAt) >= 5 && !S.activities.some(a => a.rt === 'deal' && a.rid === d.id && a.dir === 'in' && a.at > lp.sentAt)) flags.push({ l: 'No reply · ' + FB.daysSince(lp.sentAt) + 'd', icon: 'send', bg: 'var(--blue-soft)', fg: 'var(--blue)' });
+    if (d.archived) flags.push({ l: 'Archived', icon: 'archive', bg: 'var(--surface-3)', fg: 'var(--text-2)' });
+    if (d.stage === 'Closed Won' && d.handoff) flags.push({ l: d.handoff.ownerId ? 'Handed off' : 'Needs delivery owner', icon: 'package', bg: 'var(--blue-soft)', fg: 'var(--blue)' });
+    if (d.stage === 'Closed Lost' && d.lostReason) flags.push({ l: d.lostReason, icon: 'ban', bg: 'var(--red-soft)', fg: 'var(--red)' });
+    const canMove = FB.canEditDeal(d);
+    return { id: d.id, company: c.name, title: d.title, stage: d.stage, dot: FB.stageTone(d.stage), value: vis ? FB.num(d.value) : 'Values hidden', valueFull: FB.dealValue(d), showCur: vis, vsize: vis ? '20px' : '13px', vcol: vis ? 'var(--text)' : 'var(--text-3)', owner: FB.uname(d.ownerId), ini: FB.initials(FB.uname(d.ownerId).replace('Dev ', '')), close: FB.date(d.close), last: FB.ago(d.lastActivity), flags, hasFlags: flags.length > 0,
+      open: () => FB.go('deal', d.id), canMove, drag: canMove ? 'true' : 'false', cursor: canMove ? 'grab' : 'pointer', op: this.state.dragId === d.id ? 0.4 : 1,
+      start: e => { e.dataTransfer.setData('text/plain', d.id); e.dataTransfer.effectAllowed = 'move'; this.setState({ dragId: d.id }); }, end: () => this.setState({ dragId: null, over: null }), move: () => FB.modal('moveTo', { id: d.id }) };
+  }
+  renderVals() {
+    if (!window.FB) return {};
+    const S = FB.s, role = FB.role(), mgmt = role === 'management', st0 = this.state;
+    const ro = role === 'delivery' || role === 'finance';
+    const ownerOpts = FB.ownerOptions().map(o => ({ v: o.id, l: o.label }));
+    if (S.route.page === 'deal') return { ownerOpts, isDetail: true, ...this.detail(FB.deal(S.route.id), ownerOpts) };
+    const all = FB.dealsVisible().filter(d => st0.archived || !d.archived);
+    const open = all.filter(d => !d.stage.startsWith('Closed')), won = all.filter(d => d.stage === 'Closed Won'), lost = all.filter(d => d.stage === 'Closed Lost');
+    const sum = a => a.reduce((x, d) => x + (FB.valueVisible(d) ? d.value : 0), 0);
+    const anyHidden = all.some(d => !FB.valueVisible(d));
+    const sim = S.sim;
+    const st = { loading: sim === 'loading', error: sim === 'error', empty: sim === 'empty' || (!all.length && sim === 'normal'), ok: !['loading', 'error', 'empty'].includes(sim) && all.length > 0 };
+    const col = (name, list, emptyText) => {
+      const over = st0.over === name; const bgBase = name === 'Closed Won' ? 'var(--primary-soft)' : name === 'Closed Lost' ? 'var(--red-soft)' : 'var(--surface-2)';
+      const vis = list.filter(FB.valueVisible); const hidden = list.length - vis.length;
+      return { name, n: list.length, dot: FB.stageTone(name), total: !list.length ? (FB.can('deals.values') || role === 'sales' ? 'KES 0' : 'Values hidden') : vis.length ? FB.kes(sum(list)) + (hidden ? ' · ' + hidden + ' hidden' : '') : 'Values hidden', cards: list.map(d => this.card(d)), empty: !list.length, emptyText: emptyText || 'No deals', bg: over ? 'var(--primary-soft)' : bgBase, bd: over ? 'var(--primary)' : 'var(--border)', bs: over ? 'dashed' : 'solid',
+        over: e => { if (!st0.dragId) return; e.preventDefault(); if (st0.over !== name) this.setState({ over: name }); }, leave: () => {}, drop: e => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain') || st0.dragId; this.setState({ over: null, dragId: null }); if (id) FB.moveDeal(id, name); } };
+    };
+    const groups = ro ? [{ label: 'WON DEALS', tip: role === 'delivery' ? 'Prices are hidden for Delivery' : '', cols: [col('Closed Won', won, 'No won deals yet')] }]
+      : [{ label: 'OPEN PIPELINE', tip: 'Drag cards between stages, or use ⇄ on a card', cols: FB.ref.stages.slice(0, 3).map(s => col(s, open.filter(d => d.stage === s), 'Drop a deal here')) }, { label: 'CLOSED', tip: '', cols: [col('Closed Won', won, 'No deals won yet'), col('Closed Lost', lost, 'No deals lost')] }];
+    const sc = FB.scopeStyle(mgmt ? 'org' : ro ? 'ro' : 'own');
+    const stats = ro ? [
+      { l: 'Won deals', v: won.length, sub: 'handed to delivery', dot: 'var(--primary)', col: 'var(--text)' },
+      { l: 'Won value', v: anyHidden ? 'Values hidden' : FB.kes(sum(won)), sub: anyHidden ? 'not shown for your role' : 'contracted', dot: 'var(--orange)', col: anyHidden ? 'var(--text-3)' : 'var(--text)' },
+      { l: 'In onboarding', v: won.filter(d => d.handoff && d.handoff.status !== 'Delivered').length, sub: 'not yet delivered', dot: 'var(--blue)', col: 'var(--text)' },
+    ] : [
+      { l: 'Open deals', v: open.length, sub: 'across ' + new Set(open.map(d => d.stage)).size + ' stages', dot: 'var(--blue)', col: 'var(--text)' },
+      { l: 'Open pipeline', v: FB.kes(sum(open)), sub: 'value still in play', dot: 'var(--orange)', col: 'var(--text)' },
+      { l: 'Won', v: FB.kes(sum(won)), sub: won.length + ' deal' + (won.length === 1 ? '' : 's') + ' closed won', dot: 'var(--primary)', col: 'var(--text)' },
+      { l: 'Lost', v: lost.length, sub: lost.length ? 'see lost reasons in Reports' : 'no deals lost', dot: 'var(--red)', col: 'var(--text)' },
+    ];
+    const vw = st0.view;
+    return {
+      ownerOpts, isList: true, st, groups, stats, sc: { ...sc, label: mgmt ? 'All organisation deals · ' + all.length : ro ? 'Read-only · won deals' : 'My deals · ' + all.length },
+      title: ro ? 'Won deals' : 'Deals',
+      hint: mgmt ? 'Showing all organisation deals.' : ro ? 'Won deals and their handoff status. You can’t edit the pipeline.' : 'Showing deals you own. You see values on your own deals.',
+      provisional: ro ? 'The seeded matrix gives ' + FB.roleLabel() + ' “view all deals”, including the open pipeline. Following the stakeholder brief, this view shows won deals only. Needs Michael’s sign-off (FIG-444).' : '',
+      can: { import: FB.role() === 'management', export: FB.can('deals.export'), create: FB.can('deals.edit') },
+      views: [['board', 'Board', 'kanban'], ['list', 'List', 'list']].map(([id, l, icon]) => ({ l, icon, on: vw === id, bg: vw === id ? 'var(--surface)' : 'transparent', sh: vw === id ? 'var(--shadow-sm)' : 'none', fg: vw === id ? 'var(--text)' : 'var(--text-2)', go: () => this.setState({ view: id }) })),
+      showBoard: st.ok && vw === 'board', showTable: st.ok && vw === 'list', allCards: all.map(d => this.card(d)),
+      cols: [{ l: 'COMPANY / DEAL', al: 'left' }, { l: 'STAGE', al: 'left' }, { l: 'VALUE', al: 'right' }, { l: 'OWNER', al: 'left' }, { l: 'EXPECTED CLOSE', al: 'left' }, { l: 'LAST ACTIVITY', al: 'left' }, { l: 'FLAGS', al: 'left' }],
+      showArchived: st0.archived, toggleArchived: () => this.setState({ archived: !st0.archived }),
+      doImport: () => FB.modal('import', { kind: 'deals' }), doExport: () => FB.toast('Exporting deals… deals-2026-10-19.csv is downloading'), newDeal: () => FB.drawer('deal'), goLeads: () => FB.go('leads'), retry: () => FB.simulate('normal'), skel: [1, 2, 3],
+    };
+  }
+  detail(d, ownerOpts) {
+    const empty = { x: { steps: [], facts: [], proposals: [], tasks: [] }, timeline: [], tlTabs: [], pcols: [], dsc: {} };
+    if (!d || !FB.dealsVisible().find(x => x.id === d.id)) return { ...empty, x: { ...empty.x, company: 'You can’t open this deal', title: 'It isn’t in your view.' } };
+    const S = FB.s, role = FB.role(), c = FB.company(d.companyId), p = d.contactId && FB.contact(d.contactId);
+    const editable = FB.canEditDeal(d), vis = FB.valueVisible(d);
+    const isOpen = !d.stage.startsWith('Closed');
+    const steps = FB.ref.stages.map(s => { const cur = s === d.stage; const won = s === 'Closed Won', lost = s === 'Closed Lost'; return { l: s, dis: !editable || cur, bg: cur ? (lost ? 'var(--red)' : 'var(--primary-btn)') : 'var(--surface)', fg: cur ? '#ffffff' : won ? 'var(--primary-text)' : lost ? 'var(--red)' : 'var(--text-2)', bd: cur ? 'transparent' : 'var(--border-strong)', go: () => FB.moveDeal(d.id, s) }; });
+    const facts = [{ k: 'COMPANY', v: c.name }, { k: 'SERVICE', v: d.service }, { k: 'OWNER', v: FB.uname(d.ownerId) }, { k: 'VALUE', v: FB.dealValue(d), col: vis ? 'var(--text)' : 'var(--text-3)' }, { k: 'EXPECTED CLOSE', v: FB.date(d.close), col: isOpen && d.close < FB.now ? 'var(--red)' : 'var(--text)' }, { k: 'SOURCE', v: d.source }, { k: 'CREATED', v: FB.date(d.createdAt) }, { k: 'LAST ACTIVITY', v: FB.ago(d.lastActivity) }].map(f => ({ col: 'var(--text)', ...f }));
+    if (d.cost) facts.push(FB.can('deals.margin') ? { k: 'MARGIN', v: FB.kes(d.value - d.cost) + ' · ' + Math.round((d.value - d.cost) / d.value * 100) + '%', col: 'var(--text)' } : { k: 'MARGIN', v: 'Management only', col: 'var(--text-3)' });
+    if (d.lostReason) facts.push({ k: 'LOST REASON', v: d.lostReason, col: 'var(--red)' });
+    const lp = d.proposals[d.proposals.length - 1];
+    if (d.stage === 'Proposal Sent' && lp && lp.sentAt) { const dd = FB.daysSince(lp.sentAt); const rep = S.activities.some(a => a.rt === 'deal' && a.rid === d.id && a.dir === 'in' && a.at > lp.sentAt); facts.push({ k: 'PROPOSAL RESPONSE', v: rep ? 'Customer replied' : 'No reply · ' + dd + ' days', col: rep ? 'var(--primary-text)' : dd >= 5 ? 'var(--orange-text)' : 'var(--text)' }); }
+    if (FB.can('deals.margin') && d.cost) facts.push({ k: 'COST · MARGIN', v: FB.kes(d.cost) + ' · ' + Math.round((d.value - d.cost) / d.value * 100) + '%', col: 'var(--text)' });
+    const acts = FB.activitiesFor('deal', d.id), tl = this.state.tl;
+    const commK = ['call', 'whatsapp', 'email', 'meeting'], audK = ['stage', 'status', 'system', 'assigned', 'handoff'];
+    const timeline = (tl === 'comms' ? acts.filter(a => commK.includes(a.kind)) : tl === 'audit' ? acts.filter(a => audK.includes(a.kind)) : acts).map(a => ({ text: a.text, icon: FB.actIcon(a.kind), by: a.byId ? FB.uname(a.byId) : 'Figbloom automation', when: FB.when(a.at), carried: !!a.carried, bg: commK.includes(a.kind) ? 'var(--primary-soft)' : a.kind === 'handoff' ? 'var(--blue-soft)' : 'var(--surface-3)', fg: commK.includes(a.kind) ? 'var(--primary-text)' : a.kind === 'handoff' ? 'var(--blue)' : 'var(--text-2)' }));
+    const tasks = S.tasks.filter(t => t.link && t.link.type === 'deal' && t.link.id === d.id && t.status !== 'Completed').map(t => { const s = FB.dueState(t.due); return { title: t.title, due: FB.dueLabel(t.due), who: FB.uname(t.assigneeId), col: s === 'overdue' ? 'var(--red)' : 'var(--text-2)' }; });
+    const h = d.handoff;
+    const sc = FB.scopeStyle(editable ? (role === 'management' ? 'org' : 'own') : 'ro');
+    return {
+      backLabel: role === 'delivery' || role === 'finance' ? 'Won deals' : 'Deals', back: () => FB.go('deals'),
+      dsc: { ...sc, label: editable ? (role === 'management' ? 'Organisation' : 'Own') : 'Read-only' },
+      pcols: ['NUMBER', 'STATUS', 'AMOUNT', 'SENT', 'APPROVAL', 'DOCUMENT'],
+      x: { company: c.name, title: d.title, stage: d.stage, dot: FB.stageTone(d.stage), value: FB.dealValue(d), vcol: vis ? 'var(--text)' : 'var(--text-3)', editable, editRole: FB.can('deals.edit'), isOpen, archived: !!d.archived, restore: () => FB.restore('deal', d.id), stalled: FB.stalled(d), days: FB.daysSince(d.lastActivity),
+        steps, facts, canReassign: FB.can('deals.all') && !d.archived, ownerId: d.ownerId, reassign: e => FB.reassign('deal', d.id, e.target.value),
+        proposals: d.proposals.map(pp => ({ ...pp, amount: vis ? FB.kes(pp.amount) : 'Hidden', acol: vis ? 'var(--text)' : 'var(--text-3)' })), noProposals: !d.proposals.length,
+        addProposal: () => { d.proposals.push({ no: 'P-2026-0' + (15 + d.proposals.length), status: 'Draft', amount: d.value, sent: '—', approval: 'Not sent', doc: 'Drive / Proposals / …' }); FB.toast('Proposal reference added'); FB.emit(); },
+        handoff: h ? { status: h.ownerId ? h.status : 'Needs an owner', owner: h.ownerId ? FB.uname(h.ownerId) : 'Not assigned yet', start: FB.date(h.start), scope: h.scope, canOpen: FB.can('delivery'), open: () => FB.go('delivery', d.id) } : null,
+        contact: p ? { name: FB.cname(p), ini: FB.initials(FB.cname(p)), title: p.title, phone: p.phone, tel: 'tel:' + p.phone, wa: 'https://wa.me/' + p.phone.replace(/\D/g, ''), open: () => FB.go('contact', p.id), call: e => { e.preventDefault(); FB.modal('logPrompt', { kind: 'call', name: p.first, rt: 'deal', rid: d.id }); }, whatsapp: e => { e.preventDefault(); FB.modal('logPrompt', { kind: 'whatsapp', name: p.first, rt: 'deal', rid: d.id }); } } : null,
+        canContact: FB.can('activities.create'),
+        tasks, noTasks: !tasks.length, addTask: () => FB.drawer('task', { rt: 'deal', rid: d.id }),
+        canQuote: FB.rel('v11') && FB.can('quotes.create'), quote: () => FB.go('quote', d.id), quoteLabel: S.quotes.some(q => q.dealId === d.id) ? 'Open quote' : 'Build quote',
+        log: () => FB.drawer('note', { rt: 'deal', rid: d.id }), move: () => FB.modal('moveTo', { id: d.id }), won: () => FB.moveDeal(d.id, 'Closed Won'), archive: () => FB.archive('deal', d.id) },
+      timeline, tlEmpty: !timeline.length,
+      tlTabs: [['all', 'Activity'], ['comms', 'Communications'], ['audit', 'Audit history']].map(([id, l]) => ({ l, bg: tl === id ? 'var(--surface)' : 'transparent', sh: tl === id ? 'var(--shadow-sm)' : 'none', fg: tl === id ? 'var(--text)' : 'var(--text-2)', go: () => this.setState({ tl: id }) })),
+    };
+  }
+}
+</script>
+</body>
+</html>
