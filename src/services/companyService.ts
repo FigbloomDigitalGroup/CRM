@@ -1,4 +1,10 @@
+import type { Company, Prisma } from "@prisma/client";
 import { canAssignAccountOwner, canWorkAccounts } from "../auth/accountAccess";
+import { assertWritable, cleanArchiveReason } from "../lib/archive";
+import { findDuplicates } from "./duplicateService";
+import { auditCustomFieldChanges, prepareCustomFields } from "./customFieldService";
+import { MERGE_UNDO_WINDOW_MS, validateMergeChoices, type MergeOptions } from "../lib/merge";
+import { mergeRecords } from "../repositories/merges";
 import type { AuthContext } from "../auth/context";
 import {
   deny, requirePermission } from "../auth/context";
@@ -12,7 +18,6 @@ import {
   getCompanyById,
   countCompanies as countCompaniesRecords,
   listCompanies as listCompaniesRecords,
-  mergeCompanies as mergeCompaniesRecord,
   restoreCompany as restoreCompanyRecord,
   updateCompany as updateCompanyRecord,
   type CreateCompanyInput,
@@ -124,10 +129,24 @@ export async function createCompany(
     ctx.organizationId,
     { name: clean.name, email: clean.email, phone: clean.phone },
   );
+  // The fuller check (B2.04): phone formats, plus-addressing, domains and similar names, with reasons and a confidence band. It warns; it never blocks.
+  const found = await findDuplicates(ctx, {
+    entity: "company",
+    companyName: clean.name,
+    email: clean.email,
+    phone: clean.phone,
+    website: clean.website,
+  });
+
+  const custom = await prepareCustomFields(ctx.organizationId, "COMPANY", {
+    incoming: input.customFields as Record<string, unknown> | undefined,
+    mode: "create",
+  });
 
   const company = await createCompanyRecord({
     ...input,
     ...clean,
+    customFields: custom?.values as Prisma.InputJsonValue | undefined,
     organizationId: ctx.organizationId,
     createdByMembershipId: ctx.membershipId,
     ownerMembershipId,
@@ -145,7 +164,7 @@ export async function createCompany(
     });
   }
 
-  return { company, possibleDuplicates };
+  return { company, possibleDuplicates, duplicates: found.candidates, hiddenDuplicates: found.hiddenCount };
 }
 
 export async function updateCompany(
@@ -159,13 +178,16 @@ export async function updateCompany(
   if (!previous) {
     throw new NotFoundError("Company", companyId);
   }
-  if (previous.archivedAt) {
-    throw new ValidationError(
-      "This company is archived. Restore it before editing it.",
-    );
-  }
+  assertWritable(ctx, "company", previous, "editing it");
+
+  const custom = await prepareCustomFields(ctx.organizationId, "COMPANY", {
+    existing: previous.customFields as Record<string, unknown>,
+    incoming: input.customFields as Record<string, unknown> | undefined,
+    mode: "update",
+  });
 
   const data: UpdateCompanyInput = {
+    customFields: custom?.values as Prisma.InputJsonValue | undefined,
     name: cleanRequiredText(input.name, "Company name"),
     industry: cleanOptionalText(input.industry, "Industry"),
     website: cleanOptionalText(input.website, "Website"),
@@ -231,7 +253,9 @@ export async function updateCompany(
     });
   }
 
-  return updateCompanyRecord(ctx.organizationId, companyId, data);
+  const updated = await updateCompanyRecord(ctx.organizationId, companyId, data);
+  if (custom) await auditCustomFieldChanges(ctx, "Company", companyId, custom.changes);
+  return updated;
 }
 
 export async function getCompany(ctx: AuthContext, companyId: string) {
@@ -289,14 +313,18 @@ export async function checkDuplicateCompanies(
 }
 
 /** Soft-delete (FIG-601) -- the row and everything linked to it stays intact, just hidden from default lists. */
-export async function archiveCompany(ctx: AuthContext, companyId: string) {
+export async function archiveCompany(ctx: AuthContext, companyId: string, input: { reason?: string | null } = {}) {
   requirePermission(ctx, "companies.archive");
   const company = await getCompany(ctx, companyId);
   if (company.archivedAt) {
     throw new ValidationError("This company is already archived.");
   }
 
-  const archived = await archiveCompanyRecord(ctx.organizationId, companyId);
+  const reason = cleanArchiveReason(input.reason);
+  const archived = await archiveCompanyRecord(ctx.organizationId, companyId, {
+    membershipId: ctx.membershipId,
+    reason,
+  });
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -304,6 +332,7 @@ export async function archiveCompany(ctx: AuthContext, companyId: string) {
     action: "company.archived",
     entityType: "Company",
     entityId: companyId,
+    metadata: reason ? { reason } : undefined,
   });
 
   return archived;
@@ -348,6 +377,7 @@ export async function mergeCompanies(
   ctx: AuthContext,
   loserId: string,
   winnerId: string,
+  options: MergeOptions = {},
 ) {
   requirePermission(ctx, "companies.merge");
   if (loserId === winnerId) {
@@ -363,7 +393,18 @@ export async function mergeCompanies(
     throw new ValidationError("Cannot merge into an archived company.");
   }
 
-  const merged = await mergeCompaniesRecord(ctx.organizationId, loserId, winnerId);
+  validateMergeChoices("Company", options.fields);
+  const outcome = await mergeRecords<Company>({
+    organizationId: ctx.organizationId,
+    entity: "Company",
+    loserId,
+    winnerId,
+    mergedByMembershipId: ctx.membershipId,
+    choices: options.fields,
+    undoExpiresAt: new Date(Date.now() + MERGE_UNDO_WINDOW_MS),
+    archiveReason: "Merged into another company.",
+  });
+  const merged = { ...outcome.loser, mergeRecordId: outcome.mergeRecordId, undoExpiresAt: new Date(Date.now() + MERGE_UNDO_WINDOW_MS) };
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -372,7 +413,7 @@ export async function mergeCompanies(
     entityType: "Company",
     entityId: loserId,
     newValue: { mergedIntoId: winnerId },
-    metadata: { winnerName: winner.name },
+    metadata: { winnerName: winner.name, mergeRecordId: outcome.mergeRecordId, fieldsChanged: outcome.changedFields, moved: outcome.moved },
   });
   await recordAuditEvent({
     organizationId: ctx.organizationId,

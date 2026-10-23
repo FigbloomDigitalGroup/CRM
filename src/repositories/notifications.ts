@@ -82,3 +82,56 @@ export async function markAllNotificationsRead(
     }),
   );
 }
+
+export interface NotificationFeedFilters {
+  unreadOnly?: boolean;
+  /** Only archived ones; the default feed leaves them out. */
+  archived?: boolean;
+  types?: NotificationTypeKey[];
+  limit: number;
+}
+
+/** The feed rows, newest first; archived ones only when asked for. */
+export async function listNotificationFeed(
+  organizationId: string,
+  membershipId: string,
+  filters: NotificationFeedFilters,
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.notification.findMany({
+      where: {
+        organizationId,
+        membershipId,
+        archivedAt: filters.archived ? { not: null } : null,
+        ...(filters.unreadOnly ? { readAt: null } : {}),
+        ...(filters.types?.length ? { type: { in: filters.types } } : {}),
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: filters.limit,
+    }),
+  );
+}
+
+export async function archiveNotification(
+  organizationId: string,
+  membershipId: string,
+  notificationId: string,
+  archived: boolean,
+) {
+  const now = new Date();
+  return withOrgContext(organizationId, (tx) =>
+    tx.notification.updateMany({
+      where: { id: notificationId, organizationId, membershipId },
+      data: archived ? { archivedAt: now, readAt: now } : { archivedAt: null },
+    }),
+  );
+}
+
+/** Read notifications older than the cut-off are removed; unread ones are never expired. */
+export async function deleteReadNotificationsBefore(organizationId: string, cutoff: Date) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.notification.deleteMany({
+      where: { organizationId, readAt: { not: null, lt: cutoff } },
+    }),
+  );
+}

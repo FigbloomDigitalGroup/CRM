@@ -141,3 +141,26 @@ export class RateLimitedError extends Error {
     this.name = "RateLimitedError";
   }
 }
+
+/** What the UI needs to offer "Restore" on an archived record (B2.16). */
+export interface RestoreHint {
+  entityType: string;
+  entityId: string;
+  /** Whether the caller may restore it themselves. */
+  canRestore: boolean;
+}
+
+/**
+ * A write to a record that is archived (FIG-1045, B2.16). Maps to 409 with the
+ * code `ARCHIVED_READ_ONLY` and a restore hint. A subclass of `ValidationError`
+ * so older callers that catch validation failures still see it.
+ */
+export class ArchivedReadOnlyError extends ValidationError {
+  constructor(
+    message: string,
+    readonly restore: RestoreHint,
+  ) {
+    super(message);
+    this.name = "ArchivedReadOnlyError";
+  }
+}

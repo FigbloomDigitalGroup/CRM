@@ -1,4 +1,5 @@
 import { adminDb } from "../db/adminClient";
+import { GENERAL_QUESTIONS, SERVICE_QUESTIONS, type QualificationQuestion } from "../lib/qualificationDefaults";
 import { WEBSITE_LEAD_ASSIGNMENT_CURSOR_KEY } from "../repositories/leadIngestion";
 
 /**
@@ -210,4 +211,45 @@ export async function seedOrganizationDefaults(
       value: { lastMembershipId: null },
     },
   });
+
+  await seedQualificationQuestions(organizationId);
+}
+
+/**
+ * Starting qualification questions (FIG-1030, B2.01). Create-only: a question
+ * Management has edited, hidden or made required is never put back.
+ */
+async function seedQualificationQuestions(organizationId: string): Promise<void> {
+  const services = await adminDb.service.findMany({ where: { organizationId }, select: { id: true, key: true } });
+  const serviceIdByKey = new Map(services.map((s) => [s.key, s.id]));
+
+  const rows: { question: QualificationQuestion; serviceId: string | null; sortOrder: number }[] = [];
+  GENERAL_QUESTIONS.forEach((question, i) => rows.push({ question, serviceId: null, sortOrder: 10 + i }));
+  for (const [serviceKey, questions] of Object.entries(SERVICE_QUESTIONS)) {
+    const serviceId = serviceIdByKey.get(serviceKey);
+    if (!serviceId) continue;
+    questions.forEach((question, i) => rows.push({ question, serviceId, sortOrder: 100 + i }));
+  }
+
+  await Promise.all(
+    rows.map(({ question, serviceId, sortOrder }) =>
+      adminDb.customFieldDefinition.upsert({
+        where: { organizationId_entityType_key: { organizationId, entityType: "LEAD", key: question.key } },
+        update: {},
+        create: {
+          organizationId,
+          entityType: "LEAD",
+          section: "QUALIFICATION",
+          key: question.key,
+          label: question.label,
+          fieldType: question.fieldType,
+          options: question.options,
+          helpText: question.helpText,
+          requiredOnQualify: question.requiredOnQualify ?? false,
+          serviceId,
+          sortOrder,
+        },
+      }),
+    ),
+  );
 }

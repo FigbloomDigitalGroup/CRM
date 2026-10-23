@@ -36,6 +36,8 @@ import { listContacts } from "../src/repositories/contacts";
 import { listDeals } from "../src/repositories/deals";
 import { listLeads } from "../src/repositories/leads";
 import { listTasks } from "../src/repositories/tasks";
+import { getStorageDriver } from "../src/storage";
+import { FILE_POLICIES } from "../src/storage/policy";
 
 function parseArgs(argv: string[]) {
   const get = (flag: string) => {
@@ -75,6 +77,34 @@ async function writeEntityCsv(
   return rows.length;
 }
 
+/** attachments.csv (who and what), and the file bytes under files/ named by attachment id. Files that are not READY are listed but not copied. */
+async function writeAttachments(outDir: string, organizationId: string): Promise<number> {
+  const attachments = await adminDb.attachment.findMany({
+    where: { organizationId },
+    include: { file: true },
+    orderBy: { createdAt: "asc" },
+  });
+  await mkdir(path.join(outDir, "files"), { recursive: true });
+  const rows: Record<string, unknown>[] = [];
+  for (const a of attachments) {
+    let copied = "";
+    if (a.file.status === "READY" && !a.deletedAt) {
+      try {
+        const data = await getStorageDriver().getObject(a.file.storageKey, FILE_POLICIES.ATTACHMENT.maxBytes);
+        const safeName = a.file.name.replace(/[^A-Za-z0-9._-]+/g, "_");
+        await writeFile(path.join(outDir, "files", `${a.id}-${safeName}`), data);
+        copied = `files/${a.id}-${safeName}`;
+      } catch (err) {
+        copied = `NOT COPIED: ${err instanceof Error ? err.message : String(err)}`;
+      }
+    }
+    const { file, ...rest } = a;
+    rows.push({ ...rest, fileName: file.name, mimeType: file.mimeType, sizeBytes: file.sizeBytes, fileStatus: file.status, copiedTo: copied });
+  }
+  await writeEntityCsv(outDir, "attachments", rows);
+  return rows.length;
+}
+
 async function main(): Promise<void> {
   const { orgSlug, outDir: outDirArg } = parseArgs(process.argv.slice(2));
   if (!orgSlug) {
@@ -99,7 +129,7 @@ async function main(): Promise<void> {
       listLeads(org.id, { includeArchived: true }),
       listDeals(org.id, { includeArchived: true }),
       listActivities(org.id, {}),
-      listTasks(org.id, {}),
+      listTasks(org.id, { includeArchived: true }),
       listCommunications(org.id, {}),
     ]);
 
@@ -111,6 +141,17 @@ async function main(): Promise<void> {
     activities: await writeEntityCsv(outDir, "activities", activities),
     tasks: await writeEntityCsv(outDir, "tasks", tasks),
     communications: await writeEntityCsv(outDir, "communications", communications),
+    // Tags, custom fields and attachments (FIG-798, FIG-803, FIG-796): the definitions, the links, and the files themselves.
+    tags: await writeEntityCsv(outDir, "tags", await adminDb.tag.findMany({ where: { organizationId: org.id } })),
+    tag_links: await writeEntityCsv(outDir, "tag_links", await adminDb.tagLink.findMany({ where: { organizationId: org.id } })),
+    custom_field_definitions: await writeEntityCsv(
+      outDir,
+      "custom_field_definitions",
+      await adminDb.customFieldDefinition.findMany({ where: { organizationId: org.id } }),
+    ),
+    attachments: await writeAttachments(outDir, org.id),
+    // Comments (FIG-1044); deleted ones are exported as deleted, without text.
+    comments: await writeEntityCsv(outDir, "comments", await adminDb.comment.findMany({ where: { organizationId: org.id } })),
   };
 
   await recordAuditEvent({

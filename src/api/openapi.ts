@@ -15,6 +15,7 @@ import {
   FileSchema,
 } from "./dto/files";
 import { MeContextSchema } from "./dto/meContext";
+import { STAGE2_OPERATIONS } from "./stage2Operations";
 import {
   ExtendSessionResponseSchema,
   MyProfileSchema,
@@ -318,6 +319,7 @@ export const OPERATIONS: OperationDef[] = [
     response: NotificationPreferencesViewSchema,
     errors: [400, 401, 403],
   },
+  ...STAGE2_OPERATIONS,
 ];
 
 function json(schema: z.ZodType) {

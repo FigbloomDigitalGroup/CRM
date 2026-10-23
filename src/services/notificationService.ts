@@ -5,6 +5,7 @@ import { adminDb } from "../db/adminClient";
 import { logger } from "../lib/logger";
 import {
   sendDealWonHandoffEmail,
+  sendLeadPoolEmail,
   sendGenericNotificationEmail,
   sendLeadAssignedEmail,
   sendNotificationDigestEmail,
@@ -81,6 +82,9 @@ async function dispatch(
     switch (templateKey) {
       case "lead-assigned":
         return sendLeadAssignedEmail(recipient.email, payload as { leadLabel: string; link: string });
+      case "event":
+      case "lead-pool":
+        return sendLeadPoolEmail(recipient.email, payload as { title: string; message: string; link: string });
       case "deal-won-handoff":
         return sendDealWonHandoffEmail(
           recipient.email,
@@ -273,6 +277,66 @@ export async function notifyDealWonHandoff(
   }
 }
 
+/**
+ * Tells someone about the shared lead pool (FIG-1031, B2.02): a request to
+ * Management, or the answer to the requester. Same best-effort contract as
+ * `notifyLeadAssigned`.
+ */
+export async function notifyLeadPool(
+  organizationId: string,
+  membershipId: string,
+  input: { requestId: string; leadId: string; title: string; body: string },
+): Promise<void> {
+  try {
+    const org = await getOrganizationBasics(organizationId);
+    const link = `${appBaseUrl()}/o/${org.slug}/leads/${input.leadId}`;
+    await notify({
+      organizationId,
+      membershipId,
+      type: "LEAD_POOL",
+      title: input.title,
+      body: input.body,
+      entityType: "LeadPoolRequest",
+      entityId: input.requestId,
+      link,
+      templateKey: "lead-pool",
+      emailPayload: { title: input.title, message: input.body, link },
+    });
+  } catch (err) {
+    logger.error({ err, organizationId, membershipId }, "Failed to notify lead pool");
+  }
+}
+
+/**
+ * A handoff event for Delivery or Management (FIG-1037, B2.08): awaiting an
+ * owner, taken, delivered. Uses the DEAL_WON_HANDOFF type, so the same
+ * preference governs it. Same best-effort contract as the other `notify*`.
+ */
+export async function notifyHandoffEvent(
+  organizationId: string,
+  membershipId: string,
+  input: { key: string; dealId: string; title: string; body: string },
+): Promise<void> {
+  try {
+    const org = await getOrganizationBasics(organizationId);
+    const link = `${appBaseUrl()}/o/${org.slug}/deals/${input.dealId}`;
+    await notify({
+      organizationId,
+      membershipId,
+      type: "DEAL_WON_HANDOFF",
+      title: input.title,
+      body: input.body,
+      entityType: "DealHandoffEvent",
+      entityId: input.key,
+      link,
+      templateKey: "event",
+      emailPayload: { title: input.title, message: input.body, link },
+    });
+  } catch (err) {
+    logger.error({ err, organizationId, membershipId }, "Failed to notify handoff event");
+  }
+}
+
 async function notifyTask(
   type: "TASK_DUE" | "TASK_OVERDUE",
   organizationId: string,
@@ -446,7 +510,7 @@ export async function setWebsiteAcknowledgementSetting(
  * keeps the bell consistent with the dashboard and Leads list, which count
  * exactly the leads you currently own.
  */
-async function visibleNotifications(
+export async function filterByPreferences(
   ctx: AuthContext,
   rows: Awaited<ReturnType<typeof listNotificationsForMembership>>,
 ) {
@@ -493,7 +557,7 @@ export async function listMyNotifications(
     ctx.membershipId,
     { ...filters, limit: FEED_SCAN_LIMIT },
   );
-  return (await visibleNotifications(ctx, rows)).slice(0, FEED_PAGE_SIZE);
+  return (await filterByPreferences(ctx, rows)).slice(0, FEED_PAGE_SIZE);
 }
 
 export async function getMyUnreadNotificationCount(ctx: AuthContext) {
@@ -502,7 +566,7 @@ export async function getMyUnreadNotificationCount(ctx: AuthContext) {
     ctx.membershipId,
     { unreadOnly: true, limit: FEED_SCAN_LIMIT },
   );
-  return (await visibleNotifications(ctx, rows)).length;
+  return (await filterByPreferences(ctx, rows)).length;
 }
 
 export async function markNotificationRead(ctx: AuthContext, notificationId: string) {

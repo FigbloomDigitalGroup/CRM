@@ -68,11 +68,11 @@ npm run seed
 
 **M0 (baseline and guardrails): built and merged to `main`** (PRs #9 to #17). Test baseline in `docs/TEST_BASELINE.md`; decisions signed 22 Oct in `docs/DECISIONS.md`; design in `design-spec/`; API conventions, release flags, seed v2 and the dev Super Admin with its three guards are on `main`. The FIG-789/792/793/794 backend halves are merged; their UI halves live in M7 to M9.
 
-**M1 (identity, preferences, organisation profile): all 13 issues implemented (FIG-1017 to FIG-1029), PR open, not merged.** The exit gate B1.13 (FIG-1029) closes only when that PR is merged with green CI and Given has moved the statuses. Known follow-ups before or at the gate:
-- The OpenAPI document lists only part of the Stage 1 routes. Missing: `/me/sessions/*`, `/me/sign-in-events`, `/orgs/{org}/security/*`, the membership lifecycle routes (deactivate, reactivate, remove, reassign, reassignment, resend-invite, role, unlock), `/files/{id}/content`, `/storage/blob`, `/platform/preferences`. Add them (Zod DTO per route, B0.06) before G1.06 freezes the contract.
-- The "no open Urgent or High bugs against M1" box on B1.13 needs a check by Given.
+**M1 (identity, preferences, organisation profile): merged to `main`** (PR #18). The OpenAPI document still lacks some Stage 1 routes: `/me/sessions/*`, `/me/sign-in-events`, `/orgs/{org}/security/*`, the membership lifecycle routes, `/files/{id}/content`, `/storage/blob`, `/platform/preferences`. Add them (Zod DTO per route, B0.06) before G1.06 freezes the contract.
 
-**Next: M2 (sales core).** Start with B2.18 (FIG-1066, job framework); the dependent issues (FIG-1048 lifecycle, FIG-1059 automations, FIG-1061 migration, FIG-1062 privacy) reference it. Do not start M2 build work beyond what is already in progress until the M1 gate is closed. Then M3, M4, M5 (G1.08, tag `backend-v1`).
+**M2 (sales core and record extras): all 22 issues built, in the working tree, not committed.** FIG-1030 to FIG-1046, FIG-1066, FIG-796, 797, 798, 803. Migrations `20261023140000` to `20261024060000` are applied to the dev and test databases. Docs: `docs/JOBS.md`, `docs/MASKING.md`, `docs/SCORING.md`, the Stage 2 section of `IMPLEMENTATION_NOTES.md`, demo in `docs/demo/stage-2.http` and `tests/stage2ExitGate.test.ts`. The gate (B2.17, FIG-1046) closes when the work is committed, merged with green CI, and Given confirms there are no open Urgent or High bugs. Known gaps: no payments figures on the Finance dashboard until the payments table (M3, B3.03); `q:` qualification columns are exported but not imported; OpenAPI lists the main Stage 2 endpoints only.
+
+**Next: M3 (customers, delivery, finance, reporting), FIG-1047 to FIG-1057.** Do not start M4 until the B3.11 gate is closed.
 
 Ops reminders: new migrations need `npm run migrate:deploy`; `ALLOW_DEV_ACCOUNTS=true` in local `.env` for dev sign-in; Docker Desktop must be running for the test database (`docker compose up -d --wait`).
 

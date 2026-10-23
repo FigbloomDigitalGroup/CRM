@@ -24,6 +24,23 @@ export async function sendLeadAssignedEmail(
   );
 }
 
+export async function sendLeadPoolEmail(
+  to: string,
+  args: { title: string; message: string; link: string },
+  transportOverride?: MailTransport,
+): Promise<void> {
+  await deliverOrLog(
+    "lead-pool",
+    {
+      to,
+      subject: args.title,
+      text: `${args.message}\n\nView it here: ${args.link}`,
+      html: `<p><strong>${args.title}</strong></p><p>${args.message}</p><p><a href="${args.link}">View it here</a></p>`,
+    },
+    transportOverride,
+  );
+}
+
 export async function sendDealWonHandoffEmail(
   to: string,
   args: { dealLabel: string; taskCount: number; link: string },

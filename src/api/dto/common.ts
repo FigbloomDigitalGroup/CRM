@@ -30,7 +30,9 @@ export const ErrorEnvelopeSchema = z.strictObject({
     "SESSION_EXPIRED",
     "ACCOUNT_DEACTIVATED",
     "AWAITING_ACCESS",
+    "CSRF_REJECTED",
     "REASSIGNMENT_REQUIRED",
+    "ARCHIVED_READ_ONLY",
     "NOT_FOUND",
     "VALIDATION_FAILED",
     "RATE_LIMITED",
@@ -63,6 +65,13 @@ export const ErrorEnvelopeSchema = z.strictObject({
     .strictObject({
       reason: z.enum(["expired", "revoked"]),
       email: z.string().nullable(),
+    })
+    .optional(),
+  restore: z
+    .strictObject({
+      entityType: z.string(),
+      entityId: z.string(),
+      canRestore: z.boolean(),
     })
     .optional(),
   reassignment: z
@@ -101,8 +110,24 @@ export function pageOf<T extends z.ZodType>(item: T) {
  * seeded matrix, so the "Provisional" banner shows -- FIG-1019).
  */
 export const RecordScopeSchema = z.enum(["own", "organisation", "read-only"]);
+/** The archived banner (B2.16): when, by whom, why, and whether the caller may restore. Null on an active record. */
+export const ArchiveBannerSchema = z.strictObject({
+  archivedAt: isoDateTime,
+  archivedByMembershipId: z.string().nullable(),
+  reason: z.string().nullable(),
+  canRestore: z.boolean(),
+});
+
+/** Body of every archive endpoint: an optional reason, shown on the banner. */
+export const ArchiveBodySchema = z.strictObject({
+  reason: z.string().max(500).optional(),
+});
+
 export const RecordMetaShape = {
   archived: z.boolean(),
+  archive: ArchiveBannerSchema.nullable(),
+  archivedByMembershipId: z.string().nullable(),
+  archiveReason: z.string().nullable(),
   masked: z.boolean(),
   scope: RecordScopeSchema,
   provisional: z.boolean(),
@@ -126,3 +151,38 @@ export function recordAccess(
 export function relation<S extends z.ZodRawShape>(shape: S) {
   return z.looseObject(shape);
 }
+
+/** A possible duplicate found by the shared detector (B2.04). It is a warning, never a block. */
+export const DuplicateCandidateSchema = z.strictObject({
+  entityType: z.enum(["lead", "contact", "company"]),
+  id: z.string(),
+  label: z.string(),
+  reasons: z.array(
+    z.strictObject({
+      type: z.enum(["EMAIL", "PHONE", "DOMAIN", "NAME", "SIMILAR_NAME", "COMPANY"]),
+      detail: z.string(),
+    }),
+  ),
+  confidence: z.enum(["high", "medium", "low"]),
+  score: z.number(),
+});
+
+export const DuplicateResultSchema = z.strictObject({
+  candidates: z.array(DuplicateCandidateSchema),
+  hiddenCount: z.number().int(),
+});
+
+/** A tag as it appears on a record (FIG-798). */
+export const TagSummarySchema = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  colour: z.string(),
+});
+
+/** A score and the factors behind it, as one viewer may see it (FIG-1032). */
+export const ScoreViewSchema = z.strictObject({
+  score: z.number().int(),
+  band: z.string(),
+  factors: z.array(z.strictObject({ key: z.string(), label: z.string(), points: z.number().int() })),
+  computedAt: isoDateTime.nullable(),
+});

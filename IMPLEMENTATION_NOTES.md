@@ -1930,3 +1930,21 @@ Described in the README's "Dev accounts and production". Decisions:
 - **Known gap:** the OpenAPI document does not yet list every Stage 1 route
   (sessions, sign-in events, security, membership lifecycle, file content,
   platform preferences). Tracked in CLAUDE.md "Where we are right now".
+
+## Stage 2: sales core and record extras (FIG-1030 to FIG-1046, FIG-1066, FIG-796/797/798/803, B2.01 to B2.18)
+
+- **Jobs (B2.18):** `background_jobs`, lease-based claim, retries, dead letter, schedules, status API. See `docs/JOBS.md`.
+- **Archive semantics (B2.16):** one rule set in `src/lib/archive.ts`. Archived records are hidden by default, read-only (`ARCHIVED_READ_ONLY` with a `restore` hint), restorable by Management or whoever archived them.
+- **Masking (B2.07):** `src/auth/masking.ts`, scanned for a sentinel on every surface. See `docs/MASKING.md`.
+- **Duplicates and merge (B2.04):** `src/lib/matching.ts` normalises phone (last nine digits), email (plus-addressing removed) and company names; SQL expression indexes back the lookups. Merges are undoable for one hour (`merge_records`). Every new table that links to a company or contact must add a line to `LINKS` in `src/repositories/merges.ts` (attachments, tags, comments and follows already did).
+- **Custom fields and qualification (B2.01, FIG-803):** definitions plus a `custom_fields` JSON column; qualification answers live in `qualification_data`, and a required-on-qualify answer blocks the Qualified status.
+- **Tags, attachments, templates (FIG-798, 796, 797):** tags and links with a one-record CHECK; attachments over the file service (deal files hidden from roles without the value unless shared); email templates with merge fields.
+- **Lead pool, scoring (B2.02, B2.03):** pool requests with approval or auto mode; rules-based scores stored and refreshed nightly. See `docs/SCORING.md`.
+- **Deal rules, handoff, tasks, calendar (B2.06 to B2.10):** stalled per stage, validated undoable moves, handoff states (Awaiting owner, Onboarding, Delivered), tasks grouped by due state in the viewer's time zone, My work for Restricted Technical, calendar views.
+- **Notification centre (B2.11):** list with paging and filters, an unread count that equals the unread list, archive, 90-day retention of read notifications. A notification about a record the member can no longer open is not shown or counted.
+- **Search v2 (B2.12):** groups with totals, paged per group, archived on request, `hidden` explains what the role cannot see, phone numbers match across formats, trigram indexes, per-user recents.
+- **Dashboards and signals (B2.13, B2.14):** sections per role, each loaded on its own, absent when the role lacks them, counts and group-bys only. Adoption, stalled and overdue signals are stored in `signal_snapshots` and refreshed nightly, on stale reads and on deal or task changes.
+- **Comments (B2.15):** comments, mentions (only people who can open the record), follow, soft edit and delete. Mentions and followers are told through the MENTION notification type.
+- **Import and export (B2.05):** runs in the background (`data_runs`) with progress, cancel and an error report CSV; duplicate and already-converted rows are reported; `tags` and `cf:<key>` columns are read; exports over 500 rows need `export.bulk` (Management) until the approvals engine arrives.
+- **Exit gate (B2.17):** `tests/stage2ExitGate.test.ts` and `docs/demo/stage-2.http`.
+- **Known gaps:** the Finance dashboard has no payments figures (no payments table until V1.1); the `q:` qualification columns an export writes are not read back by import; the OpenAPI document lists the main Stage 2 endpoints (`src/api/stage2Operations.ts`), not every route; the 500-row export gate is always on (no per-organisation switch yet).

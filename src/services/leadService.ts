@@ -1,3 +1,9 @@
+import type { Prisma } from "@prisma/client";
+import { assertWritable, cleanArchiveReason } from "../lib/archive";
+import { findDuplicates } from "./duplicateService";
+import { rescoreLeadQuietly } from "./scoreEngine";
+import { auditCustomFieldChanges, prepareCustomFields } from "./customFieldService";
+import { checkQualificationForSave, recordQualificationChange } from "./qualificationRules";
 import type { AuthContext } from "../auth/context";
 import {
   deny,
@@ -109,8 +115,32 @@ export async function createLead(
     },
   );
 
+  const found = await findDuplicates(ctx, {
+    entity: "lead",
+    companyId: input.companyId,
+    contactId: input.contactId,
+  });
+
+  const createStatus = await adminDb.leadStatus.findFirst({
+    where: { id: input.leadStatusId, organizationId: ctx.organizationId },
+    select: { key: true },
+  });
+  const qualification = await checkQualificationForSave({
+    organizationId: ctx.organizationId,
+    serviceInterestId: input.serviceInterestId ?? null,
+    existing: null,
+    incoming: input.qualificationData,
+    becomingQualified: createStatus?.key === "QUALIFIED",
+  });
+  const custom = await prepareCustomFields(ctx.organizationId, "LEAD", {
+    incoming: input.customFields as Record<string, unknown> | undefined,
+    mode: "create",
+  });
+
   const lead = await createLeadRecord({
     ...input,
+    qualificationData: qualification.values,
+    customFields: custom?.values as Prisma.InputJsonValue | undefined,
     organizationId: ctx.organizationId,
     createdByMembershipId: ctx.membershipId,
     ownerMembershipId,
@@ -132,7 +162,8 @@ export async function createLead(
     });
   }
 
-  return { lead, possibleDuplicates };
+  await rescoreLeadQuietly(ctx.organizationId, lead.id);
+  return { lead, possibleDuplicates, duplicates: found.candidates, hiddenDuplicates: found.hiddenCount };
 }
 
 async function loadOwnedLead(ctx: AuthContext, leadId: string) {
@@ -169,11 +200,7 @@ export async function updateLead(
     lead.ownerMembershipId,
   );
 
-  if (lead.archivedAt) {
-    throw new ValidationError(
-      "This lead is archived. Restore it before making changes.",
-    );
-  }
+  assertWritable(ctx, "lead", lead, "making changes");
 
   // Ownership is deliberately not part of an edit -- it only ever changes
   // through `assignLead` (which needs `leads.assign`). Dropping the key
@@ -182,6 +209,7 @@ export async function updateLead(
     ownerMembershipId?: unknown;
   };
   delete data.ownerMembershipId;
+  let becomingQualified = false;
 
   if (data.leadStatusId !== undefined && data.leadStatusId !== lead.leadStatusId) {
     if (lead.convertedAt) {
@@ -195,6 +223,7 @@ export async function updateLead(
     if (!nextStatus) {
       throw new ValidationError("Unknown lead status.");
     }
+    becomingQualified = nextStatus.key === "QUALIFIED";
     if (nextStatus.key === LEAD_LOCKED_STATUS_KEYS.converted) {
       throw new ValidationError(
         "A lead becomes Converted by converting it to a deal, not by picking the status.",
@@ -216,7 +245,27 @@ export async function updateLead(
     data.lostReasonId = lead.lostReasonId;
   }
 
+  // Qualification answers are checked against the questions for the lead's service, and the
+  // required ones must be there before it can become Qualified (FIG-1030, B2.01).
+  const qualification = await checkQualificationForSave({
+    organizationId: ctx.organizationId,
+    serviceInterestId: data.serviceInterestId !== undefined ? data.serviceInterestId : lead.serviceInterestId,
+    existing: lead.qualificationData,
+    incoming: data.qualificationData,
+    becomingQualified,
+  });
+  if (qualification.values !== undefined) data.qualificationData = qualification.values;
+  const custom = await prepareCustomFields(ctx.organizationId, "LEAD", {
+    existing: lead.customFields as Record<string, unknown>,
+    incoming: input.customFields as Record<string, unknown> | undefined,
+    mode: "update",
+  });
+  if (custom) data.customFields = custom.values as Prisma.InputJsonValue;
+
   const updated = await updateLeadRecord(ctx.organizationId, leadId, data);
+  await recordQualificationChange(ctx, leadId, qualification.changes);
+  if (custom) await auditCustomFieldChanges(ctx, "Lead", leadId, custom.changes);
+  await rescoreLeadQuietly(ctx.organizationId, leadId);
 
   // Ownership is audited separately via assignLead -- this covers the
   // other important field changes updateLead never audited at all before
@@ -322,11 +371,7 @@ export async function assignLead(
     );
   }
 
-  if (lead.archivedAt) {
-    throw new ValidationError(
-      "This lead is archived. Restore it before reassigning it.",
-    );
-  }
+  assertWritable(ctx, "lead", lead, "reassigning it");
   if (lead.convertedAt) {
     throw new ValidationError(
       "This lead has been converted -- the deal now owns the work.",
@@ -403,11 +448,7 @@ export async function convertLead(
   );
   requirePermission(ctx, "leads.convert");
 
-  if (lead.archivedAt) {
-    throw new ValidationError(
-      "This lead is archived. Restore it before converting it.",
-    );
-  }
+  assertWritable(ctx, "lead", lead, "converting it");
   if (lead.convertedAt) {
     throw new ValidationError(
       "This lead has already been converted to a deal.",
@@ -487,7 +528,7 @@ export async function convertLead(
 }
 
 /** Soft-delete (FIG-601) -- own/all split, same tier as `leads.edit.own/.all`. */
-export async function archiveLead(ctx: AuthContext, leadId: string) {
+export async function archiveLead(ctx: AuthContext, leadId: string, input: { reason?: string | null } = {}) {
   const lead = await loadOwnedLead(ctx, leadId);
   requireOwnedRecordPermission(
     ctx,
@@ -499,7 +540,11 @@ export async function archiveLead(ctx: AuthContext, leadId: string) {
     throw new ValidationError("This lead is already archived.");
   }
 
-  const archived = await archiveLeadRecord(ctx.organizationId, leadId);
+  const reason = cleanArchiveReason(input.reason);
+  const archived = await archiveLeadRecord(ctx.organizationId, leadId, {
+    membershipId: ctx.membershipId,
+    reason,
+  });
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -507,6 +552,7 @@ export async function archiveLead(ctx: AuthContext, leadId: string) {
     action: "lead.archived",
     entityType: "Lead",
     entityId: leadId,
+    metadata: reason ? { reason } : undefined,
   });
 
   return archived;

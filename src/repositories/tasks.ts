@@ -1,10 +1,13 @@
 import type { Prisma } from "@prisma/client";
 import { withOrgContext } from "../db/orgScopedClient";
+import { archivedWhere, type ArchiveMeta } from "../lib/archive";
 
 export interface CreateTaskInput {
   organizationId: string;
   title: string;
   description?: string;
+  /** Client requirements snapshot (FIG-1038). */
+  requirements?: string;
   assigneeMembershipId: string;
   createdByMembershipId: string;
   dueAt?: Date;
@@ -22,6 +25,7 @@ export async function createTask(input: CreateTaskInput) {
         organizationId: input.organizationId,
         title: input.title,
         description: input.description,
+        requirements: input.requirements,
         assigneeMembershipId: input.assigneeMembershipId,
         createdByMembershipId: input.createdByMembershipId,
         dueAt: input.dueAt,
@@ -43,6 +47,7 @@ export async function createTask(input: CreateTaskInput) {
 export interface UpdateTaskInput {
   title?: string;
   description?: string | null;
+  requirements?: string | null;
   assigneeMembershipId?: string;
   dueAt?: Date | null;
   priority?: "LOW" | "MEDIUM" | "HIGH";
@@ -81,6 +86,10 @@ export interface ListTasksFilters {
   leadId?: string;
   dealId?: string;
   overdueOnly?: boolean;
+  /** Archived tasks are hidden unless asked for (B2.16). */
+  includeArchived?: boolean;
+  /** The archived tab: only archived tasks. */
+  archivedOnly?: boolean;
   /** Still open and not yet past due (no due date counts): the dashboard's "upcoming" list (FIG-789). */
   upcomingOnly?: boolean;
   /** "Due today," "due this week," etc. (FIG-443) -- independent of overdueOnly. */
@@ -104,6 +113,7 @@ function tasksWhere(
 ): Prisma.TaskWhereInput {
   return {
     organizationId,
+    ...archivedWhere(filters),
     assigneeMembershipId: filters.assigneeMembershipId,
     status: filters.status,
     priority: filters.priority,
@@ -171,11 +181,135 @@ export async function deleteTasksByIds(organizationId: string, ids: string[]) {
 }
 
 /** Rows matching `filters` across all pages (FIG-789) -- ignores `take`/`skip`. */
+/** Tasks per assignee for the same filters a list would use (FIG-1043). */
+export async function countTasksByAssignee(organizationId: string, filters: ListTasksFilters = {}) {
+  return withOrgContext(organizationId, async (tx) => {
+    const rows = await tx.task.groupBy({ by: ["assigneeMembershipId"], where: tasksWhere(organizationId, filters), _count: { _all: true } });
+    return rows.map((r) => ({ assigneeMembershipId: r.assigneeMembershipId, count: r._count._all }));
+  });
+}
+
 export async function countTasks(
   organizationId: string,
   filters: ListTasksFilters = {},
 ) {
   return withOrgContext(organizationId, (tx) =>
     tx.task.count({ where: tasksWhere(organizationId, filters) }),
+  );
+}
+
+/** Sets `archivedAt`, who and why (FIG-1045, B2.16) -- never a hard delete. */
+export async function archiveTask(organizationId: string, taskId: string, meta: ArchiveMeta = {}) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.task.update({
+      where: { id: taskId, organizationId },
+      data: {
+        archivedAt: new Date(),
+        archivedByMembershipId: meta.membershipId ?? null,
+        archiveReason: meta.reason ?? null,
+      },
+    }),
+  );
+}
+
+export async function restoreTask(organizationId: string, taskId: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.task.update({
+      where: { id: taskId, organizationId },
+      data: { archivedAt: null, archivedByMembershipId: null, archiveReason: null },
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Due-state groups (FIG-1038, B2.09)
+// ---------------------------------------------------------------------------
+
+export type TaskGroupKey = "OVERDUE" | "TODAY" | "THIS_WEEK" | "LATER" | "NO_DATE" | "DONE";
+export const TASK_GROUP_KEYS: readonly TaskGroupKey[] = ["OVERDUE", "TODAY", "THIS_WEEK", "LATER", "NO_DATE", "DONE"];
+
+/** The moments that divide the groups, in the viewer's own time zone. */
+export interface TaskGroupBounds {
+  /** Start of today. */
+  todayStart: Date;
+  /** Start of tomorrow: the end of today. */
+  tomorrowStart: Date;
+  /** Start of the next week (Monday): the end of this week. */
+  nextWeekStart: Date;
+}
+
+const OPEN = ["PENDING", "IN_PROGRESS"] as const;
+
+/**
+ * The one predicate for each group, used by both the counts and the rows, so a
+ * group's count always equals what its list holds.
+ *   Overdue   open, due before today
+ *   Today     open, due today
+ *   This week open, due after today and before next Monday
+ *   Later     open, due from next Monday on
+ *   No date   open, no due date
+ *   Done      completed or cancelled
+ */
+export function taskGroupWhere(group: TaskGroupKey, bounds: TaskGroupBounds): Prisma.TaskWhereInput {
+  switch (group) {
+    case "OVERDUE":
+      return { status: { in: [...OPEN] }, dueAt: { lt: bounds.todayStart } };
+    case "TODAY":
+      return { status: { in: [...OPEN] }, dueAt: { gte: bounds.todayStart, lt: bounds.tomorrowStart } };
+    case "THIS_WEEK":
+      return { status: { in: [...OPEN] }, dueAt: { gte: bounds.tomorrowStart, lt: bounds.nextWeekStart } };
+    case "LATER":
+      return { status: { in: [...OPEN] }, dueAt: { gte: bounds.nextWeekStart } };
+    case "NO_DATE":
+      return { status: { in: [...OPEN] }, dueAt: null };
+    case "DONE":
+      return { status: { in: ["COMPLETED", "CANCELLED"] } };
+  }
+}
+
+/** Counts per group for one set of filters, in one pass of six cheap counts. */
+export async function countTaskGroups(organizationId: string, filters: ListTasksFilters, bounds: TaskGroupBounds) {
+  return withOrgContext(organizationId, async (tx) => {
+    const base = tasksWhere(organizationId, { ...filters, overdueOnly: undefined, upcomingOnly: undefined, dueAfter: undefined, dueBefore: undefined, status: undefined });
+    const counts = await Promise.all(TASK_GROUP_KEYS.map((g) => tx.task.count({ where: { AND: [base, taskGroupWhere(g, bounds)] } })));
+    return Object.fromEntries(TASK_GROUP_KEYS.map((g, i) => [g, counts[i]!])) as Record<TaskGroupKey, number>;
+  });
+}
+
+/** One page of one group, ordered the way the group reads: soonest due first, done most recent first. */
+export async function listTaskGroup(
+  organizationId: string,
+  filters: ListTasksFilters,
+  group: TaskGroupKey,
+  bounds: TaskGroupBounds,
+  paging: { skip: number; take: number },
+) {
+  return withOrgContext(organizationId, async (tx) => {
+    const base = tasksWhere(organizationId, { ...filters, overdueOnly: undefined, upcomingOnly: undefined, dueAfter: undefined, dueBefore: undefined, status: undefined });
+    const where: Prisma.TaskWhereInput = { AND: [base, taskGroupWhere(group, bounds)] };
+    const orderBy: Prisma.TaskOrderByWithRelationInput[] =
+      group === "DONE"
+        ? [{ completedAt: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }, { id: "asc" }]
+        : [{ dueAt: { sort: "asc", nulls: "last" } }, { priority: "desc" }, { createdAt: "desc" }, { id: "asc" }];
+    const items = await tx.task.findMany({
+      where,
+      include: { assignee: { include: { user: true } } },
+      orderBy,
+      skip: paging.skip,
+      take: paging.take,
+    });
+    return items;
+  });
+}
+
+/** Attachments of several tasks at once (the technician's My work shows the files each task carries). */
+export async function listAttachmentsForTasks(organizationId: string, taskIds: string[]) {
+  if (taskIds.length === 0) return [];
+  return withOrgContext(organizationId, (tx) =>
+    tx.attachment.findMany({
+      where: { organizationId, taskId: { in: taskIds }, deletedAt: null, file: { status: "READY" } },
+      select: { id: true, taskId: true, title: true, file: { select: { id: true, name: true, sizeBytes: true, mimeType: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
   );
 }

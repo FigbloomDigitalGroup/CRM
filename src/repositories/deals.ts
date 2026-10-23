@@ -1,5 +1,8 @@
+import { archivedWhere, type ArchiveMeta } from "../lib/archive";
+import type { JsonClause } from "../lib/customFields";
 import { Prisma } from "@prisma/client";
 import { withOrgContext } from "../db/orgScopedClient";
+import { TAG_LINKS_INCLUDE, tagFilter } from "./tags";
 
 const DEAL_INCLUDE = {
   company: true,
@@ -8,9 +11,11 @@ const DEAL_INCLUDE = {
   service: true,
   pipelineStage: true,
   lostReason: true,
+  ...TAG_LINKS_INCLUDE,
 } satisfies Prisma.DealInclude;
 
 export interface CreateDealInput {
+  customFields?: Prisma.InputJsonValue;
   organizationId: string;
   companyId: string;
   primaryContactId?: string;
@@ -45,6 +50,7 @@ export async function createDeal(input: CreateDealInput) {
         expectedCloseDate: input.expectedCloseDate,
         notes: input.notes,
         createdByMembershipId: input.createdByMembershipId,
+        customFields: input.customFields,
       },
       include: DEAL_INCLUDE,
     }),
@@ -58,6 +64,7 @@ export async function createDeal(input: CreateDealInput) {
  * client input -- a caller can't PATCH straight to `outcome: "WON"`.
  */
 export interface UpdateDealInput {
+  customFields?: Prisma.InputJsonValue;
   primaryContactId?: string | null;
   serviceId?: string | null;
   pipelineStageId?: string;
@@ -116,6 +123,16 @@ export interface ListDealsFilters {
   visibleOutcome?: "WON";
   /** Archived deals are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
+  /** The archived tab: only archived records (B2.16). */
+  archivedOnly?: boolean;
+  /** `customField[key]=value` filters (FIG-803), built by `buildCustomFieldWhere`. */
+  customFieldClauses?: JsonClause[];
+  /** Records carrying any of these tags (FIG-798). */
+  tagIds?: string[];
+  /** Open deals with no activity for longer than their stage allows (FIG-1035); built by the service from the stage thresholds. */
+  inactiveStages?: { stageId: string; before: Date }[];
+  /** Open deals whose expected close date is before today (FIG-1035). Same as the older `stalledOnly`. */
+  closeDatePassed?: boolean;
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
   take?: number;
   /** Rows to skip before `take` -- set by the paged list functions (FIG-789), not by callers. */
@@ -123,10 +140,40 @@ export interface ListDealsFilters {
 }
 
 /** Shared by the list and count queries so a page and its total can never disagree (FIG-789). */
-function dealsWhere(
+/** Adds the custom field filters on top of the plain filters. */
+function dealsWhere(...args: Parameters<typeof baseDealsWhere>): Prisma.DealWhereInput {
+  const base = baseDealsWhere(...args);
+  const clauses = args[1].customFieldClauses;
+  if (!clauses || clauses.length === 0) return base;
+  return { AND: [base, ...clauses.map((c) => ({ customFields: c as Prisma.JsonFilter<"Deal"> }))] };
+}
+
+function baseDealsWhere(
   organizationId: string,
   filters: ListDealsFilters,
 ): Prisma.DealWhereInput {
+  // Conditions that each need their own OR/AND go in one list, so none can overwrite another.
+  const all: Prisma.DealWhereInput[] = [];
+  if (filters.visibleOutcome) all.push({ outcome: filters.visibleOutcome });
+  if (filters.stalledOnly || filters.closeDatePassed) {
+    all.push({ outcome: "OPEN", expectedCloseDate: { lt: startOfToday() } });
+  }
+  if (filters.inactiveStages) {
+    all.push({
+      outcome: "OPEN",
+      OR: filters.inactiveStages.length
+        ? filters.inactiveStages.map((s) => ({ pipelineStageId: s.stageId, lastActivityAt: { lt: s.before } }))
+        : [{ id: "00000000-0000-0000-0000-000000000000" }],
+    });
+  }
+  if (filters.query) {
+    all.push({
+      OR: [
+        { notes: { contains: filters.query, mode: "insensitive" } },
+        { company: { name: { contains: filters.query, mode: "insensitive" } } },
+      ],
+    });
+  }
   return {
     organizationId,
     ownerMembershipId: filters.ownerMembershipId,
@@ -134,24 +181,45 @@ function dealsWhere(
     outcome: filters.outcome,
     companyId: filters.companyId,
     serviceId: filters.serviceId,
-    ...(filters.includeArchived ? {} : { archivedAt: null }),
-    ...(filters.visibleOutcome ? { AND: [{ outcome: filters.visibleOutcome }] } : {}),
-    ...(filters.stalledOnly
-      ? { outcome: "OPEN", expectedCloseDate: { lt: new Date() } }
-      : {}),
-    ...(filters.query
-      ? {
-          OR: [
-            { notes: { contains: filters.query, mode: "insensitive" } },
-            {
-              company: {
-                name: { contains: filters.query, mode: "insensitive" },
-              },
-            },
-          ],
-        }
-      : {}),
+    ...archivedWhere(filters),
+    ...tagFilter(filters.tagIds),
+    ...(all.length > 0 ? { AND: all } : {}),
   };
+}
+
+/** Midnight at the start of today, so a deal closing today is not yet late. */
+function startOfToday(): Date {
+  const d = new Date();
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
+/**
+ * Stage columns for the board (FIG-1035): how many deals each stage holds in the
+ * caller's scope, and the value summed per currency. The service decides whether
+ * the caller may see the values at all.
+ */
+export async function boardColumns(organizationId: string, filters: ListDealsFilters = {}) {
+  return withOrgContext(organizationId, async (tx) => {
+    const where = dealsWhere(organizationId, filters);
+    const rows = await tx.deal.groupBy({
+      by: ["pipelineStageId", "currency"],
+      where,
+      _count: { _all: true },
+      _sum: { value: true },
+    });
+    const valued = await tx.deal.groupBy({
+      by: ["pipelineStageId", "currency"],
+      where: { AND: [where, { value: { not: null } }] },
+      _count: { _all: true },
+    });
+    return { rows, valued };
+  });
+}
+
+export async function touchDealActivity(organizationId: string, dealId: string, at: Date = new Date()) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.deal.updateMany({ where: { id: dealId, organizationId, lastActivityAt: { lt: at } }, data: { lastActivityAt: at } }),
+  );
 }
 
 export async function listDeals(
@@ -174,6 +242,14 @@ export async function listDeals(
 }
 
 /** Rows matching `filters` across all pages (FIG-789) -- ignores `take`/`skip`. */
+/** Deals per owner for the same filters a list would use (FIG-1043), so a signal and its list filter always agree. */
+export async function countDealsByOwner(organizationId: string, filters: ListDealsFilters = {}) {
+  return withOrgContext(organizationId, async (tx) => {
+    const rows = await tx.deal.groupBy({ by: ["ownerMembershipId"], where: dealsWhere(organizationId, filters), _count: { _all: true } });
+    return rows.map((r) => ({ ownerMembershipId: r.ownerMembershipId, count: r._count._all }));
+  });
+}
+
 export async function countDeals(
   organizationId: string,
   filters: ListDealsFilters = {},
@@ -242,11 +318,15 @@ export async function summarizeDeals(
 }
 
 /** Sets `archivedAt` (FIG-601) -- never a hard delete; see the model's doc comment. */
-export async function archiveDeal(organizationId: string, dealId: string) {
+export async function archiveDeal(organizationId: string, dealId: string, meta: ArchiveMeta = {}) {
   return withOrgContext(organizationId, (tx) =>
     tx.deal.update({
       where: { id: dealId, organizationId },
-      data: { archivedAt: new Date() },
+      data: {
+        archivedAt: new Date(),
+        archivedByMembershipId: meta.membershipId ?? null,
+        archiveReason: meta.reason ?? null,
+      },
       include: DEAL_INCLUDE,
     }),
   );
@@ -256,7 +336,7 @@ export async function restoreDeal(organizationId: string, dealId: string) {
   return withOrgContext(organizationId, (tx) =>
     tx.deal.update({
       where: { id: dealId, organizationId },
-      data: { archivedAt: null },
+      data: { archivedAt: null, archivedByMembershipId: null, archiveReason: null },
       include: DEAL_INCLUDE,
     }),
   );

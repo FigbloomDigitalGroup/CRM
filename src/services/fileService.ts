@@ -319,6 +319,22 @@ export async function getDownloadLink(ctx: AuthContext, fileId: string) {
   return { file, download: { url: link.url, expiresAt: link.expiresAt } };
 }
 
+/**
+ * A download link for a file the caller has already been authorised to read by
+ * some other rule (an attachment is readable by whoever can open its record).
+ * The link is as short-lived as any other.
+ */
+export async function issueDownloadLinkAuthorised(file: File) {
+  assertServable(file);
+  const link = await getStorageDriver().signDownload(file.storageKey, {
+    expiresInSeconds: DOWNLOAD_LINK_SECONDS,
+    fileName: file.name,
+    contentType: file.mimeType,
+    disposition: "attachment",
+  });
+  return { file, download: { url: link.url, expiresAt: link.expiresAt } };
+}
+
 /** The bytes themselves, for the authenticated content route. */
 export async function readFileContent(ctx: AuthContext, fileId: string) {
   const file = await loadVisible(ctx, fileId);
@@ -330,6 +346,11 @@ export async function readFileContent(ctx: AuthContext, fileId: string) {
 export async function deleteFile(ctx: AuthContext, fileId: string) {
   const file = await loadVisible(ctx, fileId);
   if (!canManage(ctx, file)) throw new NotFoundError("File", fileId);
+  return markFileDeleted(ctx, file);
+}
+
+/** Soft-deletes a file the caller has already been authorised to remove (kept until the retention purge removes its bytes). */
+export async function markFileDeleted(ctx: AuthContext, file: Pick<File, "id" | "purpose" | "status">) {
   const deleted = await updateFileRecord(ctx.organizationId, file.id, {
     status: "DELETED",
     deletedAt: new Date(),

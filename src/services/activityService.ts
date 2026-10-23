@@ -12,6 +12,8 @@ import {
 } from "../repositories/activities";
 import { getCompany } from "./companyService";
 import { getContact } from "./contactService";
+import { touchDealActivity } from "../repositories/deals";
+import { rescoreCompanyQuietly, rescoreLeadQuietly } from "./scoreEngine";
 import { assertCanAccessLinkedRecords, type LinkedRecordIds } from "./recordAccess";
 import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 
@@ -24,14 +26,19 @@ export async function createActivity(
   ctx: AuthContext,
   input: CreateActivityServiceInput,
 ) {
-  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true });
+  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true, requireWritable: true });
   requirePermission(ctx, "activities.create");
 
-  return createActivityRecord({
+  const activity = await createActivityRecord({
     ...input,
     organizationId: ctx.organizationId,
     authorMembershipId: ctx.membershipId,
   });
+  // A contact with a lead or a customer changes how it scores (B2.03).
+  await rescoreLeadQuietly(ctx.organizationId, input.leadId);
+  if (input.dealId) await touchDealActivity(ctx.organizationId, input.dealId);
+  await rescoreCompanyQuietly(ctx.organizationId, input.companyId);
+  return activity;
 }
 
 async function listActivitiesFor(ctx: AuthContext, ids: LinkedRecordIds) {

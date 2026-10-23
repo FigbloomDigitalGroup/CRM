@@ -15,6 +15,8 @@ export interface CreateCommunicationInput {
   contactId?: string;
   leadId?: string;
   dealId?: string;
+  /** The email template this started from (FIG-797). */
+  emailTemplateId?: string;
 }
 
 export async function createCommunication(input: CreateCommunicationInput) {
@@ -34,6 +36,7 @@ export async function createCommunication(input: CreateCommunicationInput) {
         contactId: input.contactId,
         leadId: input.leadId,
         dealId: input.dealId,
+        emailTemplateId: input.emailTemplateId,
       },
     }),
   );

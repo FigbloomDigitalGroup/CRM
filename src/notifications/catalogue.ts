@@ -5,7 +5,7 @@ import type { Release } from "../lib/featureFlags";
 import { releaseAtLeast } from "../lib/featureFlags";
 
 /**
- * The nine things the CRM can tell a person about (FIG-1027, B1.11), which of
+ * The things the CRM can tell a person about (FIG-1027, B1.11), which of
  * them apply to which role, which count as "important", and the three presets.
  * The raisers for most of the new types arrive with the features they belong to
  * (mentions, renewals, proposals, stalled deals, support access); the
@@ -21,6 +21,7 @@ export const NOTIFICATION_TYPES = [
   "PROPOSAL_UNANSWERED",
   "STALLED_DEAL",
   "SUPPORT_ACCESS_REQUEST",
+  "LEAD_POOL",
 ] as const;
 export type NotificationTypeKey = (typeof NOTIFICATION_TYPES)[number];
 
@@ -112,6 +113,14 @@ export const TYPE_DEFS: readonly NotificationTypeDef[] = [
     alwaysOn: false,
     // The support view is a V2 feature; until then there is nothing to ask about.
     relevant: (c, release) => hasPermission(c, "security.manage") && releaseAtLeast(release, "v2"),
+  },
+  {
+    key: "LEAD_POOL",
+    label: "Shared lead pool",
+    description: "When someone asks to take a lead from the pool, and the answer to your own request.",
+    important: true,
+    alwaysOn: false,
+    relevant: (c) => hasPermission(c, "leads.assign") || hasPermission(c, "leads.view.shared"),
   },
 ];
 

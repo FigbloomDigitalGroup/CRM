@@ -91,6 +91,21 @@ model Organization {
   pageViews                  PageView[]
   dealHandoffs               DealHandoff[]
   idempotencyKeys            IdempotencyKey[]
+  backgroundJobs             BackgroundJob[]
+  mergeRecords               MergeRecord[]
+  customFieldDefinitions     CustomFieldDefinition[]
+  tags                       Tag[]
+  tagLinks                   TagLink[]
+  searchRecents              SearchRecent[]
+  comments                   Comment[]
+  commentMentions            CommentMention[]
+  recordFollows              RecordFollow[]
+  dataRuns                   DataRun[]
+  signalSnapshots            SignalSnapshot[]
+  attachments                Attachment[]
+  emailTemplates             EmailTemplate[]
+  leadPoolRequests           LeadPoolRequest[]
+  dealMoves                  DealMove[]
   files                      File[]
   sessions                   Session[]
   signInEvents               SignInEvent[]
@@ -541,12 +556,26 @@ model PageView {
 /// the migration like every other composite FK (see
 /// `tenant_integrity_and_rls`).
 model DealHandoff {
-  id                        String   @id @default(uuid())
-  organizationId            String   @map("organization_id")
-  dealId                    String   @map("deal_id")
-  deliveryOwnerMembershipId String   @map("delivery_owner_membership_id")
-  createdByMembershipId     String   @map("created_by_membership_id")
-  createdAt                 DateTime @default(now()) @map("created_at")
+  id                        String        @id @default(uuid())
+  organizationId            String        @map("organization_id")
+  dealId                    String        @map("deal_id")
+  deliveryOwnerMembershipId String?       @map("delivery_owner_membership_id")
+  createdByMembershipId     String        @map("created_by_membership_id")
+  createdAt                 DateTime      @default(now()) @map("created_at")
+  updatedAt                 DateTime      @default(now()) @updatedAt @map("updated_at")
+  /// Awaiting owner until someone in Delivery takes it, then Onboarding, then Delivered (FIG-1037).
+  status                    HandoffStatus @default(ONBOARDING)
+  startDate                 DateTime?     @map("start_date") @db.Date
+  scope                     String?
+  requirements              String?
+  /// [{ "title": "...", "done": false }]
+  deliverables              Json          @default("[]")
+  /// Membership ids working on it besides the owner.
+  teamMembershipIds         Json          @default("[]") @map("team_membership_ids")
+  tasksCreatedAt            DateTime?     @map("tasks_created_at")
+  ownerTakenAt              DateTime?     @map("owner_taken_at")
+  deliveredAt               DateTime?     @map("delivered_at")
+  deliveredByMembershipId   String?       @map("delivered_by_membership_id")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
@@ -643,6 +672,8 @@ model File {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  attachment Attachment?
+
   @@unique([organizationId, id], map: "files_organization_id_id_key")
   @@index([organizationId, purpose, status])
   @@index([organizationId, ownerMembershipId])
@@ -667,6 +698,8 @@ enum NotificationType {
   PROPOSAL_UNANSWERED
   STALLED_DEAL
   SUPPORT_ACCESS_REQUEST
+  /// B2.02: a salesperson asks to take an unassigned lead, and the answer.
+  LEAD_POOL
 }
 
 /// In-app notification feed entry for one membership (FIG-597). Always has
@@ -684,6 +717,7 @@ model Notification {
   entityId       String?          @map("entity_id")
   link           String?
   readAt         DateTime?        @map("read_at")
+  archivedAt     DateTime?        @map("archived_at")
   createdAt      DateTime         @default(now()) @map("created_at")
 
   organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -700,6 +734,7 @@ model Notification {
   // original owner is a second, real event for the *same* entity+type+
   // membership triple, and must still notify.
   @@index([organizationId, membershipId, readAt])
+  @@index([organizationId, membershipId, archivedAt, createdAt(sort: Desc)], map: "notifications_feed_idx")
   @@map("notifications")
 }
 
@@ -884,18 +919,20 @@ model LeadStatus {
 /// -> ... -> Closed Won/Lost). See IMPLEMENTATION_NOTES.md for where the
 /// lead/deal split happens.
 model PipelineStage {
-  id             String   @id @default(uuid())
-  organizationId String   @map("organization_id")
-  key            String
-  name           String
-  description    String?
-  sequence       Int      @default(0)
-  probability    Int?
-  isWon          Boolean  @default(false) @map("is_won")
-  isLost         Boolean  @default(false) @map("is_lost")
-  isActive       Boolean  @default(true) @map("is_active")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  organizationId   String   @map("organization_id")
+  key              String
+  name             String
+  description      String?
+  sequence         Int      @default(0)
+  probability      Int?
+  /// Days without activity after which an open deal in this stage counts as stalled; null uses the organisation default (FIG-1035).
+  stalledAfterDays Int?     @map("stalled_after_days")
+  isWon            Boolean  @default(false) @map("is_won")
+  isLost           Boolean  @default(false) @map("is_lost")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   deals        Deal[]
@@ -987,29 +1024,38 @@ model Service {
 /// detection is an application-level concern informed by the
 /// name/email/phone indexes below.
 model Company {
-  id                    String    @id @default(uuid())
-  organizationId        String    @map("organization_id")
-  name                  String
-  industry              String?
-  website               String?
-  location              String?
-  phone                 String?
-  email                 String?
-  notes                 String?
-  lifecycleStateId      String?   @map("lifecycle_state_id")
-  ownerMembershipId     String?   @map("owner_membership_id")
-  createdByMembershipId String?   @map("created_by_membership_id")
+  id                     String    @id @default(uuid())
+  organizationId         String    @map("organization_id")
+  name                   String
+  industry               String?
+  website                String?
+  location               String?
+  phone                  String?
+  email                  String?
+  notes                  String?
+  lifecycleStateId       String?   @map("lifecycle_state_id")
+  ownerMembershipId      String?   @map("owner_membership_id")
+  createdByMembershipId  String?   @map("created_by_membership_id")
   /// Soft-delete (FIG-601) -- excluded from default list/duplicate queries
   /// when set, but never physically removed; see `companyService.ts`'s
   /// archive/restore functions and IMPLEMENTATION_NOTES.md.
-  archivedAt            DateTime? @map("archived_at")
+  archivedAt             DateTime? @map("archived_at")
+  archivedByMembershipId String?   @map("archived_by_membership_id")
+  archiveReason          String?   @map("archive_reason")
+  /// Organisation-defined custom field values, keyed by field key (FIG-803). A lead's qualification answers are in `qualificationData`.
+  customFields           Json      @default("{}") @map("custom_fields")
+  /// Rules-based customer health 0-100 and the factors behind it (FIG-1032).
+  healthValue            Int?      @map("health_value")
+  healthBand             String?   @map("health_band")
+  healthFactors          Json?     @map("health_factors")
+  healthScoredAt         DateTime? @map("health_scored_at")
   /// Set when this row was the "loser" of a merge (FIG-601) -- always
   /// archived at the same time. Points at the surviving Company so a
   /// visitor landing on the old record's page can be redirected/shown
   /// where its history went.
-  mergedIntoId          String?   @map("merged_into_id")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  mergedIntoId           String?   @map("merged_into_id")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   lifecycleState CustomerLifecycleState? @relation(fields: [lifecycleStateId], references: [id], onDelete: SetNull)
@@ -1026,6 +1072,12 @@ model Company {
   communications  Communication[]
   companyServices CompanyService[]
 
+  tagLinks TagLink[]
+
+  attachments Attachment[]
+  comments    Comment[]
+  follows     RecordFollow[]
+
   @@unique([organizationId, id])
   @@index([organizationId])
   @@index([organizationId, ownerMembershipId])
@@ -1040,26 +1092,30 @@ model Company {
 /// A person, distinct from Company. A contact with no company is
 /// supported (e.g. an individual lead with no business behind them yet).
 model Contact {
-  id                    String    @id @default(uuid())
-  organizationId        String    @map("organization_id")
-  companyId             String?   @map("company_id")
-  firstName             String    @map("first_name")
-  lastName              String?   @map("last_name")
-  phone                 String?
-  email                 String?
-  jobTitle              String?   @map("job_title")
-  department            String?
-  socialProfiles        Json?     @map("social_profiles")
-  notes                 String?
-  ownerMembershipId     String?   @map("owner_membership_id")
-  createdByMembershipId String?   @map("created_by_membership_id")
+  id                     String    @id @default(uuid())
+  organizationId         String    @map("organization_id")
+  companyId              String?   @map("company_id")
+  firstName              String    @map("first_name")
+  lastName               String?   @map("last_name")
+  phone                  String?
+  email                  String?
+  jobTitle               String?   @map("job_title")
+  department             String?
+  socialProfiles         Json?     @map("social_profiles")
+  notes                  String?
+  ownerMembershipId      String?   @map("owner_membership_id")
+  createdByMembershipId  String?   @map("created_by_membership_id")
   /// Soft-delete (FIG-601) -- see Company.archivedAt's doc comment.
-  archivedAt            DateTime? @map("archived_at")
+  archivedAt             DateTime? @map("archived_at")
+  archivedByMembershipId String?   @map("archived_by_membership_id")
+  archiveReason          String?   @map("archive_reason")
+  /// Organisation-defined custom field values, keyed by field key (FIG-803). A lead's qualification answers are in `qualificationData`.
+  customFields           Json      @default("{}") @map("custom_fields")
   /// Set when this row was the "loser" of a merge (FIG-601) -- see
   /// Company.mergedIntoId's doc comment.
-  mergedIntoId          String?   @map("merged_into_id")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  mergedIntoId           String?   @map("merged_into_id")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   company      Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1073,6 +1129,12 @@ model Contact {
   activities     Activity[]
   tasks          Task[]
   communications Communication[]
+
+  tagLinks TagLink[]
+
+  attachments Attachment[]
+  comments    Comment[]
+  follows     RecordFollow[]
 
   @@unique([organizationId, id])
   @@index([organizationId])
@@ -1095,25 +1157,34 @@ enum LeadTemperature {
 /// service-specific qualification questions (e.g. property/internet
 /// details) without needing a full custom-fields subsystem.
 model Lead {
-  id                    String          @id @default(uuid())
-  organizationId        String          @map("organization_id")
-  companyId             String?         @map("company_id")
-  contactId             String?         @map("contact_id")
-  leadSourceId          String?         @map("lead_source_id")
-  leadStatusId          String          @map("lead_status_id")
-  temperature           LeadTemperature @default(WARM)
-  serviceInterestId     String?         @map("service_interest_id")
-  ownerMembershipId     String?         @map("owner_membership_id")
-  qualificationData     Json?           @map("qualification_data")
-  lostReasonId          String?         @map("lost_reason_id")
-  nextFollowUpAt        DateTime?       @map("next_follow_up_at")
-  convertedAt           DateTime?       @map("converted_at")
-  notes                 String?
-  createdByMembershipId String?         @map("created_by_membership_id")
+  id                     String          @id @default(uuid())
+  organizationId         String          @map("organization_id")
+  companyId              String?         @map("company_id")
+  contactId              String?         @map("contact_id")
+  leadSourceId           String?         @map("lead_source_id")
+  leadStatusId           String          @map("lead_status_id")
+  temperature            LeadTemperature @default(WARM)
+  serviceInterestId      String?         @map("service_interest_id")
+  ownerMembershipId      String?         @map("owner_membership_id")
+  qualificationData      Json?           @map("qualification_data")
+  lostReasonId           String?         @map("lost_reason_id")
+  nextFollowUpAt         DateTime?       @map("next_follow_up_at")
+  convertedAt            DateTime?       @map("converted_at")
+  notes                  String?
+  createdByMembershipId  String?         @map("created_by_membership_id")
   /// Soft-delete (FIG-601) -- see Company.archivedAt's doc comment.
-  archivedAt            DateTime?       @map("archived_at")
-  createdAt             DateTime        @default(now()) @map("created_at")
-  updatedAt             DateTime        @updatedAt @map("updated_at")
+  archivedAt             DateTime?       @map("archived_at")
+  archivedByMembershipId String?         @map("archived_by_membership_id")
+  archiveReason          String?         @map("archive_reason")
+  /// Organisation-defined custom field values, keyed by field key (FIG-803). A lead's qualification answers are in `qualificationData`.
+  customFields           Json            @default("{}") @map("custom_fields")
+  /// Rules-based lead score 0-100 and the factors behind it (FIG-1032); see docs/SCORING.md.
+  scoreValue             Int?            @map("score_value")
+  scoreBand              String?         @map("score_band")
+  scoreFactors           Json?           @map("score_factors")
+  scoredAt               DateTime?       @map("scored_at")
+  createdAt              DateTime        @default(now()) @map("created_at")
+  updatedAt              DateTime        @updatedAt @map("updated_at")
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   company         Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
@@ -1129,6 +1200,14 @@ model Lead {
   activities     Activity[]
   tasks          Task[]
   communications Communication[]
+
+  tagLinks TagLink[]
+
+  attachments Attachment[]
+
+  poolRequests LeadPoolRequest[]
+  comments     Comment[]
+  follows      RecordFollow[]
 
   @@unique([organizationId, id])
   @@index([organizationId])
@@ -1159,27 +1238,33 @@ enum DealOutcome {
 /// converted into more than one Deal, while still allowing many Deals with
 /// no originating Lead (leadId null — e.g. an existing-customer upsell).
 model Deal {
-  id                    String      @id @default(uuid())
-  organizationId        String      @map("organization_id")
-  companyId             String      @map("company_id")
-  primaryContactId      String?     @map("primary_contact_id")
-  leadId                String?     @map("lead_id")
-  serviceId             String?     @map("service_id")
-  ownerMembershipId     String      @map("owner_membership_id")
-  pipelineStageId       String      @map("pipeline_stage_id")
-  value                 Decimal?    @db.Decimal(14, 2)
-  currency              String      @default("KES")
-  expectedCloseDate     DateTime?   @map("expected_close_date") @db.Date
-  outcome               DealOutcome @default(OPEN)
-  lostReasonId          String?     @map("lost_reason_id")
-  wonAt                 DateTime?   @map("won_at")
-  lostAt                DateTime?   @map("lost_at")
-  notes                 String?
-  createdByMembershipId String?     @map("created_by_membership_id")
+  id                     String      @id @default(uuid())
+  organizationId         String      @map("organization_id")
+  companyId              String      @map("company_id")
+  primaryContactId       String?     @map("primary_contact_id")
+  leadId                 String?     @map("lead_id")
+  serviceId              String?     @map("service_id")
+  ownerMembershipId      String      @map("owner_membership_id")
+  pipelineStageId        String      @map("pipeline_stage_id")
+  value                  Decimal?    @db.Decimal(14, 2)
+  currency               String      @default("KES")
+  expectedCloseDate      DateTime?   @map("expected_close_date") @db.Date
+  outcome                DealOutcome @default(OPEN)
+  lostReasonId           String?     @map("lost_reason_id")
+  wonAt                  DateTime?   @map("won_at")
+  lostAt                 DateTime?   @map("lost_at")
+  notes                  String?
+  createdByMembershipId  String?     @map("created_by_membership_id")
   /// Soft-delete (FIG-601) -- see Company.archivedAt's doc comment.
-  archivedAt            DateTime?   @map("archived_at")
-  createdAt             DateTime    @default(now()) @map("created_at")
-  updatedAt             DateTime    @updatedAt @map("updated_at")
+  archivedAt             DateTime?   @map("archived_at")
+  archivedByMembershipId String?     @map("archived_by_membership_id")
+  archiveReason          String?     @map("archive_reason")
+  /// Organisation-defined custom field values, keyed by field key (FIG-803). A lead's qualification answers are in `qualificationData`.
+  customFields           Json        @default("{}") @map("custom_fields")
+  /// When anything last happened on the deal (activity, email, stage move); stalled is derived from it (FIG-1035).
+  lastActivityAt         DateTime    @default(now()) @map("last_activity_at")
+  createdAt              DateTime    @default(now()) @map("created_at")
+  updatedAt              DateTime    @updatedAt @map("updated_at")
 
   organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   company        Company       @relation(fields: [companyId], references: [id], onDelete: Restrict)
@@ -1196,6 +1281,14 @@ model Deal {
   communications     Communication[]
   proposalReferences ProposalReference[]
   handoff            DealHandoff?
+
+  tagLinks TagLink[]
+
+  attachments Attachment[]
+
+  moves    DealMove[]
+  comments Comment[]
+  follows  RecordFollow[]
 
   @@unique([organizationId, id])
   @@unique([organizationId, leadId])
@@ -1284,22 +1377,27 @@ enum TaskStatus {
 /// (organizationId, status, dueAt) index exists to make that derivation
 /// cheap at query time.
 model Task {
-  id                    String       @id @default(uuid())
-  organizationId        String       @map("organization_id")
-  title                 String
-  description           String?
-  assigneeMembershipId  String       @map("assignee_membership_id")
-  createdByMembershipId String       @map("created_by_membership_id")
-  dueAt                 DateTime?    @map("due_at")
-  priority              TaskPriority @default(MEDIUM)
-  status                TaskStatus   @default(PENDING)
-  completedAt           DateTime?    @map("completed_at")
-  companyId             String?      @map("company_id")
-  contactId             String?      @map("contact_id")
-  leadId                String?      @map("lead_id")
-  dealId                String?      @map("deal_id")
-  createdAt             DateTime     @default(now()) @map("created_at")
-  updatedAt             DateTime     @updatedAt @map("updated_at")
+  id                     String       @id @default(uuid())
+  organizationId         String       @map("organization_id")
+  title                  String
+  description            String?
+  /// Client requirements as a snapshot taken when the task was created (FIG-1038); what a Restricted Technical user works from.
+  requirements           String?
+  assigneeMembershipId   String       @map("assignee_membership_id")
+  createdByMembershipId  String       @map("created_by_membership_id")
+  dueAt                  DateTime?    @map("due_at")
+  priority               TaskPriority @default(MEDIUM)
+  status                 TaskStatus   @default(PENDING)
+  completedAt            DateTime?    @map("completed_at")
+  archivedAt             DateTime?    @map("archived_at")
+  archivedByMembershipId String?      @map("archived_by_membership_id")
+  archiveReason          String?      @map("archive_reason")
+  companyId              String?      @map("company_id")
+  contactId              String?      @map("contact_id")
+  leadId                 String?      @map("lead_id")
+  dealId                 String?      @map("deal_id")
+  createdAt              DateTime     @default(now()) @map("created_at")
+  updatedAt              DateTime     @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   assignee     Membership   @relation("TaskAssignee", fields: [assigneeMembershipId], references: [id], onDelete: Restrict)
@@ -1309,6 +1407,11 @@ model Task {
   lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
   deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
+  attachments Attachment[]
+  comments    Comment[]
+  follows     RecordFollow[]
+
+  @@unique([organizationId, id])
   @@index([organizationId])
   @@index([organizationId, assigneeMembershipId, status])
   @@index([organizationId, status, dueAt])
@@ -1317,6 +1420,7 @@ model Task {
   /// Follow-up-performance reporting (FIG-603) scans by organizationId +
   /// a dueAt range (owner filter is optional) before grouping by status.
   @@index([organizationId, dueAt])
+  @@index([organizationId, archivedAt])
   @@map("tasks")
 }
 
@@ -1353,6 +1457,8 @@ model Communication {
   /// and log email") always stamps the caller's own membership.
   authorMembershipId String?                @map("author_membership_id")
   activityId         String?                @map("activity_id")
+  /// The template this email started from (FIG-797); kept as null if the template is deleted.
+  emailTemplateId    String?                @map("email_template_id")
   companyId          String?                @map("company_id")
   contactId          String?                @map("contact_id")
   leadId             String?                @map("lead_id")
@@ -1366,6 +1472,8 @@ model Communication {
   contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
   lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
   deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  emailTemplate EmailTemplate? @relation(fields: [emailTemplateId], references: [id], onDelete: SetNull)
 
   @@index([organizationId])
   @@index([organizationId, companyId, occurredAt])
@@ -1547,4 +1655,409 @@ model AuthRateLimitAttempt {
 
   @@index([action, scope, key, createdAt])
   @@map("auth_rate_limit_attempts")
+}
+
+enum BackgroundJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  DEAD
+  CANCELLED
+}
+
+/// One unit of background work (FIG-1066, B2.18): an import, a lifecycle
+/// pass, a reminder sweep. Every job belongs to an organisation. A worker
+/// claims a job with a lease; a crashed worker's lease expires and the job is
+/// picked up again, so work is never lost, and a result is only recorded by
+/// the worker that still holds the lease, so it is never applied twice.
+/// `DEAD` is the dead-letter state: attempts used up, kept for inspection.
+model BackgroundJob {
+  id                    String              @id @default(uuid())
+  organizationId        String              @map("organization_id")
+  type                  String
+  payload               Json                @default("{}")
+  status                BackgroundJobStatus @default(QUEUED)
+  attempts              Int                 @default(0)
+  maxAttempts           Int                 @default(5) @map("max_attempts")
+  runAt                 DateTime            @default(now()) @map("run_at")
+  timeoutMs             Int                 @default(300000) @map("timeout_ms")
+  lockedBy              String?             @map("locked_by")
+  leaseExpiresAt        DateTime?           @map("lease_expires_at")
+  startedAt             DateTime?           @map("started_at")
+  finishedAt            DateTime?           @map("finished_at")
+  lastError             String?             @map("last_error")
+  result                Json?
+  dedupeKey             String?             @map("dedupe_key")
+  requestId             String?             @map("request_id")
+  createdByMembershipId String?             @map("created_by_membership_id")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, dedupeKey], map: "background_jobs_org_dedupe_key")
+  @@index([status, runAt], map: "background_jobs_claim_idx")
+  @@index([organizationId, status, createdAt], map: "background_jobs_org_status_idx")
+  @@index([organizationId, type, createdAt], map: "background_jobs_org_type_idx")
+  @@map("background_jobs")
+}
+
+/// What a company or contact merge moved (FIG-1033, B2.04), kept so the merge
+/// can be undone for a short period (`undoExpiresAt`). The loser is archived,
+/// never deleted, whether or not the merge is undone.
+model MergeRecord {
+  id                   String    @id @default(uuid())
+  organizationId       String    @map("organization_id")
+  entityType           String    @map("entity_type")
+  winnerId             String    @map("winner_id")
+  loserId              String    @map("loser_id")
+  mergedByMembershipId String?   @map("merged_by_membership_id")
+  mergedAt             DateTime  @default(now()) @map("merged_at")
+  undoExpiresAt        DateTime  @map("undo_expires_at")
+  undoneAt             DateTime? @map("undone_at")
+  undoneByMembershipId String?   @map("undone_by_membership_id")
+  /// Ids re-pointed per table, and the winner's and loser's field values before the merge.
+  snapshot             Json
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, entityType, mergedAt])
+  @@index([organizationId, loserId])
+  @@map("merge_records")
+}
+
+enum CustomFieldEntity {
+  LEAD
+  CONTACT
+  COMPANY
+  DEAL
+}
+
+enum CustomFieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT
+  MULTISELECT
+  BOOLEAN
+}
+
+enum CustomFieldSection {
+  GENERAL
+  QUALIFICATION
+}
+
+/// A field an organisation adds to leads, contacts, companies or deals
+/// (FIG-803), or a per-service qualification question (FIG-1030, B2.01:
+/// `section = QUALIFICATION`, optionally tied to one service). Values are
+/// validated against these definitions on every write.
+model CustomFieldDefinition {
+  id                String             @id @default(uuid())
+  organizationId    String             @map("organization_id")
+  entityType        CustomFieldEntity  @map("entity_type")
+  section           CustomFieldSection @default(GENERAL)
+  key               String
+  label             String
+  fieldType         CustomFieldType    @default(TEXT) @map("field_type")
+  options           Json?
+  helpText          String?            @map("help_text")
+  required          Boolean            @default(false)
+  requiredOnQualify Boolean            @default(false) @map("required_on_qualify")
+  serviceId         String?            @map("service_id")
+  sortOrder         Int                @default(0) @map("sort_order")
+  isActive          Boolean            @default(true) @map("is_active")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, entityType, key], map: "custom_field_definitions_org_entity_key_key")
+  @@unique([organizationId, id], map: "custom_field_definitions_organization_id_id_key")
+  @@index([organizationId, entityType, isActive, sortOrder], map: "custom_field_definitions_org_entity_active_idx")
+  @@map("custom_field_definitions")
+}
+
+/// An organisation's tag (FIG-798). Names are unique per organisation without
+/// regard to case. Linked to records through `TagLink`.
+model Tag {
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  name                  String
+  colour                String   @default("forest")
+  createdByMembershipId String?  @map("created_by_membership_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  links        TagLink[]
+
+  @@map("tags")
+}
+
+/// One tag on one record: exactly one of the four record columns is set.
+model TagLink {
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  tagId                 String   @map("tag_id")
+  companyId             String?  @map("company_id")
+  contactId             String?  @map("contact_id")
+  leadId                String?  @map("lead_id")
+  dealId                String?  @map("deal_id")
+  createdByMembershipId String?  @map("created_by_membership_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tag          Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@map("tag_links")
+}
+
+/// A file attached to a company, contact, lead, deal or task (FIG-796). The
+/// bytes are described by the `File` row; this says which record it belongs to
+/// and whether it is shared with everyone who can open that record. Exactly one
+/// record column is set.
+model Attachment {
+  id                     String    @id @default(uuid())
+  organizationId         String    @map("organization_id")
+  fileId                 String    @unique @map("file_id")
+  companyId              String?   @map("company_id")
+  contactId              String?   @map("contact_id")
+  leadId                 String?   @map("lead_id")
+  dealId                 String?   @map("deal_id")
+  taskId                 String?   @map("task_id")
+  proposalReferenceId    String?   @map("proposal_reference_id")
+  title                  String?
+  /// Files on a deal are visible only to people who may see deal values, unless shared.
+  shared                 Boolean   @default(true)
+  uploadedByMembershipId String?   @map("uploaded_by_membership_id")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  deletedAt              DateTime? @map("deleted_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  file         File         @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  task         Task?        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("attachments")
+}
+
+/// A reusable email (FIG-797): subject and body with merge fields such as
+/// {{contact.firstName}}. Managed in Settings (`templates.manage`).
+model EmailTemplate {
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  name                  String
+  subject               String
+  body                  String
+  isActive              Boolean  @default(true) @map("is_active")
+  createdByMembershipId String?  @map("created_by_membership_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  communications Communication[]
+
+  @@map("email_templates")
+}
+
+enum LeadPoolRequestStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  CANCELLED
+  SUPERSEDED
+}
+
+/// A request to take an unassigned lead from the shared pool (FIG-1031, B2.02).
+model LeadPoolRequest {
+  id                    String                @id @default(uuid())
+  organizationId        String                @map("organization_id")
+  leadId                String                @map("lead_id")
+  requesterMembershipId String                @map("requester_membership_id")
+  status                LeadPoolRequestStatus @default(PENDING)
+  note                  String?
+  decisionReason        String?               @map("decision_reason")
+  decidedByMembershipId String?               @map("decided_by_membership_id")
+  decidedAt             DateTime?             @map("decided_at")
+  createdAt             DateTime              @default(now()) @map("created_at")
+  updatedAt             DateTime              @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lead         Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status, createdAt])
+  @@map("lead_pool_requests")
+}
+
+/// One move of a deal between pipeline stages (FIG-1035), kept so it can be
+/// undone for a short period. `previous` holds the outcome fields before it.
+model DealMove {
+  id                  String    @id @default(uuid())
+  organizationId      String    @map("organization_id")
+  dealId              String    @map("deal_id")
+  fromStageId         String    @map("from_stage_id")
+  toStageId           String    @map("to_stage_id")
+  movedByMembershipId String?   @map("moved_by_membership_id")
+  movedAt             DateTime  @default(now()) @map("moved_at")
+  undoExpiresAt       DateTime  @map("undo_expires_at")
+  undoneAt            DateTime? @map("undone_at")
+  previous            Json
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deal         Deal         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, dealId, movedAt])
+  @@map("deal_moves")
+}
+
+enum HandoffStatus {
+  AWAITING_OWNER
+  ONBOARDING
+  DELIVERED
+}
+
+/// What a member searched for recently (FIG-1041); the newest few are shown under the search box.
+model SearchRecent {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  membershipId   String   @map("membership_id")
+  query          String
+  lastUsedAt     DateTime @default(now()) @map("last_used_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, membershipId, lastUsedAt(sort: Desc)], map: "search_recents_member_used_idx")
+  @@map("search_recents")
+}
+
+/// A comment on one record (FIG-1044): exactly one of the five record columns is set.
+/// Edits and deletes are soft; a deleted comment keeps its row but loses its text.
+model Comment {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  companyId             String?   @map("company_id")
+  contactId             String?   @map("contact_id")
+  leadId                String?   @map("lead_id")
+  dealId                String?   @map("deal_id")
+  taskId                String?   @map("task_id")
+  authorMembershipId    String?   @map("author_membership_id")
+  body                  String
+  editedAt              DateTime? @map("edited_at")
+  deletedAt             DateTime? @map("deleted_at")
+  deletedByMembershipId String?   @map("deleted_by_membership_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company      Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact      Contact?         @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  lead         Lead?            @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal         Deal?            @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  task         Task?            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  mentions     CommentMention[]
+
+  @@map("comments")
+}
+
+/// Who a comment mentioned, so an edit notifies only the newly mentioned.
+model CommentMention {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  commentId      String   @map("comment_id")
+  membershipId   String   @map("membership_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  comment      Comment      @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, membershipId])
+  @@map("comment_mentions")
+}
+
+/// A member following a record to hear about its new comments (FIG-1044).
+model RecordFollow {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  membershipId   String   @map("membership_id")
+  companyId      String?  @map("company_id")
+  contactId      String?  @map("contact_id")
+  leadId         String?  @map("lead_id")
+  dealId         String?  @map("deal_id")
+  taskId         String?  @map("task_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact      Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  task         Task?        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("record_follows")
+}
+
+enum DataRunKind {
+  IMPORT
+  EXPORT
+}
+
+enum DataRunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  COMPLETED_WITH_ERRORS
+  FAILED
+  CANCELLED
+}
+
+/// An import or export a person started (FIG-1034). The work is a background job; this row is what they watch.
+model DataRun {
+  id                    String        @id @default(uuid())
+  organizationId        String        @map("organization_id")
+  kind                  DataRunKind
+  entity                String
+  status                DataRunStatus @default(QUEUED)
+  createdByMembershipId String?       @map("created_by_membership_id")
+  sourceFileId          String?       @map("source_file_id")
+  resultFileId          String?       @map("result_file_id")
+  errorFileId           String?       @map("error_file_id")
+  params                Json          @default("{}")
+  totalRows             Int           @default(0) @map("total_rows")
+  processedRows         Int           @default(0) @map("processed_rows")
+  createdRows           Int           @default(0) @map("created_rows")
+  duplicateRows         Int           @default(0) @map("duplicate_rows")
+  alreadyConvertedRows  Int           @default(0) @map("already_converted_rows")
+  failedRows            Int           @default(0) @map("failed_rows")
+  truncated             Boolean       @default(false)
+  cancelRequested       Boolean       @default(false) @map("cancel_requested")
+  failureMessage        String?       @map("failure_message")
+  jobId                 String?       @map("job_id")
+  startedAt             DateTime?     @map("started_at")
+  finishedAt            DateTime?     @map("finished_at")
+  createdAt             DateTime      @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt(sort: Desc)], map: "data_runs_org_created_idx")
+  @@map("data_runs")
+}
+
+/// The last computed dashboard signals for an organisation (FIG-1043): adoption, stalled deals, overdue tasks.
+model SignalSnapshot {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  key            String
+  value          Json
+  computedAt     DateTime @map("computed_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@map("signal_snapshots")
 }

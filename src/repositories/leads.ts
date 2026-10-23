@@ -1,7 +1,11 @@
+import { archivedWhere, type ArchiveMeta } from "../lib/archive";
+import type { JsonClause } from "../lib/customFields";
 import { Prisma } from "@prisma/client";
 import { withOrgContext } from "../db/orgScopedClient";
+import { TAG_LINKS_INCLUDE, tagFilter } from "./tags";
 
 export interface CreateLeadInput {
+  customFields?: Prisma.InputJsonValue;
   organizationId: string;
   leadStatusId: string;
   companyId?: string;
@@ -28,6 +32,7 @@ export async function createLead(input: CreateLeadInput) {
         ownerMembershipId: input.ownerMembershipId,
         createdByMembershipId: input.createdByMembershipId,
         qualificationData: input.qualificationData,
+        customFields: input.customFields,
       },
     }),
   );
@@ -39,6 +44,7 @@ export async function createLead(input: CreateLeadInput) {
  */
 
 export interface UpdateLeadInput {
+  customFields?: Prisma.InputJsonValue;
   leadStatusId?: string;
   companyId?: string | null;
   contactId?: string | null;
@@ -92,6 +98,7 @@ export async function getLeadById(organizationId: string, leadId: string) {
         leadStatus: true,
         leadSource: true,
         lostReason: true,
+        ...TAG_LINKS_INCLUDE,
       },
     }),
   );
@@ -125,6 +132,9 @@ export async function findActiveLeadIdsOwnedBy(
 
 export interface ListLeadsFilters {
   query?: string;
+  /** Also match leads whose contact or company phone matched the query in another format (FIG-1041). */
+  matchContactIds?: string[];
+  matchCompanyIds?: string[];
   ownerMembershipId?: string;
   leadStatusId?: string;
   leadSourceId?: string;
@@ -139,6 +149,14 @@ export interface ListLeadsFilters {
   ownedByOrUnassigned?: string;
   /** Archived leads are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
+  /** The archived tab: only archived records (B2.16). */
+  archivedOnly?: boolean;
+  /** The shared pool (B2.02): leads with no owner, still open. */
+  unassignedOnly?: boolean;
+  /** `customField[key]=value` filters (FIG-803), built by `buildCustomFieldWhere`. */
+  customFieldClauses?: JsonClause[];
+  /** Records carrying any of these tags (FIG-798). */
+  tagIds?: string[];
   /** Standard `sort` (B0.06); the default order is newest first. `id` always breaks ties. */
   sort?: { field: LeadSortField; direction: "asc" | "desc" };
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
@@ -151,7 +169,15 @@ export const LEAD_SORT_FIELDS = ["createdAt", "updatedAt", "temperature", "nextF
 export type LeadSortField = (typeof LEAD_SORT_FIELDS)[number];
 
 /** Shared by the list and count queries so a page and its total can never disagree (FIG-789). */
-function leadsWhere(
+/** Adds the custom field filters on top of the plain filters. */
+function leadsWhere(...args: Parameters<typeof baseLeadsWhere>): Prisma.LeadWhereInput {
+  const base = baseLeadsWhere(...args);
+  const clauses = args[1].customFieldClauses;
+  if (!clauses || clauses.length === 0) return base;
+  return { AND: [base, ...clauses.map((c) => ({ customFields: c as Prisma.JsonFilter<"Lead"> }))] };
+}
+
+function baseLeadsWhere(
   organizationId: string,
   filters: ListLeadsFilters,
 ): Prisma.LeadWhereInput {
@@ -173,7 +199,9 @@ function leadsWhere(
           ],
         }
       : {}),
-    ...(filters.includeArchived ? {} : { archivedAt: null }),
+    ...archivedWhere(filters),
+    ...tagFilter(filters.tagIds),
+    ...(filters.unassignedOnly ? { ownerMembershipId: null, convertedAt: null } : {}),
     ...(filters.createdAfter || filters.createdBefore
       ? {
           createdAt: {
@@ -186,6 +214,8 @@ function leadsWhere(
       ? {
           OR: [
             { notes: { contains: filters.query, mode: "insensitive" } },
+            ...(filters.matchContactIds?.length ? [{ contactId: { in: filters.matchContactIds } }] : []),
+            ...(filters.matchCompanyIds?.length ? [{ companyId: { in: filters.matchCompanyIds } }] : []),
             {
               company: {
                 name: { contains: filters.query, mode: "insensitive" },
@@ -224,6 +254,7 @@ export async function listLeads(
         contact: true,
         leadStatus: true,
         leadSource: true,
+        ...TAG_LINKS_INCLUDE,
       },
       orderBy: filters.sort
         ? [{ [filters.sort.field]: filters.sort.direction }, { id: "asc" }]
@@ -270,12 +301,35 @@ export async function findPossibleDuplicateLeads(
   );
 }
 
+/** Leads already converted to a deal that match this contact or company (FIG-1034: an import row for one is "already converted"). */
+export async function findConvertedLeadMatches(
+  organizationId: string,
+  candidate: { contactEmail?: string; contactPhone?: string; companyId?: string },
+) {
+  const clauses: Prisma.LeadWhereInput[] = [];
+  if (candidate.companyId) clauses.push({ companyId: candidate.companyId });
+  if (candidate.contactEmail) clauses.push({ contact: { email: candidate.contactEmail } });
+  if (candidate.contactPhone) clauses.push({ contact: { phone: candidate.contactPhone } });
+  if (clauses.length === 0) return [];
+  return withOrgContext(organizationId, (tx) =>
+    tx.lead.findMany({
+      where: { organizationId, convertedAt: { not: null }, OR: clauses },
+      select: { id: true },
+      take: 3,
+    }),
+  );
+}
+
 /** Sets `archivedAt` (FIG-601) -- never a hard delete; see the model's doc comment. */
-export async function archiveLead(organizationId: string, leadId: string) {
+export async function archiveLead(organizationId: string, leadId: string, meta: ArchiveMeta = {}) {
   return withOrgContext(organizationId, (tx) =>
     tx.lead.update({
       where: { id: leadId, organizationId },
-      data: { archivedAt: new Date() },
+      data: {
+        archivedAt: new Date(),
+        archivedByMembershipId: meta.membershipId ?? null,
+        archiveReason: meta.reason ?? null,
+      },
     }),
   );
 }
@@ -284,7 +338,22 @@ export async function restoreLead(organizationId: string, leadId: string) {
   return withOrgContext(organizationId, (tx) =>
     tx.lead.update({
       where: { id: leadId, organizationId },
-      data: { archivedAt: null },
+      data: { archivedAt: null, archivedByMembershipId: null, archiveReason: null },
     }),
   );
+}
+
+/**
+ * Gives an unowned lead to someone, in one conditional statement: it matches
+ * only while the lead still has no owner, so of two people taking the same lead
+ * at once exactly one gets it. Returns whether this call got it.
+ */
+export async function takeUnassignedLead(organizationId: string, leadId: string, membershipId: string): Promise<boolean> {
+  return withOrgContext(organizationId, async (tx) => {
+    const { count } = await tx.lead.updateMany({
+      where: { id: leadId, organizationId, ownerMembershipId: null, convertedAt: null, archivedAt: null },
+      data: { ownerMembershipId: membershipId },
+    });
+    return count === 1;
+  });
 }

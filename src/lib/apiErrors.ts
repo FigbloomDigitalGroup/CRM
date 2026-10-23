@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import {
   AccountDeactivatedError,
+  ArchivedReadOnlyError,
   AwaitingAccessError,
   ForbiddenError,
   NoActiveMembershipError,
@@ -11,6 +12,7 @@ import {
   UnauthorizedError,
   ValidationError,
   type ReassignmentChecklistDetail,
+  type RestoreHint,
 } from "../auth/errors";
 import { ownerRoleNamesForKeys } from "../auth/areaOwners";
 import { adminDb } from "../db/adminClient";
@@ -36,6 +38,7 @@ export type ApiErrorCode =
   | "ACCOUNT_DEACTIVATED"
   | "AWAITING_ACCESS"
   | "REASSIGNMENT_REQUIRED"
+  | "ARCHIVED_READ_ONLY"
   | "NOT_FOUND"
   | "VALIDATION_FAILED"
   | "RATE_LIMITED"
@@ -86,6 +89,8 @@ export interface ApiErrorBody {
   session?: { reason: "expired" | "revoked"; email: string | null };
   /** On `REASSIGNMENT_REQUIRED`: what the member still owns (B1.05). */
   reassignment?: ReassignmentChecklistDetail;
+  /** On `ARCHIVED_READ_ONLY`: the record and whether the caller may restore it (B2.16). */
+  restore?: RestoreHint;
 }
 
 /** An API error that is neither a typed auth error nor a validation failure (for example a replayed idempotency key). */
@@ -214,6 +219,9 @@ export async function buildErrorResponse(
     });
   }
   if (err instanceof NotFoundError) return make(404, "NOT_FOUND", err.message);
+  if (err instanceof ArchivedReadOnlyError) {
+    return make(409, "ARCHIVED_READ_ONLY", err.message, { restore: err.restore });
+  }
   if (err instanceof ValidationError) {
     const fieldErrors = err.issues ?? [];
     return make(400, "VALIDATION_FAILED", err.message, {
