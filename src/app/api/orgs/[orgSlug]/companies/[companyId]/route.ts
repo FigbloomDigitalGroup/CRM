@@ -1,3 +1,4 @@
+import { flattenTags } from "@/repositories/tags";
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
@@ -5,6 +6,8 @@ import { resolveRequestContext } from "@/auth/requestContext";
 import { getCompany, updateCompany } from "@/services/companyService";
 
 const UpdateCompanySchema = z.object({
+  /** Organisation-defined custom field values (FIG-803); a field sent as null is cleared. */
+  customFields: z.record(z.string(), z.any()).optional(),
   name: z.string().min(1).optional(),
   industry: z.string().optional(),
   website: z.string().optional(),
@@ -22,7 +25,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   return handleRoute(async () => {
     const { orgSlug, companyId } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    return getCompany(ctx, companyId);
+    return flattenTags(await getCompany(ctx, companyId));
   });
 }
 

@@ -93,3 +93,23 @@ export function parseQueryParams<Schema extends z.ZodType>(
   }
   return result.data;
 }
+
+/**
+ * Like `parseJsonBody`, but a request with no body at all is the empty
+ * object, for endpoints whose body is optional (archive with an optional
+ * reason). A body that is present must still be valid JSON matching the schema.
+ */
+export async function parseOptionalJsonBody<Schema extends z.ZodType>(
+  request: Request,
+  schema: Schema,
+): Promise<z.output<Schema>> {
+  const text = await request.text();
+  if (!text.trim()) return validateData({}, schema);
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new ValidationError("Request body must be valid JSON.");
+  }
+  return validateData(raw, schema);
+}

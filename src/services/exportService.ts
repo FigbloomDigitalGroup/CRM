@@ -1,6 +1,6 @@
 import { stringify } from "csv-stringify/sync";
 import type { AuthContext } from "../auth/context";
-import { requirePermission } from "../auth/context";
+import { deny, hasPermission, requirePermission } from "../auth/context";
 import { adminDb } from "../db/adminClient";
 import { listOrganizationMemberships } from "../repositories/memberships";
 import type { ListCompaniesFilters } from "../repositories/companies";
@@ -18,12 +18,22 @@ import {
   getSalesBySalesperson,
   getUpcomingRenewals,
 } from "./customerReportService";
+import { loadActiveDefinitions } from "./customFieldService";
 import { getFormReferenceData } from "./referenceDataService";
 import { buildReportNameResolvers } from "./reportingNames";
 import {
   getOrganizationMetrics,
   type OrganizationMetricsFilters,
 } from "./reportingService";
+
+/** Exports above this many rows need the bulk-export permission (Management) until the approvals engine arrives (FIG-1034, B6.13). */
+export const BULK_EXPORT_ROW_LIMIT = 500;
+
+export function assertBulkExportAllowed(ctx: AuthContext, rowCount: number): void {
+  if (rowCount > BULK_EXPORT_ROW_LIMIT && !hasPermission(ctx, "export.bulk")) {
+    throw deny(ctx, "export.bulk", ["export.bulk"]);
+  }
+}
 
 export interface CsvExport {
   columns: string[];
@@ -52,6 +62,36 @@ async function membershipLookup(organizationId: string) {
 
 const dateOrEmpty = (d: Date | null | undefined) => (d ? d.toISOString() : "");
 
+/**
+ * Extra columns every record export carries: `tags`, and one column per active
+ * custom field (`cf:<key>`; for leads also `q:<key>` per qualification question)
+ * (FIG-798, FIG-803). Values are written the way the importer reads them back:
+ * choices by option value, several choices joined with ";".
+ */
+async function exportExtras(ctx: AuthContext, entityType: "LEAD" | "CONTACT" | "COMPANY" | "DEAL") {
+  const defs = await loadActiveDefinitions(ctx.organizationId, entityType);
+  const general = defs.filter((d) => d.section === "GENERAL");
+  const qualification = defs.filter((d) => d.section === "QUALIFICATION");
+  const columns = [
+    "tags",
+    ...general.map((d) => `cf:${d.key}`),
+    ...qualification.map((d) => `q:${d.key}`),
+  ];
+  const cell = (value: unknown) => (Array.isArray(value) ? value.join(";") : value === null || value === undefined ? "" : String(value));
+  return {
+    columns,
+    cells: (row: { tagLinks?: { tag: { name: string } }[]; customFields?: unknown; qualificationData?: unknown }) => {
+      const custom = (row.customFields ?? {}) as Record<string, unknown>;
+      const answers = (row.qualificationData ?? {}) as Record<string, unknown>;
+      return {
+        tags: (row.tagLinks ?? []).map((l) => l.tag.name).join("; "),
+        ...Object.fromEntries(general.map((d) => [`cf:${d.key}`, cell(custom[d.key])])),
+        ...Object.fromEntries(qualification.map((d) => [`q:${d.key}`, cell(answers[d.key])])),
+      };
+    },
+  };
+}
+
 export async function exportCompaniesCsv(
   ctx: AuthContext,
   filters: ListCompaniesFilters = {},
@@ -68,6 +108,7 @@ export async function exportCompaniesCsv(
   ]);
   const lifecycleName = new Map(lifecycleStates.map((s) => [s.id, s.name]));
 
+  assertBulkExportAllowed(ctx, total);
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,
@@ -89,6 +130,8 @@ export async function exportCompaniesCsv(
     "notes",
     "createdAt",
   ];
+  const extra = await exportExtras(ctx, "COMPANY");
+  columns.push(...extra.columns);
   return {
     columns,
     rows: mapRows(
@@ -96,6 +139,7 @@ export async function exportCompaniesCsv(
         listCompanies(ctx, { ...filters, skip, take }),
       ),
       (c) => ({
+        ...extra.cells(c),
         id: c.id,
         name: c.name,
         industry: c.industry ?? "",
@@ -125,6 +169,7 @@ export async function exportContactsCsv(
     membershipLookup(ctx.organizationId),
   ]);
 
+  assertBulkExportAllowed(ctx, total);
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,
@@ -146,6 +191,8 @@ export async function exportContactsCsv(
     "notes",
     "createdAt",
   ];
+  const extra = await exportExtras(ctx, "CONTACT");
+  columns.push(...extra.columns);
   return {
     columns,
     rows: mapRows(
@@ -153,6 +200,7 @@ export async function exportContactsCsv(
         listContacts(ctx, { ...filters, skip, take }),
       ),
       (c) => ({
+        ...extra.cells(c),
         id: c.id,
         firstName: c.firstName,
         lastName: c.lastName ?? "",
@@ -185,6 +233,7 @@ export async function exportLeadsCsv(
   ]);
   const serviceName = new Map(services.map((s) => [s.id, s.name]));
 
+  assertBulkExportAllowed(ctx, total);
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,
@@ -209,6 +258,8 @@ export async function exportLeadsCsv(
     "notes",
     "createdAt",
   ];
+  const extra = await exportExtras(ctx, "LEAD");
+  columns.push(...extra.columns);
   return {
     columns,
     rows: mapRows(
@@ -216,6 +267,7 @@ export async function exportLeadsCsv(
         listLeads(ctx, { ...filters, skip, take }),
       ),
       (l) => ({
+        ...extra.cells(l),
         id: l.id,
         company: l.company?.name ?? "",
         contact: l.contact
@@ -250,6 +302,7 @@ export async function exportDealsCsv(
     membershipLookup(ctx.organizationId),
   ]);
 
+  assertBulkExportAllowed(ctx, total);
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,
@@ -273,6 +326,8 @@ export async function exportDealsCsv(
     "owner",
     "createdAt",
   ];
+  const extra = await exportExtras(ctx, "DEAL");
+  columns.push(...extra.columns);
   return {
     columns,
     rows: mapRows(
@@ -280,6 +335,7 @@ export async function exportDealsCsv(
         listDeals(ctx, { ...filters, skip, take }),
       ),
       (d) => ({
+        ...extra.cells(d),
         id: d.id,
         company: d.company?.name ?? "",
         primaryContact: d.primaryContact

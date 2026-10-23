@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ForbiddenError, ValidationError } from "../src/auth/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../src/auth/errors";
 import * as companyService from "../src/services/companyService";
 import * as contactService from "../src/services/contactService";
 import * as dealService from "../src/services/dealService";
@@ -89,7 +89,7 @@ describe("archive/restore: leads (own/all split)", () => {
     const leadStatusId = await getLeadStatusId(org.id);
     const { lead } = await leadService.createLead(ownerCtx, { leadStatusId });
 
-    await expect(leadService.archiveLead(otherCtx, lead.id)).rejects.toThrow(ForbiddenError);
+    await expect(leadService.archiveLead(otherCtx, lead.id)).rejects.toThrow(NotFoundError);
 
     const archived = await leadService.archiveLead(ownerCtx, lead.id);
     expect(archived.archivedAt).not.toBeNull();
@@ -136,7 +136,7 @@ describe("archive/restore: deals (own/all split)", () => {
       pipelineStageId,
     });
 
-    await expect(dealService.archiveDeal(otherCtx, deal.id)).rejects.toThrow(ForbiddenError);
+    await expect(dealService.archiveDeal(otherCtx, deal.id)).rejects.toThrow(NotFoundError);
 
     const archived = await dealService.archiveDeal(ownerCtx, deal.id);
     expect(archived.archivedAt).not.toBeNull();

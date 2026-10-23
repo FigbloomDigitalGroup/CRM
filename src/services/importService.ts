@@ -15,8 +15,12 @@ import {
   createContact,
   findPossibleDuplicateContacts,
 } from "../repositories/contacts";
-import { createLead, findPossibleDuplicateLeads } from "../repositories/leads";
+import { createLead, findConvertedLeadMatches, findPossibleDuplicateLeads } from "../repositories/leads";
+import { applyValues, missingRequired, type FieldDefinition } from "../lib/customFields";
+import { loadActiveDefinitions, toFieldDefinition } from "./customFieldService";
+import { findDuplicates } from "./duplicateService";
 import { assertEligibleAccountOwner } from "./ownerEligibility";
+import { changeTags } from "./tagService";
 
 /**
  * Hard ceiling on rows processed per import call, independent of upload
@@ -36,18 +40,36 @@ const MAX_REPORTED_ERRORS = 500;
 
 export type DuplicateStrategy = "skip" | "create";
 
+export type ImportRowOutcome = "failed" | "duplicate" | "already_converted" | "warning";
+
 export interface ImportRowError {
   row: number;
   reason: string;
+  /** What happened to the row; rows that failed leave nothing behind, a warning means the record was created. */
+  outcome?: ImportRowOutcome;
+  /** The existing record a duplicate or already-converted row matched. */
+  matchedId?: string;
 }
 
 export interface ImportSummary {
   totalRows: number;
   created: number;
   duplicatesSkipped: number;
+  /** Leads only: rows for a contact or company that already has a converted lead. */
+  alreadyConverted: number;
   failed: number;
   truncated: boolean;
+  cancelled: boolean;
+  /** At most 500 in the request-time summary; background runs keep every row for the error report. */
   errors: ImportRowError[];
+}
+
+/** What a background import adds: progress, cancelling, and a complete error list. */
+export interface ImportHooks {
+  onProgress?: (summary: ImportSummary) => Promise<void>;
+  isCancelled?: () => Promise<boolean>;
+  /** Keep every problem row (up to this many) instead of the first 500. */
+  maxErrors?: number;
 }
 
 /** Thrown by a row resolver for a problem specific to that one row -- caught per-row, never aborts the whole import. */
@@ -180,6 +202,66 @@ async function resolveByName(
   return match.id;
 }
 
+/** The text of one CSV cell as the value a custom field of this type stores. */
+function csvValueFor(def: FieldDefinition, cell: string): unknown {
+  switch (def.fieldType) {
+    case "NUMBER":
+      return Number(cell);
+    case "BOOLEAN": {
+      const v = cell.toLowerCase();
+      if (["true", "yes", "1"].includes(v)) return true;
+      if (["false", "no", "0"].includes(v)) return false;
+      return cell;
+    }
+    case "MULTISELECT":
+      return cell.split(";").map((s) => s.trim()).filter(Boolean);
+    default:
+      return cell;
+  }
+}
+
+/**
+ * Tags and custom fields from the file (FIG-798, FIG-803). A `tags` column holds names
+ * separated by ";"; a `cf:<key>` column holds that custom field. The headers an export
+ * writes are read back as they are, with no mapping needed, and a mapping entry can point
+ * either at another header.
+ */
+async function extraColumns(
+  organizationId: string,
+  entityType: "LEAD" | "CONTACT" | "COMPANY",
+  rawRow: Record<string, string>,
+  mapping: Record<string, string | undefined>,
+): Promise<{ customFields?: Record<string, unknown>; tags: string[] }> {
+  const tagHeader = mapping.tags ?? "tags";
+  const tags = (rawRow[tagHeader] ?? "").split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+
+  const incoming: Record<string, unknown> = {};
+  const defs = (await loadActiveDefinitions(organizationId, entityType, "GENERAL")).map(toFieldDefinition);
+  const byKey = new Map(defs.map((d) => [d.key, d]));
+  for (const key of new Set([...Object.keys(rawRow).filter((h) => h.startsWith("cf:")).map((h) => h.slice(3)), ...Object.keys(mapping).filter((f) => f.startsWith("cf:")).map((f) => f.slice(3))])) {
+    const header = mapping[`cf:${key}`] ?? `cf:${key}`;
+    const cell = rawRow[header]?.trim();
+    const def = byKey.get(key);
+    if (!cell) continue;
+    if (!def) throw new RowValidationError(`"${header}" is not a custom field of this record.`);
+    incoming[key] = csvValueFor(def, cell);
+  }
+
+  if (Object.keys(incoming).length === 0) {
+    // Required fields still apply to an imported record.
+    const missing = missingRequired(defs, {}, "save");
+    if (missing.length > 0) throw new RowValidationError(missing.map((i) => i.message).join(" "));
+    return { tags };
+  }
+  const result = applyValues(defs, incoming, { unknownKeys: "reject" });
+  const issues = [...result.issues, ...missingRequired(defs, result.values, "save")];
+  if (issues.length > 0) throw new RowValidationError(issues.map((i) => i.message).join(" "));
+  return { customFields: result.values, tags };
+}
+
+/** Why a row was not imported although it is not an error: the matching record, if any. */
+export type RowHold = { outcome: "duplicate" | "already_converted"; matchedId?: string; reason: string };
+
 interface RunImportOptions<TCandidate> {
   organizationId: string;
   fileStream: Readable;
@@ -188,8 +270,12 @@ interface RunImportOptions<TCandidate> {
     rawRow: Record<string, string>,
     mapping: Record<string, string | undefined>,
   ) => Promise<TCandidate>;
-  findDuplicates: (candidate: TCandidate) => Promise<unknown[]>;
-  create: (candidate: TCandidate) => Promise<unknown>;
+  /** A reason to leave this row out (a duplicate, an already-converted lead), or null to import it. */
+  findHold: (candidate: TCandidate, strategy: DuplicateStrategy) => Promise<RowHold | null>;
+  create: (candidate: TCandidate) => Promise<{ id: string }>;
+  /** Tags from the row, applied after the record exists. A failure is a warning, not a failed row. */
+  afterCreate?: (record: { id: string }, rawRow: Record<string, string>, mapping: Record<string, string | undefined>) => Promise<void>;
+  hooks?: ImportHooks;
 }
 
 async function runImport<TCandidate>(
@@ -200,42 +286,50 @@ async function runImport<TCandidate>(
     totalRows: 0,
     created: 0,
     duplicatesSkipped: 0,
+    alreadyConverted: 0,
     failed: 0,
     truncated: false,
+    cancelled: false,
     errors: [],
+  };
+  const maxErrors = opts.hooks?.maxErrors ?? MAX_REPORTED_ERRORS;
+  const note = (entry: ImportRowError) => {
+    if (summary.errors.length < maxErrors) summary.errors.push(entry);
   };
 
   async function handleRow(rawRow: Record<string, string>, row: number) {
     try {
       const candidate = await opts.resolveCandidate(rawRow, mapping);
-      if (opts.duplicateStrategy === "skip") {
-        const duplicates = await opts.findDuplicates(candidate);
-        if (duplicates.length > 0) {
-          summary.duplicatesSkipped += 1;
-          return;
+      const hold = await opts.findHold(candidate, opts.duplicateStrategy);
+      if (hold) {
+        if (hold.outcome === "already_converted") summary.alreadyConverted += 1;
+        else summary.duplicatesSkipped += 1;
+        note({ row, reason: hold.reason, outcome: hold.outcome, matchedId: hold.matchedId });
+        return;
+      }
+      const record = await opts.create(candidate);
+      summary.created += 1;
+      if (opts.afterCreate) {
+        try {
+          await opts.afterCreate(record, rawRow, mapping);
+        } catch (err) {
+          note({ row, reason: `Created, but the tags were not applied: ${err instanceof Error ? err.message : "unknown error"}`, outcome: "warning" });
         }
       }
-      await opts.create(candidate);
-      summary.created += 1;
     } catch (err) {
       summary.failed += 1;
-      if (summary.errors.length < MAX_REPORTED_ERRORS) {
-        summary.errors.push({
-          row,
-          reason:
-            err instanceof RowValidationError
-              ? err.message
-              : err instanceof Error
-                ? err.message
-                : "Unknown error.",
-        });
-      }
+      note({
+        row,
+        reason: err instanceof Error ? err.message : "Unknown error.",
+        outcome: "failed",
+      });
     }
   }
 
   const maxRows = maxImportRows();
   let rowNumber = 1; // header is row 1, first data row is row 2
   let stopped = false;
+  const PROGRESS_EVERY = 50;
 
   async function* boundedRows() {
     for await (const rawRow of parseCsvRows(opts.fileStream)) {
@@ -244,6 +338,14 @@ async function runImport<TCandidate>(
         stopped = true;
         summary.truncated = true;
         return;
+      }
+      if (opts.hooks && (rowNumber - 1) % PROGRESS_EVERY === 0) {
+        await opts.hooks.onProgress?.(summary);
+        if (await opts.hooks.isCancelled?.()) {
+          stopped = true;
+          summary.cancelled = true;
+          return;
+        }
       }
       summary.totalRows = rowNumber - 1;
       yield { rawRow, row: rowNumber };
@@ -258,14 +360,27 @@ async function runImport<TCandidate>(
     // Drain the rest of the stream so it doesn't dangle.
     opts.fileStream.destroy();
   }
+  await opts.hooks?.onProgress?.(summary);
 
   return summary;
+}
+
+async function applyTags(
+  ctx: AuthContext,
+  entity: "lead" | "contact" | "company",
+  id: string,
+  rawRow: Record<string, string>,
+  mapping: Record<string, string | undefined>,
+) {
+  const names = (rawRow[mapping.tags ?? "tags"] ?? "").split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+  if (names.length > 0) await changeTags(ctx, entity, id, { addTagNames: names });
 }
 
 export interface ImportCompaniesInput {
   fileStream: Readable;
   mapping: Record<string, string | undefined>;
   duplicateStrategy: DuplicateStrategy;
+  hooks?: ImportHooks;
 }
 
 export async function importCompanies(
@@ -278,6 +393,7 @@ export async function importCompanies(
     organizationId: ctx.organizationId,
     fileStream: input.fileStream,
     duplicateStrategy: input.duplicateStrategy,
+    hooks: input.hooks,
     resolveCandidate: async (rawRow, mapping) => {
       const name = requiredCell(rawRow, mapping, "name");
       const email = optionalCell(rawRow, mapping, "email");
@@ -294,7 +410,9 @@ export async function importCompanies(
         "companies",
         ctx.membershipId,
       );
+      const extra = await extraColumns(ctx.organizationId, "COMPANY", rawRow, mapping);
       return {
+        customFields: extra.customFields as never,
         organizationId: ctx.organizationId,
         name,
         industry: optionalCell(rawRow, mapping, "industry"),
@@ -308,9 +426,16 @@ export async function importCompanies(
         createdByMembershipId: ctx.membershipId,
       };
     },
-    findDuplicates: (candidate) =>
-      findPossibleDuplicateCompanies(ctx.organizationId, candidate),
+    findHold: async (candidate, strategy) => {
+      if (strategy !== "skip") return null;
+      const existing = await findPossibleDuplicateCompanies(ctx.organizationId, candidate);
+      if (existing.length > 0) return { outcome: "duplicate", matchedId: existing[0]!.id, reason: `Skipped: a company with the same name, email or phone already exists.` };
+      const found = await findDuplicates(ctx, { entity: "company", companyName: candidate.name, email: candidate.email, phone: candidate.phone, website: candidate.website });
+      const high = found.candidates.find((c) => c.confidence === "high");
+      return high ? { outcome: "duplicate", matchedId: high.id, reason: `Skipped: looks like the existing company "${high.label}".` } : null;
+    },
     create: (candidate) => createCompany(candidate),
+    afterCreate: (record, rawRow, mapping) => applyTags(ctx, "company", record.id, rawRow, mapping),
   });
 
   await recordAuditEvent({
@@ -328,6 +453,7 @@ export interface ImportContactsInput {
   fileStream: Readable;
   mapping: Record<string, string | undefined>;
   duplicateStrategy: DuplicateStrategy;
+  hooks?: ImportHooks;
 }
 
 export async function importContacts(
@@ -340,6 +466,7 @@ export async function importContacts(
     organizationId: ctx.organizationId,
     fileStream: input.fileStream,
     duplicateStrategy: input.duplicateStrategy,
+    hooks: input.hooks,
     resolveCandidate: async (rawRow, mapping) => {
       const firstName = requiredCell(rawRow, mapping, "firstName");
       const email = optionalCell(rawRow, mapping, "email");
@@ -354,7 +481,9 @@ export async function importContacts(
         "contacts",
         ctx.membershipId,
       );
+      const extra = await extraColumns(ctx.organizationId, "CONTACT", rawRow, mapping);
       return {
+        customFields: extra.customFields as never,
         organizationId: ctx.organizationId,
         firstName,
         lastName: optionalCell(rawRow, mapping, "lastName"),
@@ -368,9 +497,16 @@ export async function importContacts(
         createdByMembershipId: ctx.membershipId,
       };
     },
-    findDuplicates: (candidate) =>
-      findPossibleDuplicateContacts(ctx.organizationId, candidate),
+    findHold: async (candidate, strategy) => {
+      if (strategy !== "skip") return null;
+      const existing = await findPossibleDuplicateContacts(ctx.organizationId, candidate);
+      if (existing.length > 0) return { outcome: "duplicate", matchedId: existing[0]!.id, reason: `Skipped: a contact with the same email or phone already exists.` };
+      const found = await findDuplicates(ctx, { entity: "contact", firstName: candidate.firstName, lastName: candidate.lastName, email: candidate.email, phone: candidate.phone });
+      const high = found.candidates.find((c) => c.confidence === "high");
+      return high ? { outcome: "duplicate", matchedId: high.id, reason: `Skipped: looks like the existing contact "${high.label}".` } : null;
+    },
     create: (candidate) => createContact(candidate),
+    afterCreate: (record, rawRow, mapping) => applyTags(ctx, "contact", record.id, rawRow, mapping),
   });
 
   await recordAuditEvent({
@@ -388,6 +524,7 @@ export interface ImportLeadsInput {
   fileStream: Readable;
   mapping: Record<string, string | undefined>;
   duplicateStrategy: DuplicateStrategy;
+  hooks?: ImportHooks;
 }
 
 export async function importLeads(
@@ -400,6 +537,7 @@ export async function importLeads(
     organizationId: ctx.organizationId,
     fileStream: input.fileStream,
     duplicateStrategy: input.duplicateStrategy,
+    hooks: input.hooks,
     resolveCandidate: async (rawRow, mapping) => {
       const leadStatusId = await resolveByName(
         ctx.organizationId,
@@ -448,7 +586,9 @@ export async function importLeads(
         );
       }
 
+      const extra = await extraColumns(ctx.organizationId, "LEAD", rawRow, mapping);
       return {
+        customFields: extra.customFields as never,
         organizationId: ctx.organizationId,
         leadStatusId,
         companyId,
@@ -462,14 +602,22 @@ export async function importLeads(
         _contactPhone: contactPhone,
       };
     },
-    findDuplicates: (candidate) =>
-      findPossibleDuplicateLeads(ctx.organizationId, {
-        contactEmail: candidate._contactEmail,
-        contactPhone: candidate._contactPhone,
-        companyId: candidate.companyId,
-      }),
+    findHold: async (candidate, strategy) => {
+      if (strategy !== "skip") return null;
+      const probe = { contactEmail: candidate._contactEmail, contactPhone: candidate._contactPhone, companyId: candidate.companyId };
+      const converted = await findConvertedLeadMatches(ctx.organizationId, probe);
+      if (converted.length > 0) {
+        return { outcome: "already_converted", matchedId: converted[0]!.id, reason: "Skipped: this contact or company already has a lead that became a deal." };
+      }
+      const open = await findPossibleDuplicateLeads(ctx.organizationId, probe);
+      if (open.length > 0) return { outcome: "duplicate", matchedId: open[0]!.id, reason: "Skipped: an open lead for this contact or company already exists." };
+      const found = await findDuplicates(ctx, { entity: "lead", email: candidate._contactEmail, phone: candidate._contactPhone, companyId: candidate.companyId });
+      const high = found.candidates.find((c) => c.confidence === "high");
+      return high ? { outcome: "duplicate", matchedId: high.id, reason: `Skipped: looks like the existing record "${high.label}".` } : null;
+    },
     create: ({ _contactEmail, _contactPhone, ...candidate }) =>
       createLead(candidate),
+    afterCreate: (record, rawRow, mapping) => applyTags(ctx, "lead", record.id, rawRow, mapping),
   });
 
   await recordAuditEvent({

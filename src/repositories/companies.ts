@@ -1,7 +1,11 @@
+import { archivedWhere, type ArchiveMeta } from "../lib/archive";
+import type { JsonClause } from "../lib/customFields";
 import type { Prisma } from "@prisma/client";
 import { withOrgContext } from "../db/orgScopedClient";
+import { TAG_LINKS_INCLUDE, tagFilter } from "./tags";
 
 export interface CreateCompanyInput {
+  customFields?: Prisma.InputJsonValue;
   organizationId: string;
   name: string;
   industry?: string;
@@ -16,6 +20,7 @@ export interface CreateCompanyInput {
 }
 
 export interface UpdateCompanyInput {
+  customFields?: Prisma.InputJsonValue;
   name?: string;
   industry?: string | null;
   website?: string | null;
@@ -29,10 +34,18 @@ export interface UpdateCompanyInput {
 
 export interface ListCompaniesFilters {
   query?: string;
+  /** Also match these ids: records whose phone matched the query in another format (FIG-1041). */
+  matchIds?: string[];
   ownerMembershipId?: string;
   lifecycleStateId?: string;
   /** Archived companies are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
+  /** The archived tab: only archived records (B2.16). */
+  archivedOnly?: boolean;
+  /** `customField[key]=value` filters (FIG-803), built by `buildCustomFieldWhere`. */
+  customFieldClauses?: JsonClause[];
+  /** Records carrying any of these tags (FIG-798). */
+  tagIds?: string[];
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
   take?: number;
   /** Rows to skip before `take` -- set by the paged list functions (FIG-789), not by callers. */
@@ -68,6 +81,7 @@ export async function createCompany(input: CreateCompanyInput) {
         lifecycleStateId: input.lifecycleStateId,
         ownerMembershipId: input.ownerMembershipId,
         createdByMembershipId: input.createdByMembershipId,
+        customFields: input.customFields,
       },
     }),
   );
@@ -97,6 +111,7 @@ export async function getCompanyById(
         contacts: true,
         lifecycleState: true,
         owner: OWNER_SUMMARY,
+        ...TAG_LINKS_INCLUDE,
       },
     }),
   );
@@ -108,7 +123,15 @@ export async function getCompanyById(
  * search, not exact lookup.
  */
 /** Shared by the list and count queries so a page and its total can never disagree (FIG-789). */
-function companiesWhere(
+/** Adds the custom field filters on top of the plain filters. */
+function companiesWhere(...args: Parameters<typeof baseCompaniesWhere>): Prisma.CompanyWhereInput {
+  const base = baseCompaniesWhere(...args);
+  const clauses = args[1].customFieldClauses;
+  if (!clauses || clauses.length === 0) return base;
+  return { AND: [base, ...clauses.map((c) => ({ customFields: c as Prisma.JsonFilter<"Company"> }))] };
+}
+
+function baseCompaniesWhere(
   organizationId: string,
   filters: ListCompaniesFilters,
 ): Prisma.CompanyWhereInput {
@@ -116,13 +139,15 @@ function companiesWhere(
     organizationId,
     ownerMembershipId: filters.ownerMembershipId,
     lifecycleStateId: filters.lifecycleStateId,
-    ...(filters.includeArchived ? {} : { archivedAt: null }),
+    ...archivedWhere(filters),
+    ...tagFilter(filters.tagIds),
     ...(filters.query
       ? {
           OR: [
             { name: { contains: filters.query, mode: "insensitive" } },
             { email: { contains: filters.query, mode: "insensitive" } },
             { phone: { contains: filters.query, mode: "insensitive" } },
+            ...(filters.matchIds?.length ? [{ id: { in: filters.matchIds } }] : []),
           ],
         }
       : {}),
@@ -140,6 +165,7 @@ export async function listCompanies(
         lifecycleState: true,
         owner: OWNER_SUMMARY,
         _count: { select: { contacts: { where: { archivedAt: null } } } },
+        ...TAG_LINKS_INCLUDE,
       },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: filters.take,
@@ -159,11 +185,15 @@ export async function countCompanies(
 }
 
 /** Sets `archivedAt` (FIG-601) -- never a hard delete; see the model's doc comment. */
-export async function archiveCompany(organizationId: string, companyId: string) {
+export async function archiveCompany(organizationId: string, companyId: string, meta: ArchiveMeta = {}) {
   return withOrgContext(organizationId, (tx) =>
     tx.company.update({
       where: { id: companyId, organizationId },
-      data: { archivedAt: new Date() },
+      data: {
+        archivedAt: new Date(),
+        archivedByMembershipId: meta.membershipId ?? null,
+        archiveReason: meta.reason ?? null,
+      },
     }),
   );
 }
@@ -172,59 +202,9 @@ export async function restoreCompany(organizationId: string, companyId: string) 
   return withOrgContext(organizationId, (tx) =>
     tx.company.update({
       where: { id: companyId, organizationId },
-      data: { archivedAt: null, mergedIntoId: null },
+      data: { archivedAt: null, archivedByMembershipId: null, archiveReason: null, mergedIntoId: null },
     }),
   );
-}
-
-/**
- * Reassigns every Contact/Lead/Deal/Activity/Task/Communication/
- * CompanyService linked to `loserId` onto `winnerId`, then archives the
- * loser and records where it went (FIG-601). One transaction so a failure
- * partway through leaves nothing half-reassigned. The service layer
- * (`companyService.ts`) checks permissions and that both ids resolve to
- * real, distinct, not-already-archived companies before calling this.
- */
-export async function mergeCompanies(
-  organizationId: string,
-  loserId: string,
-  winnerId: string,
-) {
-  return withOrgContext(organizationId, async (tx) => {
-    await tx.contact.updateMany({
-      where: { organizationId, companyId: loserId },
-      data: { companyId: winnerId },
-    });
-    await tx.lead.updateMany({
-      where: { organizationId, companyId: loserId },
-      data: { companyId: winnerId },
-    });
-    await tx.deal.updateMany({
-      where: { organizationId, companyId: loserId },
-      data: { companyId: winnerId },
-    });
-    await tx.activity.updateMany({
-      where: { organizationId, companyId: loserId },
-      data: { companyId: winnerId },
-    });
-    await tx.task.updateMany({
-      where: { organizationId, companyId: loserId },
-      data: { companyId: winnerId },
-    });
-    await tx.communication.updateMany({
-      where: { organizationId, companyId: loserId },
-      data: { companyId: winnerId },
-    });
-    await tx.companyService.updateMany({
-      where: { organizationId, companyId: loserId },
-      data: { companyId: winnerId },
-    });
-
-    return tx.company.update({
-      where: { id: loserId, organizationId },
-      data: { archivedAt: new Date(), mergedIntoId: winnerId },
-    });
-  });
 }
 
 /**

@@ -1,3 +1,4 @@
+import { withAvatars } from "./profileService";
 import type { AuthContext } from "../auth/context";
 import { hasPermission } from "../auth/context";
 import { adminDb } from "../db/adminClient";
@@ -47,9 +48,10 @@ export async function getFormReferenceData(ctx: AuthContext) {
     }),
   ]);
 
-  const members = hasPermission(ctx, "membership.view")
+  const memberRows = hasPermission(ctx, "membership.view")
     ? await listOrganizationMemberships(organizationId)
     : [];
+  const members = await withAvatars(organizationId, memberRows, (m) => m.userName);
 
   return {
     leadSources,

@@ -1,63 +1,20 @@
 import { adminDb } from "../db/adminClient";
 import { logger } from "../lib/logger";
-import { listTasks } from "../repositories/tasks";
+import { enqueueAndRunNow } from "../jobs/runner";
+import {
+  NOTIFICATIONS_SWEEP_JOB_TYPE,
+  sweepIntervalMinutes,
+} from "../jobs/handlers/notificationSweep";
 import {
   getJobRunState,
   releaseJobLock,
   tryAcquireJobLock,
   type ScheduledJobRunState,
 } from "../repositories/scheduledJobRuns";
-import {
-  notifyTaskDue,
-  notifyTaskOverdue,
-  retryDueDeliveries,
-} from "./notificationService";
 
 export const NOTIFICATIONS_SWEEP_JOB_KEY = "notifications-sweep";
-const DEFAULT_INTERVAL_MINUTES = 15;
+export { sweepIntervalMinutes };
 const MIN_STALE_LOCK_MINUTES = 15;
-
-/** `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` (FIG-783 AC: "configurable through env") -- see docs/DEPLOYMENT.md's "Scheduled jobs" section. */
-export function sweepIntervalMinutes(): number {
-  const raw = Number(process.env.NOTIFICATIONS_SWEEP_INTERVAL_MINUTES);
-  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_INTERVAL_MINUTES;
-}
-
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-async function sweepOrganization(organizationId: string): Promise<{
-  due: number;
-  overdue: number;
-  retried: number;
-}> {
-  const today = startOfDay(new Date());
-  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-
-  const dueToday = await listTasks(organizationId, {
-    dueAfter: today,
-    dueBefore: tomorrow,
-  });
-  for (const task of dueToday) {
-    if (task.status !== "PENDING" && task.status !== "IN_PROGRESS") continue;
-    await notifyTaskDue(organizationId, task.assigneeMembershipId, {
-      id: task.id,
-      title: task.title,
-    });
-  }
-
-  const overdue = await listTasks(organizationId, { overdueOnly: true });
-  for (const task of overdue) {
-    await notifyTaskOverdue(organizationId, task.assigneeMembershipId, {
-      id: task.id,
-      title: task.title,
-    });
-  }
-
-  const { attempted } = await retryDueDeliveries(organizationId);
-  return { due: dueToday.length, overdue: overdue.length, retried: attempted };
-}
 
 export interface NotificationSweepResult {
   ran: boolean;
@@ -140,14 +97,14 @@ export async function runNotificationsSweep(
       select: { id: true, slug: true },
     });
 
+    // Each organisation's sweep runs as a background job (FIG-1066): it is
+    // logged with the organisation, retried by the framework when it fails, and
+    // visible in the job status API. One organisation failing never stops the rest.
     for (const org of organizations) {
       try {
-        const { due, overdue, retried } = await sweepOrganization(org.id);
-        if (due > 0 || overdue > 0 || retried > 0) {
-          logger.info(
-            { orgSlug: org.slug, due, overdue, deliveriesRetried: retried },
-            "Notifications sweep: organization processed",
-          );
+        const run = await enqueueAndRunNow({ organizationId: org.id, type: NOTIFICATIONS_SWEEP_JOB_TYPE });
+        if (run.outcome !== "succeeded") {
+          logger.error({ orgSlug: org.slug, outcome: run.outcome }, "Notifications sweep failed for organization");
         }
       } catch (err) {
         logger.error({ err, orgSlug: org.slug }, "Notifications sweep failed for organization");

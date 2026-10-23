@@ -1,10 +1,11 @@
 import { Prisma } from "@prisma/client";
+import type { NotificationTypeKey } from "../notifications/catalogue";
 import { withOrgContext } from "../db/orgScopedClient";
 
 export interface CreateNotificationInput {
   organizationId: string;
   membershipId: string;
-  type: "LEAD_ASSIGNED" | "TASK_DUE" | "TASK_OVERDUE" | "DEAL_WON_HANDOFF";
+  type: NotificationTypeKey;
   title: string;
   body: string;
   entityType?: string;
@@ -78,6 +79,59 @@ export async function markAllNotificationsRead(
     tx.notification.updateMany({
       where: { organizationId, membershipId, readAt: null },
       data: { readAt: new Date() },
+    }),
+  );
+}
+
+export interface NotificationFeedFilters {
+  unreadOnly?: boolean;
+  /** Only archived ones; the default feed leaves them out. */
+  archived?: boolean;
+  types?: NotificationTypeKey[];
+  limit: number;
+}
+
+/** The feed rows, newest first; archived ones only when asked for. */
+export async function listNotificationFeed(
+  organizationId: string,
+  membershipId: string,
+  filters: NotificationFeedFilters,
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.notification.findMany({
+      where: {
+        organizationId,
+        membershipId,
+        archivedAt: filters.archived ? { not: null } : null,
+        ...(filters.unreadOnly ? { readAt: null } : {}),
+        ...(filters.types?.length ? { type: { in: filters.types } } : {}),
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: filters.limit,
+    }),
+  );
+}
+
+export async function archiveNotification(
+  organizationId: string,
+  membershipId: string,
+  notificationId: string,
+  archived: boolean,
+) {
+  const now = new Date();
+  return withOrgContext(organizationId, (tx) =>
+    tx.notification.updateMany({
+      where: { id: notificationId, organizationId, membershipId },
+      data: archived ? { archivedAt: now, readAt: now } : { archivedAt: null },
+    }),
+  );
+}
+
+/** Read notifications older than the cut-off are removed; unread ones are never expired. */
+export async function deleteReadNotificationsBefore(organizationId: string, cutoff: Date) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.notification.deleteMany({
+      where: { organizationId, readAt: { not: null, lt: cutoff } },
     }),
   );
 }

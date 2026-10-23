@@ -171,7 +171,7 @@ export default async function ReportsPage({
   // ---- what this role's reports cover ---------------------------------
   const coverage: string[] = [];
   if (scope.leads) coverage.push(scope.leads === "all" ? "all leads" : "leads you own");
-  if (scope.deals) coverage.push(scope.deals === "all" ? "all deals" : "deals you own");
+  if (scope.deals) coverage.push(scope.deals === "all" ? "all deals" : scope.deals === "won" ? "won deals" : "deals you own");
   if (scope.tasks) coverage.push(scope.tasks === "all" ? "all tasks" : "tasks assigned to you");
 
   const attention: {

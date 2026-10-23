@@ -1,3 +1,5 @@
+import { customFieldFilters } from "@/app/api/_lib/pageQuery";
+import { buildCustomFieldWhere } from "@/services/customFieldService";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { pageQueryShape, toPageRequest } from "@/app/api/_lib/pageQuery";
 import { parseJsonBody, parseQueryParams } from "@/app/api/_lib/validation";
@@ -27,6 +29,7 @@ export async function GET(
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
     const { searchParams } = new URL(request.url);
+    const customFieldClauses = await buildCustomFieldWhere(ctx.organizationId, "LEAD", customFieldFilters(searchParams));
     const query = parseQueryParams(
       searchParams,
       ListLeadsQuerySchema.extend(pageQueryShape),
@@ -40,6 +43,9 @@ export async function GET(
         leadSourceId: query.leadSourceId,
         temperature: query.temperature,
         includeArchived: query.includeArchived === "true",
+        archivedOnly: query.archivedOnly === "true",
+        customFieldClauses,
+        tagIds: query.tagId ? query.tagId.split(",").filter(Boolean) : undefined,
         sort: parseSort(query.sort, LEAD_SORTS),
       },
       toPageRequest(query),

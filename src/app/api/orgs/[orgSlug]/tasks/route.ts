@@ -15,12 +15,17 @@ const ListTasksQuerySchema = z.object({
   leadId: z.string().optional(),
   dealId: z.string().optional(),
   overdueOnly: z.enum(["true", "false"]).optional(),
+  includeArchived: z.enum(["true", "false"]).optional(),
+  /** The archived tab: only archived tasks. */
+  archivedOnly: z.enum(["true", "false"]).optional(),
   ...pageQueryShape,
 });
 
 const CreateTaskSchema = z.object({
   title: requiredString("title is required."),
   description: z.string().optional(),
+  /** Client requirements snapshot (FIG-1038). */
+  requirements: z.string().max(5000).optional(),
   assigneeMembershipId: z.string().optional(),
   // Deliberately a string, not z.coerce.date() -- taskService.createTask
   // does its own new Date() conversion.
@@ -50,6 +55,8 @@ export async function GET(
         leadId: query.leadId,
         dealId: query.dealId,
         overdueOnly: query.overdueOnly === "true",
+        includeArchived: query.includeArchived === "true",
+        archivedOnly: query.archivedOnly === "true",
       },
       toPageRequest(query),
     );

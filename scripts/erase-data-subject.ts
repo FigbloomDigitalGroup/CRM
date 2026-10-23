@@ -45,6 +45,7 @@ import "dotenv/config";
 import { adminDb } from "../src/db/adminClient";
 import { withOrgContext } from "../src/db/orgScopedClient";
 import { recordAuditEvent } from "../src/repositories/auditEvents";
+import { getStorageDriver } from "../src/storage";
 
 function parseArgs(argv: string[]) {
   const get = (flag: string) => {
@@ -81,19 +82,24 @@ async function main(): Promise<void> {
       throw new Error(`No contact ${contactId} in organization "${orgSlug}".`);
     }
 
-    const [leads, deals, activities, tasks, communications] = await Promise.all([
+    const [leads, deals, activities, tasks, communications, attachments] = await Promise.all([
       tx.lead.count({ where: { organizationId: org.id, contactId } }),
       tx.deal.count({ where: { organizationId: org.id, primaryContactId: contactId } }),
       tx.activity.count({ where: { organizationId: org.id, contactId } }),
       tx.task.count({ where: { organizationId: org.id, contactId } }),
       tx.communication.count({ where: { organizationId: org.id, contactId } }),
+      // Files attached to the contact or to its tasks (FIG-796): the rows cascade, the stored bytes are removed below.
+      tx.attachment.findMany({
+        where: { organizationId: org.id, OR: [{ contactId }, { task: { contactId } }] },
+        select: { fileId: true, file: { select: { storageKey: true } } },
+      }),
     ]);
 
     console.log(
       `Contact: ${contact.firstName} ${contact.lastName ?? ""} <${contact.email ?? "no email"}>`,
     );
     console.log(
-      `Will DELETE (cascades from this contact): ${activities} activities, ${tasks} tasks, ${communications} communications.`,
+      `Will DELETE (cascades from this contact): ${activities} activities, ${tasks} tasks, ${communications} communications, ${attachments.length} attached files.`,
     );
     console.log(
       `Will UNLINK, not delete (contactId cleared, record kept): ${leads} leads, ${deals} deals.`,
@@ -120,10 +126,16 @@ async function main(): Promise<void> {
         phone: contact.phone,
         unlinkedLeads: leads,
         unlinkedDeals: deals,
+        erasedFiles: attachments.length,
       },
     });
 
     await tx.contact.delete({ where: { id: contact.id } });
+    // The bytes of every attached file go too, and the file rows are marked purged, so nothing about the person stays in storage.
+    for (const a of attachments) {
+      await getStorageDriver().deleteObject(a.file.storageKey).catch(() => undefined);
+      await tx.file.update({ where: { id: a.fileId }, data: { status: "DELETED", deletedAt: new Date(), purgedAt: new Date() } });
+    }
     console.log(`Erased contact ${contactId}.`);
   });
 }

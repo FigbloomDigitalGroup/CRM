@@ -1,7 +1,11 @@
+import { archivedWhere, type ArchiveMeta } from "../lib/archive";
+import type { JsonClause } from "../lib/customFields";
 import type { Prisma } from "@prisma/client";
 import { withOrgContext } from "../db/orgScopedClient";
+import { TAG_LINKS_INCLUDE, tagFilter } from "./tags";
 
 export interface CreateContactInput {
+  customFields?: Prisma.InputJsonValue;
   organizationId: string;
   firstName: string;
   lastName?: string;
@@ -16,6 +20,7 @@ export interface CreateContactInput {
 }
 
 export interface UpdateContactInput {
+  customFields?: Prisma.InputJsonValue;
   firstName?: string;
   lastName?: string | null;
   companyId?: string | null;
@@ -29,10 +34,18 @@ export interface UpdateContactInput {
 
 export interface ListContactsFilters {
   query?: string;
+  /** Also match these ids: records whose phone matched the query in another format (FIG-1041). */
+  matchIds?: string[];
   companyId?: string;
   ownerMembershipId?: string;
   /** Archived contacts are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
+  /** The archived tab: only archived records (B2.16). */
+  archivedOnly?: boolean;
+  /** `customField[key]=value` filters (FIG-803), built by `buildCustomFieldWhere`. */
+  customFieldClauses?: JsonClause[];
+  /** Records carrying any of these tags (FIG-798). */
+  tagIds?: string[];
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
   take?: number;
   /** Rows to skip before `take` -- set by the paged list functions (FIG-789), not by callers. */
@@ -59,6 +72,7 @@ export async function createContact(input: CreateContactInput) {
         notes: input.notes,
         ownerMembershipId: input.ownerMembershipId,
         createdByMembershipId: input.createdByMembershipId,
+        customFields: input.customFields,
       },
     }),
   );
@@ -84,7 +98,7 @@ export async function getContactById(
   return withOrgContext(organizationId, (tx) =>
     tx.contact.findFirst({
       where: { id: contactId, organizationId },
-      include: { company: true, owner: OWNER_SUMMARY },
+      include: { company: true, owner: OWNER_SUMMARY, ...TAG_LINKS_INCLUDE },
     }),
   );
 }
@@ -103,7 +117,15 @@ export async function listContactsByCompany(
 }
 
 /** Shared by the list and count queries so a page and its total can never disagree (FIG-789). */
-function contactsWhere(
+/** Adds the custom field filters on top of the plain filters. */
+function contactsWhere(...args: Parameters<typeof baseContactsWhere>): Prisma.ContactWhereInput {
+  const base = baseContactsWhere(...args);
+  const clauses = args[1].customFieldClauses;
+  if (!clauses || clauses.length === 0) return base;
+  return { AND: [base, ...clauses.map((c) => ({ customFields: c as Prisma.JsonFilter<"Contact"> }))] };
+}
+
+function baseContactsWhere(
   organizationId: string,
   filters: ListContactsFilters,
 ): Prisma.ContactWhereInput {
@@ -111,7 +133,8 @@ function contactsWhere(
     organizationId,
     companyId: filters.companyId,
     ownerMembershipId: filters.ownerMembershipId,
-    ...(filters.includeArchived ? {} : { archivedAt: null }),
+    ...archivedWhere(filters),
+    ...tagFilter(filters.tagIds),
     ...(filters.query
       ? {
           OR: [
@@ -119,6 +142,7 @@ function contactsWhere(
             { lastName: { contains: filters.query, mode: "insensitive" } },
             { email: { contains: filters.query, mode: "insensitive" } },
             { phone: { contains: filters.query, mode: "insensitive" } },
+            ...(filters.matchIds?.length ? [{ id: { in: filters.matchIds } }] : []),
             {
               company: {
                 name: { contains: filters.query, mode: "insensitive" },
@@ -137,7 +161,7 @@ export async function listContacts(
   return withOrgContext(organizationId, (tx) =>
     tx.contact.findMany({
       where: contactsWhere(organizationId, filters),
-      include: { company: true, owner: OWNER_SUMMARY },
+      include: { company: true, owner: OWNER_SUMMARY, ...TAG_LINKS_INCLUDE },
       orderBy: [{ createdAt: "desc" }, { id: "asc" }],
       take: filters.take,
       skip: filters.skip,
@@ -156,11 +180,15 @@ export async function countContacts(
 }
 
 /** Sets `archivedAt` (FIG-601) -- never a hard delete; see the model's doc comment. */
-export async function archiveContact(organizationId: string, contactId: string) {
+export async function archiveContact(organizationId: string, contactId: string, meta: ArchiveMeta = {}) {
   return withOrgContext(organizationId, (tx) =>
     tx.contact.update({
       where: { id: contactId, organizationId },
-      data: { archivedAt: new Date() },
+      data: {
+        archivedAt: new Date(),
+        archivedByMembershipId: meta.membershipId ?? null,
+        archiveReason: meta.reason ?? null,
+      },
     }),
   );
 }
@@ -169,50 +197,9 @@ export async function restoreContact(organizationId: string, contactId: string) 
   return withOrgContext(organizationId, (tx) =>
     tx.contact.update({
       where: { id: contactId, organizationId },
-      data: { archivedAt: null, mergedIntoId: null },
+      data: { archivedAt: null, archivedByMembershipId: null, archiveReason: null, mergedIntoId: null },
     }),
   );
-}
-
-/**
- * Reassigns every Lead/Deal(-as-primary-contact)/Activity/Task/
- * Communication linked to `loserId` onto `winnerId`, then archives the
- * loser and records where it went (FIG-601). Doesn't touch either
- * contact's own `companyId` -- merging two Contact *records* believed to
- * be the same person is independent of which Company they're filed under.
- */
-export async function mergeContacts(
-  organizationId: string,
-  loserId: string,
-  winnerId: string,
-) {
-  return withOrgContext(organizationId, async (tx) => {
-    await tx.lead.updateMany({
-      where: { organizationId, contactId: loserId },
-      data: { contactId: winnerId },
-    });
-    await tx.deal.updateMany({
-      where: { organizationId, primaryContactId: loserId },
-      data: { primaryContactId: winnerId },
-    });
-    await tx.activity.updateMany({
-      where: { organizationId, contactId: loserId },
-      data: { contactId: winnerId },
-    });
-    await tx.task.updateMany({
-      where: { organizationId, contactId: loserId },
-      data: { contactId: winnerId },
-    });
-    await tx.communication.updateMany({
-      where: { organizationId, contactId: loserId },
-      data: { contactId: winnerId },
-    });
-
-    return tx.contact.update({
-      where: { id: loserId, organizationId },
-      data: { archivedAt: new Date(), mergedIntoId: winnerId },
-    });
-  });
 }
 
 /** Duplicate detection by email/phone (a shared work phone across contacts is legitimate — FIG-438 section 9 — so this surfaces candidates, it does not block). */

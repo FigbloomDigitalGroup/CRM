@@ -19,6 +19,8 @@ const UpdateHandoffSettingsSchema = z.object({
     }),
   ),
   customerLifecycleStateId: z.string().nullable().optional(),
+  /** Whether Management may mark a handoff Delivered, or only its Delivery owner (default true). */
+  managementCanMarkDelivered: z.boolean().optional(),
 });
 
 export async function GET(

@@ -1,6 +1,8 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission, requireOwnedRecordPermission } from "../auth/context";
 import { NotFoundError } from "../auth/errors";
+import { maskAmount } from "../auth/masking";
+import { assertRecordVisible } from "../auth/visibility";
 import { getDealById } from "../repositories/deals";
 import {
   createProposalReference as createProposalReferenceRecord,
@@ -23,19 +25,16 @@ async function loadOwnedDealForProposals(ctx: AuthContext, dealId: string) {
   if (!deal) {
     throw new NotFoundError("Deal", dealId);
   }
+  assertRecordVisible(ctx, "deals", "Deal", dealId, deal);
   return deal;
 }
 
 export async function listProposalReferences(ctx: AuthContext, dealId: string) {
   const deal = await loadOwnedDealForProposals(ctx, dealId);
   requirePermission(ctx, "proposals.view");
-  requireOwnedRecordPermission(
-    ctx,
-    "deals.view.own",
-    "deals.view.all",
-    deal.ownerMembershipId,
-  );
-  return listProposalReferencesByDeal(ctx.organizationId, dealId);
+  const proposals = await listProposalReferencesByDeal(ctx.organizationId, dealId);
+  // A proposal amount is the deal's value under another name (B2.07).
+  return proposals.map((p) => maskAmount(ctx, deal, p));
 }
 
 export interface CreateProposalReferenceServiceInput {
@@ -60,7 +59,7 @@ export async function createProposalReference(
     deal.ownerMembershipId,
   );
 
-  return createProposalReferenceRecord({
+  const created = await createProposalReferenceRecord({
     organizationId: ctx.organizationId,
     dealId,
     proposalNumber: input.proposalNumber,
@@ -70,6 +69,7 @@ export async function createProposalReference(
     notes: input.notes,
     ownerMembershipId: ctx.membershipId,
   });
+  return maskAmount(ctx, deal, created);
 }
 
 const STATUS_TIMESTAMP_FIELDS: Record<
@@ -107,8 +107,9 @@ export async function updateProposalReferenceStatus(
     throw new NotFoundError("ProposalReference", proposalReferenceId);
   }
 
-  return updateProposalReferenceRecord(ctx.organizationId, proposalReferenceId, {
+  const updated = await updateProposalReferenceRecord(ctx.organizationId, proposalReferenceId, {
     status,
     ...STATUS_TIMESTAMP_FIELDS[status],
   });
+  return maskAmount(ctx, deal, updated);
 }

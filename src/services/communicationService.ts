@@ -8,6 +8,9 @@ import {
   listCommunications as listCommunicationsRecord,
   type CreateCommunicationInput,
 } from "../repositories/communications";
+import { assertTemplateUsable } from "./emailTemplateService";
+import { touchDealActivity } from "../repositories/deals";
+import { rescoreCompanyQuietly, rescoreLeadQuietly } from "./scoreEngine";
 import { assertCanAccessLinkedRecords, type LinkedRecordIds } from "./recordAccess";
 
 export type CreateCommunicationServiceInput = Omit<
@@ -26,7 +29,7 @@ export async function createCommunication(
   ctx: AuthContext,
   input: CreateCommunicationServiceInput,
 ) {
-  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true });
+  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true, requireWritable: true });
   requirePermission(ctx, "communications.create");
 
   const communication = await createCommunicationRecord({
@@ -52,6 +55,9 @@ export async function createCommunication(
     },
   });
 
+  await rescoreLeadQuietly(ctx.organizationId, communication.leadId);
+  if (communication.dealId) await touchDealActivity(ctx.organizationId, communication.dealId);
+  await rescoreCompanyQuietly(ctx.organizationId, communication.companyId);
   return communication;
 }
 
@@ -85,6 +91,8 @@ export interface SendEmailServiceInput {
   contactId?: string;
   leadId?: string;
   dealId?: string;
+  /** The template the subject and body started from (FIG-797). The text may have been edited since; it is recorded on the communication. */
+  templateId?: string;
 }
 
 /**
@@ -97,7 +105,7 @@ export interface SendEmailServiceInput {
  * email that was never sent would be a false record, worse than no record.
  */
 export async function sendAndLogEmail(ctx: AuthContext, input: SendEmailServiceInput) {
-  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true });
+  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true, requireWritable: true });
   requirePermission(ctx, "communications.create");
 
   if (!input.to.trim()) {
@@ -106,6 +114,8 @@ export async function sendAndLogEmail(ctx: AuthContext, input: SendEmailServiceI
   if (!input.subject.trim()) {
     throw new ValidationError("A subject is required.");
   }
+
+  if (input.templateId) await assertTemplateUsable(ctx, input.templateId, input.subject, input.body);
 
   try {
     await sendComposedEmail(input.to, { subject: input.subject, body: input.body });
@@ -126,6 +136,7 @@ export async function sendAndLogEmail(ctx: AuthContext, input: SendEmailServiceI
     contactId: input.contactId,
     leadId: input.leadId,
     dealId: input.dealId,
+    emailTemplateId: input.templateId,
   });
 
   await recordAuditEvent({
@@ -135,6 +146,7 @@ export async function sendAndLogEmail(ctx: AuthContext, input: SendEmailServiceI
     entityType: "Communication",
     entityId: communication.id,
     newValue: {
+      templateId: input.templateId,
       channel: "EMAIL",
       direction: "OUTBOUND",
       subject: input.subject,
@@ -146,5 +158,8 @@ export async function sendAndLogEmail(ctx: AuthContext, input: SendEmailServiceI
     },
   });
 
+  await rescoreLeadQuietly(ctx.organizationId, input.leadId);
+  if (input.dealId) await touchDealActivity(ctx.organizationId, input.dealId);
+  await rescoreCompanyQuietly(ctx.organizationId, input.companyId);
   return communication;
 }

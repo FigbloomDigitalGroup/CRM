@@ -54,6 +54,13 @@ export default defineConfig({
       // Notification emails and bell links are built from this; without it
       // they point at the default dev port and a clicked notification dead-ends.
       APP_BASE_URL: process.env.E2E_BASE_URL ?? "http://localhost:3100",
+      // `npm start` runs with NODE_ENV=production, where the storage driver
+      // must be chosen explicitly (src/storage/index.ts, FIG-1023); without it
+      // every page or API that shows an avatar fails. The suite uses the
+      // local-disk driver (files under .data/files) with a throwaway signing
+      // secret; nothing here is a real secret.
+      STORAGE_DRIVER: "local",
+      STORAGE_SIGNING_SECRET: "figbloom_e2e_only_storage_signing_secret",
     },
   },
 });

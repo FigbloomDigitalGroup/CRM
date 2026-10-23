@@ -1,10 +1,14 @@
 import { z } from "zod";
 import type { AuthContext } from "../../auth/context";
+import { archiveBanner, type ArchivableRecord } from "../../lib/archive";
+import { flattenTags, type TagSummary } from "../../repositories/tags";
+import { signalsForDeal, type StageRules } from "../../services/dealRuleService";
 import {
+  TagSummarySchema,
   RecordMetaShape,
   decimalString,
   isoDateTime,
-  recordScope,
+  recordAccess,
   relation,
 } from "./common";
 
@@ -30,6 +34,19 @@ export const DealSchema = z.strictObject({
   wonAt: isoDateTime.nullable(),
   lostAt: isoDateTime.nullable(),
   notes: z.string().nullable(),
+  customFields: z.record(z.string(), z.any()),
+  tags: z.array(TagSummarySchema),
+  lastActivityAt: isoDateTime,
+  /** Stalled, close date passed and how long (FIG-1035); the pipeline never moves a deal by itself. */
+  signals: z
+    .strictObject({
+      stalled: z.boolean(),
+      daysSinceActivity: z.number().int(),
+      stalledAfterDays: z.number().int(),
+      closeDatePassed: z.boolean(),
+      closeDateOverdueDays: z.number().int(),
+    })
+    .nullable(),
   createdByMembershipId: z.string().nullable(),
   archivedAt: isoDateTime.nullable(),
   createdAt: isoDateTime,
@@ -52,24 +69,25 @@ export const DealSchema = z.strictObject({
 
 /** Adds the standard `archived`, `masked` and `scope` fields to a masked deal. */
 export function toDealDto<
-  T extends {
-    archivedAt: Date | null;
+  T extends ArchivableRecord & {
     ownerMembershipId: string;
+    outcome: "OPEN" | "WON" | "LOST";
     valueMasked: boolean;
+    tagLinks?: { tag: TagSummary }[];
+    pipelineStageId: string;
+    lastActivityAt: Date;
+    expectedCloseDate: Date | null;
   },
->(ctx: AuthContext, deal: T) {
+>(ctx: AuthContext, deal: T, rules?: StageRules) {
   return {
-    ...deal,
+    ...flattenTags(deal),
+    signals: rules ? signalsForDeal(deal, rules) : null,
     archived: deal.archivedAt !== null,
+    archive: archiveBanner(ctx, "deal", deal),
     masked: deal.valueMasked,
-    scope: recordScope(
-      ctx,
-      {
-        viewAll: "deals.view.all",
-        editAll: "deals.edit.all",
-        editOwn: "deals.edit.own",
-      },
-      deal.ownerMembershipId,
-    ),
+    ...recordAccess(ctx, "deals", {
+      ownerMembershipId: deal.ownerMembershipId,
+      outcome: deal.outcome,
+    }),
   };
 }

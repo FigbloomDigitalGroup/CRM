@@ -1,7 +1,14 @@
+import type { Contact, Prisma } from "@prisma/client";
 import { canAssignAccountOwner, canWorkAccounts } from "../auth/accountAccess";
+import { assertWritable, cleanArchiveReason } from "../lib/archive";
+import { findDuplicates } from "./duplicateService";
+import { auditCustomFieldChanges, prepareCustomFields } from "./customFieldService";
+import { MERGE_UNDO_WINDOW_MS, validateMergeChoices, type MergeOptions } from "../lib/merge";
+import { mergeRecords } from "../repositories/merges";
 import type { AuthContext } from "../auth/context";
-import { requirePermission } from "../auth/context";
-import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
+import {
+  deny, requirePermission } from "../auth/context";
+import { NotFoundError, ValidationError } from "../auth/errors";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { getCompanyById } from "../repositories/companies";
 import {
@@ -11,7 +18,6 @@ import {
   getContactById,
   countContacts as countContactsRecords,
   listContacts as listContactsRecords,
-  mergeContacts as mergeContactsRecord,
   restoreContact as restoreContactRecord,
   updateContact as updateContactRecord,
   type CreateContactInput,
@@ -71,7 +77,7 @@ async function assertLinkableCompany(
 /** People who can be handed a contact -- feeds the owner pickers. Management only. */
 export async function listAssignableContactOwners(ctx: AuthContext) {
   if (!canAssignAccountOwner(ctx, "contacts")) {
-    throw new ForbiddenError("contacts.edit + membership.manage");
+    throw deny(ctx, "contacts.edit + membership.manage", ["contacts.edit", "membership.manage"]);
   }
   return listAccountOwnerCandidates(ctx.organizationId, "contacts");
 }
@@ -98,7 +104,7 @@ export async function createContact(
     input.ownerMembershipId !== ctx.membershipId
   ) {
     if (!canAssignAccountOwner(ctx, "contacts")) {
-      throw new ForbiddenError("contacts.edit + membership.manage (to choose a different owner)");
+      throw deny(ctx, "contacts.edit + membership.manage (to choose a different owner)", ["contacts.edit", "membership.manage"]);
     }
     await assertEligibleAccountOwner(
       ctx.organizationId,
@@ -124,10 +130,24 @@ export async function createContact(
     ctx.organizationId,
     { email: clean.email, phone: clean.phone },
   );
+  const found = await findDuplicates(ctx, {
+    entity: "contact",
+    firstName: clean.firstName,
+    lastName: clean.lastName,
+    email: clean.email,
+    phone: clean.phone,
+    companyId: input.companyId,
+  });
+
+  const custom = await prepareCustomFields(ctx.organizationId, "CONTACT", {
+    incoming: input.customFields as Record<string, unknown> | undefined,
+    mode: "create",
+  });
 
   const contact = await createContactRecord({
     ...input,
     ...clean,
+    customFields: custom?.values as Prisma.InputJsonValue | undefined,
     organizationId: ctx.organizationId,
     createdByMembershipId: ctx.membershipId,
     ownerMembershipId,
@@ -145,7 +165,7 @@ export async function createContact(
     });
   }
 
-  return { contact, possibleDuplicates };
+  return { contact, possibleDuplicates, duplicates: found.candidates, hiddenDuplicates: found.hiddenCount };
 }
 
 export async function updateContact(
@@ -159,13 +179,16 @@ export async function updateContact(
   if (!previous) {
     throw new NotFoundError("Contact", contactId);
   }
-  if (previous.archivedAt) {
-    throw new ValidationError(
-      "This contact is archived. Restore it before editing it.",
-    );
-  }
+  assertWritable(ctx, "contact", previous, "editing it");
+
+  const custom = await prepareCustomFields(ctx.organizationId, "CONTACT", {
+    existing: previous.customFields as Record<string, unknown>,
+    incoming: input.customFields as Record<string, unknown> | undefined,
+    mode: "update",
+  });
 
   const data: UpdateContactInput = {
+    customFields: custom?.values as Prisma.InputJsonValue | undefined,
     firstName: cleanRequiredText(input.firstName, "First name"),
     lastName: cleanOptionalText(input.lastName, "Last name"),
     jobTitle: cleanOptionalText(input.jobTitle, "Job title"),
@@ -192,7 +215,7 @@ export async function updateContact(
     input.ownerMembershipId !== previous.ownerMembershipId
   ) {
     if (!canAssignAccountOwner(ctx, "contacts")) {
-      throw new ForbiddenError("contacts.edit + membership.manage (to reassign the owner)");
+      throw deny(ctx, "contacts.edit + membership.manage (to reassign the owner)", ["contacts.edit", "membership.manage"]);
     }
     if (!input.ownerMembershipId) {
       throw new ValidationError(
@@ -238,7 +261,9 @@ export async function updateContact(
     });
   }
 
-  return updateContactRecord(ctx.organizationId, contactId, data);
+  const updated = await updateContactRecord(ctx.organizationId, contactId, data);
+  if (custom) await auditCustomFieldChanges(ctx, "Contact", contactId, custom.changes);
+  return updated;
 }
 
 export async function getContact(ctx: AuthContext, contactId: string) {
@@ -296,14 +321,18 @@ export async function checkDuplicateContacts(
 }
 
 /** Soft-delete (FIG-601) -- the row and everything linked to it stays intact, just hidden from default lists. */
-export async function archiveContact(ctx: AuthContext, contactId: string) {
+export async function archiveContact(ctx: AuthContext, contactId: string, input: { reason?: string | null } = {}) {
   requirePermission(ctx, "contacts.archive");
   const contact = await getContact(ctx, contactId);
   if (contact.archivedAt) {
     throw new ValidationError("This contact is already archived.");
   }
 
-  const archived = await archiveContactRecord(ctx.organizationId, contactId);
+  const reason = cleanArchiveReason(input.reason);
+  const archived = await archiveContactRecord(ctx.organizationId, contactId, {
+    membershipId: ctx.membershipId,
+    reason,
+  });
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -311,6 +340,7 @@ export async function archiveContact(ctx: AuthContext, contactId: string) {
     action: "contact.archived",
     entityType: "Contact",
     entityId: contactId,
+    metadata: reason ? { reason } : undefined,
   });
 
   return archived;
@@ -352,6 +382,7 @@ export async function mergeContacts(
   ctx: AuthContext,
   loserId: string,
   winnerId: string,
+  options: MergeOptions = {},
 ) {
   requirePermission(ctx, "contacts.merge");
   if (loserId === winnerId) {
@@ -367,7 +398,18 @@ export async function mergeContacts(
     throw new ValidationError("Cannot merge into an archived contact.");
   }
 
-  const merged = await mergeContactsRecord(ctx.organizationId, loserId, winnerId);
+  validateMergeChoices("Contact", options.fields);
+  const outcome = await mergeRecords<Contact>({
+    organizationId: ctx.organizationId,
+    entity: "Contact",
+    loserId,
+    winnerId,
+    mergedByMembershipId: ctx.membershipId,
+    choices: options.fields,
+    undoExpiresAt: new Date(Date.now() + MERGE_UNDO_WINDOW_MS),
+    archiveReason: "Merged into another contact.",
+  });
+  const merged = { ...outcome.loser, mergeRecordId: outcome.mergeRecordId, undoExpiresAt: new Date(Date.now() + MERGE_UNDO_WINDOW_MS) };
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -376,7 +418,12 @@ export async function mergeContacts(
     entityType: "Contact",
     entityId: loserId,
     newValue: { mergedIntoId: winnerId },
-    metadata: { winnerName: `${winner.firstName} ${winner.lastName ?? ""}`.trim() },
+    metadata: {
+      winnerName: `${winner.firstName} ${winner.lastName ?? ""}`.trim(),
+      mergeRecordId: outcome.mergeRecordId,
+      fieldsChanged: outcome.changedFields,
+      moved: outcome.moved,
+    },
   });
   await recordAuditEvent({
     organizationId: ctx.organizationId,

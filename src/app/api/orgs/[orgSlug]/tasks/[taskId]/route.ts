@@ -7,6 +7,8 @@ import { getTask, updateTask } from "@/services/taskService";
 const UpdateTaskSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
+  /** Client requirements snapshot (FIG-1038). */
+  requirements: z.string().max(5000).nullable().optional(),
   assigneeMembershipId: z.string().optional(),
   dueAt: z.string().nullable().optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),

@@ -153,6 +153,23 @@ export async function listCalendarActivities(
   );
 }
 
+/** How many calls and meetings fall in [from, to) (FIG-1042): a COUNT, not a fetch. */
+export async function countCalendarActivities(
+  organizationId: string,
+  range: { from: Date; to: Date; authorMembershipId?: string },
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.activity.count({
+      where: {
+        organizationId,
+        type: { in: ["CALL", "MEETING"] },
+        occurredAt: { gte: range.from, lt: range.to },
+        authorMembershipId: range.authorMembershipId,
+      },
+    }),
+  );
+}
+
 /** Timeline activities across all pages (FIG-789). */
 export async function countActivitiesForTimeline(
   organizationId: string,

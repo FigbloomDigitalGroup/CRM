@@ -59,8 +59,9 @@ async function setup() {
   const mgmt = await createTestContext(org.id, "MANAGEMENT", "ac.mgmt");
   const sales = await createTestContext(org.id, "SALES", "ac.sales");
   const delivery = await createTestContext(org.id, "DELIVERY", "ac.delivery");
+  const technical = await createTestContext(org.id, "RESTRICTED_TECHNICAL", "ac.technical");
   const leadStatusId = await getLeadStatusId(org.id);
-  return { org, mgmt, sales, delivery, leadStatusId };
+  return { org, mgmt, sales, delivery, technical, leadStatusId };
 }
 
 async function json(res: Response) {
@@ -122,7 +123,7 @@ describe("error envelope", () => {
     expect(body.issues).toEqual(body.fieldErrors);
   });
 
-  it("explains a denial: the caller's role, the roles that could, and who to ask", async () => {
+  it("explains a denial: the caller's role, the roles that own the area, and who to ask", async () => {
     const { sales } = await setup();
     let denied: unknown;
     try {
@@ -133,9 +134,9 @@ describe("error envelope", () => {
     const { status, body } = await buildErrorResponse(denied, "req-12345678");
     expect(status).toBe(403);
     expect(body.denial).toEqual({
-      role: "Sales",
-      requiredRoles: ["Management"],
-      whoToAsk: "your organisation's Management users",
+      yourRole: "Sales",
+      ownerRoles: ["Management"],
+      whoToAsk: [expect.any(String)],
     });
     expect(ErrorEnvelopeSchema.safeParse(body).success).toBe(true);
   });
@@ -149,8 +150,8 @@ describe("error envelope", () => {
       denied = err;
     }
     const { body } = await buildErrorResponse(denied, "req-12345678");
-    expect(body.denial?.role).toBe("Delivery");
-    expect(body.denial?.requiredRoles).toContain("Management");
+    expect(body.denial?.yourRole).toBe("Delivery");
+    expect(body.denial?.ownerRoles).toContain("Management");
   });
 
   it("builds a denial even for a permission string that is not a key, with no roles listed", async () => {
@@ -159,7 +160,8 @@ describe("error envelope", () => {
       "req-12345678",
     );
     expect(body.code).toBe("FORBIDDEN");
-    expect(body.denial?.requiredRoles).toEqual([]);
+    expect(body.denial?.ownerRoles).toEqual([]);
+    expect(body.denial?.whoToAsk).toEqual([]);
   });
 
   it("echoes a safe caller request id and replaces an unsafe one", () => {
@@ -340,7 +342,19 @@ describe("contract: deal detail", () => {
       serviceId: await getServiceId(s.org.id),
       value: 1234.5,
     });
-    return { ...s, deal };
+    // Delivery and Finance see won deals only (B1.03), so the contract tests
+    // for those roles need a won deal; `deal` stays open for the others.
+    const openDeal = await dealService.createDeal(s.mgmt, {
+      companyId: company.id,
+      pipelineStageId: await getPipelineStageId(s.org.id),
+      serviceId: await getServiceId(s.org.id),
+      value: 99,
+    });
+    await dealService.updateDeal(s.mgmt, openDeal.id, {
+      pipelineStageId: await getPipelineStageId(s.org.id, "CLOSED_WON"),
+    });
+    const wonDeal = openDeal;
+    return { ...s, deal, wonDeal };
   }
   const getDeal = (id: string) =>
     dealRoute.GET(new Request(`${BASE}/deals/${id}`), {
@@ -364,22 +378,37 @@ describe("contract: deal detail", () => {
   });
 
   it("masks the value and marks the record read-only for a role without the value permission", async () => {
-    const { delivery, deal } = await dealSetup();
+    const { delivery, wonDeal } = await dealSetup();
     current.ctx = delivery;
-    const body = await json(await getDeal(deal.id));
+    const body = await json(await getDeal(wonDeal.id));
     expect(DealSchema.safeParse(body).success).toBe(true);
-    expect(body).toMatchObject({ value: null, masked: true, valueMasked: true, scope: "read-only" });
+    expect(body).toMatchObject({
+      value: null,
+      masked: true,
+      valueMasked: true,
+      scope: "read-only",
+      provisional: true,
+    });
   });
 
-  it("explains the denial for a role that cannot see this deal at all", async () => {
-    const { sales, deal } = await dealSetup();
-    current.ctx = sales;
+  it("explains the denial for a role that cannot use deals at all", async () => {
+    const { technical, deal } = await dealSetup();
+    current.ctx = technical;
     const res = await getDeal(deal.id);
     expect(res.status).toBe(403);
     const body = await json(res);
     expect(ErrorEnvelopeSchema.safeParse(body).success).toBe(true);
-    expect(body.denial.role).toBe("Sales");
-    expect(body.denial.requiredRoles).toContain("Management");
+    expect(body.denial.yourRole).toBe("Restricted Technical");
+    expect(body.denial.ownerRoles).toEqual(expect.arrayContaining(["Management", "Sales"]));
+    expect(body.denial.whoToAsk.length).toBeGreaterThan(0);
+  });
+
+  it("answers 404, not 403, for a deal another salesperson owns (no existence leak)", async () => {
+    const { sales, deal } = await dealSetup();
+    current.ctx = sales;
+    const res = await getDeal(deal.id);
+    expect(res.status).toBe(404);
+    expect((await json(res)).code).toBe("NOT_FOUND");
   });
 
   it("is a 404 envelope for a deal that does not exist", async () => {

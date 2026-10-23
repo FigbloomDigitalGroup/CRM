@@ -5,6 +5,8 @@ import { resolveRequestContext } from "@/auth/requestContext";
 import { getLead, updateLead } from "@/services/leadService";
 
 const UpdateLeadSchema = z.object({
+  /** Organisation-defined custom field values (FIG-803); a field sent as null is cleared. */
+  customFields: z.record(z.string(), z.any()).optional(),
   leadStatusId: z.string().min(1).optional(),
   companyId: z.string().nullable().optional(),
   contactId: z.string().nullable().optional(),

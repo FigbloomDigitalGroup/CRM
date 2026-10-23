@@ -1,4 +1,5 @@
 import { hasPermission, type AuthContext } from "@/auth/context";
+import { canUseResource } from "@/auth/permissions";
 import {
   IconCheck,
   IconDeals,
@@ -44,7 +45,7 @@ export function NoAccess({
             : "the teams that work them";
 
   const canLeads = has("leads.view.all") || has("leads.view.own");
-  const canDeals = has("deals.view.all") || has("deals.view.own");
+  const canDeals = canUseResource(ctx, "deals");
   const canTasks = has("tasks.view.all") || has("tasks.view.own");
 
   const abilities: { label: string; on: boolean }[] = [

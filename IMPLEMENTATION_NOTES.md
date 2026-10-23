@@ -1889,3 +1889,62 @@ Described in the README's "Dev accounts and production". Decisions:
   tenant cookies, route 404 matrix, audit, privileges and RLS, holding page)
   and `e2e/dev-accounts-closed.spec.ts` (production build: no `/dev-login`,
   `/platform`, dev sign-in API or chips).
+
+## Stage 1: identity, sessions, preferences, organisation profile (FIG-1017 to FIG-1029, B1.01 to B1.13)
+
+- **Permissions (B1.01 to B1.03):** `src/auth/permissions.ts` is the single
+  scope resolver (own / organisation / read-only / none, with a reason).
+  Roles and permission keys live in `prisma/seedData.ts`; roles and keys for
+  later releases carry `requiredFeature` and are inert until their flag is on.
+  The five signed departures each have a flag (`departure.*`,
+  `src/lib/featureFlags.ts`); off falls back to the seeded matrix. Customer
+  Support is a sixth role behind `customer_support.role`. No route checks a
+  role name; everything goes through permission keys.
+- **Explained no-access (B1.02):** denials carry `denial: { yourRole,
+  ownerRoles, whoToAsk }` in the one error envelope (`src/lib/apiErrors.ts`,
+  `src/auth/areaOwners.ts`). Individual records outside a user's scope answer
+  404, not 403.
+- **Sessions and sign-in events (B1.04, B1.05):** `sessions` and
+  `sign_in_events` tables with RLS. Lifetime policy 4/8/12/24 h (default 8,
+  `src/auth/sessionPolicy.ts`), "Stay signed in" extends within an absolute
+  ceiling, revoked sessions fail on the next request. Lockout, deactivate vs
+  remove (with the reassignment checklist), and the admin sign-in events view
+  are under `/api/orgs/{org}/memberships/*` and `/security/*`.
+- **Files (B1.07):** `src/storage` has a local-disk driver (signed links, dev
+  only) and an S3-compatible driver (SigV4, no SDK), type/size limits, content
+  sniffing, and a malware-scan hook that fails closed. Config in `.env.example`.
+- **Profile, preferences, organisation look (B1.06, B1.08, B1.09):** avatar via
+  the file service (`sharp` re-encodes and strips EXIF), preferences with an
+  account/device split, reset and undo, and the organisation's allow-
+  personalisation lock with shared-look resolution (`/look`).
+- **Identity context (B1.10):** `GET /api/me/context` returns the shell
+  payload for every role in one call (short cache, `ME_CONTEXT_CACHE_MS`).
+- **Notification preferences v2 (B1.11) and invite states (B1.12):** per-role
+  event types, channels, quiet hours, daily email cap, overdue always on; invite
+  and membership states (invited, accepted, awaiting access, deactivated). The
+  frozen login, sign-up, forgot, reset and accept-invite pages are untouched;
+  only their API routes changed.
+- **Exit gate (B1.13):** `tests/stage1ExitGate.test.ts` walks the demo per role
+  and checks cross-organisation isolation; `docs/demo/stage-1.http` is the
+  manual version.
+- **Known gap:** the OpenAPI document does not yet list every Stage 1 route
+  (sessions, sign-in events, security, membership lifecycle, file content,
+  platform preferences). Tracked in CLAUDE.md "Where we are right now".
+
+## Stage 2: sales core and record extras (FIG-1030 to FIG-1046, FIG-1066, FIG-796/797/798/803, B2.01 to B2.18)
+
+- **Jobs (B2.18):** `background_jobs`, lease-based claim, retries, dead letter, schedules, status API. See `docs/JOBS.md`.
+- **Archive semantics (B2.16):** one rule set in `src/lib/archive.ts`. Archived records are hidden by default, read-only (`ARCHIVED_READ_ONLY` with a `restore` hint), restorable by Management or whoever archived them.
+- **Masking (B2.07):** `src/auth/masking.ts`, scanned for a sentinel on every surface. See `docs/MASKING.md`.
+- **Duplicates and merge (B2.04):** `src/lib/matching.ts` normalises phone (last nine digits), email (plus-addressing removed) and company names; SQL expression indexes back the lookups. Merges are undoable for one hour (`merge_records`). Every new table that links to a company or contact must add a line to `LINKS` in `src/repositories/merges.ts` (attachments, tags, comments and follows already did).
+- **Custom fields and qualification (B2.01, FIG-803):** definitions plus a `custom_fields` JSON column; qualification answers live in `qualification_data`, and a required-on-qualify answer blocks the Qualified status.
+- **Tags, attachments, templates (FIG-798, 796, 797):** tags and links with a one-record CHECK; attachments over the file service (deal files hidden from roles without the value unless shared); email templates with merge fields.
+- **Lead pool, scoring (B2.02, B2.03):** pool requests with approval or auto mode; rules-based scores stored and refreshed nightly. See `docs/SCORING.md`.
+- **Deal rules, handoff, tasks, calendar (B2.06 to B2.10):** stalled per stage, validated undoable moves, handoff states (Awaiting owner, Onboarding, Delivered), tasks grouped by due state in the viewer's time zone, My work for Restricted Technical, calendar views.
+- **Notification centre (B2.11):** list with paging and filters, an unread count that equals the unread list, archive, 90-day retention of read notifications. A notification about a record the member can no longer open is not shown or counted.
+- **Search v2 (B2.12):** groups with totals, paged per group, archived on request, `hidden` explains what the role cannot see, phone numbers match across formats, trigram indexes, per-user recents.
+- **Dashboards and signals (B2.13, B2.14):** sections per role, each loaded on its own, absent when the role lacks them, counts and group-bys only. Adoption, stalled and overdue signals are stored in `signal_snapshots` and refreshed nightly, on stale reads and on deal or task changes.
+- **Comments (B2.15):** comments, mentions (only people who can open the record), follow, soft edit and delete. Mentions and followers are told through the MENTION notification type.
+- **Import and export (B2.05):** runs in the background (`data_runs`) with progress, cancel and an error report CSV; duplicate and already-converted rows are reported; `tags` and `cf:<key>` columns are read; exports over 500 rows need `export.bulk` (Management) until the approvals engine arrives.
+- **Exit gate (B2.17):** `tests/stage2ExitGate.test.ts` and `docs/demo/stage-2.http`.
+- **Known gaps:** the Finance dashboard has no payments figures (no payments table until V1.1); the `q:` qualification columns an export writes are not read back by import; the OpenAPI document lists the main Stage 2 endpoints (`src/api/stage2Operations.ts`), not every route; the 500-row export gate is always on (no per-organisation switch yet).
