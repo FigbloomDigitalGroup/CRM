@@ -1,45 +1,22 @@
+import { invalidateMeContext } from "./meContextCache";
 import type { Prisma } from "@prisma/client";
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import { RELEASE_KEY, TOGGLES_KEY, loadFeatureConfig } from "../lib/featureConfig";
 import {
   FeatureUnavailableError,
   RELEASE_FLAG_KEYS,
   RELEASES,
   TOGGLES,
   findToggle,
-  globalRelease,
-  parseRelease,
   resolveFeature,
-  type FeatureConfig,
   type Release,
 } from "../lib/featureFlags";
 
-const TOGGLES_KEY = "feature_toggles";
-const RELEASE_KEY = "release_override";
-
-/** The organization's effective release and saved toggle values. */
-export async function loadFeatureConfig(organizationId: string): Promise<FeatureConfig> {
-  const rows = await adminDb.organizationSetting.findMany({
-    where: { organizationId, key: { in: [TOGGLES_KEY, RELEASE_KEY] } },
-  });
-  const byKey = new Map(rows.map((r) => [r.key, r.value]));
-
-  const rawToggles = byKey.get(TOGGLES_KEY);
-  const toggles: Record<string, boolean> = {};
-  if (rawToggles && typeof rawToggles === "object" && !Array.isArray(rawToggles)) {
-    for (const [key, value] of Object.entries(rawToggles)) {
-      if (typeof value === "boolean") toggles[key] = value;
-    }
-  }
-  const override = byKey.get(RELEASE_KEY) as { release?: string } | null | undefined;
-  return {
-    release: parseRelease(override?.release) ?? globalRelease(),
-    toggles,
-  };
-}
+export { loadFeatureConfig };
 
 export async function isFeatureEnabled(organizationId: string, key: string) {
   return resolveFeature(key, await loadFeatureConfig(organizationId)).enabled;
@@ -167,6 +144,7 @@ export async function updateFeatureToggles(
       newValue: { enabled: a.value },
     });
   }
+  invalidateMeContext({ organizationId: ctx.organizationId });
   return getFeatureSnapshot(ctx);
 }
 
@@ -196,6 +174,7 @@ export async function setOrganizationRelease(
       create: { organizationId, key: RELEASE_KEY, value: { release } },
     });
   }
+  invalidateMeContext({ organizationId });
   const effective = (await loadFeatureConfig(organizationId)).release;
   await recordAuditEvent({
     organizationId,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ForbiddenError, ValidationError } from "../src/auth/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../src/auth/errors";
 import * as activityService from "../src/services/activityService";
 import { createCompany } from "../src/services/companyService";
 import * as contactService from "../src/services/contactService";
@@ -54,7 +54,7 @@ describe("activityService", () => {
 
     await expect(
       activityService.createActivity(otherCtx, { type: "NOTE", leadId: lead.id }),
-    ).rejects.toThrow(ForbiddenError);
+    ).rejects.toThrow(NotFoundError);
   });
 
   it("Sales cannot list activities for a lead they do not own", async () => {
@@ -70,10 +70,10 @@ describe("activityService", () => {
 
     await expect(
       activityService.listActivitiesForLead(otherCtx, lead.id),
-    ).rejects.toThrow(ForbiddenError);
+    ).rejects.toThrow(NotFoundError);
   });
 
-  it("Delivery can log an activity against a deal it can view but not edit", async () => {
+  it("Delivery can log an activity against a won deal it can view but not edit", async () => {
     const org = await createTestOrganization();
     const salesCtx = await createTestContext(org.id, "SALES", "owner");
     const deliveryCtx = await createTestContext(org.id, "DELIVERY", "viewer");
@@ -82,6 +82,9 @@ describe("activityService", () => {
     const deal = await dealService.createDeal(salesCtx, {
       companyId: company.id,
       pipelineStageId,
+    });
+    await dealService.updateDeal(salesCtx, deal.id, {
+      pipelineStageId: await getPipelineStageId(org.id, "CLOSED_WON"),
     });
 
     const activity = await activityService.createActivity(deliveryCtx, {

@@ -48,12 +48,13 @@ describe("leadService", () => {
 
     const { lead } = await leadService.createLead(ownerCtx, { leadStatusId });
 
-    // Exists in the same organization but not owned by the caller ->
-    // ForbiddenError, not NotFoundError (see leadService.ts's comment on
-    // the NotFoundError/ForbiddenError convention). A genuinely
-    // nonexistent/cross-tenant id is covered in tests/tenant-isolation.test.ts.
+    // Exists in the same organization but is not visible to the caller ->
+    // NotFoundError, the same answer a missing id gets, so existence is never
+    // leaked (B1.02). A role that cannot use leads at all still gets the
+    // explained ForbiddenError. A genuinely nonexistent/cross-tenant id is
+    // covered in tests/tenant-isolation.test.ts.
     await expect(leadService.getLead(otherCtx, lead.id)).rejects.toThrow(
-      ForbiddenError,
+      NotFoundError,
     );
   });
 
@@ -93,7 +94,7 @@ describe("leadService", () => {
 
     await expect(
       leadService.updateLead(otherCtx, lead.id, { notes: "sneaky edit" }),
-    ).rejects.toThrow(ForbiddenError);
+    ).rejects.toThrow(NotFoundError);
   });
 
   it("throws NotFoundError (not ForbiddenError) for a lead id that does not exist at all", async () => {
@@ -264,7 +265,7 @@ describe("leadService", () => {
       });
 
       await expect(leadService.convertLead(otherCtx, lead.id)).rejects.toThrow(
-        ForbiddenError,
+        NotFoundError,
       );
     });
 

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
-import { SESSION_COOKIE_NAME } from "@/auth/session";
+import { getClientInfo } from "@/app/api/_lib/clientRequest";
+import { setSessionCookie } from "@/app/api/_lib/sessionCookie";
 import { acceptMembershipInvite } from "@/services/authService";
 
 const AcceptInviteSchema = z.object({
@@ -15,20 +16,17 @@ const AcceptInviteSchema = z.object({
 export async function POST(request: Request) {
   return handleRoute(async () => {
     const body = await parseJsonBody(request, AcceptInviteSchema);
+    const client = getClientInfo(request);
     const { token, expiresAt, userId, organizationSlug } = await acceptMembershipInvite(
       body.token,
       body.password,
-      request.headers.get("user-agent"),
+      client.userAgent,
+      client.ipAddress,
+      client.place,
     );
 
     const response = NextResponse.json({ userId, organizationSlug });
-    response.cookies.set(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      expires: expiresAt,
-    });
+    setSessionCookie(response, token, expiresAt);
     return response;
   });
 }

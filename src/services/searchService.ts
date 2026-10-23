@@ -1,3 +1,4 @@
+import { canUseResource } from "../auth/permissions";
 import type { AuthContext } from "../auth/context";
 import { hasPermission } from "../auth/context";
 import { listCompanies } from "./companyService";
@@ -63,8 +64,7 @@ export async function globalSearch(
   const canViewContacts = hasPermission(ctx, "contacts.view");
   const canViewLeads =
     hasPermission(ctx, "leads.view.own") || hasPermission(ctx, "leads.view.all");
-  const canViewDeals =
-    hasPermission(ctx, "deals.view.own") || hasPermission(ctx, "deals.view.all");
+  const canViewDeals = canUseResource(ctx, "deals");
   const canViewTasks =
     hasPermission(ctx, "tasks.view.own") || hasPermission(ctx, "tasks.view.all");
 

@@ -70,3 +70,15 @@ export async function enforceRateLimit(
     activeRules.map((rule) => recordAttempt(action, rule.scope, rule.key)),
   );
 }
+
+/** Forgets the recorded attempts for one bucket -- an admin unlock (B1.05) clears the email's login window so the person can try again straight away. */
+export async function clearRateLimit(
+  action: AuthRateLimitAction,
+  scope: string,
+  key: string,
+): Promise<number> {
+  const result = await adminDb.authRateLimitAttempt.deleteMany({
+    where: { action, scope, key },
+  });
+  return result.count;
+}

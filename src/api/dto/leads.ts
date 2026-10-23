@@ -5,7 +5,7 @@ import {
   RecordMetaShape,
   isoDateTime,
   pageOf,
-  recordScope,
+  recordAccess,
   relation,
 } from "./common";
 
@@ -83,14 +83,8 @@ export function toLeadDto<
     ...lead,
     archived: lead.archivedAt !== null,
     masked: false,
-    scope: recordScope(
-      ctx,
-      {
-        viewAll: "leads.view.all",
-        editAll: "leads.edit.all",
-        editOwn: "leads.edit.own",
-      },
-      lead.ownerMembershipId,
-    ),
+    ...recordAccess(ctx, "leads", {
+      ownerMembershipId: lead.ownerMembershipId,
+    }),
   };
 }

@@ -1,6 +1,7 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission, requireOwnedRecordPermission } from "../auth/context";
 import { NotFoundError } from "../auth/errors";
+import { assertRecordVisible } from "../auth/visibility";
 import { getDealById } from "../repositories/deals";
 import {
   createProposalReference as createProposalReferenceRecord,
@@ -23,18 +24,13 @@ async function loadOwnedDealForProposals(ctx: AuthContext, dealId: string) {
   if (!deal) {
     throw new NotFoundError("Deal", dealId);
   }
+  assertRecordVisible(ctx, "deals", "Deal", dealId, deal);
   return deal;
 }
 
 export async function listProposalReferences(ctx: AuthContext, dealId: string) {
-  const deal = await loadOwnedDealForProposals(ctx, dealId);
+  await loadOwnedDealForProposals(ctx, dealId);
   requirePermission(ctx, "proposals.view");
-  requireOwnedRecordPermission(
-    ctx,
-    "deals.view.own",
-    "deals.view.all",
-    deal.ownerMembershipId,
-  );
   return listProposalReferencesByDeal(ctx.organizationId, dealId);
 }
 

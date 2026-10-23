@@ -66,17 +66,15 @@ npm run seed
 
 ## Where we are right now (update as milestones close)
 
-M0, in progress. Working order:
-1. FIG-786 review/merge/close the orphan branch `sprint4/dashboard-overview-notification-fix`
-2. FIG-1009 (B0.01) reconcile Done-but-not-on-main: FIG-443 dashboards, FIG-750 lifecycle states, FIG-737 CI Node 22 (branch `fix/ci-node-22-rebased`)
-3. FIG-1010 (B0.02) green test suite on a reachable Postgres, baseline in `docs/TEST_BASELINE.md`
-4. FIG-1011 (B0.03) commit `design-brief/`, tag `pre-makeover` on the green commit, branch rules in `CONTRIBUTING.md`
-5. FIG-1013 (B0.05) decision pack for Michael in `docs/DECISIONS.md` (no code; Michael's slot is 23 Oct)
-6. FIG-788 update stale docs (after B0.02, so they describe the real baseline)
-7. FIG-789, 792, 794, 793: backend half only, after the tag. 789 first (pagination feeds B0.06 and B3.10)
-8. FIG-790, 791: mostly UI that now lives in F2.04 and F4.10; check the state, then close or re-scope with a comment
+**M0 (baseline and guardrails): built and merged to `main`** (PRs #9 to #17). Test baseline in `docs/TEST_BASELINE.md`; decisions signed 22 Oct in `docs/DECISIONS.md`; design in `design-spec/`; API conventions, release flags, seed v2 and the dev Super Admin with its three guards are on `main`. The FIG-789/792/793/794 backend halves are merged; their UI halves live in M7 to M9.
 
-Then todo: B0.04, B0.06, B0.07, B0.08, B0.09, FIG-801, FIG-802, then M1 and M2.
+**M1 (identity, preferences, organisation profile): all 13 issues implemented (FIG-1017 to FIG-1029), PR open, not merged.** The exit gate B1.13 (FIG-1029) closes only when that PR is merged with green CI and Given has moved the statuses. Known follow-ups before or at the gate:
+- The OpenAPI document lists only part of the Stage 1 routes. Missing: `/me/sessions/*`, `/me/sign-in-events`, `/orgs/{org}/security/*`, the membership lifecycle routes (deactivate, reactivate, remove, reassign, reassignment, resend-invite, role, unlock), `/files/{id}/content`, `/storage/blob`, `/platform/preferences`. Add them (Zod DTO per route, B0.06) before G1.06 freezes the contract.
+- The "no open Urgent or High bugs against M1" box on B1.13 needs a check by Given.
+
+**Next: M2 (sales core).** Start with B2.18 (FIG-1066, job framework); the dependent issues (FIG-1048 lifecycle, FIG-1059 automations, FIG-1061 migration, FIG-1062 privacy) reference it. Do not start M2 build work beyond what is already in progress until the M1 gate is closed. Then M3, M4, M5 (G1.08, tag `backend-v1`).
+
+Ops reminders: new migrations need `npm run migrate:deploy`; `ALLOW_DEV_ACCOUNTS=true` in local `.env` for dev sign-in; Docker Desktop must be running for the test database (`docker compose up -d --wait`).
 
 ## How to start a session
 

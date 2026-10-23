@@ -201,7 +201,9 @@ export default async function DealsPage({
           <p className="who">
             {hasPermission(ctx, "deals.view.all")
               ? "Showing all organization deals."
-              : "Showing only deals you own."}
+              : hasPermission(ctx, "deals.view.won")
+                ? "Showing won deals only."
+                : "Showing only deals you own."}
             {!hasPermission(ctx, "deals.view.value") &&
               " Deal values are hidden unless you own the deal."}
           </p>

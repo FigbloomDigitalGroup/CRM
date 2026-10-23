@@ -1,10 +1,11 @@
 import { Prisma } from "@prisma/client";
+import type { NotificationTypeKey } from "../notifications/catalogue";
 import { withOrgContext } from "../db/orgScopedClient";
 
 export interface CreateNotificationInput {
   organizationId: string;
   membershipId: string;
-  type: "LEAD_ASSIGNED" | "TASK_DUE" | "TASK_OVERDUE" | "DEAL_WON_HANDOFF";
+  type: NotificationTypeKey;
   title: string;
   body: string;
   entityType?: string;

@@ -1,7 +1,8 @@
 import { canAssignAccountOwner, canWorkAccounts } from "../auth/accountAccess";
 import type { AuthContext } from "../auth/context";
-import { requirePermission } from "../auth/context";
-import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
+import {
+  deny, requirePermission } from "../auth/context";
+import { NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
@@ -68,7 +69,7 @@ async function assertLifecycleState(
 /** People who can be handed a company -- feeds the owner pickers. Management only. */
 export async function listAssignableCompanyOwners(ctx: AuthContext) {
   if (!canAssignAccountOwner(ctx, "companies")) {
-    throw new ForbiddenError("companies.edit + membership.manage");
+    throw deny(ctx, "companies.edit + membership.manage", ["companies.edit", "membership.manage"]);
   }
   return listAccountOwnerCandidates(ctx.organizationId, "companies");
 }
@@ -97,7 +98,7 @@ export async function createCompany(
     input.ownerMembershipId !== ctx.membershipId
   ) {
     if (!canAssignAccountOwner(ctx, "companies")) {
-      throw new ForbiddenError("companies.edit + membership.manage (to choose a different owner)");
+      throw deny(ctx, "companies.edit + membership.manage (to choose a different owner)", ["companies.edit", "membership.manage"]);
     }
     await assertEligibleAccountOwner(
       ctx.organizationId,
@@ -185,7 +186,7 @@ export async function updateCompany(
     input.ownerMembershipId !== previous.ownerMembershipId
   ) {
     if (!canAssignAccountOwner(ctx, "companies")) {
-      throw new ForbiddenError("companies.edit + membership.manage (to reassign the owner)");
+      throw deny(ctx, "companies.edit + membership.manage (to reassign the owner)", ["companies.edit", "membership.manage"]);
     }
     if (!input.ownerMembershipId) {
       throw new ValidationError(

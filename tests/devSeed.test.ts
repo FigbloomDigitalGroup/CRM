@@ -220,7 +220,12 @@ describe("sample data", () => {
 
     const s1Leads = await leadService.listLeads(s1, { includeArchived: true });
     expect(s1Leads.length).toBeGreaterThan(0);
-    expect(s1Leads.every((l) => l.ownerMembershipId === s1.membershipId)).toBe(true);
+    // Own leads plus the shared pool of unassigned ones (B1.03), never a colleague's.
+    expect(
+      s1Leads.every(
+        (l) => l.ownerMembershipId === s1.membershipId || l.ownerMembershipId === null,
+      ),
+    ).toBe(true);
     const s2Deals = await dealService.listDeals(s2);
     expect(s2Deals.length).toBeGreaterThan(0);
     expect(s2Deals.every((d) => d.ownerMembershipId === s2.membershipId)).toBe(true);

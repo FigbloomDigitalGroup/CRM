@@ -1,7 +1,8 @@
 import { Prisma } from "@prisma/client";
 import type { AuthContext } from "../auth/context";
-import { hasPermission, requirePermission } from "../auth/context";
-import { ForbiddenError, ValidationError } from "../auth/errors";
+import {
+  deny, hasPermission, requirePermission } from "../auth/context";
+import { ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
@@ -195,7 +196,7 @@ export async function getSalesBySalesperson(
   filters: SalespersonReportFilters = {},
 ) {
   const scope = getReportScope(ctx);
-  if (!scope.deals) throw new ForbiddenError("deals.view.own (or .all)");
+  if (!scope.deals) throw deny(ctx, "deals.view.own (or .all)", ["deals.view.own"]);
   const ownOnly = scope.mode === "personal" && scope.deals === "own";
   const canSeeValue = ownOnly || hasPermission(ctx, "deals.view.value");
 

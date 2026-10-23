@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AuthContext } from "../../auth/context";
-import { hasPermission } from "../../auth/context";
+import { resolveScope, type ScopedRecord } from "../../auth/permissions";
 
 /**
  * Building blocks shared by every route's DTOs (FIG-1014, B0.06). The Zod
@@ -18,6 +18,7 @@ export const decimalString = z.string().regex(/^-?\d+(\.\d+)?$/);
 export const FieldErrorSchema = z.strictObject({
   path: z.string(),
   message: z.string(),
+  code: z.string().optional(),
 });
 
 export const ErrorEnvelopeSchema = z.strictObject({
@@ -26,12 +27,18 @@ export const ErrorEnvelopeSchema = z.strictObject({
     "UNAUTHORIZED",
     "FORBIDDEN",
     "NO_ACTIVE_MEMBERSHIP",
+    "SESSION_EXPIRED",
+    "ACCOUNT_DEACTIVATED",
+    "AWAITING_ACCESS",
+    "REASSIGNMENT_REQUIRED",
     "NOT_FOUND",
     "VALIDATION_FAILED",
     "RATE_LIMITED",
     "FEATURE_UNAVAILABLE",
     "IDEMPOTENCY_KEY_REUSED",
     "IDEMPOTENCY_IN_PROGRESS",
+    "FILE_UNAVAILABLE",
+    "SERVICE_UNAVAILABLE",
     "INTERNAL_ERROR",
   ]),
   message: z.string(),
@@ -47,9 +54,27 @@ export const ErrorEnvelopeSchema = z.strictObject({
     .optional(),
   denial: z
     .strictObject({
-      role: z.string().nullable(),
-      requiredRoles: z.array(z.string()),
-      whoToAsk: z.string(),
+      yourRole: z.string().nullable(),
+      ownerRoles: z.array(z.string()),
+      whoToAsk: z.array(z.string()),
+    })
+    .optional(),
+  session: z
+    .strictObject({
+      reason: z.enum(["expired", "revoked"]),
+      email: z.string().nullable(),
+    })
+    .optional(),
+  reassignment: z
+    .strictObject({
+      membershipId: z.string(),
+      userName: z.string(),
+      total: z.number().int(),
+      totals: z.record(z.string(), z.number().int()),
+      items: z.record(
+        z.string(),
+        z.array(z.strictObject({ id: z.string(), label: z.string() })),
+      ),
     })
     .optional(),
 });
@@ -69,27 +94,32 @@ export function pageOf<T extends z.ZodType>(item: T) {
 /**
  * What the UI needs to draw pills and banners without guessing:
  * `archived` (archived pill / read-only banner), `masked` (some value on
- * this record is hidden from the caller) and `scope` (`own`: the caller sees
+ * this record is hidden from the caller), `scope` (`own`: the caller sees
  * only their own records; `organisation`: they see the whole organisation
- * and may edit this record; `read-only`: they may view but not edit it).
+ * and may edit this record; `read-only`: they may view but not edit it) and
+ * `provisional` (the access exists only because of a departure from the
+ * seeded matrix, so the "Provisional" banner shows -- FIG-1019).
  */
 export const RecordScopeSchema = z.enum(["own", "organisation", "read-only"]);
 export const RecordMetaShape = {
   archived: z.boolean(),
   masked: z.boolean(),
   scope: RecordScopeSchema,
+  provisional: z.boolean(),
 };
 
-export function recordScope(
+/**
+ * The scope pill and provisional flag for one record, from the single scope
+ * resolver (`src/auth/permissions.ts`) -- the same answer the services use.
+ */
+export function recordAccess(
   ctx: AuthContext,
-  perms: { viewAll: string; editAll: string; editOwn: string },
-  ownerMembershipId: string | null,
-): z.infer<typeof RecordScopeSchema> {
-  const canEdit =
-    hasPermission(ctx, perms.editAll) ||
-    (hasPermission(ctx, perms.editOwn) && ownerMembershipId === ctx.membershipId);
-  if (!canEdit) return "read-only";
-  return hasPermission(ctx, perms.viewAll) ? "organisation" : "own";
+  resource: "leads" | "deals",
+  record: ScopedRecord,
+): { scope: z.infer<typeof RecordScopeSchema>; provisional: boolean } {
+  const edit = resolveScope(ctx, resource, "edit", record);
+  const scope = edit.scope === "none" ? "read-only" : edit.scope;
+  return { scope, provisional: edit.provisional };
 }
 
 /** A related record included on a response: only the fields every consumer relies on are pinned. */

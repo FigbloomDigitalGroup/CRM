@@ -18,7 +18,13 @@ Code: `src/lib/featureFlags.ts` (definitions and resolution, no database), `src/
 |---|---|---|---|
 | `integrations.enabled` | V1 | on | Integrations (click-to-chat, website capture) |
 | `personalisation.allowed` | V1 | on | Members choosing their own theme and page colours |
-| `permissions.provisional_departures` | V1 | on | The five signed departures from the permission matrix; off falls back to the seeded matrix (read by B1.03) |
+| `preferences.own_colours` | V1.1 | on | Members picking their own accent and page colours (B1.08). Needs `personalisation.allowed`; checked only for the colour fields actually sent |
+| `permissions.provisional_departures` | V1 | on | Umbrella over the five signed departures from the permission matrix; off switches all five off and falls back to the seeded matrix |
+| `departure.won_only` | V1 | on | Delivery and Finance see won deals only (decision 1.2). Off: they see every deal again (`deals.view.all`) |
+| `departure.shared_pool` | V1 | on | Sales sees unassigned leads read-only and may claim them (decision 1.3) |
+| `departure.technical_my_work` | V1 | on | Restricted Technical gets My work: tasks plus the client requirements on them (decision 1.4) |
+| `departure.finance_followup` | V1 | on | Finance adds a follow-up note on won deals instead of tasks (decision 1.5) |
+| `departure.handoff_permission` | V1 | on | The delivery-handoff permission: Management and Sales start, Delivery receives (decision 1.6) |
 | `assistant.enabled` | V1.1 | off | The Ask Figbloom assistant |
 | `organisation.switcher` | V1.1 | on | The multi-organisation switcher |
 | `quotes.enabled` | V1.1 | on | Quotes, approvals, forecast |
@@ -58,3 +64,13 @@ Services that only need a yes or no use `isFeatureEnabled(orgId, key)`. An unkno
 1. Add the toggle to `TOGGLES` (key, description, default, `minRelease`).
 2. Gate its routes with `requireFeature` and its navigation with `flags[key]`.
 3. Test it on and off (`tests/featureFlags.test.ts` shows the pattern).
+
+## Departures from the permission matrix (B1.03)
+
+Each departure is effective only while both the umbrella toggle and its own toggle are on. When a departure is off, the keys it introduced are removed from the affected roles and the keys the seeded matrix gave them are put back, so "off" means the old behaviour exactly. The member's effective keys (`ActiveMembership.permissionKeys`) already reflect this; nothing downstream checks a flag or a role name.
+
+Where a departure applies, the record payload carries `provisional: true` next to `scope` so the UI can show the "Provisional" banner; the decision reference lives with the definition in `src/auth/permissions.ts` (`DEPARTURES`).
+
+## Customer Support (B1.01)
+
+`customer_support.role` gates the sixth role. While it is off, Customer Support cannot be invited or assigned (a validation error names the flag), and a member who somehow holds it carries no permissions. Turning it on needs the organization to be on V1.1 or later.

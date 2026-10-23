@@ -1,5 +1,6 @@
+import { canView } from "../auth/permissions";
 import type { AuthContext } from "../auth/context";
-import { hasPermission, requirePermission } from "../auth/context";
+import { requirePermission } from "../auth/context";
 import { adminDb } from "../db/adminClient";
 import {
   createActivity as createActivityRecord,
@@ -90,20 +91,16 @@ async function visibleLeadAndDealIds(
 
   const [leads, deals] = await Promise.all([
     adminDb.lead.findMany({ where: leadWhere, select: { id: true, ownerMembershipId: true } }),
-    adminDb.deal.findMany({ where: dealWhere, select: { id: true, ownerMembershipId: true } }),
+    adminDb.deal.findMany({
+      where: dealWhere,
+      select: { id: true, ownerMembershipId: true, outcome: true },
+    }),
   ]);
 
-  const leadIds = hasPermission(ctx, "leads.view.all")
-    ? leads.map((l) => l.id)
-    : hasPermission(ctx, "leads.view.own")
-      ? leads.filter((l) => l.ownerMembershipId === ctx.membershipId).map((l) => l.id)
-      : [];
-
-  const dealIds = hasPermission(ctx, "deals.view.all")
-    ? deals.map((d) => d.id)
-    : hasPermission(ctx, "deals.view.own")
-      ? deals.filter((d) => d.ownerMembershipId === ctx.membershipId).map((d) => d.id)
-      : [];
+  // The scope resolver decides record by record: own, organisation, shared
+  // pool and won-only all come out of the same place (B1.01).
+  const leadIds = leads.filter((l) => canView(ctx, "leads", l)).map((l) => l.id);
+  const dealIds = deals.filter((d) => canView(ctx, "deals", d)).map((d) => d.id);
 
   return { leadIds, dealIds };
 }

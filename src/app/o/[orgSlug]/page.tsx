@@ -1,3 +1,4 @@
+import { canUseResource } from "@/auth/permissions";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { hasPermission } from "@/auth/context";
 import { countCompanies, listCompanies } from "@/services/companyService";
@@ -30,9 +31,7 @@ export default async function OrgDashboardPage({
   const canViewLeads =
     hasPermission(ctx, "leads.view.own") ||
     hasPermission(ctx, "leads.view.all");
-  const canViewDeals =
-    hasPermission(ctx, "deals.view.own") ||
-    hasPermission(ctx, "deals.view.all");
+  const canViewDeals = canUseResource(ctx, "deals");
   const canViewTasks =
     hasPermission(ctx, "tasks.view.own") ||
     hasPermission(ctx, "tasks.view.all");
@@ -126,7 +125,9 @@ export default async function OrgDashboardPage({
       value: dealCount,
       caption: hasPermission(ctx, "deals.view.all")
         ? "visible organization-wide"
-        : "owned by you",
+        : hasPermission(ctx, "deals.view.won")
+          ? "won deals"
+          : "owned by you",
       href: `/o/${orgSlug}/deals`,
     });
   }

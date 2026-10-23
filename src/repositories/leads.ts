@@ -131,6 +131,12 @@ export interface ListLeadsFilters {
   temperature?: "HOT" | "WARM" | "COLD";
   createdAfter?: Date;
   createdBefore?: Date;
+  /**
+   * Set by the service for a caller with `leads.view.own` plus the shared
+   * pool (B1.03): only leads they own or leads nobody owns, ANDed with every
+   * other filter.
+   */
+  ownedByOrUnassigned?: string;
   /** Archived leads are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
   /** Standard `sort` (B0.06); the default order is newest first. `id` always breaks ties. */
@@ -155,6 +161,18 @@ function leadsWhere(
     leadStatusId: filters.leadStatusId,
     leadSourceId: filters.leadSourceId,
     temperature: filters.temperature,
+    ...(filters.ownedByOrUnassigned
+      ? {
+          AND: [
+            {
+              OR: [
+                { ownerMembershipId: filters.ownedByOrUnassigned },
+                { ownerMembershipId: null },
+              ],
+            },
+          ],
+        }
+      : {}),
     ...(filters.includeArchived ? {} : { archivedAt: null }),
     ...(filters.createdAfter || filters.createdBefore
       ? {

@@ -1,3 +1,5 @@
+import { describePlace, type ClientInfo } from "@/auth/deviceInfo";
+
 /**
  * Best-effort client IP extraction for rate limiting (FIG-594). Next.js
  * Route Handlers don't expose the socket's remote address directly --
@@ -13,6 +15,16 @@ export function getClientIp(request: Request): string | null {
     return forwardedFor.split(",")[0].trim();
   }
   return request.headers.get("x-real-ip");
+}
+
+/** Device, address and coarse place of the caller, for session and sign-in records (B1.04). */
+export function getClientInfo(request: Request): ClientInfo {
+  const ipAddress = getClientIp(request);
+  return {
+    userAgent: request.headers.get("user-agent"),
+    ipAddress,
+    place: describePlace(ipAddress, request.headers),
+  };
 }
 
 /** The request's Origin header, falling back to Referer's origin. */

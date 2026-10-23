@@ -133,3 +133,49 @@ export async function sendWebsiteLeadAcknowledgementEmail(
     transportOverride,
   );
 }
+
+/** B1.11: the email for the notification types that have no template of their own (mentions, renewals, proposals, stalled deals, support requests). */
+export async function sendGenericNotificationEmail(
+  to: string,
+  args: { title: string; body: string; link: string },
+  transportOverride?: MailTransport,
+): Promise<void> {
+  await deliverOrLog(
+    "generic-notification",
+    {
+      to,
+      subject: args.title,
+      text: `${args.title}\n\n${args.body}\n\nView it here: ${args.link}`,
+      html: `<p><strong>${escapeHtml(args.title)}</strong></p><p>${escapeHtml(args.body)}</p><p><a href="${escapeHtml(args.link)}">View it here</a></p>`,
+    },
+    transportOverride,
+  );
+}
+
+/** B1.11: everything held back by the daily email cap, in one message. */
+export async function sendNotificationDigestEmail(
+  to: string,
+  args: { items: { title: string; body: string; link: string | null }[] },
+  transportOverride?: MailTransport,
+): Promise<void> {
+  const n = args.items.length;
+  const lines = args.items.map((i) => `- ${i.title}${i.body && i.body !== i.title ? ` (${i.body})` : ""}${i.link ? `\n  ${i.link}` : ""}`);
+  const rows = args.items
+    .map(
+      (i) =>
+        `<li>${i.link ? `<a href="${escapeHtml(i.link)}">${escapeHtml(i.title)}</a>` : escapeHtml(i.title)}${
+          i.body && i.body !== i.title ? ` <span>${escapeHtml(i.body)}</span>` : ""
+        }</li>`,
+    )
+    .join("");
+  await deliverOrLog(
+    "notification-digest",
+    {
+      to,
+      subject: `${n} more notification${n === 1 ? "" : "s"} for you`,
+      text: `You reached your daily email limit, so these were held back:\n\n${lines.join("\n")}`,
+      html: `<p>You reached your daily email limit, so these were held back:</p><ul>${rows}</ul>`,
+    },
+    transportOverride,
+  );
+}

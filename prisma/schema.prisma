@@ -43,18 +43,25 @@ model Organization {
   /// used for internal runtime state like the lead-assignment cursor), so a
   /// real column per field is simpler and keeps the DB schema self-
   /// documenting about what tenant profile data actually exists.
-  timezone          String   @default("Africa/Nairobi")
-  defaultCurrency   String   @default("KES") @map("default_currency")
-  phone             String?
-  website           String?
-  address           String?
+  timezone              String   @default("Africa/Nairobi")
+  defaultCurrency       String   @default("KES") @map("default_currency")
+  phone                 String?
+  website               String?
+  address               String?
   /// Day keys, e.g. ["MON","TUE","WED","THU","FRI"] -- see
   /// `src/services/organizationProfileService.ts`'s `WORKING_DAY_KEYS` for
   /// the closed set of valid values.
-  workingDays       String[] @default(["MON", "TUE", "WED", "THU", "FRI"]) @map("working_days")
+  workingDays           String[] @default(["MON", "TUE", "WED", "THU", "FRI"]) @map("working_days")
   /// 24-hour "HH:MM" strings (e.g. "08:00"), or both null if not set.
-  workingHoursStart String?  @map("working_hours_start")
-  workingHoursEnd   String?  @map("working_hours_end")
+  workingHoursStart     String?  @map("working_hours_start")
+  workingHoursEnd       String?  @map("working_hours_end")
+  /// B1.09: how the organisation looks. `allowPersonalisation` is the
+  /// `personalisation.allowed` toggle, not a column.
+  displayName           String?  @map("display_name")
+  logoFileId            String?  @map("logo_file_id")
+  defaultTheme          String   @default("FOREST") @map("default_theme")
+  defaultPageColour     String   @default("WHITE") @map("default_page_colour")
+  showLogoOnClientPages Boolean  @default(false) @map("show_logo_on_client_pages")
 
   memberships                Membership[]
   settings                   OrganizationSetting[]
@@ -84,6 +91,11 @@ model Organization {
   pageViews                  PageView[]
   dealHandoffs               DealHandoff[]
   idempotencyKeys            IdempotencyKey[]
+  files                      File[]
+  sessions                   Session[]
+  signInEvents               SignInEvent[]
+  userPreferences            UserPreference[]
+  notificationSettings       NotificationSetting[]
 
   @@map("organizations")
 }
@@ -99,18 +111,26 @@ enum UserStatus {
 /// the same password-reset-token flow that handles "forgot password"
 /// (FIG-592) also handles setting the first password.
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  name         String
-  phone        String?
-  passwordHash String?    @map("password_hash")
-  status       UserStatus @default(ACTIVE)
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  id                 String     @id @default(uuid())
+  email              String     @unique
+  name               String
+  phone              String?
+  passwordHash       String?    @map("password_hash")
+  status             UserStatus @default(ACTIVE)
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+  /// B1.05 lockout: consecutive wrong passwords, reset by a good sign-in or
+  /// an unlock; `lockedUntil` in the future means sign-in is refused.
+  failedSignInCount  Int        @default(0) @map("failed_sign_in_count")
+  lastFailedSignInAt DateTime?  @map("last_failed_sign_in_at")
+  lockedUntil        DateTime?  @map("locked_until")
+  /// B1.06: the person's own time zone (IANA name); null = use the organisation's.
+  timeZone           String?    @map("time_zone")
 
   memberships         Membership[]
   auditEvents         AuditEvent[]         @relation("AuditActorUser")
   sessions            Session[]
+  signInEvents        SignInEvent[]
   passwordResetTokens PasswordResetToken[]
 
   @@map("users")
@@ -123,16 +143,28 @@ model User {
 /// plaintext token exists only in the client's cookie. Not organization-
 /// scoped -- a session belongs to a User, same tier as Membership.
 model Session {
-  id         String    @id @default(uuid())
-  userId     String    @map("user_id")
-  tokenHash  String    @unique @map("token_hash")
-  createdAt  DateTime  @default(now()) @map("created_at")
-  expiresAt  DateTime  @map("expires_at")
-  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
-  revokedAt  DateTime? @map("revoked_at")
-  userAgent  String?   @map("user_agent")
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  tokenHash         String    @unique @map("token_hash")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  expiresAt         DateTime  @map("expires_at")
+  lastSeenAt        DateTime  @default(now()) @map("last_seen_at")
+  revokedAt         DateTime? @map("revoked_at")
+  userAgent         String?   @map("user_agent")
+  /// B1.04: the organisation the session was signed in under (the user's
+  /// oldest active membership); null for a user with no organisation yet.
+  organizationId    String?   @map("organization_id")
+  deviceLabel       String?   @map("device_label")
+  ipAddress         String?   @map("ip_address")
+  place             String?
+  /// The ceiling `extend` can never push `expiresAt` past.
+  absoluteExpiresAt DateTime  @map("absolute_expires_at")
+  /// Why it ended: SIGNED_OUT, REVOKED, SIGNED_OUT_OTHERS, DEACTIVATED,
+  /// REMOVED, PASSWORD_RESET, LOCKED.
+  revokedReason     String?   @map("revoked_reason")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@map("sessions")
@@ -141,6 +173,41 @@ model Session {
 /// Single-use, short-lived token backing both "forgot password" and
 /// "set your first password" (FIG-592) -- see the User model's doc comment
 /// for why one flow covers both. Only `tokenHash` is stored.
+/// B1.04: one row per sign-in attempt worth showing -- success, failure,
+/// lockout, new device. Written once per organisation the user belongs to (so
+/// each tenant sees only its own people); an attempt that belongs to no
+/// organisation has a null `organizationId` and is invisible to every tenant.
+model SignInEvent {
+  id             String        @id @default(uuid())
+  organizationId String?       @map("organization_id")
+  userId         String?       @map("user_id")
+  email          String
+  outcome        SignInOutcome
+  reason         String?
+  sessionId      String?       @map("session_id")
+  deviceLabel    String?       @map("device_label")
+  userAgent      String?       @map("user_agent")
+  ipAddress      String?       @map("ip_address")
+  place          String?
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, userId])
+  @@index([organizationId, outcome])
+  @@index([userId, deviceLabel])
+  @@map("sign_in_events")
+}
+
+enum SignInOutcome {
+  SUCCESS
+  FAILURE
+  LOCKOUT
+  NEW_DEVICE
+}
+
 model PasswordResetToken {
   id        String    @id @default(uuid())
   userId    String    @map("user_id")
@@ -159,13 +226,15 @@ model PasswordResetToken {
 /// Technical). RBAC is a security rule, not organization-configurable
 /// business data, so this is global rather than per-organization.
 model Role {
-  id          String   @id @default(uuid())
-  key         String   @unique
-  name        String
-  description String?
-  isSystem    Boolean  @default(true) @map("is_system")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(uuid())
+  key             String   @unique
+  name            String
+  description     String?
+  isSystem        Boolean  @default(true) @map("is_system")
+  /// Feature toggle that must be on for the role to be assignable (B1.01).
+  requiredFeature String?  @map("required_feature")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   memberships     Membership[]
   rolePermissions RolePermission[]
@@ -205,6 +274,9 @@ enum MembershipStatus {
   /// all; `resolveActiveMembership` only ever matches ACTIVE, so a pending
   /// invite grants zero access until accepted.
   PENDING
+  /// Membership ended (B1.05/B1.12). The row stays for history; every record
+  /// the member owned had to be reassigned first.
+  REMOVED
 }
 
 /// A user's relationship to one Organization — the actual tenant boundary.
@@ -216,21 +288,34 @@ enum MembershipStatus {
 /// membership carries an implicit, DB-checkable organization binding (see
 /// the composite FK added in the tenant-integrity migration).
 model Membership {
-  id                   String           @id @default(uuid())
-  organizationId       String           @map("organization_id")
-  userId               String           @map("user_id")
-  roleId               String           @map("role_id")
-  status               MembershipStatus @default(ACTIVE)
-  invitedAt            DateTime?        @map("invited_at")
-  joinedAt             DateTime?        @map("joined_at")
+  id                        String           @id @default(uuid())
+  organizationId            String           @map("organization_id")
+  userId                    String           @map("user_id")
+  roleId                    String           @map("role_id")
+  status                    MembershipStatus @default(ACTIVE)
+  invitedAt                 DateTime?        @map("invited_at")
+  joinedAt                  DateTime?        @map("joined_at")
   /// Set only while status is PENDING (FIG-593) -- only the hash is
   /// stored, same generate-random/hash-and-compare pattern as sessions and
   /// the website API key. Cleared (both columns) the moment the invite is
   /// accepted, enforcing single use.
-  inviteTokenHash      String?          @unique @map("invite_token_hash")
-  inviteTokenExpiresAt DateTime?        @map("invite_token_expires_at")
-  createdAt            DateTime         @default(now()) @map("created_at")
-  updatedAt            DateTime         @updatedAt @map("updated_at")
+  inviteTokenHash           String?          @unique @map("invite_token_hash")
+  inviteTokenExpiresAt      DateTime?        @map("invite_token_expires_at")
+  /// B1.12: who acted and when, per state. Actors are memberships of the same
+  /// organisation (composite foreign keys in the migration).
+  invitedByMembershipId     String?          @map("invited_by_membership_id")
+  inviteLastSentAt          DateTime?        @map("invite_last_sent_at")
+  deactivatedAt             DateTime?        @map("deactivated_at")
+  deactivatedByMembershipId String?          @map("deactivated_by_membership_id")
+  removedAt                 DateTime?        @map("removed_at")
+  removedByMembershipId     String?          @map("removed_by_membership_id")
+  /// B1.06: the picture (a READY AVATAR file in the same organisation; composite
+  /// foreign key in the migration) and where it was cropped from.
+  avatarFileId              String?          @map("avatar_file_id")
+  avatarCrop                Json?            @map("avatar_crop")
+  avatarUpdatedAt           DateTime?        @map("avatar_updated_at")
+  createdAt                 DateTime         @default(now()) @map("created_at")
+  updatedAt                 DateTime         @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -254,6 +339,8 @@ model Membership {
   createdInboundEmailKeys  InboundEmailKey[]           @relation("InboundEmailKeyCreatedBy")
   notifications            Notification[]
   notificationPreferences  NotificationPreference[]
+  userPreferences          UserPreference[]
+  notificationSettings     NotificationSetting[]
   assignedWebsiteLeadRules WebsiteLeadAssignmentRule[] @relation("WebsiteLeadAssignmentRuleAssignee")
   pageViews                PageView[]
 
@@ -482,6 +569,8 @@ model PlatformIdentity {
   name         String
   passwordHash String?  @map("password_hash")
   isDev        Boolean  @default(false) @map("is_dev")
+  /// B1.08: the only look setting a platform admin has (LIGHT or DARK).
+  uiMode       String   @default("LIGHT") @map("ui_mode")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -513,6 +602,54 @@ model IdempotencyKey {
   @@map("idempotency_keys")
 }
 
+enum FilePurpose {
+  AVATAR
+  LOGO
+  ATTACHMENT
+  IMPORT
+  EXPORT
+}
+
+enum FileStatus {
+  UPLOADING
+  READY
+  QUARANTINED
+  DELETED
+}
+
+/// One stored file (FIG-1023, B1.07). The bytes live in the storage driver
+/// under `storageKey`, always inside `orgs/<organizationId>/`; this row is the
+/// authority on owner, purpose, status and whether it may be served. Only a
+/// READY file can be downloaded: QUARANTINED (malware scan) and DELETED never.
+model File {
+  id                String      @id @default(uuid())
+  organizationId    String      @map("organization_id")
+  ownerMembershipId String?     @map("owner_membership_id")
+  purpose           FilePurpose
+  name              String
+  sizeBytes         Int         @map("size_bytes")
+  mimeType          String      @map("mime_type")
+  checksumSha256    String?     @map("checksum_sha256")
+  storageKey        String      @unique @map("storage_key")
+  status            FileStatus  @default(UPLOADING)
+  scanResult        String?     @map("scan_result")
+  quarantineReason  String?     @map("quarantine_reason")
+  uploadExpiresAt   DateTime?   @map("upload_expires_at")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+  readyAt           DateTime?   @map("ready_at")
+  deletedAt         DateTime?   @map("deleted_at")
+  purgedAt          DateTime?   @map("purged_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, id], map: "files_organization_id_id_key")
+  @@index([organizationId, purpose, status])
+  @@index([organizationId, ownerMembershipId])
+  @@index([status, deletedAt])
+  @@map("files")
+}
+
 /// What a Notification is "about" (FIG-597). Each type is deduplicated to
 /// at most one Notification per entity (see Notification's unique index
 /// below) -- a lead is only ever announced once, and a task crosses into
@@ -523,6 +660,13 @@ enum NotificationType {
   TASK_DUE
   TASK_OVERDUE
   DEAL_WON_HANDOFF
+  /// B1.11: the event types below can be preferred and delivered; the
+  /// features that raise them arrive in later milestones.
+  MENTION
+  RENEWAL_DUE
+  PROPOSAL_UNANSWERED
+  STALLED_DEAL
+  SUPPORT_ACCESS_REQUEST
 }
 
 /// In-app notification feed entry for one membership (FIG-597). Always has
@@ -597,6 +741,8 @@ model NotificationDelivery {
   maxAttempts    Int                        @default(5) @map("max_attempts")
   lastError      String?                    @map("last_error")
   nextAttemptAt  DateTime                   @default(now()) @map("next_attempt_at")
+  /// B1.11: held back by the daily email cap; goes out in the next digest.
+  digestPending  Boolean                    @default(false) @map("digest_pending")
   sentAt         DateTime?                  @map("sent_at")
   createdAt      DateTime                   @default(now()) @map("created_at")
 
@@ -605,6 +751,7 @@ model NotificationDelivery {
 
   @@index([status, nextAttemptAt])
   @@index([organizationId, createdAt])
+  @@index([digestPending, nextAttemptAt])
   @@map("notification_deliveries")
 }
 
@@ -621,6 +768,7 @@ model NotificationPreference {
   type           NotificationType
   emailEnabled   Boolean          @default(true) @map("email_enabled")
   inAppEnabled   Boolean          @default(true) @map("in_app_enabled")
+  pushEnabled    Boolean          @default(false) @map("push_enabled")
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
@@ -629,6 +777,58 @@ model NotificationPreference {
 
   @@unique([organizationId, membershipId, type])
   @@map("notification_preferences")
+}
+
+/// B1.08: the account-stored half of a member's preferences. Text columns are
+/// validated against the catalogue in `src/preferences/catalogue.ts`; device-only
+/// settings (text size, bolder text, higher contrast, reduce motion) are not stored.
+model UserPreference {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  membershipId    String    @map("membership_id")
+  /// null = follow the organisation's default look.
+  theme           String?
+  pageColour      String?   @map("page_colour")
+  toggleLightPage String    @default("WHITE") @map("toggle_light_page")
+  toggleDarkPage  String    @default("DARK") @map("toggle_dark_page")
+  density         String    @default("COMFORTABLE")
+  startPage       String?   @map("start_page")
+  sidebar         Json      @default("{\"collapsed\":false,\"hidden\":[]}")
+  hourFormat      String    @default("H12") @map("hour_format")
+  firstDayOfWeek  String    @default("MON") @map("first_day_of_week")
+  dateFormat      String    @default("DMY") @map("date_format")
+  ownColours      Json?     @map("own_colours")
+  undoSnapshot    Json?     @map("undo_snapshot")
+  undoTokenHash   String?   @map("undo_token_hash")
+  undoExpiresAt   DateTime? @map("undo_expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  membership   Membership   @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, membershipId])
+  @@map("user_preferences")
+}
+
+/// B1.11: quiet hours and the daily email cap, per member. Absence of a row
+/// means the defaults (quiet hours off, cap 20).
+model NotificationSetting {
+  id                String   @id @default(uuid())
+  organizationId    String   @map("organization_id")
+  membershipId      String   @map("membership_id")
+  quietHoursEnabled Boolean  @default(false) @map("quiet_hours_enabled")
+  quietHoursStart   String   @default("20:00") @map("quiet_hours_start")
+  quietHoursEnd     String   @default("07:00") @map("quiet_hours_end")
+  dailyEmailCap     Int      @default(20) @map("daily_email_cap")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  membership   Membership   @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, membershipId])
+  @@map("notification_settings")
 }
 
 // ---------------------------------------------------------------------------
