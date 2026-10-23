@@ -23,9 +23,9 @@ rest of the foundation on every run (see "What the smoke test guards").
 
 | Measure | Value |
 |---|---|
-| Test files | 64 (54 integration, 10 component) |
-| Tests | 698, all passing (as of FIG-801/802; 661 at FIG-1016, 521 at the original baseline) |
-| Duration | 150 to 200 s (the last two runs: 189 s with coverage, 175 s without) |
+| Test files | 75 (65 integration, 10 component) |
+| Tests | 999, all passing (as of Stage 1 / M1; 698 at FIG-801/802, 521 at the original baseline) |
+| Duration | over 10 minutes locally with coverage as of Stage 1 (was 150 to 200 s at the original baseline); CI time is the reference |
 | Failing / skipped | 0 / 0 |
 | Lint, typecheck | clean |
 | e2e (Playwright) | 20 tests, all passing (run separately, `npm run e2e`) |
@@ -34,9 +34,9 @@ Coverage (`npm run test:coverage`, Vitest v8):
 
 | Metric | Value | CI floor (`vitest.config.ts`) |
 |---|---|---|
-| Lines and statements | 42.37 % (41.83 % at FIG-1016, 35.98 % at the original baseline) | 42 % |
-| Branches | 81.28 % | 80 % |
-| Functions | 69.76 % | 69 % |
+| Lines and statements | 51.42 % (42.37 % at FIG-801/802, 35.98 % at the original baseline) | 42 % |
+| Branches | 85.10 % | 80 % |
+| Functions | 76.42 % | 69 % |
 
 By area (lines):
 

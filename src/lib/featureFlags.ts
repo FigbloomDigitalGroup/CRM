@@ -60,10 +60,48 @@ export const TOGGLES: readonly ToggleDef[] = [
     defaultValue: true,
     minRelease: "v1",
   },
+  // The five departures, one switch each (B1.03). Each is only effective
+  // while the umbrella toggle above is also on.
+  {
+    key: "departure.won_only",
+    description: "Delivery and Finance see won deals only (decision 1.2).",
+    defaultValue: true,
+    minRelease: "v1",
+  },
+  {
+    key: "departure.shared_pool",
+    description: "Sales sees a shared pool of unassigned leads and can claim from it (decision 1.3).",
+    defaultValue: true,
+    minRelease: "v1",
+  },
+  {
+    key: "departure.technical_my_work",
+    description: "Restricted Technical gets My work: tasks plus their client requirements (decision 1.4).",
+    defaultValue: true,
+    minRelease: "v1",
+  },
+  {
+    key: "departure.finance_followup",
+    description: "Finance adds a follow-up note on won deals instead of tasks (decision 1.5).",
+    defaultValue: true,
+    minRelease: "v1",
+  },
+  {
+    key: "departure.handoff_permission",
+    description: "The delivery-handoff permission: Sales and Management start, Delivery receives (decision 1.6).",
+    defaultValue: true,
+    minRelease: "v1",
+  },
   {
     key: "assistant.enabled",
     description: "The Ask Figbloom assistant.",
     defaultValue: false,
+    minRelease: "v1.1",
+  },
+  {
+    key: "preferences.own_colours",
+    description: "Members may set their own sidebar, accent, highlight and page colours (each checked for readability).",
+    defaultValue: true,
     minRelease: "v1.1",
   },
   {

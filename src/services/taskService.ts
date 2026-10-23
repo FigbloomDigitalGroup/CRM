@@ -1,10 +1,11 @@
 import type { AuthContext } from "../auth/context";
 import {
+  deny,
   hasPermission,
   requirePermission,
-  requireOwnedRecordPermission,
 } from "../auth/context";
 import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
+import { assertRecordVisible } from "../auth/visibility";
 import {
   createTask as createTaskRecord,
   getTaskById,
@@ -101,12 +102,9 @@ async function loadVisibleTask(ctx: AuthContext, taskId: string) {
   if (!task) {
     throw new NotFoundError("Task", taskId);
   }
-  requireOwnedRecordPermission(
-    ctx,
-    "tasks.view.own",
-    "tasks.view.all",
-    task.assigneeMembershipId,
-  );
+  assertRecordVisible(ctx, "tasks", "Task", taskId, {
+    ownerMembershipId: task.assigneeMembershipId,
+  });
   return task;
 }
 
@@ -300,9 +298,9 @@ export async function updateTask(
 ) {
   const task = await loadVisibleTask(ctx, taskId);
   if (!canManageTask(ctx, task)) {
-    throw new ForbiddenError(
-      "tasks.assign.any, or being this task's assignee/creator",
-    );
+    throw deny(ctx, "tasks.assign.any, or being this task's assignee/creator", [
+      "tasks.assign.any",
+    ]);
   }
 
   // A finished task is a record of what happened: reopen it (status back to

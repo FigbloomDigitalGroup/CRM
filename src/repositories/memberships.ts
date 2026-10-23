@@ -1,5 +1,7 @@
 import { MembershipStatus } from "@prisma/client";
+import { effectivePermissionKeys } from "../auth/permissions";
 import { adminDb } from "../db/adminClient";
+import { loadFeatureConfig } from "../lib/featureConfig";
 
 export interface AddMembershipInput {
   organizationId: string;
@@ -33,10 +35,34 @@ export async function addMembership(input: AddMembershipInput) {
   });
 }
 
-export async function deactivateMembership(membershipId: string) {
+export async function deactivateMembership(
+  membershipId: string,
+  actorMembershipId?: string,
+) {
   return adminDb.membership.update({
     where: { id: membershipId },
-    data: { status: MembershipStatus.INACTIVE },
+    data: {
+      status: MembershipStatus.INACTIVE,
+      deactivatedAt: new Date(),
+      deactivatedByMembershipId: actorMembershipId ?? null,
+    },
+  });
+}
+
+/** Ends a membership (B1.05). The row stays, so history keeps pointing at a real member. */
+export async function removeMembership(
+  membershipId: string,
+  actorMembershipId?: string,
+) {
+  return adminDb.membership.update({
+    where: { id: membershipId },
+    data: {
+      status: MembershipStatus.REMOVED,
+      removedAt: new Date(),
+      removedByMembershipId: actorMembershipId ?? null,
+      inviteTokenHash: null,
+      inviteTokenExpiresAt: null,
+    },
   });
 }
 
@@ -61,14 +87,20 @@ export async function resolveActiveMembership(
     return null;
   }
 
+  // B1.01/B1.03: the keys a request carries are the role's catalogue keys
+  // adjusted for this organization's release, departure flags and (for
+  // Customer Support) role flag.
+  const config = await loadFeatureConfig(organizationId);
   return {
     membershipId: membership.id,
     userId: membership.userId,
     organizationId: membership.organizationId,
     roleKey: membership.role.key,
-    permissionKeys: membership.role.rolePermissions.map(
-      (rp) => rp.permission.key,
-    ),
+    permissionKeys: effectivePermissionKeys({
+      roleKey: membership.role.key,
+      catalogueKeys: membership.role.rolePermissions.map((rp) => rp.permission.key),
+      config,
+    }),
   };
 }
 
@@ -106,6 +138,10 @@ export async function listAllMembershipsForAdmin(organizationId: string) {
     orderBy: { createdAt: "asc" },
   });
 
+  const names = new Map(memberships.map((m) => [m.id, m.user.name]));
+  const actor = (id: string | null) => (id ? (names.get(id) ?? null) : null);
+  const now = Date.now();
+
   return memberships.map((m) => ({
     membershipId: m.id,
     userId: m.userId,
@@ -114,9 +150,39 @@ export async function listAllMembershipsForAdmin(organizationId: string) {
     roleKey: m.role.key,
     roleName: m.role.name,
     status: m.status,
+    /** B1.12: the four states the Settings screen shows. */
+    state: membershipState(m.status),
     invitedAt: m.invitedAt,
     joinedAt: m.joinedAt,
+    inviteExpiresAt: m.status === "PENDING" ? m.inviteTokenExpiresAt : null,
+    inviteExpired:
+      m.status === "PENDING" &&
+      (!m.inviteTokenExpiresAt || m.inviteTokenExpiresAt.getTime() <= now),
+    inviteLastSentAt: m.inviteLastSentAt,
+    invitedByName: actor(m.invitedByMembershipId),
+    deactivatedAt: m.deactivatedAt,
+    deactivatedByName: actor(m.deactivatedByMembershipId),
+    removedAt: m.removedAt,
+    removedByName: actor(m.removedByMembershipId),
+    /** B1.05: set while the account is locked after repeated failed sign-ins. */
+    lockedUntil: m.user.lockedUntil && m.user.lockedUntil.getTime() > now ? m.user.lockedUntil : null,
   }));
+}
+
+export type MembershipState = "invited" | "active" | "deactivated" | "removed";
+
+/** The API's name for a membership's status. */
+export function membershipState(status: MembershipStatus): MembershipState {
+  switch (status) {
+    case "PENDING":
+      return "invited";
+    case "ACTIVE":
+      return "active";
+    case "INACTIVE":
+      return "deactivated";
+    case "REMOVED":
+      return "removed";
+  }
 }
 
 /** A single membership, tenant-scoped -- the lookup every mutation below starts from. */
@@ -153,7 +219,24 @@ export async function upsertPendingInvite(input: {
   roleId: string;
   tokenHash: string;
   expiresAt: Date;
+  invitedByMembershipId?: string;
 }) {
+  const now = new Date();
+  // A re-invite starts the membership's story over: whoever removed or
+  // deactivated them earlier no longer describes its current state.
+  const fresh = {
+    roleId: input.roleId,
+    status: MembershipStatus.PENDING,
+    invitedAt: now,
+    inviteLastSentAt: now,
+    invitedByMembershipId: input.invitedByMembershipId ?? null,
+    inviteTokenHash: input.tokenHash,
+    inviteTokenExpiresAt: input.expiresAt,
+    deactivatedAt: null,
+    deactivatedByMembershipId: null,
+    removedAt: null,
+    removedByMembershipId: null,
+  };
   return adminDb.membership.upsert({
     where: {
       organizationId_userId: {
@@ -164,20 +247,33 @@ export async function upsertPendingInvite(input: {
     create: {
       organizationId: input.organizationId,
       userId: input.userId,
-      roleId: input.roleId,
-      status: MembershipStatus.PENDING,
-      invitedAt: new Date(),
-      inviteTokenHash: input.tokenHash,
-      inviteTokenExpiresAt: input.expiresAt,
+      ...fresh,
     },
-    update: {
-      roleId: input.roleId,
-      status: MembershipStatus.PENDING,
-      invitedAt: new Date(),
-      inviteTokenHash: input.tokenHash,
-      inviteTokenExpiresAt: input.expiresAt,
-    },
+    update: fresh,
   });
+}
+
+/**
+ * Like `findMembershipByInviteToken`, but tells an expired invite apart from
+ * one that does not exist (B1.12) -- the holder of a real token is entitled
+ * to know it ran out and to ask for a new one. A used token is cleared from
+ * the row on acceptance, so it reads as unknown, not expired.
+ */
+export async function inspectInviteToken(tokenHash: string) {
+  const membership = await adminDb.membership.findUnique({
+    where: { inviteTokenHash: tokenHash },
+    include: { user: true },
+  });
+  if (!membership || membership.status !== MembershipStatus.PENDING) {
+    return { state: "unknown" as const, membership: null };
+  }
+  if (
+    !membership.inviteTokenExpiresAt ||
+    membership.inviteTokenExpiresAt.getTime() <= Date.now()
+  ) {
+    return { state: "expired" as const, membership };
+  }
+  return { state: "valid" as const, membership };
 }
 
 /** Read-only lookup for the accept-invite page -- does not consume the token. */
@@ -231,7 +327,11 @@ export async function setInviteToken(
 ) {
   return adminDb.membership.update({
     where: { id: membershipId },
-    data: { inviteTokenHash: tokenHash, inviteTokenExpiresAt: expiresAt },
+    data: {
+      inviteTokenHash: tokenHash,
+      inviteTokenExpiresAt: expiresAt,
+      inviteLastSentAt: new Date(),
+    },
   });
 }
 
@@ -245,7 +345,11 @@ export async function setMembershipRole(membershipId: string, roleId: string) {
 export async function reactivateMembership(membershipId: string) {
   return adminDb.membership.update({
     where: { id: membershipId },
-    data: { status: MembershipStatus.ACTIVE },
+    data: {
+      status: MembershipStatus.ACTIVE,
+      deactivatedAt: null,
+      deactivatedByMembershipId: null,
+    },
   });
 }
 

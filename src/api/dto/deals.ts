@@ -4,7 +4,7 @@ import {
   RecordMetaShape,
   decimalString,
   isoDateTime,
-  recordScope,
+  recordAccess,
   relation,
 } from "./common";
 
@@ -55,6 +55,7 @@ export function toDealDto<
   T extends {
     archivedAt: Date | null;
     ownerMembershipId: string;
+    outcome: "OPEN" | "WON" | "LOST";
     valueMasked: boolean;
   },
 >(ctx: AuthContext, deal: T) {
@@ -62,14 +63,9 @@ export function toDealDto<
     ...deal,
     archived: deal.archivedAt !== null,
     masked: deal.valueMasked,
-    scope: recordScope(
-      ctx,
-      {
-        viewAll: "deals.view.all",
-        editAll: "deals.edit.all",
-        editOwn: "deals.edit.own",
-      },
-      deal.ownerMembershipId,
-    ),
+    ...recordAccess(ctx, "deals", {
+      ownerMembershipId: deal.ownerMembershipId,
+      outcome: deal.outcome,
+    }),
   };
 }

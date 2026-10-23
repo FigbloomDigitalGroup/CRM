@@ -77,7 +77,7 @@ export function NotificationPreferencesForm({
                 <input
                   type="checkbox"
                   checked={row.emailEnabled}
-                  disabled={savingType === row.type}
+                  disabled={savingType === row.type || row.type === "TASK_OVERDUE"}
                   onChange={(e) => handleChange(row.type, "emailEnabled", e.target.checked)}
                 />
               </td>
@@ -85,7 +85,7 @@ export function NotificationPreferencesForm({
                 <input
                   type="checkbox"
                   checked={row.inAppEnabled}
-                  disabled={savingType === row.type}
+                  disabled={savingType === row.type || row.type === "TASK_OVERDUE"}
                   onChange={(e) => handleChange(row.type, "inAppEnabled", e.target.checked)}
                 />
               </td>

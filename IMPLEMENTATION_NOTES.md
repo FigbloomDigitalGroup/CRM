@@ -1889,3 +1889,44 @@ Described in the README's "Dev accounts and production". Decisions:
   tenant cookies, route 404 matrix, audit, privileges and RLS, holding page)
   and `e2e/dev-accounts-closed.spec.ts` (production build: no `/dev-login`,
   `/platform`, dev sign-in API or chips).
+
+## Stage 1: identity, sessions, preferences, organisation profile (FIG-1017 to FIG-1029, B1.01 to B1.13)
+
+- **Permissions (B1.01 to B1.03):** `src/auth/permissions.ts` is the single
+  scope resolver (own / organisation / read-only / none, with a reason).
+  Roles and permission keys live in `prisma/seedData.ts`; roles and keys for
+  later releases carry `requiredFeature` and are inert until their flag is on.
+  The five signed departures each have a flag (`departure.*`,
+  `src/lib/featureFlags.ts`); off falls back to the seeded matrix. Customer
+  Support is a sixth role behind `customer_support.role`. No route checks a
+  role name; everything goes through permission keys.
+- **Explained no-access (B1.02):** denials carry `denial: { yourRole,
+  ownerRoles, whoToAsk }` in the one error envelope (`src/lib/apiErrors.ts`,
+  `src/auth/areaOwners.ts`). Individual records outside a user's scope answer
+  404, not 403.
+- **Sessions and sign-in events (B1.04, B1.05):** `sessions` and
+  `sign_in_events` tables with RLS. Lifetime policy 4/8/12/24 h (default 8,
+  `src/auth/sessionPolicy.ts`), "Stay signed in" extends within an absolute
+  ceiling, revoked sessions fail on the next request. Lockout, deactivate vs
+  remove (with the reassignment checklist), and the admin sign-in events view
+  are under `/api/orgs/{org}/memberships/*` and `/security/*`.
+- **Files (B1.07):** `src/storage` has a local-disk driver (signed links, dev
+  only) and an S3-compatible driver (SigV4, no SDK), type/size limits, content
+  sniffing, and a malware-scan hook that fails closed. Config in `.env.example`.
+- **Profile, preferences, organisation look (B1.06, B1.08, B1.09):** avatar via
+  the file service (`sharp` re-encodes and strips EXIF), preferences with an
+  account/device split, reset and undo, and the organisation's allow-
+  personalisation lock with shared-look resolution (`/look`).
+- **Identity context (B1.10):** `GET /api/me/context` returns the shell
+  payload for every role in one call (short cache, `ME_CONTEXT_CACHE_MS`).
+- **Notification preferences v2 (B1.11) and invite states (B1.12):** per-role
+  event types, channels, quiet hours, daily email cap, overdue always on; invite
+  and membership states (invited, accepted, awaiting access, deactivated). The
+  frozen login, sign-up, forgot, reset and accept-invite pages are untouched;
+  only their API routes changed.
+- **Exit gate (B1.13):** `tests/stage1ExitGate.test.ts` walks the demo per role
+  and checks cross-organisation isolation; `docs/demo/stage-1.http` is the
+  manual version.
+- **Known gap:** the OpenAPI document does not yet list every Stage 1 route
+  (sessions, sign-in events, security, membership lifecycle, file content,
+  platform preferences). Tracked in CLAUDE.md "Where we are right now".

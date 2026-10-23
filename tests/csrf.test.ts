@@ -78,6 +78,29 @@ describe("CSRF middleware (FIG-802)", () => {
   });
 
   it("only runs on the cookie-authenticated API prefixes", () => {
-    expect(config.matcher).toEqual(["/api/orgs/:path*", "/api/auth/:path*"]);
+    expect(config.matcher).toEqual([
+      "/api/orgs/:path*",
+      "/api/auth/:path*",
+      "/api/me/:path*",
+      "/api/session/:path*",
+      "/api/platform/:path*",
+    ]);
+  });
+
+  it("protects the personal session endpoints (B1.04): sign-out-others, revoke, extend", () => {
+    for (const [method, path] of [
+      ["POST", "/api/session/extend"],
+      ["POST", "/api/me/sessions/sign-out-others"],
+      ["DELETE", "/api/me/sessions/abc"],
+    ] as const) {
+      const res = middleware(req(path, { method, headers: { origin: "https://evil.example" } }));
+      expect(res.status).toBe(403);
+    }
+    // Reads stay open: they change nothing.
+    expect(
+      middleware(req("/api/session", { method: "GET", headers: { origin: "https://evil.example" } })).headers.get(
+        "x-middleware-next",
+      ),
+    ).toBe("1");
   });
 });

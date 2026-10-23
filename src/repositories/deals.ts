@@ -109,6 +109,11 @@ export interface ListDealsFilters {
    * today.
    */
   stalledOnly?: boolean;
+  /**
+   * Set by the service for a won-only viewer (B1.03): ANDed with everything
+   * else, so no combination of the other filters can reach an open or lost deal.
+   */
+  visibleOutcome?: "WON";
   /** Archived deals are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
@@ -130,6 +135,7 @@ function dealsWhere(
     companyId: filters.companyId,
     serviceId: filters.serviceId,
     ...(filters.includeArchived ? {} : { archivedAt: null }),
+    ...(filters.visibleOutcome ? { AND: [{ outcome: filters.visibleOutcome }] } : {}),
     ...(filters.stalledOnly
       ? { outcome: "OPEN", expectedCloseDate: { lt: new Date() } }
       : {}),

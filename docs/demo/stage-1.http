@@ -1,0 +1,67 @@
+### Stage 1 demo (B1.13). Run the dev server (`npm run dev`), seed the dev accounts
+### (`npm run seed:dev`), sign in as each dev account in the browser, then send these
+### with the session cookie. The same walk-through runs automatically in
+### tests/stage1ExitGate.test.ts. Replace {{org}} with the organisation slug.
+
+@base = http://localhost:3000
+@org = figbloom
+
+### 1. The shell: one call, same shape for every role
+GET {{base}}/api/me/context
+
+### 2. Profile
+PATCH {{base}}/api/orgs/{{org}}/me/profile
+Content-Type: application/json
+
+{ "name": "Wanjiru K.", "timeZone": "Africa/Nairobi" }
+
+### 3. Preferences: change, reset, undo (use the token from the reset response)
+PATCH {{base}}/api/orgs/{{org}}/me/preferences
+Content-Type: application/json
+
+{ "theme": "OCEAN", "hourFormat": "H24", "startPage": "leads" }
+
+###
+POST {{base}}/api/orgs/{{org}}/me/preferences/reset
+
+###
+POST {{base}}/api/orgs/{{org}}/me/preferences/undo
+Content-Type: application/json
+
+{ "token": "<undo.token from the reset response>" }
+
+### 4. Notification settings
+GET {{base}}/api/orgs/{{org}}/me/notification-preferences
+
+###
+PATCH {{base}}/api/orgs/{{org}}/me/notification-preferences
+Content-Type: application/json
+
+{ "preset": "IMPORTANT_ONLY", "quietHours": { "enabled": true, "start": "20:00", "end": "07:00" } }
+
+### 5. Sessions: list devices, stay signed in, sign one device out, sign out all others
+GET {{base}}/api/me/sessions
+
+###
+POST {{base}}/api/session/extend
+
+###
+DELETE {{base}}/api/me/sessions/<session id>
+
+###
+POST {{base}}/api/me/sessions/sign-out-others
+
+###
+GET {{base}}/api/me/sign-in-events
+
+### 6. Organisation look: everyone reads, only Management writes (a 403 names the permission and who to ask)
+GET {{base}}/api/orgs/{{org}}/look
+
+###
+PATCH {{base}}/api/orgs/{{org}}/look
+Content-Type: application/json
+
+{ "displayName": "Figbloom Kenya", "defaultTheme": "SKY" }
+
+### 7. Dev Platform Super Admin: sign in with the dev platform cookie (development only), then
+GET {{base}}/api/me/context

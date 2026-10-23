@@ -1,3 +1,4 @@
+import { canUseResource } from "@/auth/permissions";
 import { redirect } from "next/navigation";
 import { hasPermission } from "@/auth/context";
 import { UnauthorizedError } from "@/auth/errors";
@@ -47,9 +48,7 @@ export default async function OrgLayout({
   const canViewLeads =
     hasPermission(ctx, "leads.view.own") ||
     hasPermission(ctx, "leads.view.all");
-  const canViewDeals =
-    hasPermission(ctx, "deals.view.own") ||
-    hasPermission(ctx, "deals.view.all");
+  const canViewDeals = canUseResource(ctx, "deals");
   const canViewTasks =
     hasPermission(ctx, "tasks.view.own") ||
     hasPermission(ctx, "tasks.view.all");

@@ -1,20 +1,25 @@
 import { withOrgContext } from "../db/orgScopedClient";
+import {
+  ALWAYS_ON_TYPES,
+  NOTIFICATION_TYPES,
+  type NotificationTypeKey,
+} from "../notifications/catalogue";
 
-export type NotificationTypeKey =
-  | "LEAD_ASSIGNED"
-  | "TASK_DUE"
-  | "TASK_OVERDUE"
-  | "DEAL_WON_HANDOFF";
+export { NOTIFICATION_TYPES };
+export type { NotificationTypeKey };
 
-export const NOTIFICATION_TYPES: NotificationTypeKey[] = [
-  "LEAD_ASSIGNED",
-  "TASK_DUE",
-  "TASK_OVERDUE",
-  "DEAL_WON_HANDOFF",
-];
+export interface EffectivePreference {
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+}
 
 /** No row for a (membership, type) means "both channels on" -- see the model's doc comment in schema.prisma. */
-const DEFAULT_PREFERENCE = { emailEnabled: true, inAppEnabled: true } as const;
+const DEFAULT_PREFERENCE: EffectivePreference = { emailEnabled: true, inAppEnabled: true };
+
+/** Types that can never be switched off (overdue tasks): whatever an old row says, both channels are on. */
+function applyAlwaysOn(type: NotificationTypeKey, pref: EffectivePreference): EffectivePreference {
+  return ALWAYS_ON_TYPES.includes(type) ? { emailEnabled: true, inAppEnabled: true } : pref;
+}
 
 export async function listPreferencesForMembership(
   organizationId: string,
@@ -31,19 +36,17 @@ export async function listPreferencesForMembership(
 export async function resolveEffectivePreferences(
   organizationId: string,
   membershipId: string,
-): Promise<Record<NotificationTypeKey, { emailEnabled: boolean; inAppEnabled: boolean }>> {
+): Promise<Record<NotificationTypeKey, EffectivePreference>> {
   const rows = await listPreferencesForMembership(organizationId, membershipId);
   const byType = new Map(rows.map((r) => [r.type, r]));
 
-  const result = {} as Record<
-    NotificationTypeKey,
-    { emailEnabled: boolean; inAppEnabled: boolean }
-  >;
+  const result = {} as Record<NotificationTypeKey, EffectivePreference>;
   for (const type of NOTIFICATION_TYPES) {
     const row = byType.get(type);
-    result[type] = row
-      ? { emailEnabled: row.emailEnabled, inAppEnabled: row.inAppEnabled }
-      : { ...DEFAULT_PREFERENCE };
+    result[type] = applyAlwaysOn(
+      type,
+      row ? { emailEnabled: row.emailEnabled, inAppEnabled: row.inAppEnabled } : { ...DEFAULT_PREFERENCE },
+    );
   }
   return result;
 }
@@ -52,16 +55,17 @@ export async function resolveEffectivePreference(
   organizationId: string,
   membershipId: string,
   type: NotificationTypeKey,
-) {
+): Promise<EffectivePreference> {
   return withOrgContext(organizationId, async (tx) => {
     const row = await tx.notificationPreference.findUnique({
       where: {
         organizationId_membershipId_type: { organizationId, membershipId, type },
       },
     });
-    return row
-      ? { emailEnabled: row.emailEnabled, inAppEnabled: row.inAppEnabled }
-      : { ...DEFAULT_PREFERENCE };
+    return applyAlwaysOn(
+      type,
+      row ? { emailEnabled: row.emailEnabled, inAppEnabled: row.inAppEnabled } : { ...DEFAULT_PREFERENCE },
+    );
   });
 }
 

@@ -281,7 +281,7 @@ describe("won by salesperson", () => {
     expect(own.valueMasked).toBe(false);
     expect(Number(own.rows[0]!.wonValue)).toBe(1200);
 
-    // Delivery sees every deal but has no value permission: counts only.
+    // Delivery sees won deals (all this report counts) but has no value permission: counts only.
     const del = await customerReports.getSalesBySalesperson(delivery, window);
     expect(del.rows).toHaveLength(2);
     expect(del.valueMasked).toBe(true);

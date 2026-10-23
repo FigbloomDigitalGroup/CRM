@@ -66,40 +66,10 @@ export default async function globalSetup(): Promise<void> {
   execSync("npx tsx scripts/db-admin.ts grant-role", { stdio: "inherit", env });
 
   const { adminDb } = await import("../src/db/adminClient");
-  const { ROLES, PERMISSIONS, ROLE_PERMISSIONS } =
-    await import("../prisma/seedData");
-
-  for (const role of ROLES) {
-    await adminDb.role.upsert({
-      where: { key: role.key },
-      update: {},
-      create: role,
-    });
-  }
-  for (const permission of PERMISSIONS) {
-    await adminDb.permission.upsert({
-      where: { key: permission.key },
-      update: {},
-      create: permission,
-    });
-  }
-  for (const [roleKey, permissionKeys] of Object.entries(ROLE_PERMISSIONS)) {
-    const role = await adminDb.role.findUniqueOrThrow({
-      where: { key: roleKey },
-    });
-    for (const permissionKey of permissionKeys) {
-      const permission = await adminDb.permission.findUniqueOrThrow({
-        where: { key: permissionKey },
-      });
-      await adminDb.rolePermission.upsert({
-        where: {
-          roleId_permissionId: { roleId: role.id, permissionId: permission.id },
-        },
-        update: {},
-        create: { roleId: role.id, permissionId: permission.id },
-      });
-    }
-  }
+  // Same reconciling sync production runs (B1.01), so a permission removed from
+  // the catalogue is removed from the test database too, not left behind.
+  const { seedRolesAndPermissions } = await import("../prisma/seedReference");
+  await seedRolesAndPermissions();
 
   await adminDb.$disconnect();
 }

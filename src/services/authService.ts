@@ -11,20 +11,28 @@ import {
   consumePasswordResetToken,
   createPasswordResetToken,
 } from "../auth/passwordResetToken";
-import { enforceRateLimit, type RateLimitRule } from "../auth/rateLimiter";
+import { clearRateLimit, enforceRateLimit, type RateLimitRule } from "../auth/rateLimiter";
 import {
   createSession,
   resolveSessionUserId,
   revokeAllSessionsForUser,
   revokeSession,
 } from "../auth/session";
-import { UnauthorizedError, ValidationError } from "../auth/errors";
+import type { ClientInfo } from "../auth/deviceInfo";
+import {
+  AccountDeactivatedError,
+  RateLimitedError,
+  UnauthorizedError,
+  ValidationError,
+} from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import { getAccessState, type AccessState } from "./accessStateService";
+import { recordAuthAuditEvent } from "./authAudit";
+import { recordSignInEvent } from "./signInEventService";
 import {
   activateMembershipByInviteToken,
-  findMembershipByInviteToken,
-  listActiveOrganizationSlugsForUser,
+  inspectInviteToken,
 } from "../repositories/memberships";
 
 /**
@@ -124,26 +132,31 @@ function passwordResetRateLimitRules(
   ];
 }
 
-async function recordAuthAuditEvent(
-  userId: string,
-  action: "auth.login" | "auth.logout" | "auth.password_reset",
-) {
-  const memberships = await adminDb.membership.findMany({
-    where: { userId },
-    select: { id: true, organizationId: true },
-  });
-  await Promise.all(
-    memberships.map((m) =>
-      recordAuditEvent({
-        organizationId: m.organizationId,
-        actorMembershipId: m.id,
-        actorUserId: userId,
-        action,
-        entityType: "User",
-        entityId: userId,
-      }),
-    ),
-  );
+/**
+ * Account lockout (B1.05), on top of the FIG-784 rate limits above.
+ *
+ * Documented policy: LOCKOUT_MAX_FAILURES (default 5) wrong passwords in a row
+ * lock the account for LOCKOUT_DURATION_MS (default 15 minutes). While it is
+ * locked every attempt -- even with the right password -- gets the same
+ * generic "too many attempts" 429 as the rate limiter, so the response never
+ * says whether an account exists. Two ways out: the lock simply runs out, or
+ * Management unlocks the member (`membership.manage`), which also clears the
+ * email's login window. A correct sign-in resets the failure counter.
+ */
+export function lockoutPolicy() {
+  return {
+    maxFailures: envInt("LOCKOUT_MAX_FAILURES", 5),
+    durationMs: envInt("LOCKOUT_DURATION_MS", 15 * 60_000),
+  };
+}
+
+/** Forgets the email's recorded login attempts (used by the admin unlock). */
+export async function clearLoginRateLimitForEmail(email: string): Promise<void> {
+  await clearRateLimit("LOGIN", "email", normalizeEmailForRateLimit(email));
+}
+
+function clientOf(userAgent?: string | null, ipAddress?: string | null, place?: string | null): ClientInfo {
+  return { userAgent: userAgent ?? null, ipAddress: ipAddress ?? null, place: place ?? null };
 }
 
 /**
@@ -166,7 +179,8 @@ export async function signup(
   name: string,
   userAgent?: string | null,
   ipAddress?: string | null,
-): Promise<{ token: string; expiresAt: Date; userId: string }> {
+  place?: string | null,
+): Promise<{ token: string; expiresAt: Date; userId: string; access: AccessState }> {
   await enforceRateLimit("SIGNUP", signupRateLimitRules(ipAddress ?? null, email));
 
   if (!isPasswordStrongEnough(password)) {
@@ -194,8 +208,10 @@ export async function signup(
     throw err;
   }
 
-  const { token, expiresAt } = await createSession(user.id, userAgent);
-  return { token, expiresAt, userId: user.id };
+  const { token, expiresAt } = await createSession(user.id, {
+    client: clientOf(userAgent, ipAddress, place),
+  });
+  return { token, expiresAt, userId: user.id, access: await getAccessState(user.id) };
 }
 
 export async function login(
@@ -203,6 +219,7 @@ export async function login(
   password: string,
   userAgent?: string | null,
   ipAddress?: string | null,
+  place?: string | null,
 ): Promise<{
   token: string;
   expiresAt: Date;
@@ -215,30 +232,142 @@ export async function login(
    * resolvable membership wins rather than presenting a choice.
    */
   organizationSlug: string | null;
+  /** Whether the account is waiting for access to an organisation (B1.12). */
+  access: AccessState;
 }> {
   await enforceRateLimit("LOGIN", loginRateLimitRules(ipAddress ?? null, email));
 
+  const client = clientOf(userAgent, ipAddress, place);
   const user = await adminDb.user.findUnique({ where: { email } });
 
   if (!user || user.status !== "ACTIVE" || !user.passwordHash) {
+    // An unknown email has no organisation to attribute the attempt to, so
+    // nothing is logged for it; a known but unusable account is.
+    if (user) {
+      await recordSignInEvent({
+        userId: user.id,
+        email: user.email,
+        outcome: "FAILURE",
+        reason: user.status !== "ACTIVE" ? "ACCOUNT_INACTIVE" : "NO_PASSWORD",
+        client,
+      });
+    }
     throw new UnauthorizedError(INVALID_CREDENTIALS_MESSAGE);
+  }
+
+  const policy = lockoutPolicy();
+  const now = Date.now();
+  if (user.lockedUntil) {
+    if (user.lockedUntil.getTime() > now) {
+      await recordSignInEvent({
+        userId: user.id,
+        email: user.email,
+        outcome: "FAILURE",
+        reason: "LOCKED",
+        client,
+      });
+      throw new RateLimitedError();
+    }
+    // The lock has run out: time-based unlock.
+    await adminDb.user.update({
+      where: { id: user.id },
+      data: { lockedUntil: null, failedSignInCount: 0 },
+    });
+    user.failedSignInCount = 0;
+    await recordAuthAuditEvent(user.id, "auth.unlocked", { by: "timeout" });
   }
 
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {
+    const failures = user.failedSignInCount + 1;
+    const locking = failures >= policy.maxFailures;
+    await adminDb.user.update({
+      where: { id: user.id },
+      data: {
+        failedSignInCount: failures,
+        lastFailedSignInAt: new Date(now),
+        ...(locking ? { lockedUntil: new Date(now + policy.durationMs) } : {}),
+      },
+    });
+    if (locking) {
+      await recordSignInEvent({
+        userId: user.id,
+        email: user.email,
+        outcome: "LOCKOUT",
+        reason: "TOO_MANY_FAILURES",
+        client,
+      });
+      await recordAuthAuditEvent(user.id, "auth.locked_out", {
+        failures,
+        minutes: Math.round(policy.durationMs / 60_000),
+      });
+    } else {
+      await recordSignInEvent({
+        userId: user.id,
+        email: user.email,
+        outcome: "FAILURE",
+        reason: "WRONG_PASSWORD",
+        client,
+      });
+    }
     throw new UnauthorizedError(INVALID_CREDENTIALS_MESSAGE);
   }
 
-  const { token, expiresAt } = await createSession(user.id, userAgent);
+  // The password proved who is asking, so it is safe to say why they are
+  // refused: every organisation they belonged to has deactivated them.
+  const access = await getAccessState(user.id);
+  if (access.state === "deactivated") {
+    await recordSignInEvent({
+      userId: user.id,
+      email: user.email,
+      outcome: "FAILURE",
+      reason: "DEACTIVATED",
+      client,
+    });
+    throw new AccountDeactivatedError();
+  }
+
+  if (user.failedSignInCount > 0 || user.lockedUntil) {
+    await adminDb.user.update({
+      where: { id: user.id },
+      data: { failedSignInCount: 0, lockedUntil: null },
+    });
+  }
+
+  const session = await createSession(user.id, { client });
+  await recordSignInEvent({
+    userId: user.id,
+    email: user.email,
+    outcome: "SUCCESS",
+    sessionId: session.sessionId,
+    deviceLabel: session.deviceLabel,
+    client,
+  });
+  if (session.isNewDevice) {
+    await recordSignInEvent({
+      userId: user.id,
+      email: user.email,
+      outcome: "NEW_DEVICE",
+      sessionId: session.sessionId,
+      deviceLabel: session.deviceLabel,
+      client,
+    });
+  }
   await recordAuthAuditEvent(user.id, "auth.login");
 
-  const [organizationSlug] = await listActiveOrganizationSlugsForUser(user.id);
-  return { token, expiresAt, userId: user.id, organizationSlug: organizationSlug ?? null };
+  const organizationSlug = access.organizations[0]?.slug ?? null;
+  return {
+    token: session.token,
+    expiresAt: session.expiresAt,
+    userId: user.id,
+    organizationSlug,
+    access,
+  };
 }
 
 export async function logout(token: string): Promise<void> {
   const userId = await resolveSessionUserId(token);
-  await revokeSession(token);
+  await revokeSession(token, "SIGNED_OUT");
   if (userId) {
     await recordAuthAuditEvent(userId, "auth.logout");
   }
@@ -291,8 +420,26 @@ export async function resetPassword(
 
   const passwordHash = await hashPassword(newPassword);
   await adminDb.user.update({ where: { id: userId }, data: { passwordHash } });
-  await revokeAllSessionsForUser(userId);
+  await revokeAllSessionsForUser(userId, "PASSWORD_RESET");
   await recordAuthAuditEvent(userId, "auth.password_reset");
+}
+
+const INVALID_INVITE_MESSAGE = "Invalid or expired invite link.";
+const EXPIRED_INVITE_MESSAGE =
+  "This invite has expired. Ask your organisation's Management users to send a new one.";
+
+/** The invite behind a token, or a clear refusal: expired (ask for a new one) versus unknown or already used. */
+async function requireUsableInvite(tokenHash: string) {
+  const found = await inspectInviteToken(tokenHash);
+  if (found.state === "expired") {
+    throw new ValidationError(EXPIRED_INVITE_MESSAGE, [
+      { path: "token", message: EXPIRED_INVITE_MESSAGE },
+    ]);
+  }
+  if (found.state === "unknown") {
+    throw new ValidationError(INVALID_INVITE_MESSAGE);
+  }
+  return found.membership;
 }
 
 /**
@@ -304,10 +451,7 @@ export async function resetPassword(
 export async function getInviteInfo(
   token: string,
 ): Promise<{ email: string; requiresPassword: boolean }> {
-  const membership = await findMembershipByInviteToken(hashInviteToken(token));
-  if (!membership) {
-    throw new ValidationError("Invalid or expired invite link.");
-  }
+  const membership = await requireUsableInvite(hashInviteToken(token));
   return {
     email: membership.user.email,
     requiresPassword: !membership.user.passwordHash,
@@ -324,6 +468,8 @@ export async function acceptMembershipInvite(
   token: string,
   password: string | undefined,
   userAgent?: string | null,
+  ipAddress?: string | null,
+  place?: string | null,
 ): Promise<{
   token: string;
   expiresAt: Date;
@@ -336,10 +482,7 @@ export async function acceptMembershipInvite(
   // it after would leave the membership activated but the account
   // permanently unreachable (no password, and the now-burned link can't be
   // retried) if validation failed.
-  const preview = await findMembershipByInviteToken(tokenHash);
-  if (!preview) {
-    throw new ValidationError("Invalid or expired invite link.");
-  }
+  const preview = await requireUsableInvite(tokenHash);
   if (!preview.user.passwordHash) {
     if (!password || !isPasswordStrongEnough(password)) {
       throw new ValidationError(
@@ -369,10 +512,23 @@ export async function acceptMembershipInvite(
     entityId: membership.id,
   });
 
-  const { token: sessionToken, expiresAt } = await createSession(
-    user.id,
-    userAgent,
-  );
+  const client = clientOf(userAgent, ipAddress, place);
+  const {
+    token: sessionToken,
+    expiresAt,
+    sessionId,
+    deviceLabel,
+  } = await createSession(user.id, { client, organizationId: membership.organizationId });
+  await recordSignInEvent({
+    userId: user.id,
+    email: user.email,
+    outcome: "SUCCESS",
+    reason: "INVITE_ACCEPTED",
+    sessionId,
+    deviceLabel,
+    client,
+    organizationId: membership.organizationId,
+  });
   const organization = await adminDb.organization.findUniqueOrThrow({
     where: { id: membership.organizationId },
     select: { slug: true },

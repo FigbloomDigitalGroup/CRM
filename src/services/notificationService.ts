@@ -5,7 +5,9 @@ import { adminDb } from "../db/adminClient";
 import { logger } from "../lib/logger";
 import {
   sendDealWonHandoffEmail,
+  sendGenericNotificationEmail,
   sendLeadAssignedEmail,
+  sendNotificationDigestEmail,
   sendTaskDueEmail,
   sendTaskOverdueEmail,
   sendWebsiteLeadAcknowledgementEmail,
@@ -15,9 +17,15 @@ import { findActiveLeadIdsOwnedBy } from "../repositories/leads";
 import {
   createNotificationDelivery,
   listDueDeliveries,
+  listDueDigestDeliveries,
+  markDeliveriesSent,
   markDeliveryFailed,
   markDeliverySent,
+  rescheduleDelivery,
 } from "../repositories/notificationDeliveries";
+import { ValidationError } from "../auth/errors";
+import { ALWAYS_ON_TYPES } from "../notifications/catalogue";
+import { planEmail } from "./notificationDeliveryPolicy";
 import {
   NOTIFICATION_TYPES,
   resolveEffectivePreference,
@@ -82,6 +90,8 @@ async function dispatch(
         return sendTaskDueEmail(recipient.email, payload as { taskTitle: string; link: string });
       case "task-overdue":
         return sendTaskOverdueEmail(recipient.email, payload as { taskTitle: string; link: string });
+      case "generic-notification":
+        return sendGenericNotificationEmail(recipient.email, payload as { title: string; body: string; link: string });
       case "website-lead-ack":
         return sendWebsiteLeadAcknowledgementEmail(
           recipient.email,
@@ -183,6 +193,9 @@ async function notify(input: NotifyInput): Promise<void> {
     const email = await getMembershipEmail(input.organizationId, input.membershipId);
     if (!email) return;
 
+    // B1.11: the in-app notification above is immediate; the email follows the person's
+    // quiet hours and daily cap (see notificationDeliveryPolicy.ts).
+    const plan = await planEmail(input.organizationId, input.membershipId, input.type);
     const delivery = await createNotificationDelivery({
       organizationId: input.organizationId,
       notificationId: notification.id,
@@ -190,7 +203,10 @@ async function notify(input: NotifyInput): Promise<void> {
       recipientEmail: email,
       templateKey: input.templateKey,
       payload: input.emailPayload as Prisma.InputJsonValue,
+      ...(plan.action === "defer" ? { nextAttemptAt: plan.until } : {}),
+      ...(plan.action === "digest" ? { nextAttemptAt: plan.until, digestPending: true } : {}),
     });
+    if (plan.action !== "send") return;
     await attemptDelivery(input.organizationId, { ...delivery, maxAttempts: delivery.maxAttempts });
   } catch (err) {
     logger.error({ err, ...input }, "Failed to create/deliver notification");
@@ -299,6 +315,39 @@ export const notifyTaskOverdue = (
   membershipId: string,
   task: { id: string; title: string },
 ) => notifyTask("TASK_OVERDUE", organizationId, membershipId, task);
+
+/**
+ * Raises any of the nine notification types (B1.11): the in-app notification
+ * now, the email under the person's quiet hours and daily cap. Features raise
+ * their own events through here (mentions, renewals, unanswered proposals,
+ * stalled deals, support-access requests). Same best-effort contract as the
+ * rest: never throws.
+ */
+export async function notifyEvent(input: {
+  organizationId: string;
+  membershipId: string;
+  type: NotificationTypeKey;
+  title: string;
+  body: string;
+  entityType: string;
+  entityId: string;
+  /** Path under the app, such as `/o/acme/deals/123`; the base URL is added. */
+  path: string;
+}): Promise<void> {
+  const link = `${appBaseUrl()}${input.path}`;
+  await notify({
+    organizationId: input.organizationId,
+    membershipId: input.membershipId,
+    type: input.type,
+    title: input.title,
+    body: input.body,
+    entityType: input.entityType,
+    entityId: input.entityId,
+    link,
+    templateKey: "generic-notification",
+    emailPayload: { title: input.title, body: input.body, link },
+  });
+}
 
 /**
  * The one delivery with no internal recipient -- an external enquirer, not
@@ -476,6 +525,9 @@ export async function updateMyNotificationPreference(
   if (!NOTIFICATION_TYPES.includes(type)) {
     throw new Error(`Unknown notification type "${type}".`);
   }
+  if (ALWAYS_ON_TYPES.includes(type) && (input.emailEnabled === false || input.inAppEnabled === false)) {
+    throw alwaysOn(type);
+  }
   return upsertPreference(ctx.organizationId, ctx.membershipId, type, input);
 }
 
@@ -490,10 +542,79 @@ export async function updateMyNotificationPreference(
 export async function retryDueDeliveries(
   organizationId: string,
   limit = 100,
-): Promise<{ attempted: number }> {
+): Promise<{ attempted: number; deferred: number; digests: number }> {
   const due = await listDueDeliveries(organizationId, limit);
+  let attempted = 0;
+  let deferred = 0;
   for (const delivery of due) {
+    // B1.11: a held email is re-checked against quiet hours and the cap at the moment it would
+    // leave, so a morning flush of overnight emails cannot blow through the daily limit.
+    if (delivery.notification) {
+      const plan = await planEmail(organizationId, delivery.notification.membershipId, delivery.notification.type);
+      if (plan.action === "defer") {
+        await rescheduleDelivery(organizationId, delivery.id, { nextAttemptAt: plan.until });
+        deferred++;
+        continue;
+      }
+      if (plan.action === "digest") {
+        await rescheduleDelivery(organizationId, delivery.id, { nextAttemptAt: plan.until, digestPending: true });
+        deferred++;
+        continue;
+      }
+    }
     await attemptDelivery(organizationId, delivery);
+    attempted++;
   }
-  return { attempted: due.length };
+  const digests = await sendDueDigests(organizationId);
+  return { attempted, deferred, digests };
+}
+
+/**
+ * One email per person for everything the daily cap held back (B1.11). Runs
+ * from the sweep; a held delivery becomes due at the start of the next day
+ * (after quiet hours), so the digest reads "yesterday's overflow".
+ */
+export async function sendDueDigests(organizationId: string): Promise<number> {
+  const due = await listDueDigestDeliveries(organizationId);
+  const byMember = new Map<string, typeof due>();
+  for (const d of due) {
+    if (!d.notification) continue;
+    const list = byMember.get(d.notification.membershipId) ?? [];
+    list.push(d);
+    byMember.set(d.notification.membershipId, list);
+  }
+  let sent = 0;
+  for (const [membershipId, group] of byMember) {
+    const recipientEmail = group[0]!.recipientEmail;
+    if (!recipientEmail) continue;
+    // Quiet hours may have been switched on since it was held.
+    const plan = await planEmail(organizationId, membershipId, "MENTION");
+    if (plan.action === "defer") {
+      for (const d of group) await rescheduleDelivery(organizationId, d.id, { nextAttemptAt: plan.until });
+      continue;
+    }
+    try {
+      await sendNotificationDigestEmail(recipientEmail, {
+        items: group.map((d) => ({
+          title: d.notification!.title,
+          body: d.notification!.body,
+          link: d.notification!.link,
+        })),
+      });
+      await markDeliveriesSent(organizationId, group.map((d) => d.id));
+      sent++;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown delivery error.";
+      logger.error({ err, membershipId }, "Notification digest failed");
+      for (const d of group) {
+        await markDeliveryFailed(organizationId, d.id, d.attempts + 1, d.maxAttempts, message);
+      }
+    }
+  }
+  return sent;
+}
+
+export function alwaysOn(type: string) {
+  const message = "Overdue task alerts cannot be turned off, so a missed deadline is never hidden from you.";
+  return new ValidationError(message, [{ path: `types.${type}`, code: "NOTIFICATION_ALWAYS_ON", message }]);
 }

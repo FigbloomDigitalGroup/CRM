@@ -1,10 +1,13 @@
 import type { AuthContext } from "../auth/context";
 import {
+  deny,
   hasPermission,
   requirePermission,
   requireOwnedRecordPermission,
 } from "../auth/context";
-import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
+import { NotFoundError, ValidationError } from "../auth/errors";
+import { canUseResource, viewPermissionKeys } from "../auth/permissions";
+import { assertRecordVisible } from "../auth/visibility";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
@@ -81,7 +84,7 @@ function canReassignDeals(ctx: AuthContext): boolean {
 /** Owners a deal may be handed to: active members whose role can view and edit deals. */
 export async function listAssignableDealOwners(ctx: AuthContext) {
   if (!canReassignDeals(ctx)) {
-    throw new ForbiddenError("deals.edit.all (to choose a deal owner)");
+    throw deny(ctx, "deals.edit.all (to choose a deal owner)", ["deals.edit.all"]);
   }
   return listDealOwnerCandidates(ctx.organizationId);
 }
@@ -96,11 +99,8 @@ export async function getDealOwnerNames(
   ctx: AuthContext,
   membershipIds: string[],
 ): Promise<Record<string, string>> {
-  if (
-    !hasPermission(ctx, "deals.view.all") &&
-    !hasPermission(ctx, "deals.view.own")
-  ) {
-    throw new ForbiddenError("deals.view.own or deals.view.all");
+  if (!canUseResource(ctx, "deals")) {
+    throw deny(ctx, "deals.view", viewPermissionKeys("deals"));
   }
   const ids = [...new Set(membershipIds)];
   if (ids.length === 0) return {};
@@ -126,7 +126,7 @@ export async function createDeal(
     input.ownerMembershipId !== ctx.membershipId
   ) {
     if (!canReassignDeals(ctx)) {
-      throw new ForbiddenError("deals.edit.all (to create a deal for someone else)");
+      throw deny(ctx, "deals.edit.all (to create a deal for someone else)", ["deals.edit.all"]);
     }
     await assertEligibleDealOwner(ctx.organizationId, input.ownerMembershipId);
     ownerMembershipId = input.ownerMembershipId;
@@ -170,6 +170,8 @@ async function loadOwnedDeal(ctx: AuthContext, dealId: string) {
   if (!deal) {
     throw new NotFoundError("Deal", dealId);
   }
+  // A deal the caller cannot see answers 404, same as one that does not exist.
+  assertRecordVisible(ctx, "deals", "Deal", dealId, deal);
   return deal;
 }
 
@@ -181,12 +183,6 @@ async function loadOwnedDeal(ctx: AuthContext, dealId: string) {
  */
 export async function getDeal(ctx: AuthContext, dealId: string) {
   const deal = await loadOwnedDeal(ctx, dealId);
-  requireOwnedRecordPermission(
-    ctx,
-    "deals.view.own",
-    "deals.view.all",
-    deal.ownerMembershipId,
-  );
   return maskValue(ctx, deal);
 }
 
@@ -199,8 +195,14 @@ function scopeDealFilters(
   filters: ListDealsFilters,
 ): ListDealsFilters {
   if (hasPermission(ctx, "deals.view.all")) return filters;
-  requirePermission(ctx, "deals.view.own");
-  return { ...filters, ownerMembershipId: ctx.membershipId };
+  if (hasPermission(ctx, "deals.view.own")) {
+    return { ...filters, ownerMembershipId: ctx.membershipId };
+  }
+  // Won-only viewers (Delivery and Finance while departure.won_only is on).
+  if (hasPermission(ctx, "deals.view.won")) {
+    return { ...filters, visibleOutcome: "WON" };
+  }
+  throw deny(ctx, "deals.view", viewPermissionKeys("deals"));
 }
 
 /** Every matching deal, unpaged -- internal use; list screens and the API use `listDealsPage` (FIG-789). */
@@ -469,7 +471,7 @@ export async function assignDeal(
   newOwnerMembershipId: string,
 ) {
   if (!canReassignDeals(ctx)) {
-    throw new ForbiddenError("deals.edit.all (to reassign a deal)");
+    throw deny(ctx, "deals.edit.all (to reassign a deal)", ["deals.edit.all"]);
   }
   const deal = await loadOwnedDeal(ctx, dealId);
   if (deal.archivedAt) {

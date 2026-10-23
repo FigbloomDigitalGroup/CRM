@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getClientIp } from "@/app/api/_lib/clientRequest";
+import { getClientInfo } from "@/app/api/_lib/clientRequest";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
-import { SESSION_COOKIE_NAME } from "@/auth/session";
+import { setSessionCookie } from "@/app/api/_lib/sessionCookie";
 import { login } from "@/services/authService";
 
 const LoginSchema = z.object({
@@ -21,21 +21,24 @@ const LoginSchema = z.object({
 export async function POST(request: Request) {
   return handleRoute(async () => {
     const body = await parseJsonBody(request, LoginSchema);
-    const { token, expiresAt, userId, organizationSlug } = await login(
+    const client = getClientInfo(request);
+    const { token, expiresAt, userId, organizationSlug, access } = await login(
       body.email,
       body.password,
-      request.headers.get("user-agent"),
-      getClientIp(request),
+      client.userAgent,
+      client.ipAddress,
+      client.place,
     );
 
-    const response = NextResponse.json({ userId, organizationSlug });
-    response.cookies.set(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      expires: expiresAt,
+    // `awaitingAccess` (B1.12) lets the UI send an account with no
+    // organisation to the awaiting-access screen instead of an empty app.
+    const response = NextResponse.json({
+      userId,
+      organizationSlug,
+      awaitingAccess: access.awaitingAccess,
+      access,
     });
+    setSessionCookie(response, token, expiresAt);
     return response;
   });
 }

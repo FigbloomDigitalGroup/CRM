@@ -1,10 +1,12 @@
 import type { AuthContext } from "../auth/context";
 import {
+  deny,
   hasPermission,
   requirePermission,
   requireOwnedRecordPermission,
 } from "../auth/context";
-import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
+import { NotFoundError, ValidationError } from "../auth/errors";
+import { assertRecordVisible } from "../auth/visibility";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
@@ -138,6 +140,8 @@ async function loadOwnedLead(ctx: AuthContext, leadId: string) {
   if (!lead) {
     throw new NotFoundError("Lead", leadId);
   }
+  // A lead the caller cannot see answers 404, same as one that does not exist.
+  assertRecordVisible(ctx, "leads", "Lead", leadId, lead);
   return lead;
 }
 
@@ -149,14 +153,7 @@ async function loadOwnedLead(ctx: AuthContext, leadId: string) {
  * colleagues in the same org.
  */
 export async function getLead(ctx: AuthContext, leadId: string) {
-  const lead = await loadOwnedLead(ctx, leadId);
-  requireOwnedRecordPermission(
-    ctx,
-    "leads.view.own",
-    "leads.view.all",
-    lead.ownerMembershipId,
-  );
-  return lead;
+  return loadOwnedLead(ctx, leadId);
 }
 
 export async function updateLead(
@@ -252,6 +249,11 @@ function scopeLeadFilters(
 ): ListLeadsFilters {
   if (hasPermission(ctx, "leads.view.all")) return filters;
   requirePermission(ctx, "leads.view.own");
+  // Sales shared pool (departure.shared_pool): own leads plus unassigned ones.
+  if (hasPermission(ctx, "leads.view.shared")) {
+    // A forged owner filter is dropped, never trusted: the pool is the boundary.
+    return { ...filters, ownerMembershipId: undefined, ownedByOrUnassigned: ctx.membershipId };
+  }
   return { ...filters, ownerMembershipId: ctx.membershipId };
 }
 
@@ -427,7 +429,7 @@ export async function convertLead(
     dealOwnerMembershipId !== (lead.ownerMembershipId ?? ctx.membershipId)
   ) {
     if (!hasPermission(ctx, "leads.assign")) {
-      throw new ForbiddenError("leads.assign (to choose a different deal owner)");
+      throw deny(ctx, "leads.assign (to choose a different deal owner)", ["leads.assign"]);
     }
     const member = await loadActiveMemberWithPermissions(
       ctx.organizationId,

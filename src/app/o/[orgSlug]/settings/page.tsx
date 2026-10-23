@@ -182,10 +182,10 @@ async function NotificationPreferencesSection({
   orgSlug: string;
 }) {
   const preferences = await getMyNotificationPreferences(ctx);
-  const rows = (Object.keys(preferences) as (keyof typeof preferences)[]).map((type) => ({
-    type,
-    ...preferences[type],
-  }));
+  // This screen predates the nine-type preferences (B1.11) and is replaced by the
+  // redesigned Preferences page; until then it lists the four types it knows.
+  const shown = ["LEAD_ASSIGNED", "TASK_DUE", "TASK_OVERDUE", "DEAL_WON_HANDOFF"] as const;
+  const rows = shown.map((type) => ({ type, ...preferences[type] }));
 
   return (
     <div className="card">
@@ -225,11 +225,18 @@ async function MembersSection({
 
       <MembersTable
         orgSlug={orgSlug}
-        members={members.map((m) => ({
-          ...m,
-          invitedAt: m.invitedAt?.toISOString() ?? null,
-          joinedAt: m.joinedAt?.toISOString() ?? null,
-        }))}
+        members={members
+          // The current screen has no "removed" state (the redesigned
+          // Settings will); the API returns them with `state: "removed"`.
+          .filter(
+            (m): m is typeof m & { status: "ACTIVE" | "INACTIVE" | "PENDING" } =>
+              m.status !== "REMOVED",
+          )
+          .map((m) => ({
+            ...m,
+            invitedAt: m.invitedAt?.toISOString() ?? null,
+            joinedAt: m.joinedAt?.toISOString() ?? null,
+          }))}
         roles={roleOptions}
         canAssignRole={canAssignRole}
         canManage={canManageMembers}

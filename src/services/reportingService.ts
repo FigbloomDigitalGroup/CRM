@@ -1,5 +1,6 @@
 import type { AuthContext } from "../auth/context";
-import { hasPermission, requirePermission } from "../auth/context";
+import {
+  deny, hasPermission, requirePermission } from "../auth/context";
 import { ForbiddenError } from "../auth/errors";
 import { listDeals } from "./dealService";
 import { listLeads } from "./leadService";
@@ -79,7 +80,7 @@ export async function getMyActionableWork(ctx: AuthContext) {
     !hasPermission(ctx, "reporting.view.own") &&
     !hasPermission(ctx, "reporting.view.all")
   ) {
-    throw new ForbiddenError("reporting.view.own (or .all)");
+    throw deny(ctx, "reporting.view.own (or .all)", ["reporting.view.own"]);
   }
 
   const today = startOfDay(new Date());
@@ -174,7 +175,8 @@ export async function getOrganizationMetrics(
   };
 }
 
-export type ReportScopeLevel = "all" | "own" | null;
+/** `won`: the caller sees won deals only (departure.won_only), so open-pipeline and lost figures are not reported. */
+export type ReportScopeLevel = "all" | "own" | "won" | null;
 
 /**
  * What a caller's reports cover, per area. Management (`reporting.view.all`)
@@ -186,14 +188,20 @@ export type ReportScopeLevel = "all" | "own" | null;
 export function getReportScope(ctx: AuthContext) {
   const organization = hasPermission(ctx, "reporting.view.all");
   if (!organization && !hasPermission(ctx, "reporting.view.own")) {
-    throw new ForbiddenError("reporting.view.own (or .all)");
+    throw deny(ctx, "reporting.view.own (or .all)", ["reporting.view.own"]);
   }
-  const level = (all: string, own: string): ReportScopeLevel =>
-    hasPermission(ctx, all) ? "all" : hasPermission(ctx, own) ? "own" : null;
+  const level = (all: string, own: string, won?: string): ReportScopeLevel =>
+    hasPermission(ctx, all)
+      ? "all"
+      : hasPermission(ctx, own)
+        ? "own"
+        : won && hasPermission(ctx, won)
+          ? "won"
+          : null;
   return {
     mode: organization ? ("organization" as const) : ("personal" as const),
     leads: level("leads.view.all", "leads.view.own"),
-    deals: level("deals.view.all", "deals.view.own"),
+    deals: level("deals.view.all", "deals.view.own", "deals.view.won"),
     tasks: level("tasks.view.all", "tasks.view.own"),
   };
 }
@@ -248,7 +256,10 @@ export async function getMyMetrics(
     scope.leads ? getLeadVolumeBySource(ctx.organizationId, leadFilters) : null,
     scope.leads ? getLeadConversionSummary(ctx.organizationId, leadFilters) : null,
     scope.deals ? getDealOutcomeSummary(ctx.organizationId, dealFilters) : null,
-    scope.deals ? getPipelineValueByStage(ctx.organizationId, dealFilters) : null,
+    // A won-only viewer never sees the open pipeline.
+    scope.deals && scope.deals !== "won"
+      ? getPipelineValueByStage(ctx.organizationId, dealFilters)
+      : null,
     scope.deals ? getSalesByService(ctx.organizationId, dealFilters) : null,
     scope.tasks ? getFollowUpStatusBreakdown(ctx.organizationId, taskFilters) : null,
   ]);
@@ -259,10 +270,15 @@ export async function getMyMetrics(
     dateTo,
     leadVolumeBySource,
     leadConversion,
-    dealOutcomes:
-      dealOutcomes && !canSeeValue
-        ? { ...dealOutcomes, won: { ...dealOutcomes.won, value: null } }
-        : dealOutcomes,
+    dealOutcomes: dealOutcomes
+      ? {
+          ...dealOutcomes,
+          won:
+            canSeeValue ? dealOutcomes.won : { ...dealOutcomes.won, value: null },
+          // Lost deals are not visible to a won-only viewer, so none are reported.
+          lost: scope.deals === "won" ? { count: 0 } : dealOutcomes.lost,
+        }
+      : dealOutcomes,
     pipelineByStage:
       pipelineByStage?.map((row) => ({
         ...row,

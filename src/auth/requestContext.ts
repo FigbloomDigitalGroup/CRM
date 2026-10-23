@@ -1,3 +1,4 @@
+import type { Session } from "@prisma/client";
 import { cookies } from "next/headers";
 import { adminDb } from "../db/adminClient";
 import { resolveActiveMembership } from "../repositories/memberships";
@@ -7,11 +8,13 @@ import {
   verifySessionCookieValue,
 } from "./devSession";
 import {
+  AwaitingAccessError,
   NoActiveMembershipError,
   NotFoundError,
+  SessionExpiredError,
   UnauthorizedError,
 } from "./errors";
-import { resolveSessionUserId, SESSION_COOKIE_NAME } from "./session";
+import { lookupSession, SESSION_COOKIE_NAME } from "./session";
 
 /**
  * The minimal shape this module needs from `next/headers`'s `cookies()`.
@@ -36,16 +39,68 @@ export interface CookieReader {
  * test, or any deploy that simply left NODE_ENV unset -- fail-closed by
  * default now, same reasoning as src/app/api/dev-session/route.ts.
  */
-async function resolveUserId(cookieStore: CookieReader): Promise<string | null> {
-  const realUserId = await resolveSessionUserId(
-    cookieStore.get(SESSION_COOKIE_NAME)?.value,
-  );
-  if (realUserId) return realUserId;
+export interface Identity {
+  userId: string;
+  /** The server-side session behind the request; null for the dev-session fallback. */
+  session: Session | null;
+  sessionToken: string | null;
+}
 
-  if (process.env.NODE_ENV !== "development") return null;
-  return verifySessionCookieValue(
-    cookieStore.get(DEV_SESSION_COOKIE_NAME)?.value,
-  );
+async function resolveIdentity(cookieStore: CookieReader): Promise<Identity | null> {
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  const found = await lookupSession(token);
+  if (found.state === "active") {
+    return { userId: found.userId, session: found.session, sessionToken: token ?? null };
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    const devUserId = verifySessionCookieValue(
+      cookieStore.get(DEV_SESSION_COOKIE_NAME)?.value,
+    );
+    if (devUserId) return { userId: devUserId, session: null, sessionToken: null };
+  }
+
+  // A cookie that points at an ended session is not the same as no cookie at
+  // all: the caller gets the structured "session ended" 401 (B1.04) so the UI
+  // can show the sign-in screen with the email already filled in.
+  if (found.state === "expired" || found.state === "revoked") {
+    throw new SessionExpiredError(found.state, found.email);
+  }
+  return null;
+}
+
+async function resolveUserId(cookieStore: CookieReader): Promise<string | null> {
+  return (await resolveIdentity(cookieStore))?.userId ?? null;
+}
+
+/**
+ * Identity without an organisation -- the entry point for `/api/me/*` and
+ * `/api/session/*`, which belong to the person, not to one organisation.
+ */
+export async function resolveUserContext(
+  cookieStoreOverride?: CookieReader,
+): Promise<Identity> {
+  const cookieStore = cookieStoreOverride ?? (await cookies());
+  const identity = await resolveIdentity(cookieStore);
+  if (!identity) throw new UnauthorizedError();
+  return identity;
+}
+
+/**
+ * Like `resolveUserContext`, but also requires at least one active
+ * membership. A signed-up user with no access yet (B1.12) can reach only
+ * sign-out and their profile; every other personal endpoint uses this and is
+ * refused with `AWAITING_ACCESS` until they are given a membership.
+ */
+export async function resolveMemberUserContext(
+  cookieStoreOverride?: CookieReader,
+): Promise<Identity> {
+  const identity = await resolveUserContext(cookieStoreOverride);
+  const active = await adminDb.membership.count({
+    where: { userId: identity.userId, status: "ACTIVE" },
+  });
+  if (active === 0) throw new AwaitingAccessError();
+  return identity;
 }
 
 /**
