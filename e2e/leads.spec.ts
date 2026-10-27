@@ -156,10 +156,14 @@ test.describe("the lead page", () => {
     await expect(alert).toContainText(`E2E question ${suffix}`);
     // Answer it (saved as you type) and the move now succeeds.
     // Earlier runs against this shared database leave their own required questions on the service: answer every one the page still asks for.
-    const stillAsked = page.getByRole("region", { name: /^Qualification/ }).locator("input[aria-invalid=true]");
-    for (const box of await stillAsked.all()) await box.fill("Answered");
+    const stillAsked = page.getByRole("region", { name: /^Qualification/ }).locator("[aria-invalid=true]");
+    // Whatever else the service asks (a seeded choice, or a question an earlier run left behind): answer each, by its kind.
+    for (const box of await stillAsked.all()) {
+      if ((await box.evaluate((e) => e.tagName)) === "SELECT") await box.selectOption({ index: 1 });
+      else await box.fill("Answered");
+    }
     await expect(page.getByText(/saved$/)).toBeVisible();
-    await expect(page.getByRole("region", { name: /^Qualification/ }).locator("input[aria-invalid=true]")).toHaveCount(0, { timeout: 45_000 }); // the page has re-read what is still missing
+    await expect(page.getByRole("region", { name: /^Qualification/ }).locator("[aria-invalid=true]")).toHaveCount(0, { timeout: 45_000 }); // the page has re-read what is still missing
     await strip.getByRole("button", { name: /Qualified/ }).click();
     // The move is a server write and a re-read: allow for a slow runner.
     await expect(strip.getByRole("button", { name: /Qualified/ })).toHaveAttribute("aria-current", "step", { timeout: 20_000 });

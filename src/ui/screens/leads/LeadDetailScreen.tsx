@@ -485,7 +485,7 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
                   return (
                     <label key={q.key} className="fb-ld-field" htmlFor={id}>
                       {label}
-                      <select id={id} className="fb-ld-select" value={String(v)} disabled={ro} onChange={(e) => answer(q.key, e.target.value)}>
+                      <select id={id} className="fb-ld-select" value={String(v)} disabled={ro} aria-invalid={missing ? true : undefined} onChange={(e) => answer(q.key, e.target.value)}>
                         <option value="">Choose…</option>
                         {q.options.map((o) => (
                           <option key={o.value} value={o.value}>
@@ -500,7 +500,7 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
                   return (
                     <label key={q.key} className="fb-ld-field" htmlFor={id}>
                       {label}
-                      <select id={id} className="fb-ld-select" value={v === true ? "yes" : v === false ? "no" : ""} disabled={ro} onChange={(e) => answer(q.key, e.target.value === "" ? "" : e.target.value === "yes")}>
+                      <select id={id} className="fb-ld-select" aria-invalid={missing ? true : undefined} value={v === true ? "yes" : v === false ? "no" : ""} disabled={ro} onChange={(e) => answer(q.key, e.target.value === "" ? "" : e.target.value === "yes")}>
                         <option value="">Choose…</option>
                         <option value="yes">Yes</option>
                         <option value="no">No</option>
