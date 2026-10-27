@@ -1,6 +1,9 @@
 import type { Prisma } from "@prisma/client";
 import { type OrgScopedClient, withOrgContext } from "../db/orgScopedClient";
 import { pickOwnerForRule } from "./websiteLeadAssignmentRules";
+import { RULE_KEYS, assertRuleMay } from "../automations/catalogue";
+import { createRuleTask } from "../automations/effects";
+import { logRuleRun, readOwnRule } from "../automations/runLog";
 
 /**
  * Storage key for the round-robin assignment cursor in
@@ -164,7 +167,12 @@ export async function ingestWebsiteLead(
   organizationId: string,
   input: WebsiteLeadInput,
 ): Promise<WebsiteLeadResult> {
-  return withOrgContext(organizationId, async (tx) => {
+  // What the automation rules did, written to the run log once the lead is safely committed (B4.02).
+  const ran: {
+    assignment?: { how: "RULE" | "ROUND_ROBIN" | "NONE"; reason?: string };
+    followUpTaskId?: string;
+  } = {};
+  const result = await withOrgContext(organizationId, async (tx) => {
     let companyId: string | null = null;
     let companyMatched = false;
     if (input.company) {
@@ -276,15 +284,24 @@ export async function ingestWebsiteLead(
       serviceId: serviceInterestId ?? null,
     });
 
-    let ownerMembershipId: string | null;
-    if (ruleOwnerMembershipId) {
+    // B4.02: the assignment is an automation rule Management can switch off; off leaves the lead unassigned.
+    const assignmentRule = await readOwnRule(tx, organizationId, RULE_KEYS.WEBSITE_LEAD_ASSIGNMENT);
+    let ownerMembershipId: string | null = null;
+    if (!assignmentRule.enabled) {
+      ran.assignment = { how: "NONE", reason: "The assignment rule is switched off." };
+    } else if (ruleOwnerMembershipId) {
+      assertRuleMay(RULE_KEYS.WEBSITE_LEAD_ASSIGNMENT, "ASSIGN_OWNER");
       ownerMembershipId = ruleOwnerMembershipId;
+      ran.assignment = { how: "RULE" };
     } else {
       const assignmentMode = await getWebsiteLeadAssignmentMode(tx, organizationId);
-      ownerMembershipId =
-        assignmentMode === "ROUND_ROBIN"
-          ? await pickNextAssignmentOwner(tx, organizationId)
-          : null;
+      if (assignmentMode === "ROUND_ROBIN") {
+        assertRuleMay(RULE_KEYS.WEBSITE_LEAD_ASSIGNMENT, "ASSIGN_OWNER");
+        ownerMembershipId = await pickNextAssignmentOwner(tx, organizationId);
+        ran.assignment = ownerMembershipId ? { how: "ROUND_ROBIN" } : { how: "NONE", reason: "Nobody was eligible to take it." };
+      } else {
+        ran.assignment = { how: "NONE", reason: "No assignment rule matched and the fallback is Unassigned." };
+      }
     }
 
     const lead = await tx.lead.create({
@@ -307,19 +324,24 @@ export async function ingestWebsiteLead(
       },
     });
 
-    if (ownerMembershipId) {
-      await tx.task.create({
-        data: {
+    const followUpRule = await readOwnRule(tx, organizationId, RULE_KEYS.NEW_LEAD_FOLLOW_UP_TASK);
+    if (ownerMembershipId && followUpRule.enabled) {
+      const hours = typeof followUpRule.params.dueInHours === "number" ? followUpRule.params.dueInHours : 24;
+      const task = await createRuleTask(
+        {
           organizationId,
+          ruleKey: RULE_KEYS.NEW_LEAD_FOLLOW_UP_TASK,
           title: "Follow up on new website lead",
           description: `Acknowledge and qualify the new website lead from ${input.name}.`,
           assigneeMembershipId: ownerMembershipId,
           createdByMembershipId: ownerMembershipId,
-          dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          dueAt: new Date(Date.now() + hours * 60 * 60 * 1000),
           priority: "HIGH",
           leadId: lead.id,
         },
-      });
+        tx,
+      );
+      ran.followUpTaskId = task.id;
     }
 
     return {
@@ -331,4 +353,29 @@ export async function ingestWebsiteLead(
       contactMatched,
     };
   });
+
+  // The run log (B4.02): one entry per rule that acted on this lead. A logging problem never fails the submission.
+  const target = { organizationId, entityType: "Lead", entityId: result.leadId, triggerKey: `lead:${result.leadId}` };
+  try {
+    if (ran.assignment) {
+      await logRuleRun(
+        { ...target, ruleKey: RULE_KEYS.WEBSITE_LEAD_ASSIGNMENT },
+        ran.assignment.how === "NONE" ? "SKIPPED" : "APPLIED",
+        {
+          result:
+            ran.assignment.how === "RULE"
+              ? "Assigned by a website assignment rule."
+              : ran.assignment.how === "ROUND_ROBIN"
+                ? "Assigned by the round robin."
+                : `Left unassigned. ${ran.assignment.reason ?? ""}`.trim(),
+        },
+      );
+    }
+    if (ran.followUpTaskId) {
+      await logRuleRun({ ...target, ruleKey: RULE_KEYS.NEW_LEAD_FOLLOW_UP_TASK }, "APPLIED", { result: "Created the follow-up task for the owner.", detail: { taskId: ran.followUpTaskId } });
+    }
+  } catch {
+    // best-effort
+  }
+  return result;
 }

@@ -59,12 +59,27 @@ export function maskAmount<T extends { amount?: unknown }>(
   return { ...row, amount: null, amountMasked: true };
 }
 
+/**
+ * A recurring service's value follows the same rule as a deal's: Management and Finance see it, and so does the
+ * person who owns the service.
+ */
+export function maskServiceValue<T extends { ownerMembershipId: string | null; value?: unknown }>(
+  ctx: AuthContext,
+  row: T,
+): T & { valueMasked: boolean } {
+  if (canSeeDealValue(ctx, row)) return { ...row, valueMasked: false };
+  return { ...row, value: null, valueMasked: true };
+}
+
 /** Keys that carry money anywhere in a stored snapshot (audit before/after values). */
 const VALUE_KEYS = new Set(["value", "amount", "total", "subtotal", "price", "discount"]);
 const MARGIN_KEYS = new Set(["margin", "cost", "costPrice"]);
 
 /** Entity types whose audit snapshots can hold a deal-derived money field. */
-const MONEY_ENTITIES = new Set(["Deal", "ProposalReference", "Quote", "QuoteLine", "Payment"]);
+const MONEY_ENTITIES = new Set(["Deal", "ProposalReference", "Quote", "QuoteLine", "Payment", "RecurringService"]);
+
+/** Entity types that hold payments; their audit snapshots are for Finance and Management only (finance.view.payments). */
+export const PAYMENT_ENTITIES: ReadonlySet<string> = new Set(["Invoice", "PaymentRecord", "DealPaymentNote"]);
 
 /**
  * Removes money fields from an audit snapshot for callers who may not see the

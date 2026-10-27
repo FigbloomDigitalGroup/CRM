@@ -6,7 +6,6 @@ import { adminDb } from "../db/adminClient";
 import { logger } from "../lib/logger";
 import { createActivity } from "../repositories/activities";
 import { recordAuditEvent } from "../repositories/auditEvents";
-import { updateCompany as updateCompanyRecord } from "../repositories/companies";
 import {
   createCompanyServiceLink,
   updateCompanyServiceLink,
@@ -21,9 +20,13 @@ import {
   takeOwnerlessHandoff,
   updateDealHandoffRecord,
 } from "../repositories/dealHandoffs";
-import { createTask, deleteTasksByIds } from "../repositories/tasks";
+import { deleteTasksByIds } from "../repositories/tasks";
+import { RULE_KEYS } from "../automations/catalogue";
+import { createRuleTask } from "../automations/effects";
+import { loadOwnRule, logRuleRun } from "../automations/runLog";
 import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 import { getDeal } from "./dealService";
+import { LIFECYCLE_KEYS, transitionCompany } from "./lifecycleService";
 import { notifyDealWonHandoff, notifyHandoffEvent } from "./notificationService";
 import { assertEligibleTaskAssignee } from "./ownerEligibility";
 
@@ -345,14 +348,18 @@ async function createOnboardingTasks(
   settings: HandoffSettings,
   snapshot: { scope?: string | null; requirements?: string | null } = {},
 ): Promise<string[]> {
+  // B4.02: the onboarding tasks are an automation rule Management can switch off. Off: the handoff goes ahead without
+  // them, and nothing is claimed, so switching the rule on later and taking the handoff still creates them.
+  if (!(await loadOwnRule(organizationId, RULE_KEYS.HANDOFF_ONBOARDING_TASKS)).enabled) return [];
   // Claimed first, so a repeated call (two people taking at once, a retry) never creates a second set.
   if (!(await markTasksCreated(organizationId, handoffId))) return [];
   const ids: string[] = [];
   const now = Date.now();
   try {
     for (const template of settings.tasks) {
-      const task = await createTask({
+      const task = await createRuleTask({
         organizationId,
+        ruleKey: RULE_KEYS.HANDOFF_ONBOARDING_TASKS,
         title: template.title,
         description: template.description,
         requirements: requirementsSnapshot(snapshot),
@@ -369,6 +376,13 @@ async function createOnboardingTasks(
     await deleteTasksByIds(organizationId, ids).catch(() => undefined);
     await updateDealHandoffRecord(organizationId, handoffId, { tasksCreatedAt: null }).catch(() => undefined);
     throw err;
+  }
+  if (ids.length > 0) {
+    await logRuleRun(
+      { organizationId, ruleKey: RULE_KEYS.HANDOFF_ONBOARDING_TASKS, triggerKey: `handoff:${handoffId}`, entityType: "Deal", entityId: dealId },
+      "APPLIED",
+      { result: `Created ${ids.length} onboarding task${ids.length === 1 ? "" : "s"} for the Delivery owner.`, detail: { tasks: ids.length } },
+    ).catch(() => undefined);
   }
   return ids;
 }
@@ -465,19 +479,17 @@ export async function startDealWonHandoff(
         : await adminDb.customerLifecycleState.findFirst({
             where: { organizationId, key: "CUSTOMER", isActive: true },
           });
-      if (customerState && company.lifecycleStateId !== customerState.id) {
-        await updateCompanyRecord(organizationId, company.id, { lifecycleStateId: customerState.id });
-        lifecycleStateChanged = true;
-        await recordAuditEvent({
+      if (customerState) {
+        const moved = await transitionCompany({
           organizationId,
+          companyId: company.id,
+          toStateId: customerState.id,
+          reason: "DEAL_WON",
           actorMembershipId: ctx.membershipId,
-          action: "company.lifecycle_state_changed",
-          entityType: "Company",
-          entityId: company.id,
-          previousValue: { lifecycleStateId: company.lifecycleStateId },
-          newValue: { lifecycleStateId: customerState.id },
-          metadata: { reason: "deal_won_handoff", dealId: deal.id },
+          auditReason: "deal_won_handoff",
+          detail: { dealId: deal.id },
         });
+        lifecycleStateChanged = moved.changed;
       } else if (!customerState) {
         logger.warn({ organizationId, dealId: deal.id }, "Won-deal handoff found no customer lifecycle state to move the company to");
       }
@@ -673,6 +685,7 @@ export async function takeHandoff(ctx: AuthContext, dealId: string) {
   const settings = await loadSettings(ctx.organizationId);
   const taskIds = await createOnboardingTasks(ctx.organizationId, ctx.membershipId, handoff.id, dealId, deal.companyId, ctx.membershipId, settings, { scope: handoff.scope, requirements: handoff.requirements });
 
+  await transitionCompany({ organizationId: ctx.organizationId, companyId: deal.companyId, toKey: LIFECYCLE_KEYS.ONBOARDING, reason: "DEAL_WON", actorMembershipId: ctx.membershipId, auditReason: "handoff_taken", detail: { dealId, handoff: "taken" } });
   const company = await adminDb.company.findFirst({ where: { id: deal.companyId, organizationId: ctx.organizationId }, select: { name: true } });
   const me = await adminDb.membership.findFirst({ where: { id: ctx.membershipId }, select: { user: { select: { name: true } } } });
   await timelineNote(ctx, dealId, deal.companyId, "Delivery owner took the handoff", `${me?.user.name ?? "Someone in Delivery"} took this handoff. ${taskIds.length} onboarding task${taskIds.length === 1 ? "" : "s"} created.`);
@@ -763,6 +776,9 @@ export async function updateHandoff(ctx: AuthContext, dealId: string, input: Upd
 
   let lifecycleStateChanged = false;
   if (delivered) lifecycleStateChanged = await moveCompanyToActiveCustomer(ctx, deal.companyId, dealId);
+  else if (input.status === "ONBOARDING") {
+    lifecycleStateChanged = (await transitionCompany({ organizationId: ctx.organizationId, companyId: deal.companyId, toKey: LIFECYCLE_KEYS.ONBOARDING, reason: "DEAL_WON", actorMembershipId: ctx.membershipId, auditReason: "handoff_reopened", detail: { dealId, handoff: "reopened" } })).changed;
+  }
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -787,25 +803,18 @@ export async function updateHandoff(ctx: AuthContext, dealId: string, input: Upd
   return getHandoffView(ctx, dealId);
 }
 
-/** Delivered customers become Active Customers (B3.02 later turns this into the full lifecycle engine). */
+/** Delivered customers become Active Customers (the lifecycle engine, B3.02, writes the history and the audit event). */
 async function moveCompanyToActiveCustomer(ctx: AuthContext, companyId: string, dealId: string): Promise<boolean> {
-  const [company, state] = await Promise.all([
-    adminDb.company.findFirst({ where: { id: companyId, organizationId: ctx.organizationId }, select: { lifecycleStateId: true } }),
-    adminDb.customerLifecycleState.findFirst({ where: { organizationId: ctx.organizationId, key: "ACTIVE_CUSTOMER", isActive: true } }),
-  ]);
-  if (!company || !state || company.lifecycleStateId === state.id) return false;
-  await updateCompanyRecord(ctx.organizationId, companyId, { lifecycleStateId: state.id });
-  await recordAuditEvent({
+  const moved = await transitionCompany({
     organizationId: ctx.organizationId,
+    companyId,
+    toKey: LIFECYCLE_KEYS.ACTIVE,
+    reason: "HANDOFF_DELIVERED",
     actorMembershipId: ctx.membershipId,
-    action: "company.lifecycle_state_changed",
-    entityType: "Company",
-    entityId: companyId,
-    previousValue: { lifecycleStateId: company.lifecycleStateId },
-    newValue: { lifecycleStateId: state.id },
-    metadata: { reason: "handoff_delivered", dealId },
+    auditReason: "handoff_delivered",
+    detail: { dealId },
   });
-  return true;
+  return moved.changed;
 }
 
 export interface HandoffListQuery extends PageRequest {

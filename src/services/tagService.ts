@@ -60,9 +60,14 @@ function requireCanSeeTags(ctx: AuthContext) {
   if (!some) requirePermission(ctx, "tags.manage");
 }
 
-export async function listTags(ctx: AuthContext, query?: string) {
+/**
+ * The tag picker. Hidden tags (B4.06) are left out unless a tag manager asks for them with `includeHidden`;
+ * they stay on the records that already carry them.
+ */
+export async function listTags(ctx: AuthContext, query?: string, options: { includeHidden?: boolean } = {}) {
   requireCanSeeTags(ctx);
-  return listTagsWithUsage(ctx.organizationId, query?.trim() || undefined);
+  if (options.includeHidden) requirePermission(ctx, "tags.manage");
+  return listTagsWithUsage(ctx.organizationId, query?.trim() || undefined, !options.includeHidden);
 }
 
 export async function createTag(ctx: AuthContext, input: { name: string; colour?: string }) {
@@ -194,14 +199,18 @@ export async function changeTags(ctx: AuthContext, entity: TaggableEntity, recor
   const addIds = new Set(change.addTagIds ?? []);
   const wanted = await findTagsByIds(ctx.organizationId, [...addIds]);
   for (const id of addIds) {
-    if (!wanted.some((t) => t.id === id)) issues.push({ path: "addTagIds", message: `Tag ${id} does not exist.`, code: "UNKNOWN_TAG" });
+    const tag = wanted.find((t) => t.id === id);
+    if (!tag) issues.push({ path: "addTagIds", message: `Tag ${id} does not exist.`, code: "UNKNOWN_TAG" });
+    else if (!tag.isActive) issues.push({ path: "addTagIds", message: `"${tag.name}" is hidden and cannot be added to records.`, code: "TAG_HIDDEN" });
   }
 
   const created: string[] = [];
   for (const raw of change.addTagNames ?? []) {
     const name = cleanName(raw);
     const existing = await findTagByName(ctx.organizationId, name);
-    if (existing) {
+    if (existing && !existing.isActive) {
+      issues.push({ path: "addTagNames", message: `"${existing.name}" is hidden and cannot be added to records.`, code: "TAG_HIDDEN" });
+    } else if (existing) {
       addIds.add(existing.id);
     } else if (hasPermission(ctx, "tags.manage")) {
       const tag = await createTagRecord({ organizationId: ctx.organizationId, name, colour: "forest", createdByMembershipId: ctx.membershipId });

@@ -118,18 +118,26 @@ function toTitle(key: string): string {
 }
 
 /**
- * Idempotent: safe to call repeatedly (every deploy, or whenever a new
- * organization is provisioned) -- every row is an upsert keyed on
+ * Idempotent: safe to call repeatedly -- every row is an upsert keyed on
  * (organizationId, key).
+ *
+ * By default an existing row is brought back to the catalogue (its name and
+ * order), which is right when an organization is provisioned. For an
+ * organization that already exists and may have renamed or reordered its own
+ * statuses, stages and sources, pass `fillOnly`: rows that are missing are
+ * created and nothing that is already there is changed (the upgrade backfill,
+ * scripts/backfill-organization-defaults.ts).
  */
 export async function seedOrganizationDefaults(
   organizationId: string,
+  options: { fillOnly?: boolean } = {},
 ): Promise<void> {
+  const fillOnly = options.fillOnly === true;
   await Promise.all(
     LEAD_SOURCES.map((s) =>
       adminDb.leadSource.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: { name: s.name, sequence: s.sequence },
+        update: fillOnly ? {} : { name: s.name, sequence: s.sequence },
         create: { organizationId, ...s },
       }),
     ),
@@ -139,7 +147,7 @@ export async function seedOrganizationDefaults(
     LEAD_STATUSES.map((s) =>
       adminDb.leadStatus.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: { name: s.name, sequence: s.sequence },
+        update: fillOnly ? {} : { name: s.name, sequence: s.sequence },
         create: { organizationId, ...s },
       }),
     ),
@@ -149,12 +157,14 @@ export async function seedOrganizationDefaults(
     PIPELINE_STAGES.map((s) =>
       adminDb.pipelineStage.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: {
-          name: s.name,
-          sequence: s.sequence,
-          isWon: s.isWon ?? false,
-          isLost: s.isLost ?? false,
-        },
+        update: fillOnly
+          ? {}
+          : {
+              name: s.name,
+              sequence: s.sequence,
+              isWon: s.isWon ?? false,
+              isLost: s.isLost ?? false,
+            },
         create: {
           organizationId,
           key: s.key,
@@ -171,7 +181,7 @@ export async function seedOrganizationDefaults(
     CUSTOMER_LIFECYCLE_STATES.map((s) =>
       adminDb.customerLifecycleState.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: { name: s.name, sequence: s.sequence },
+        update: fillOnly ? {} : { name: s.name, sequence: s.sequence },
         create: { organizationId, ...s },
       }),
     ),
@@ -181,7 +191,7 @@ export async function seedOrganizationDefaults(
     LOST_REASONS.map((s) =>
       adminDb.lostReason.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: { name: s.name, sequence: s.sequence },
+        update: fillOnly ? {} : { name: s.name, sequence: s.sequence },
         create: { organizationId, ...s },
       }),
     ),
@@ -191,7 +201,7 @@ export async function seedOrganizationDefaults(
     SERVICES.map((s) =>
       adminDb.service.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: { name: s.name, category: s.category, sequence: s.sequence },
+        update: fillOnly ? {} : { name: s.name, category: s.category, sequence: s.sequence },
         create: { organizationId, ...s },
       }),
     ),

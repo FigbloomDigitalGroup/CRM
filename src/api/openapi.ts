@@ -16,6 +16,8 @@ import {
 } from "./dto/files";
 import { MeContextSchema } from "./dto/meContext";
 import { STAGE2_OPERATIONS } from "./stage2Operations";
+import { STAGE3_OPERATIONS } from "./stage3Operations";
+import { STAGE4_OPERATIONS } from "./stage4Operations";
 import {
   ExtendSessionResponseSchema,
   MyProfileSchema,
@@ -34,6 +36,8 @@ import {
   UpdatePreferencesResponseSchema,
 } from "./dto/stage1";
 import { LEAD_SORT_FIELDS } from "../repositories/leads";
+import { ACCOUNT_OPERATIONS, SECURITY_SCHEMES } from "./accountOperations";
+import { allowedRolesFor, derivedOperations, roleOutcomesFor } from "./derivedOperations";
 
 /**
  * The OpenAPI 3.1 document, generated from the same Zod schemas the routes
@@ -64,6 +68,9 @@ export interface OperationDef {
   /** Replaces the generic text for a status where this operation means something more specific. */
   errorNotes?: Partial<Record<number, string>>;
 }
+
+/** The contract version. 1.0.0 is the V1 freeze (docs/API_CHANGELOG.md); later changes bump it and add a change note. */
+export const API_VERSION = "1.0.0";
 
 const ORG = "/api/orgs/{orgSlug}";
 
@@ -320,6 +327,8 @@ export const OPERATIONS: OperationDef[] = [
     errors: [400, 401, 403],
   },
   ...STAGE2_OPERATIONS,
+  ...STAGE3_OPERATIONS,
+  ...STAGE4_OPERATIONS,
 ];
 
 function json(schema: z.ZodType) {
@@ -433,11 +442,14 @@ export function buildOpenApiDocument() {
         },
       };
     }
+    const roles = allowedRolesFor(`${op.method.toUpperCase()} ${op.path}`);
     (paths[op.path] ??= {})[op.method] = {
       operationId: op.operationId,
       summary: op.summary,
       tags: op.tags,
       security: [{ sessionCookie: [] }],
+      ...(roles ? { "x-allowed-roles": roles } : {}),
+      ...(roles ? { "x-role-outcomes": roleOutcomesFor(`${op.method.toUpperCase()} ${op.path}`) } : {}),
       parameters: parametersFor(op),
       ...(op.body
         ? {
@@ -451,20 +463,48 @@ export function buildOpenApiDocument() {
     };
   }
 
+  // Routes with no hand-written definition are documented from the recorded walk (src/api/derivedOperations.ts).
+  const documented = new Set(OPERATIONS.map((o) => `${o.method.toUpperCase()} ${o.path}`));
+  const tagNames = new Set(OPERATIONS.flatMap((o) => o.tags));
+  for (const d of derivedOperations(documented)) {
+    (paths[d.path] ??= {})[d.method] = d.operation;
+    for (const tag of d.operation.tags as string[]) tagNames.add(tag);
+  }
+  for (const a of ACCOUNT_OPERATIONS) {
+    const responses: Record<string, unknown> = {
+      200: { description: "Success", content: a.response === null ? undefined : { "application/json": { schema: a.response ?? {} } } },
+      500: { description: "Unexpected error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } } },
+    };
+    for (const status of a.errors ?? []) responses[String(status)] = { description: ERROR_TEXT[status] ?? "Error.", content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorEnvelope" } } } };
+    (paths[a.path] ??= {})[a.method] = {
+      operationId: a.operationId,
+      summary: a.summary,
+      tags: [a.tag],
+      security: a.security === "none" ? [] : [{ [a.security]: [] }],
+      parameters: [...(a.path.match(/\{(\w+)\}/g) ?? []).map((n) => ({ name: n.slice(1, -1), in: "path", required: true, schema: { type: "string" } }))],
+      ...(a.body ? { requestBody: { required: true, content: { "application/json": { schema: a.body } } } } : {}),
+      responses,
+      ...(a.rateLimited ? { "x-rate-limited": true } : {}),
+      ...(a.note ? { description: a.note } : {}),
+    };
+    tagNames.add(a.tag);
+  }
+  const sortedPaths = Object.fromEntries(Object.entries(paths).sort(([x], [y]) => x.localeCompare(y)));
+
   return {
     openapi: "3.1.0",
     info: {
       title: "Figbloom CRM API",
-      version: "0.1.0",
+      version: API_VERSION,
       description:
         "Generated from the Zod schemas in src/api/dto. Conventions: docs/API_CONVENTIONS.md.",
     },
     servers: [{ url: "/" }],
-    tags: [...new Set(OPERATIONS.flatMap((o) => o.tags))].map((name) => ({ name })),
-    paths,
+    tags: [...tagNames].sort().map((name) => ({ name })),
+    paths: sortedPaths,
     components: {
       securitySchemes: {
-        sessionCookie: { type: "apiKey", in: "cookie", name: "figbloom_session" },
+        ...SECURITY_SCHEMES,
       },
       schemas: { ErrorEnvelope: json(ErrorEnvelopeSchema) },
     },

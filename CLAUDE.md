@@ -15,13 +15,13 @@ The plan lives in Linear: project "CRM Project", team Figbloom, issues FIG-xxxx.
 |---|---|---|
 | M0 | Baseline and guardrails | 23 Oct |
 | M1 to M4 | Backend stages, each ends with an exit gate (B1.13, B2.17, B3.11, B4.10) | 25, 27, 29, 30 Oct |
-| M5 | Backend V1 quality gate (G1.08): tag `backend-v1`, Michael approves | 31 Oct |
+| M5 | Backend V1 quality gate (G1.08): tag `backend-v1` on `dev-given`, Michael approves (recorded by Given) | 31 Oct |
 | M6 to M9 | Frontend (design system, sales, customers and finance, settings and mobile) | 1 to 5 Nov |
 | M10 / M11 | V1 QA and UAT / production readiness and go-live | 7 / 8 Nov |
 | M12 to M15 | V1.1 backend, gate, frontend, QA | 12 to 16 Nov |
 | M16 / M17 | V2 backend / V2 frontend and release | 17 / 18 Nov |
 
-Do not start a stage until the previous stage's exit gate is closed. Frontend work against the real API starts only after G1.08.
+**Standing decision (Given, 27 Oct 2026): all work stays on `dev-given` until every milestone is complete. Nothing is moved to `dev-staging` or `main` before then, and the gate tags (`backend-v1`, `api-v1.0`) are placed on `dev-given`.** Do not start a stage until the previous stage's exit gate is closed. Frontend work against the real API starts only after G1.08.
 If the date is at risk, the agreed cut order is: E1, E2, F1, S5, S7, then the decision-gated V2 items, then V2 polish. V1 is never cut. Do not cut anything without Given's say-so.
 
 ## Hard rules
@@ -70,9 +70,15 @@ npm run seed
 
 **M1 (identity, preferences, organisation profile): merged to `main`** (PR #18). The OpenAPI document still lacks some Stage 1 routes: `/me/sessions/*`, `/me/sign-in-events`, `/orgs/{org}/security/*`, the membership lifecycle routes, `/files/{id}/content`, `/storage/blob`, `/platform/preferences`. Add them (Zod DTO per route, B0.06) before G1.06 freezes the contract.
 
-**M2 (sales core and record extras): all 22 issues built, in the working tree, not committed.** FIG-1030 to FIG-1046, FIG-1066, FIG-796, 797, 798, 803. Migrations `20261023140000` to `20261024060000` are applied to the dev and test databases. Docs: `docs/JOBS.md`, `docs/MASKING.md`, `docs/SCORING.md`, the Stage 2 section of `IMPLEMENTATION_NOTES.md`, demo in `docs/demo/stage-2.http` and `tests/stage2ExitGate.test.ts`. The gate (B2.17, FIG-1046) closes when the work is committed, merged with green CI, and Given confirms there are no open Urgent or High bugs. Known gaps: no payments figures on the Finance dashboard until the payments table (M3, B3.03); `q:` qualification columns are exported but not imported; OpenAPI lists the main Stage 2 endpoints only.
+**M2 (sales core and record extras): merged to `dev-given`** (PR #20; branch rules in `BRANCHING.md`: work on `feature/` or `makeover/` branches, PR into `dev-given`, Mike approves `dev-staging` and `main`). FIG-1030 to FIG-1046, FIG-1066, FIG-796, 797, 798, 803. Migrations `20261023140000` to `20261024060000` are applied to the dev and test databases. Docs: `docs/JOBS.md`, `docs/MASKING.md`, `docs/SCORING.md`, the Stage 2 section of `IMPLEMENTATION_NOTES.md`, demo in `docs/demo/stage-2.http` and `tests/stage2ExitGate.test.ts`. The gate (B2.17, FIG-1046) closes when the work is committed, merged with green CI, and Given confirms there are no open Urgent or High bugs. Known gaps: `q:` qualification columns are exported but not imported; OpenAPI lists the main Stage 2 endpoints only.
 
-**Next: M3 (customers, delivery, finance, reporting), FIG-1047 to FIG-1057.** Do not start M4 until the B3.11 gate is closed.
+**M3 (customers, delivery, finance, reporting): all 12 issues built, in the working tree, not committed.** FIG-1047 to FIG-1057 and FIG-795. Migrations `20261026090000` to `20261026120000` are applied to the dev and test databases. Docs: `docs/PAYMENTS.md`, `docs/LIFECYCLE_AND_RENEWALS.md`, `docs/CUSTOMER_360_AND_CONVERSATIONS.md`, `docs/REPORTING_METRICS.md` (Reports v2), the Stage 3 section of `IMPLEMENTATION_NOTES.md` (it lists the decisions taken without being asked), demo in `docs/demo/stage-3.http` and `tests/stage3ExitGate.test.ts`. The gate (B3.11, FIG-1057) closes when the work is merged with green CI and Given confirms there are no open Urgent or High bugs. Known gaps: the audit reader (M4) must hide `PAYMENT_ENTITIES`; OpenAPI lists the Stage 3 endpoints in `src/api/stage3Operations.ts` with loose per-role schemas.
+
+**M4 (admin, automation, data and mobile sync): all 11 issues built, in the working tree, not committed.** FIG-1058 to FIG-1065, FIG-1067, FIG-799, FIG-800. Migrations `20261027090000`, `20261027100000` and `20261027110000` are applied to the dev and test databases. Docs: `docs/SETTINGS_ADMIN.md`, `docs/AUTOMATIONS.md`, `docs/DATA_MIGRATION.md`, `docs/PRIVACY.md`, `docs/SYNC_AND_PUSH.md`, the Stage 4 section of `IMPLEMENTATION_NOTES.md` (it lists the decisions taken without being asked), demo in `docs/demo/stage-4.http` and `tests/stage4ExitGate.test.ts`. The gate (B4.10, FIG-1067) closes when the work is merged with green CI and Given confirms there are no open Urgent or High bugs. New dependencies: `web-push`, `exceljs`. OpenAPI lists the Stage 4 endpoints in `src/api/stage4Operations.ts` with loose per-role schemas.
+
+**M5 (Backend V1 quality gate): G1.01 to G1.07 built, in the working tree, not committed.** FIG-1068 to FIG-1074; the sign-off gate G1.08 (FIG-1075) needs Given (tag `backend-v1` and `api-v1.0`, Michael's approval, demo). Migrations `20261028090000_rate_limit_actions` and `20261028100000_search_trgm_coverage`. Docs: `docs/PERMISSION_MATRIX_REPORT.md`, `docs/PERF_BASELINE.md`, `docs/SECURITY_REVIEW_V1.md`, `docs/MIGRATION_REHEARSAL.md` (upgrade runbook), `docs/TEST_REPORT_BACKEND_V1.md`, `docs/API_REFERENCE.md`, `docs/API_CHANGELOG.md`, the Stage 5 section of `IMPLEMENTATION_NOTES.md`. The V1 API contract is frozen in `src/api/contract/openapi.v1.json` (change it only with `npm run contract:update` plus a changelog note); typed client in `src/api-client/`, mock server `npm run mock:api`. The full suite takes about 25 minutes (the route walks); the performance run is separate (`npx vitest run --config vitest.perf.config.ts`). Open decisions for Given: the deal-rules migration lock (see the rehearsal), the Vitest 2 upgrade, `CLAMD_HOST` in production.
+
+**Next: M6 (frontend), once G1.08 is signed off.** Frontend work against the real API starts only after G1.08.
 
 Ops reminders: new migrations need `npm run migrate:deploy`; `ALLOW_DEV_ACCOUNTS=true` in local `.env` for dev sign-in; Docker Desktop must be running for the test database (`docker compose up -d --wait`).
 

@@ -27,6 +27,7 @@ import {
 import { ValidationError } from "../auth/errors";
 import { ALWAYS_ON_TYPES } from "../notifications/catalogue";
 import { planEmail } from "./notificationDeliveryPolicy";
+import { pushToMember } from "../notifications/webPush";
 import {
   NOTIFICATION_TYPES,
   resolveEffectivePreference,
@@ -186,6 +187,17 @@ async function notify(input: NotifyInput): Promise<void> {
       link: input.link,
     });
     if (!notification) return; // already notified for this entity+type
+
+    // B4.07: a member who registered a device and wants push for this type is pushed to it (best-effort, quiet hours respected).
+    await pushToMember({
+      organizationId: input.organizationId,
+      membershipId: input.membershipId,
+      notificationId: notification.id,
+      type: input.type,
+      title: input.title,
+      body: input.body,
+      link: input.link,
+    });
 
     const preference = await resolveEffectivePreference(
       input.organizationId,

@@ -22,6 +22,8 @@ export const NOTIFICATION_TYPES = [
   "STALLED_DEAL",
   "SUPPORT_ACCESS_REQUEST",
   "LEAD_POOL",
+  "PAYMENT_OVERDUE",
+  "DORMANT_CUSTOMER",
 ] as const;
 export type NotificationTypeKey = (typeof NOTIFICATION_TYPES)[number];
 
@@ -121,6 +123,22 @@ export const TYPE_DEFS: readonly NotificationTypeDef[] = [
     important: true,
     alwaysOn: false,
     relevant: (c) => hasPermission(c, "leads.assign") || hasPermission(c, "leads.view.shared"),
+  },
+  {
+    key: "PAYMENT_OVERDUE",
+    label: "An invoice is overdue",
+    description: "When an invoice passes its due date with money still owing. For Finance and the deal owner.",
+    important: true,
+    alwaysOn: false,
+    relevant: (c) => hasPermission(c, "finance.view.payments"),
+  },
+  {
+    key: "DORMANT_CUSTOMER",
+    label: "A customer has gone quiet",
+    description: "When a customer you look after has had no activity for the dormancy period.",
+    important: false,
+    alwaysOn: false,
+    relevant: (c) => hasPermission(c, "companies.edit"),
   },
 ];
 

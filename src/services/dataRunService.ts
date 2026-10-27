@@ -1,5 +1,5 @@
 import { Readable } from "node:stream";
-import { stringify } from "csv-stringify/sync";
+import { stringifyCsv as stringify } from "../lib/csv";
 import type { DataRun } from "@prisma/client";
 import type { AuthContext } from "../auth/context";
 import { hasPermission, requirePermission } from "../auth/context";
@@ -36,6 +36,7 @@ import {
   assertCsvRequestSize,
   importCompanies,
   importContacts,
+  importDeals,
   importLeads,
   type DuplicateStrategy,
   type ImportSummary,
@@ -61,10 +62,11 @@ export type DataEntity = "LEAD" | "CONTACT" | "COMPANY" | "DEAL";
 export const IMPORT_JOB = "data.import";
 export const EXPORT_JOB = "data.export";
 
-const IMPORT_PERMISSION: Record<Exclude<DataEntity, "DEAL">, string> = {
+const IMPORT_PERMISSION: Record<DataEntity, string> = {
   LEAD: "leads.import",
   CONTACT: "contacts.import",
   COMPANY: "companies.import",
+  DEAL: "deals.create",
 };
 const EXPORT_PERMISSION: Record<DataEntity, string> = {
   LEAD: "leads.export",
@@ -127,7 +129,7 @@ async function loadVisible(ctx: AuthContext, runId: string): Promise<DataRun> {
 // ---------------------------------------------------------------------------
 
 export interface StartImportInput {
-  entity: Exclude<DataEntity, "DEAL">;
+  entity: DataEntity;
   fileName: string;
   csv: Buffer;
   mapping: Record<string, string | undefined>;
@@ -165,7 +167,7 @@ export async function startImport(ctx: AuthContext, input: StartImportInput) {
   return present({ ...run, jobId: job.id });
 }
 
-async function countForExport(ctx: AuthContext, entity: DataEntity, filters: Record<string, unknown>): Promise<number> {
+export async function countForExport(ctx: AuthContext, entity: DataEntity, filters: Record<string, unknown>): Promise<number> {
   switch (entity) {
     case "COMPANY":
       return countCompanies(ctx, filters as never);
@@ -178,7 +180,7 @@ async function countForExport(ctx: AuthContext, entity: DataEntity, filters: Rec
   }
 }
 
-export async function startExport(ctx: AuthContext, input: { entity: DataEntity; filters?: Record<string, unknown> }) {
+export async function startExport(ctx: AuthContext, input: { entity: DataEntity; filters?: Record<string, unknown>; approvalId?: string }) {
   requirePermission(ctx, EXPORT_PERMISSION[input.entity]);
   const filters = input.filters ?? {};
   const unknown = Object.keys(filters).filter((k) => !(EXPORT_FILTER_KEYS as readonly string[]).includes(k));
@@ -186,7 +188,7 @@ export async function startExport(ctx: AuthContext, input: { entity: DataEntity;
     throw new ValidationError("Some export filters are not recognised.", unknown.map((k) => ({ path: `filters.${k}`, message: "Unknown filter." })));
   }
   // Refuse a large export up front, rather than after it was queued.
-  assertBulkExportAllowed(ctx, await countForExport(ctx, input.entity, filters));
+  await assertBulkExportAllowed(ctx, await countForExport(ctx, input.entity, filters), { approvalId: input.approvalId, entity: input.entity });
 
   const run = await createDataRun({
     organizationId: ctx.organizationId,
@@ -309,7 +311,9 @@ export async function runImportJob(runId: string, organizationId: string): Promi
         ? await importCompanies(ctx, input)
         : run.entity === "CONTACT"
           ? await importContacts(ctx, input)
-          : await importLeads(ctx, input);
+          : run.entity === "DEAL"
+            ? await importDeals(ctx, input)
+            : await importLeads(ctx, input);
 
     let errorFileId: string | undefined;
     if (summary.errors.length > 0) {

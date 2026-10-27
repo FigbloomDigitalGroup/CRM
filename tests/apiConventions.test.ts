@@ -561,7 +561,10 @@ describe("OpenAPI document", () => {
     const ids = Object.values(doc.paths).flatMap((p) =>
       Object.values(p as Record<string, { operationId: string }>).map((o) => o.operationId),
     );
-    expect(ids).toHaveLength(OPERATIONS.length);
+    // Every explicitly defined operation is in the document; the rest (derived from the recorded walk, account, public and cron routes, G1.06)
+    // are added to them, so the document holds at least these and every id is unique.
+    expect(ids.length).toBeGreaterThanOrEqual(OPERATIONS.length);
+    for (const op of OPERATIONS) expect(ids).toContain(op.operationId);
     expect(new Set(ids).size).toBe(ids.length);
     expect(Object.keys(doc.paths)).toEqual(
       expect.arrayContaining(["/api/orgs/{orgSlug}/leads", "/api/orgs/{orgSlug}/deals/{dealId}"]),

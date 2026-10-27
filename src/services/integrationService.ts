@@ -1,6 +1,6 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
-import { ValidationError } from "../auth/errors";
+import { NotFoundError, ValidationError } from "../auth/errors";
 import { generateInboundEmailKey } from "../auth/inboundEmailKey";
 import { generateWebsiteApiKey } from "../auth/websiteApiKey";
 import { adminDb } from "../db/adminClient";
@@ -21,7 +21,27 @@ import {
   updateWebsiteApiKeySecurity,
   type WebsiteApiKeySecuritySettings,
 } from "../repositories/websiteApiKeys";
-import { listRecentWebsiteLeadRequests } from "../repositories/websiteLeadRequestLog";
+import {
+  latestRejectedWebsiteLeadRequest,
+  listRecentWebsiteLeadRequests,
+  listRejectedWebsiteLeadRequests,
+} from "../repositories/websiteLeadRequestLog";
+import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
+
+/** B4.01: how long the old website key keeps working after a rotation unless the caller says otherwise. */
+export const DEFAULT_KEY_GRACE_HOURS = 24;
+export const MAX_KEY_GRACE_HOURS = 72;
+
+/** What each rejection outcome means, in words a person can act on (B4.01 rejected submissions list). */
+export const REJECTION_EXPLANATIONS: Record<string, string> = {
+  RATE_LIMITED: "Too many requests from one address or key in a short time.",
+  INVALID_KEY: "The request used a missing, wrong, revoked or expired website key.",
+  ORIGIN_NOT_ALLOWED: "The request came from a website that is not on the allowed list.",
+  PAYLOAD_TOO_LARGE: "The submission was larger than the limit.",
+  VALIDATION_FAILED: "The submission was missing a required field or was not valid.",
+  HONEYPOT_TRIGGERED: "A hidden field was filled in, which is what a bot does. It was discarded.",
+  CAPTCHA_FAILED: "The captcha check failed or was missing.",
+};
 
 /**
  * Reuses `configuration.manage` (Management-only) rather than inventing a
@@ -36,11 +56,29 @@ export async function getWebsiteIntegrationStatus(ctx: AuthContext) {
   if (!record) {
     return { configured: false as const };
   }
+  const lastRejected = await latestRejectedWebsiteLeadRequest(ctx.organizationId);
+  const graceActive =
+    record.previousKeyHash !== null && record.previousKeyExpiresAt !== null && record.previousKeyExpiresAt.getTime() > Date.now();
   return {
     configured: true as const,
     keyPrefix: record.keyPrefix,
     createdAt: record.createdAt,
     lastUsedAt: record.lastUsedAt,
+    /** B4.01: when the key was last rotated, and whether the key it replaced still works. */
+    rotatedAt: record.rotatedAt,
+    previousKey: graceActive
+      ? { keyPrefix: record.previousKeyPrefix, validUntil: record.previousKeyExpiresAt }
+      : null,
+    lastAcceptedAt: record.lastAcceptedAt,
+    lastRejectedAt: record.lastRejectedAt,
+    lastRejection: lastRejected
+      ? {
+          at: lastRejected.createdAt,
+          outcome: lastRejected.outcome,
+          reason: lastRejected.reason,
+          explanation: REJECTION_EXPLANATIONS[lastRejected.outcome] ?? null,
+        }
+      : null,
     revoked: record.revokedAt !== null,
     // The captcha secret itself is never returned to the client -- only
     // whether one is set, so the UI can show "configured" without being
@@ -57,14 +95,22 @@ export async function getWebsiteIntegrationStatus(ctx: AuthContext) {
  * replaces the previous key immediately; there is no overlap window (see
  * the WebsiteApiKey model's doc comment in prisma/schema.prisma for why).
  */
-export async function regenerateWebsiteApiKey(ctx: AuthContext) {
+export async function regenerateWebsiteApiKey(ctx: AuthContext, options: { graceHours?: number } = {}) {
   requirePermission(ctx, PERMISSION);
+
+  const graceHours = options.graceHours ?? DEFAULT_KEY_GRACE_HOURS;
+  if (!Number.isFinite(graceHours) || graceHours < 0 || graceHours > MAX_KEY_GRACE_HOURS) {
+    throw new ValidationError(`graceHours must be between 0 and ${MAX_KEY_GRACE_HOURS}.`, [
+      { path: "graceHours", message: `Choose 0 to switch the old key off at once, or up to ${MAX_KEY_GRACE_HOURS} hours.` },
+    ]);
+  }
 
   const { plaintext, keyHash, keyPrefix } = generateWebsiteApiKey();
   await setWebsiteApiKey(ctx.organizationId, {
     keyHash,
     keyPrefix,
     createdByMembershipId: ctx.membershipId,
+    graceMs: Math.round(graceHours * 3_600_000),
   });
 
   await recordAuditEvent({
@@ -73,10 +119,11 @@ export async function regenerateWebsiteApiKey(ctx: AuthContext) {
     action: "website_api_key.regenerated",
     entityType: "WebsiteApiKey",
     entityId: ctx.organizationId,
-    metadata: { keyPrefix },
+    metadata: { keyPrefix, graceHours },
   });
 
-  return { apiKey: plaintext, keyPrefix };
+  const validUntil = graceHours > 0 ? new Date(Date.now() + graceHours * 3_600_000) : null;
+  return { apiKey: plaintext, keyPrefix, previousKeyValidUntil: validUntil };
 }
 
 /**
@@ -117,6 +164,8 @@ export async function updateWebsiteApiKeySettings(
 ) {
   requirePermission(ctx, PERMISSION);
 
+  // Settings belong to an existing key; with none yet there is nothing to update (this was a 500 from the missing row).
+  if (!(await getWebsiteApiKeyRecord(ctx.organizationId))) throw new NotFoundError("Website API key", ctx.organizationId);
   const updated = await updateWebsiteApiKeySecurity(ctx.organizationId, settings);
 
   await recordAuditEvent({
@@ -142,6 +191,38 @@ export async function updateWebsiteApiKeySettings(
   };
 }
 
+/**
+ * Submissions the website endpoint turned away, newest first, each with the reason in plain words (B4.01).
+ * Management only: the rows carry the sender address.
+ */
+export async function listRejectedWebsiteSubmissions(
+  ctx: AuthContext,
+  query: { outcome?: string; paging?: PageRequest } = {},
+) {
+  requirePermission(ctx, PERMISSION);
+  if (query.outcome !== undefined && !(query.outcome in REJECTION_EXPLANATIONS)) {
+    throw new ValidationError(`"${query.outcome}" is not a rejection reason.`, [
+      { path: "outcome", message: `Use one of: ${Object.keys(REJECTION_EXPLANATIONS).join(", ")}.` },
+    ]);
+  }
+  const paging = resolvePaging(query.paging);
+  const { rows, total } = await listRejectedWebsiteLeadRequests(ctx.organizationId, {
+    outcome: query.outcome,
+    skip: paging.skip,
+    take: paging.take,
+  });
+  const items = rows.map((r) => ({
+    id: r.id,
+    at: r.createdAt,
+    outcome: r.outcome,
+    reason: r.reason,
+    explanation: REJECTION_EXPLANATIONS[r.outcome] ?? null,
+    origin: r.origin,
+    ipAddress: r.ipAddress,
+  }));
+  return buildPage(items, total, paging);
+}
+
 /** Recent accepted/rejected requests to the public endpoint, for monitoring (FIG-594). */
 export async function listRecentWebsiteActivity(ctx: AuthContext, limit = 25) {
   requirePermission(ctx, PERMISSION);
@@ -165,6 +246,9 @@ export async function getInboundEmailIntegrationStatus(ctx: AuthContext) {
     keyPrefix: record.keyPrefix,
     createdAt: record.createdAt,
     lastUsedAt: record.lastUsedAt,
+    /** B4.01: when mail last arrived, and the last message that could not be processed (cleared by the next good one). */
+    lastReceivedAt: record.lastUsedAt,
+    lastError: record.lastError ? { at: record.lastErrorAt, message: record.lastError } : null,
     revoked: record.revokedAt !== null,
   };
 }

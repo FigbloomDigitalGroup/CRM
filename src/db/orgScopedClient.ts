@@ -22,6 +22,12 @@ if (process.env.NODE_ENV !== "production") {
 export type OrgScopedClient = Prisma.TransactionClient;
 
 /**
+ * How many organisation-scoped database calls this process has made. Tests read it before and after a request to prove
+ * a page loads from a fixed number of calls however much data it shows (no N+1, FIG-1047); nothing else uses it.
+ */
+export const dbCallStats = { orgContextCalls: 0 };
+
+/**
  * Establishes the active-organization context before running `fn`, enforced
  * at two layers:
  *
@@ -39,16 +45,22 @@ export type OrgScopedClient = Prisma.TransactionClient;
 export async function withOrgContext<T>(
   organizationId: string,
   fn: (tx: OrgScopedClient) => Promise<T>,
+  /** `timeoutMs` lets a bulk write (a data migration chunk) run longer than Prisma's 5 second default. */
+  options: { timeoutMs?: number } = {},
 ): Promise<T> {
   if (!organizationId) {
     // Fail closed rather than run the callback with no tenant context.
     throw new Error("withOrgContext requires a non-empty organizationId.");
   }
 
-  return appDb.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT set_config('app.current_organization_id', ${organizationId}, true)`;
-    return fn(tx);
-  });
+  dbCallStats.orgContextCalls += 1;
+  return appDb.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT set_config('app.current_organization_id', ${organizationId}, true)`;
+      return fn(tx);
+    },
+    options.timeoutMs ? { timeout: options.timeoutMs, maxWait: 10_000 } : undefined,
+  );
 }
 
 /** For tests only: proves RLS still fails closed with no context set. */

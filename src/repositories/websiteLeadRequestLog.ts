@@ -32,6 +32,16 @@ export interface RecordWebsiteLeadRequestInput {
 export async function recordWebsiteLeadRequest(
   input: RecordWebsiteLeadRequestInput,
 ) {
+  // B4.01: the Settings screen shows when the website last got a lead through and when it last turned one away.
+  if (input.organizationId) {
+    const at = new Date();
+    await adminDb.websiteApiKey
+      .updateMany({
+        where: { organizationId: input.organizationId },
+        data: input.outcome === "ACCEPTED" ? { lastAcceptedAt: at } : { lastRejectedAt: at },
+      })
+      .catch(() => undefined);
+  }
   return adminDb.websiteLeadRequestLog.create({
     data: {
       organizationId: input.organizationId ?? null,
@@ -50,6 +60,33 @@ export async function recordWebsiteLeadRequest(
  * (RLS), unlike the write path above, since this is read by an
  * authenticated Management user through their resolved org context.
  */
+/** Rejected submissions (everything but ACCEPTED), newest first, with a total for paging (B4.01). */
+export async function listRejectedWebsiteLeadRequests(
+  organizationId: string,
+  filter: { outcome?: string; skip: number; take: number },
+) {
+  const where = {
+    organizationId,
+    outcome: filter.outcome ? filter.outcome : { not: "ACCEPTED" },
+  };
+  return withOrgContext(organizationId, async (tx) => {
+    const [rows, total] = await Promise.all([
+      tx.websiteLeadRequestLog.findMany({ where, orderBy: { createdAt: "desc" }, skip: filter.skip, take: filter.take }),
+      tx.websiteLeadRequestLog.count({ where }),
+    ]);
+    return { rows, total };
+  });
+}
+
+export async function latestRejectedWebsiteLeadRequest(organizationId: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.websiteLeadRequestLog.findFirst({
+      where: { organizationId, outcome: { not: "ACCEPTED" } },
+      orderBy: { createdAt: "desc" },
+    }),
+  );
+}
+
 export async function listRecentWebsiteLeadRequests(
   organizationId: string,
   limit: number,

@@ -8,6 +8,7 @@ import { logger } from "../lib/logger";
 import { getDealSummary } from "./dealService";
 import { listLeadsPage, countLeads } from "./leadService";
 import { getMyWork, taskGroupBounds } from "./taskService";
+import { paymentAggregatesFor } from "./paymentService";
 import { getMyMetrics, getOrganizationMetrics } from "./reportingService";
 import { getSignals } from "./signalService";
 
@@ -170,10 +171,8 @@ async function finance(ctx: AuthContext) {
     wonDeals: deals.won,
     // Values only when the caller may see them, as everywhere else.
     openValue: deals.openValue,
-    payments: {
-      available: false,
-      note: "Payments due and overdue arrive with the payments feature (V1.1). Nothing is estimated here.",
-    },
+    // Due this week, overdue, collected this month and still owing: the section is only offered to Finance and Management.
+    payments: { available: true, ...(await paymentAggregatesFor(ctx.organizationId)) },
   };
 }
 

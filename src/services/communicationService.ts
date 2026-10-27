@@ -1,6 +1,7 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
+import { adminDb } from "../db/adminClient";
 import { sendComposedEmail } from "../notifications/email";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
@@ -31,6 +32,15 @@ export async function createCommunication(
 ) {
   await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true, requireWritable: true });
   requirePermission(ctx, "communications.create");
+
+  // The activity this entry sits under must be this organisation's. Without the check an unknown id (or another organisation's)
+  // reached the foreign key and came back as a 500.
+  if (input.activityId) {
+    const activity = await adminDb.activity.findFirst({ where: { id: input.activityId, organizationId: ctx.organizationId }, select: { id: true } });
+    if (!activity) {
+      throw new ValidationError("That activity was not found in this organisation.", [{ path: "activityId", message: "Pick an activity from this organisation." }]);
+    }
+  }
 
   const communication = await createCommunicationRecord({
     ...input,

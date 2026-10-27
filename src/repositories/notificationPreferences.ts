@@ -73,7 +73,7 @@ export async function upsertPreference(
   organizationId: string,
   membershipId: string,
   type: NotificationTypeKey,
-  input: { emailEnabled?: boolean; inAppEnabled?: boolean },
+  input: { emailEnabled?: boolean; inAppEnabled?: boolean; pushEnabled?: boolean },
 ) {
   return withOrgContext(organizationId, (tx) =>
     tx.notificationPreference.upsert({
@@ -87,6 +87,7 @@ export async function upsertPreference(
         type,
         emailEnabled: input.emailEnabled ?? DEFAULT_PREFERENCE.emailEnabled,
         inAppEnabled: input.inAppEnabled ?? DEFAULT_PREFERENCE.inAppEnabled,
+        pushEnabled: input.pushEnabled ?? false,
       },
     }),
   );

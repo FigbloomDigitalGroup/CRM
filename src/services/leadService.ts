@@ -1,3 +1,4 @@
+import { LIFECYCLE_KEYS, transitionCompany } from "./lifecycleService";
 import type { Prisma } from "@prisma/client";
 import { assertWritable, cleanArchiveReason } from "../lib/archive";
 import { findDuplicates } from "./duplicateService";
@@ -89,9 +90,32 @@ export async function listAssignableLeadOwners(ctx: AuthContext) {
     }));
 }
 
+/**
+ * Every id a new lead points at must belong to this organisation. The database refuses a foreign one (the keys are per organisation), but
+ * that surfaced as a 500; it is a plain "pick one of yours" validation error instead.
+ */
+async function assertReferencesInOrganisation(organizationId: string, input: CreateLeadServiceInput, statusFound: boolean): Promise<void> {
+  const where = (id: string) => ({ id, organizationId });
+  const [source, company, contact, service] = await Promise.all([
+    input.leadSourceId ? adminDb.leadSource.findFirst({ where: where(input.leadSourceId), select: { id: true } }) : null,
+    input.companyId ? adminDb.company.findFirst({ where: where(input.companyId), select: { id: true } }) : null,
+    input.contactId ? adminDb.contact.findFirst({ where: where(input.contactId), select: { id: true } }) : null,
+    input.serviceInterestId ? adminDb.service.findFirst({ where: where(input.serviceInterestId), select: { id: true } }) : null,
+  ]);
+  const problems: { path: string; message: string }[] = [];
+  if (!statusFound) problems.push({ path: "leadStatusId", message: "Pick a status from this organisation." });
+  if (input.leadSourceId && !source) problems.push({ path: "leadSourceId", message: "Pick a source from this organisation." });
+  if (input.companyId && !company) problems.push({ path: "companyId", message: "Pick a company from this organisation." });
+  if (input.contactId && !contact) problems.push({ path: "contactId", message: "Pick a contact from this organisation." });
+  if (input.serviceInterestId && !service) problems.push({ path: "serviceInterestId", message: "Pick a service from this organisation." });
+  if (problems.length) throw new ValidationError("Something on this lead was not found in this organisation.", problems);
+}
+
 export async function createLead(
   ctx: AuthContext,
   input: CreateLeadServiceInput,
+  /** `skipDuplicateCheck`: the caller already checked (quick capture warns first), so do not search a second time. */
+  options: { skipDuplicateCheck?: boolean } = {},
 ) {
   requirePermission(ctx, "leads.create");
 
@@ -108,23 +132,23 @@ export async function createLead(
     ownerMembershipId = input.ownerMembershipId;
   }
 
-  const possibleDuplicates = await findPossibleDuplicateLeads(
-    ctx.organizationId,
-    {
-      companyId: input.companyId,
-    },
-  );
+  const possibleDuplicates = options.skipDuplicateCheck
+    ? []
+    : await findPossibleDuplicateLeads(ctx.organizationId, { companyId: input.companyId });
 
-  const found = await findDuplicates(ctx, {
-    entity: "lead",
-    companyId: input.companyId,
-    contactId: input.contactId,
-  });
+  const found = options.skipDuplicateCheck
+    ? { candidates: [], hiddenCount: 0 }
+    : await findDuplicates(ctx, {
+        entity: "lead",
+        companyId: input.companyId,
+        contactId: input.contactId,
+      });
 
   const createStatus = await adminDb.leadStatus.findFirst({
     where: { id: input.leadStatusId, organizationId: ctx.organizationId },
     select: { key: true },
   });
+  await assertReferencesInOrganisation(ctx.organizationId, input, createStatus !== null);
   const qualification = await checkQualificationForSave({
     organizationId: ctx.organizationId,
     serviceInterestId: input.serviceInterestId ?? null,
@@ -501,7 +525,7 @@ export async function convertLead(
   }
 
   try {
-    return await convertLeadToDeal({
+    const deal = await convertLeadToDeal({
       organizationId: ctx.organizationId,
       leadId,
       companyId: input.companyId,
@@ -516,6 +540,17 @@ export async function convertLead(
         : undefined,
       notes: input.notes,
     });
+    // A converted lead makes its company a Prospect, unless it already has a lifecycle state (B3.02).
+    await transitionCompany({
+      organizationId: ctx.organizationId,
+      companyId: deal.companyId,
+      toKey: LIFECYCLE_KEYS.PROSPECT,
+      reason: "LEAD_CONVERTED",
+      actorMembershipId: ctx.membershipId,
+      onlyIfUnset: true,
+      detail: { leadId, dealId: deal.id },
+    });
+    return deal;
   } catch (err) {
     if (
       err instanceof LeadAlreadyConvertedError ||
