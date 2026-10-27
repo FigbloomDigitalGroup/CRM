@@ -20,7 +20,18 @@ import {
   type JobContext,
   type JobDefinition,
 } from "./registry";
-import "./definitions";
+
+/**
+ * The job definitions import the services that run them, and those services import this runner to queue work, so importing the
+ * definitions from here at the top made a cycle (runner -> definitions -> service -> runner). Webpack evaluates such a cycle in whatever
+ * order the first importer happens to load, which broke the production build ("Cannot access ... before initialization"). They are
+ * loaded on first use instead; every function below that reads the registry waits for this first.
+ */
+let definitionsLoaded: Promise<unknown> | null = null;
+function ensureDefinitions(): Promise<unknown> {
+  definitionsLoaded ??= import("./definitions");
+  return definitionsLoaded;
+}
 
 /**
  * The job runner and scheduler (FIG-1066, B2.18). Anything can call these: the
@@ -62,6 +73,7 @@ export interface JobRunResult {
 }
 
 async function executeClaimed(job: BackgroundJob): Promise<JobRunResult> {
+  await ensureDefinitions();
   const definition = getJobDefinition(job.type);
   const log = logger.child({ jobId: job.id, organizationId: job.organizationId, requestId: job.requestId, jobType: job.type });
   const base = { jobId: job.id, organizationId: job.organizationId, type: job.type };
@@ -115,6 +127,7 @@ export interface RunJobsOptions {
 
 /** Recovers abandoned jobs, then runs due jobs until none are left or the budget is spent. */
 export async function runDueJobs(options: RunJobsOptions = {}): Promise<{ reclaimed: number; results: JobRunResult[] }> {
+  await ensureDefinitions();
   const workerId = options.workerId ?? newWorkerId();
   const maxJobs = options.maxJobs ?? 50;
   const deadline = Date.now() + (options.budgetMs ?? 25_000);
@@ -157,6 +170,7 @@ export interface EnqueueAndRunInput {
  * job queued for retry (or dead) exactly as it would be otherwise.
  */
 export async function enqueueAndRunNow(input: EnqueueAndRunInput): Promise<JobRunResult & { job: BackgroundJob | null }> {
+  await ensureDefinitions();
   const definition = getJobDefinition(input.type);
   const job = await enqueueJob({
     organizationId: input.organizationId,
@@ -183,6 +197,7 @@ export async function enqueueAndRunNow(input: EnqueueAndRunInput): Promise<JobRu
 
 /** Queues a job for a worker to pick up; returns at once. */
 export async function enqueueJobFor(input: Omit<EnqueueAndRunInput, "workerId"> & { runAt?: Date }): Promise<BackgroundJob> {
+  await ensureDefinitions();
   const definition = getJobDefinition(input.type);
   return enqueueJob({
     organizationId: input.organizationId,
@@ -213,6 +228,7 @@ export interface TickOptions {
  * schedulers tick, so a missed tick is simply picked up by the next one.
  */
 export async function tickSchedules(options: TickOptions = {}): Promise<{ enqueued: number }> {
+  await ensureDefinitions();
   const now = options.now ?? new Date();
   const scheduled = listJobDefinitions().filter(
     (d): d is JobDefinition & { schedule: { everyMs: number } } =>
@@ -254,6 +270,7 @@ export interface MissedRun {
  * Each one is logged as an error, which is what alerting listens for.
  */
 export async function checkMissedRuns(options: { now?: Date; organizationIds?: string[]; types?: string[]; alert?: boolean } = {}): Promise<MissedRun[]> {
+  await ensureDefinitions();
   const now = options.now ?? new Date();
   const scheduled = listJobDefinitions().filter((d) => d.schedule && (!options.types || options.types.includes(d.type)));
   if (scheduled.length === 0) return [];

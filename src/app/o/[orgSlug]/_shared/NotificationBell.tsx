@@ -8,7 +8,9 @@ interface NotificationItem {
   type: string;
   title: string;
   body: string;
-  link: string | null;
+  /** The notification centre (B2.11) names this `deepLink`; `link` is the older name, still accepted. */
+  deepLink?: string | null;
+  link?: string | null;
   readAt: string | null;
   createdAt: string;
 }
@@ -48,7 +50,8 @@ export function NotificationBell({ orgSlug }: { orgSlug: string }) {
         prev.map((p) => (p.id === n.id ? { ...p, readAt: new Date().toISOString() } : p)),
       );
     }
-    if (n.link) window.location.href = n.link;
+    const target = n.deepLink ?? n.link;
+    if (target) window.location.href = target;
   }
 
   async function handleMarkAllRead() {
