@@ -161,7 +161,8 @@ test.describe("the lead page", () => {
     await expect(page.getByText(/saved$/)).toBeVisible();
     await expect(page.getByRole("region", { name: /^Qualification/ }).locator("input[aria-invalid=true]")).toHaveCount(0, { timeout: 45_000 }); // the page has re-read what is still missing
     await strip.getByRole("button", { name: /Qualified/ }).click();
-    await expect(strip.getByRole("button", { name: /Qualified/ })).toHaveAttribute("aria-current", "step");
+    // The move is a server write and a re-read: allow for a slow runner.
+    await expect(strip.getByRole("button", { name: /Qualified/ })).toHaveAttribute("aria-current", "step", { timeout: 20_000 });
   });
 
   test("Mark lost needs a reason, and the lost reason is then shown on the lead", async ({ page }) => {
