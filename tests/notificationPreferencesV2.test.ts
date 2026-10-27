@@ -232,11 +232,11 @@ describe("presets and channels", () => {
     expect(events[0]!.newValue).toMatchObject({ preset: "IMPORTANT_ONLY", dailyEmailCap: 5 });
   });
 
-  it("keeps the older endpoint working, now across all ten types", async () => {
+  it("keeps the older endpoint working, now across all twelve types (payment overdue and dormant customer were added in Stage 3)", async () => {
     const { ctx } = await setup();
     current.ctx = ctx;
     const get = await legacyRoute.GET(new Request("http://x"), params);
-    expect(Object.keys(await get.json())).toHaveLength(10);
+    expect(Object.keys(await get.json())).toHaveLength(12);
     const post = await legacyRoute.POST(
       new Request("http://x", { method: "POST", body: JSON.stringify({ type: "MENTION", emailEnabled: false }) }),
       params,

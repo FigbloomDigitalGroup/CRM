@@ -20,6 +20,8 @@
     "notifications:sweep": "tsx scripts/notifications-sweep.ts",
     "jobs:worker": "tsx scripts/jobs-worker.ts",
     "openapi:export": "tsx scripts/export-openapi.ts",
+    "contract:update": "tsx scripts/update-contract.ts",
+    "mock:api": "tsx scripts/mock-server.ts",
     "test": "vitest run",
     "test:local": "docker compose up -d --wait && vitest run",
     "test:watch": "vitest",
@@ -37,15 +39,17 @@
     "bcryptjs": "^3.0.3",
     "csv-parse": "^7.0.3",
     "csv-stringify": "^6.9.0",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.53.0",
-    "next": "^15.5.26",
-    "nodemailer": "^10.0.13",
+    "next": "^15.5.28",
+    "nodemailer": "^10.2.1",
     "pino": "^10.3.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "recharts": "^3.10.1",
-    "sharp": "0.35.4",
-    "zod": "^4.6.5"
+    "sharp": "0.35.5",
+    "web-push": "^3.6.7",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
@@ -58,6 +62,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/web-push": "^3.6.4",
     "@typescript-eslint/eslint-plugin": "^8.70.1",
     "@typescript-eslint/parser": "^8.70.1",
     "@vitejs/plugin-react": "^4.7.0",
@@ -82,5 +87,9 @@
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "overrides": {
+    "postcss": "^8.5.28",
+    "uuid": "^11.1.1"
   }
 }

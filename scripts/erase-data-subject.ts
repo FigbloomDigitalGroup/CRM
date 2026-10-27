@@ -44,8 +44,7 @@
 import "dotenv/config";
 import { adminDb } from "../src/db/adminClient";
 import { withOrgContext } from "../src/db/orgScopedClient";
-import { recordAuditEvent } from "../src/repositories/auditEvents";
-import { getStorageDriver } from "../src/storage";
+import { eraseContactData } from "../src/services/erasureService";
 
 function parseArgs(argv: string[]) {
   const get = (flag: string) => {
@@ -110,32 +109,9 @@ async function main(): Promise<void> {
       return;
     }
 
-    // Recorded before the delete, not after -- it needs the contact's own
-    // details to be a useful processing record, and `entityId` pointing at
-    // a now-deleted row is fine (AuditEvent.entityType/entityId are plain
-    // strings, no FK -- see prisma/schema.prisma).
-    await recordAuditEvent({
-      organizationId: org.id,
-      action: "data_subject.erased",
-      entityType: "Contact",
-      entityId: contact.id,
-      metadata: {
-        firstName: contact.firstName,
-        lastName: contact.lastName,
-        email: contact.email,
-        phone: contact.phone,
-        unlinkedLeads: leads,
-        unlinkedDeals: deals,
-        erasedFiles: attachments.length,
-      },
-    });
-
-    await tx.contact.delete({ where: { id: contact.id } });
-    // The bytes of every attached file go too, and the file rows are marked purged, so nothing about the person stays in storage.
-    for (const a of attachments) {
-      await getStorageDriver().deleteObject(a.file.storageKey).catch(() => undefined);
-      await tx.file.update({ where: { id: a.fileId }, data: { status: "DELETED", deletedAt: new Date(), purgedAt: new Date() } });
-    }
+    // The erasure itself lives in the service (FIG-1062): the same code the Data and privacy screen runs after two confirmations.
+    const result = await eraseContactData({ organizationId: org.id, contactId });
+    console.log(JSON.stringify(result, null, 2));
     console.log(`Erased contact ${contactId}.`);
   });
 }

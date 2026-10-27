@@ -85,6 +85,8 @@ export async function listAssignableContactOwners(ctx: AuthContext) {
 export async function createContact(
   ctx: AuthContext,
   input: CreateContactServiceInput,
+  /** `skipDuplicateCheck`: the caller already checked (quick capture warns first), so do not search a second time. */
+  options: { skipDuplicateCheck?: boolean } = {},
 ) {
   requirePermission(ctx, "contacts.create");
 
@@ -126,18 +128,19 @@ export async function createContact(
     notes: omitNull(cleanNotes(input.notes)),
   };
 
-  const possibleDuplicates = await findPossibleDuplicateContacts(
-    ctx.organizationId,
-    { email: clean.email, phone: clean.phone },
-  );
-  const found = await findDuplicates(ctx, {
-    entity: "contact",
-    firstName: clean.firstName,
-    lastName: clean.lastName,
-    email: clean.email,
-    phone: clean.phone,
-    companyId: input.companyId,
-  });
+  const possibleDuplicates = options.skipDuplicateCheck
+    ? []
+    : await findPossibleDuplicateContacts(ctx.organizationId, { email: clean.email, phone: clean.phone });
+  const found = options.skipDuplicateCheck
+    ? { candidates: [], hiddenCount: 0 }
+    : await findDuplicates(ctx, {
+        entity: "contact",
+        firstName: clean.firstName,
+        lastName: clean.lastName,
+        email: clean.email,
+        phone: clean.phone,
+        companyId: input.companyId,
+      });
 
   const custom = await prepareCustomFields(ctx.organizationId, "CONTACT", {
     incoming: input.customFields as Record<string, unknown> | undefined,

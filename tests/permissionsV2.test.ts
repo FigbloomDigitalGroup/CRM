@@ -525,7 +525,7 @@ describe("explained denial envelope", () => {
   const AREAS: { area: string; key: string; expectOwners: string[] }[] = [
     { area: "Leads", key: "leads.edit.all", expectOwners: ["Management", "Sales"] },
     { area: "Deals", key: "deals.edit.all", expectOwners: ["Management", "Sales"] },
-    { area: "Finance", key: "finance.manage.payments", expectOwners: ["Finance"] },
+    { area: "Finance", key: "finance.manage.payments", expectOwners: ["Finance", "Management"] }, // Management manages payments too (FIG-1049)
     { area: "Organization", key: "organization.manage_settings", expectOwners: ["Management"] },
     { area: "Membership", key: "membership.manage", expectOwners: ["Management"] },
     { area: "Reporting", key: "reporting.view.all", expectOwners: ["Management"] },

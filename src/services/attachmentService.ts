@@ -155,6 +155,11 @@ async function loadForRecordAccess(ctx: AuthContext, attachmentId: string) {
   return { attachment, parent, parentId: id, loaded };
 }
 
+/** Proves the caller may open the record an attachment hangs off (404 otherwise); used by the file routes too. */
+export async function assertAttachmentRecordAccess(ctx: AuthContext, attachmentId: string): Promise<void> {
+  await loadForRecordAccess(ctx, attachmentId);
+}
+
 /** A short-lived signed link, issued after the record access check on this call, and audited. */
 export async function getAttachmentDownload(ctx: AuthContext, attachmentId: string) {
   const { attachment, parent, parentId } = await loadForRecordAccess(ctx, attachmentId);

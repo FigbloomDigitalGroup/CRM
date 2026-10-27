@@ -294,7 +294,22 @@ function quarantined() {
 async function loadVisible(ctx: AuthContext, fileId: string): Promise<File> {
   const file = await getFileById(ctx.organizationId, fileId);
   if (!file || file.status === "DELETED" || !canRead(ctx, file)) throw new NotFoundError("File", fileId);
+  await assertAttachmentFileAccess(ctx, file);
   return file;
+}
+
+/**
+ * A file attached to a record is as private as the record. Holding `attachments.manage` is not enough to open another person's
+ * attachment by its file id: the caller must also be able to open the lead, deal, contact, company or task it hangs off (the same
+ * check the attachment routes make). A file not yet attached to anything has no record to check and stays as it was.
+ */
+async function assertAttachmentFileAccess(ctx: AuthContext, file: File): Promise<void> {
+  if (file.purpose !== "ATTACHMENT" || file.ownerMembershipId === ctx.membershipId) return;
+  const linked = await adminDb.attachment.findFirst({ where: { fileId: file.id, organizationId: ctx.organizationId, deletedAt: null }, select: { id: true } });
+  if (!linked) return; // not attached to a record yet: nothing further to check
+  // Loaded on use: the attachment service imports this one.
+  const { assertAttachmentRecordAccess } = await import("./attachmentService");
+  await assertAttachmentRecordAccess(ctx, linked.id);
 }
 
 export async function getFile(ctx: AuthContext, fileId: string) {

@@ -39,10 +39,11 @@ export function tagFilter(tagIds: string[] | undefined) {
   return tagIds && tagIds.length > 0 ? { tagLinks: { some: { tagId: { in: tagIds } } } } : {};
 }
 
-export function listTagsWithUsage(organizationId: string, query?: string) {
+/** `onlyActive` is what a picker wants (B4.06: a hidden tag leaves the pickers); the settings list asks for every tag. */
+export function listTagsWithUsage(organizationId: string, query?: string, onlyActive = false) {
   return withOrgContext(organizationId, async (tx) => {
     const tags = await tx.tag.findMany({
-      where: { organizationId, ...(query ? { name: { contains: query, mode: "insensitive" } } : {}) },
+      where: { organizationId, ...(onlyActive ? { isActive: true } : {}), ...(query ? { name: { contains: query, mode: "insensitive" } } : {}) },
       orderBy: { name: "asc" },
       take: 500,
     });

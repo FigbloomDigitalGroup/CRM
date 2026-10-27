@@ -21,6 +21,8 @@ import { loadActiveDefinitions, toFieldDefinition } from "./customFieldService";
 import { findDuplicates } from "./duplicateService";
 import { assertEligibleAccountOwner } from "./ownerEligibility";
 import { changeTags } from "./tagService";
+import { type ResolvedRow, loadLookups, remember, resolveRow } from "./migrationRows";
+import { withOrgContext } from "../db/orgScopedClient";
 
 /**
  * Hard ceiling on rows processed per import call, independent of upload
@@ -628,6 +630,71 @@ export async function importLeads(
     metadata: { ...summary, errors: undefined },
   });
 
+  return summary;
+}
+
+export interface ImportDealsInput {
+  fileStream: Readable;
+  /** CRM field to CSV header: company, contactEmail, value, currency, stage, ownerEmail, service, expectedCloseDate, closedOn, lostReason, notes, name, createdAt. */
+  mapping: Record<string, string | undefined>;
+  duplicateStrategy: DuplicateStrategy;
+  hooks?: ImportHooks;
+}
+
+/**
+ * Deals from a spreadsheet (FIG-800, B4.04): company matched by name or created, primary contact by email, stage matched by name,
+ * owner matched by email, service, expected close date. A row with an unknown stage or owner, or no company, goes to the error report
+ * with the reason; nothing is silently defaulted. Rows are understood by the same resolver as the data migration (`migrationRows.ts`),
+ * so a deal means the same thing here and there. Imported deals are audited (`deals.imported`). No handoff, notification or lifecycle
+ * move runs for a won deal: this is history, not a sale happening now.
+ */
+export async function importDeals(ctx: AuthContext, input: ImportDealsInput): Promise<ImportSummary> {
+  requirePermission(ctx, "deals.create");
+  const mapping = Object.fromEntries(Object.entries(input.mapping).filter((e): e is [string, string] => typeof e[1] === "string" && e[1] !== ""));
+  const lookups = await loadLookups(ctx.organizationId, ctx.membershipId, "DEAL");
+  const options = { mapping, valueMappings: {}, createMissingCompanies: true };
+
+  const summary = await runImport<ResolvedRow>(input.mapping, {
+    organizationId: ctx.organizationId,
+    fileStream: input.fileStream,
+    duplicateStrategy: input.duplicateStrategy,
+    hooks: input.hooks,
+    resolveCandidate: async (rawRow) => {
+      const resolved = resolveRow("DEAL", rawRow, options, lookups, new Date());
+      if (!resolved.ok) throw new RowValidationError(resolved.issues.filter((i) => i.severity === "ERROR").map((i) => i.message).join(" "));
+      return resolved;
+    },
+    findHold: async (row, strategy) =>
+      strategy === "skip" && row.match ? { outcome: "duplicate", matchedId: row.match.id, reason: `Skipped: ${row.match.reason}` } : null,
+    create: async (row) => {
+      const data = { ...row.data } as Record<string, unknown>;
+      if (row.newCompany) {
+        let companyId = lookups.pendingCompanies.get(row.newCompany.key);
+        if (!companyId) {
+          const company = await createCompany({ organizationId: ctx.organizationId, name: row.newCompany.name, ownerMembershipId: ctx.membershipId, createdByMembershipId: ctx.membershipId });
+          companyId = company.id;
+          lookups.pendingCompanies.set(row.newCompany.key, companyId);
+          lookups.companiesByName.set(row.newCompany.key, [companyId]);
+        }
+        data.companyId = companyId;
+      }
+      const deal = await withOrgContext(ctx.organizationId, (tx) => tx.deal.create({ data: { ...data, organizationId: ctx.organizationId } as never, select: { id: true } }));
+      remember("DEAL", { ...row, data }, deal.id, lookups);
+      return deal;
+    },
+    afterCreate: async (record, rawRow, map) => {
+      const names = (rawRow[map.tags ?? "tags"] ?? "").split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+      if (names.length > 0) await changeTags(ctx, "deal", record.id, { addTagNames: names });
+    },
+  });
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "deals.imported",
+    entityType: "Deal",
+    metadata: { ...summary, errors: undefined },
+  });
   return summary;
 }
 

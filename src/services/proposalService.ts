@@ -1,6 +1,7 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission, requireOwnedRecordPermission } from "../auth/context";
-import { NotFoundError } from "../auth/errors";
+import { NotFoundError, ValidationError } from "../auth/errors";
+import { Prisma } from "@prisma/client";
 import { maskAmount } from "../auth/masking";
 import { assertRecordVisible } from "../auth/visibility";
 import { getDealById } from "../repositories/deals";
@@ -59,16 +60,27 @@ export async function createProposalReference(
     deal.ownerMembershipId,
   );
 
-  const created = await createProposalReferenceRecord({
-    organizationId: ctx.organizationId,
-    dealId,
-    proposalNumber: input.proposalNumber,
-    amount: input.amount,
-    currency: input.currency,
-    documentReference: input.documentReference,
-    notes: input.notes,
-    ownerMembershipId: ctx.membershipId,
-  });
+  let created;
+  try {
+    created = await createProposalReferenceRecord({
+      organizationId: ctx.organizationId,
+      dealId,
+      proposalNumber: input.proposalNumber,
+      amount: input.amount,
+      currency: input.currency,
+      documentReference: input.documentReference,
+      notes: input.notes,
+      ownerMembershipId: ctx.membershipId,
+    });
+  } catch (err) {
+    // A deal's proposal numbers are unique; a repeat is the caller's mistake, not a server fault.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new ValidationError("This deal already has a proposal with that number.", [
+        { path: "proposalNumber", message: "Use a different proposal number.", code: "DUPLICATE_PROPOSAL_NUMBER" },
+      ]);
+    }
+    throw err;
+  }
   return maskAmount(ctx, deal, created);
 }
 

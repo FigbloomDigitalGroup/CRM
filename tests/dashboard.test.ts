@@ -105,7 +105,7 @@ describe("role dashboards (FIG-1042, B2.13)", () => {
     const deliveryData = ((await loadSection(delivery, "delivery")) as { data: Record<string, any> }).data;
     expect(deliveryData).toMatchObject({ awaitingOwner: 0, onboardingInProgress: 0 });
     const financeData = ((await loadSection(finance, "finance")) as { data: Record<string, any> }).data;
-    expect(financeData.payments.available).toBe(false);
+    expect(financeData.payments).toMatchObject({ available: true, nothingToCollect: true, overdue: { count: 0 }, dueThisWeek: { count: 0 }, collectedThisMonth: { count: 0 } });
     const techData = ((await loadSection(technical, "technical")) as { data: Record<string, any> }).data;
     expect(techData.counts.OVERDUE).toBe(1);
     expect(JSON.stringify(techData)).not.toContain("Install"); // counts only

@@ -31,6 +31,11 @@ build ad hoc schedulers.
 | `notifications.expire` | Removes read notifications older than 90 days (unread are kept) | daily |
 | `scores.recompute` | Lead scores and customer health | daily |
 | `signals.refresh` | Adoption, stalled deals, overdue tasks for the dashboards | daily |
+| `lifecycle.sweep` | Customer lifecycle: dormant, renewal, back to active; tells the owners of customers that went dormant (`docs/LIFECYCLE_AND_RENEWALS.md`) | daily |
+| `reminders.sweep` | Proposal follow-ups, renewals coming up, overdue invoices (`docs/LIFECYCLE_AND_RENEWALS.md`, `docs/PAYMENTS.md`) | daily |
+| `automations.sweep` | Stalled deal alerts, keyed once per stall (`docs/AUTOMATIONS.md`) | daily |
+| `privacy.retention` | Purges data past each retention period; does nothing under a legal hold (`docs/PRIVACY.md`) | daily |
+| `data.migration` | One phase of a data migration: validate, dry run, import or rollback (`docs/DATA_MIGRATION.md`) | on demand |
 | `data.import` | One CSV import run (progress, cancel, error report) | on demand |
 | `data.export` | One CSV export run (stored through the file service) | on demand |
 

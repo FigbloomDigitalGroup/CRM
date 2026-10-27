@@ -3,6 +3,7 @@ import type { JsonClause } from "../lib/customFields";
 import { Prisma } from "@prisma/client";
 import { withOrgContext } from "../db/orgScopedClient";
 import { TAG_LINKS_INCLUDE, tagFilter } from "./tags";
+import { companyIdsNamed, contactIdsNamed } from "./searchMatch";
 
 export interface CreateLeadInput {
   customFields?: Prisma.InputJsonValue;
@@ -135,6 +136,9 @@ export interface ListLeadsFilters {
   /** Also match leads whose contact or company phone matched the query in another format (FIG-1041). */
   matchContactIds?: string[];
   matchCompanyIds?: string[];
+  /** Set by `listLeads` / `countLeads` once the company and contact text matches are looked up by id (see searchMatch.ts); not for callers. */
+  textMatchedByCompanyId?: boolean;
+  textMatchedByContactId?: boolean;
   ownerMembershipId?: string;
   leadStatusId?: string;
   leadSourceId?: string;
@@ -216,29 +220,30 @@ function baseLeadsWhere(
             { notes: { contains: filters.query, mode: "insensitive" } },
             ...(filters.matchContactIds?.length ? [{ contactId: { in: filters.matchContactIds } }] : []),
             ...(filters.matchCompanyIds?.length ? [{ companyId: { in: filters.matchCompanyIds } }] : []),
-            {
-              company: {
-                name: { contains: filters.query, mode: "insensitive" },
-              },
-            },
-            {
-              contact: {
-                firstName: { contains: filters.query, mode: "insensitive" },
-              },
-            },
-            {
-              contact: {
-                lastName: { contains: filters.query, mode: "insensitive" },
-              },
-            },
-            {
-              contact: {
-                email: { contains: filters.query, mode: "insensitive" },
-              },
-            },
+            ...(filters.textMatchedByCompanyId ? [] : [{ company: { name: { contains: filters.query, mode: "insensitive" as const } } }]),
+            ...(filters.textMatchedByContactId
+              ? []
+              : [
+                  { contact: { firstName: { contains: filters.query, mode: "insensitive" as const } } },
+                  { contact: { lastName: { contains: filters.query, mode: "insensitive" as const } } },
+                  { contact: { email: { contains: filters.query, mode: "insensitive" as const } } },
+                ]),
           ],
         }
       : {}),
+  };
+}
+
+/** Turns the search text into the ids of the companies and contacts it names, so the list filters by id instead of joining (searchMatch.ts). */
+async function withTextMatches(tx: Prisma.TransactionClient, organizationId: string, filters: ListLeadsFilters): Promise<ListLeadsFilters> {
+  if (!filters.query) return filters;
+  const [companyIds, contactIds] = await Promise.all([companyIdsNamed(tx, organizationId, filters.query), contactIdsNamed(tx, organizationId, filters.query)]);
+  return {
+    ...filters,
+    matchCompanyIds: companyIds ? [...(filters.matchCompanyIds ?? []), ...companyIds] : filters.matchCompanyIds,
+    matchContactIds: contactIds ? [...(filters.matchContactIds ?? []), ...contactIds] : filters.matchContactIds,
+    textMatchedByCompanyId: companyIds !== null,
+    textMatchedByContactId: contactIds !== null,
   };
 }
 
@@ -246,9 +251,9 @@ export async function listLeads(
   organizationId: string,
   filters: ListLeadsFilters = {},
 ) {
-  return withOrgContext(organizationId, (tx) =>
+  return withOrgContext(organizationId, async (tx) =>
     tx.lead.findMany({
-      where: leadsWhere(organizationId, filters),
+      where: leadsWhere(organizationId, await withTextMatches(tx, organizationId, filters)),
       include: {
         company: true,
         contact: true,
@@ -270,8 +275,8 @@ export async function countLeads(
   organizationId: string,
   filters: ListLeadsFilters = {},
 ) {
-  return withOrgContext(organizationId, (tx) =>
-    tx.lead.count({ where: leadsWhere(organizationId, filters) }),
+  return withOrgContext(organizationId, async (tx) =>
+    tx.lead.count({ where: leadsWhere(organizationId, await withTextMatches(tx, organizationId, filters)) }),
   );
 }
 

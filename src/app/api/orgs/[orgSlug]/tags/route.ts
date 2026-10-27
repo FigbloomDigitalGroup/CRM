@@ -4,7 +4,11 @@ import { parseJsonBody, parseQueryParams } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { createTag, listTags } from "@/services/tagService";
 
-const ListQuerySchema = z.object({ q: z.string().max(40).optional() });
+const ListQuerySchema = z.object({
+  q: z.string().max(40).optional(),
+  /** Tag managers only: include hidden tags (B4.06). The picker leaves them out. */
+  includeHidden: z.enum(["true", "false"]).optional(),
+});
 const CreateTagSchema = z.strictObject({
   name: z.string({ error: "name is required." }),
   colour: z.string().optional(),
@@ -19,7 +23,7 @@ export async function GET(
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
     const query = parseQueryParams(new URL(request.url).searchParams, ListQuerySchema);
-    return { items: await listTags(ctx, query.q) };
+    return { items: await listTags(ctx, query.q, { includeHidden: query.includeHidden === "true" }) };
   });
 }
 

@@ -21,7 +21,10 @@ import { recordAuditEvent } from "../repositories/auditEvents";
 import { countEmailsSentSince } from "../repositories/notificationDeliveries";
 import { resolveEffectivePreferences, upsertPreference } from "../repositories/notificationPreferences";
 import { getNotificationSettings, saveNotificationSettings } from "../repositories/notificationSettings";
+import { pushConfigured } from "../notifications/webPush";
+import { pushPreferenceMap } from "../repositories/pushSubscriptions";
 import { memberTimeZone } from "./notificationDeliveryPolicy";
+import { hasPushDevice } from "./pushService";
 
 /**
  * Notification preferences v2 (FIG-1027, B1.11): per-role types, three channels
@@ -57,13 +60,22 @@ function detectPreset(
   return "CUSTOM";
 }
 
+/** Why push cannot be turned on for this person right now, or null when it can (B4.07). */
+async function pushBlocker(ctx: AuthContext): Promise<string | null> {
+  if (!pushConfigured()) return PUSH_UNAVAILABLE_NOTE;
+  if (!(await hasPushDevice(ctx))) return "Allow notifications on this phone or browser first, so there is a device to send to.";
+  return null;
+}
+
 export async function getMyNotificationPreferencesV2(ctx: AuthContext) {
   const config = await loadFeatureConfig(ctx.organizationId);
   const defs = relevantTypes(ctx, config.release);
-  const [effective, settings, timeZone] = await Promise.all([
+  const [effective, settings, timeZone, blocker, pushPrefs] = await Promise.all([
     resolveEffectivePreferences(ctx.organizationId, ctx.membershipId),
     getNotificationSettings(ctx.organizationId, ctx.membershipId),
     memberTimeZone(ctx.organizationId, ctx.membershipId),
+    pushBlocker(ctx),
+    pushPreferenceMap(ctx.organizationId, ctx.membershipId),
   ]);
   const [emailsToday, held] = await Promise.all([
     countEmailsSentSince(ctx.organizationId, ctx.membershipId, startOfLocalDay(new Date(), timeZone)),
@@ -91,7 +103,7 @@ export async function getMyNotificationPreferencesV2(ctx: AuthContext) {
       channels: {
         inApp: { enabled: effective[d.key].inAppEnabled, locked: d.alwaysOn },
         email: { enabled: effective[d.key].emailEnabled, locked: d.alwaysOn },
-        push: { enabled: false, available: false, note: PUSH_UNAVAILABLE_NOTE },
+        push: { enabled: blocker === null && pushPrefs.get(d.key) === true, available: blocker === null, note: blocker ?? "Notifications are sent to your registered phones and browsers." },
       },
     })),
     quietHours: { ...settings.quietHours, timeZone },
@@ -123,7 +135,8 @@ export async function updateMyNotificationPreferencesV2(
   }
 
   // ---- per type
-  const writes = new Map<NotificationTypeKey, { emailEnabled?: boolean; inAppEnabled?: boolean }>();
+  let pushBlockerMessage: string | undefined;
+  const writes = new Map<NotificationTypeKey, { emailEnabled?: boolean; inAppEnabled?: boolean; pushEnabled?: boolean }>();
   for (const [type, change] of Object.entries(input.types ?? {})) {
     const def = findTypeDef(type);
     if (!def || !(NOTIFICATION_TYPES as readonly string[]).includes(type)) {
@@ -139,7 +152,10 @@ export async function updateMyNotificationPreferencesV2(
       continue;
     }
     if (change.push === true) {
-      issues.push({ path: `types.${type}.push`, code: "PUSH_NOT_AVAILABLE", message: `${PUSH_UNAVAILABLE_NOTE} It cannot be turned on yet.` });
+      pushBlockerMessage ??= (await pushBlocker(ctx)) ?? "";
+      if (pushBlockerMessage) {
+        issues.push({ path: `types.${type}.push`, code: "PUSH_NOT_AVAILABLE", message: `${pushBlockerMessage} It cannot be turned on yet.` });
+      }
     }
     if (def.alwaysOn && (change.inApp === false || change.email === false)) {
       issues.push({
@@ -149,9 +165,10 @@ export async function updateMyNotificationPreferencesV2(
       });
       continue;
     }
-    const w: { emailEnabled?: boolean; inAppEnabled?: boolean } = {};
+    const w: { emailEnabled?: boolean; inAppEnabled?: boolean; pushEnabled?: boolean } = {};
     if (change.email !== undefined) w.emailEnabled = change.email;
     if (change.inApp !== undefined) w.inAppEnabled = change.inApp;
+    if (change.push !== undefined) w.pushEnabled = change.push;
     if (Object.keys(w).length > 0) writes.set(def.key, w);
   }
 

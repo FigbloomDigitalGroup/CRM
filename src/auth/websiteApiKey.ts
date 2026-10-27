@@ -87,11 +87,18 @@ export async function resolveWebsitePublicContext(
   }
 
   const providedHash = Buffer.from(hashWebsiteApiKey(providedKey));
-  const storedHash = Buffer.from(organization.websiteApiKey.keyHash);
-  if (
-    providedHash.length !== storedHash.length ||
-    !timingSafeEqual(providedHash, storedHash)
-  ) {
+  const matches = (stored: string) => {
+    const storedBuffer = Buffer.from(stored);
+    return providedHash.length === storedBuffer.length && timingSafeEqual(providedHash, storedBuffer);
+  };
+  // B4.01: after a rotation the previous key still works until its grace window ends, so the live website form never breaks mid-change.
+  const record = organization.websiteApiKey;
+  const previousStillValid =
+    record.previousKeyHash !== null &&
+    record.previousKeyExpiresAt !== null &&
+    record.previousKeyExpiresAt.getTime() > Date.now() &&
+    matches(record.previousKeyHash);
+  if (!matches(record.keyHash) && !previousStillValid) {
     throw invalid();
   }
 

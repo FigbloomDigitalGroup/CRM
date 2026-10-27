@@ -35,7 +35,7 @@ describe("inboundEmailService: ingestInboundEmail", () => {
     ).rejects.toThrow(UnauthorizedError);
   });
 
-  it("does not log anything for a sender matching no contact, but still succeeds", async () => {
+  it("keeps a message from a sender matching no contact in the Needs-linking queue, and still succeeds", async () => {
     const org = await createTestOrganization();
     const ctx = await createTestContext(org.id, "MANAGEMENT");
     const { token } = await regenerateInboundEmailKey(ctx);
@@ -45,7 +45,21 @@ describe("inboundEmailService: ingestInboundEmail", () => {
       subject: "Hi",
       text: "Hello there",
     });
-    expect(result.logged).toBe(false);
+    expect(result).toMatchObject({ logged: true, needsLinking: true });
+    const waiting = await adminDb.communication.findUniqueOrThrow({ where: { id: result.communicationId! } });
+    expect(waiting).toMatchObject({ needsLinking: true, counterpartyEmail: "unknown@example.test", contactId: null, companyId: null, direction: "INBOUND" });
+  });
+
+  it("never stores the same message twice when the provider retries", async () => {
+    const org = await createTestOrganization();
+    const ctx = await createTestContext(org.id, "MANAGEMENT");
+    const { token } = await regenerateInboundEmailKey(ctx);
+    const payload = { from: "Pat Lee <pat@example.test>", subject: "Hi", text: "Hello", messageId: "<retry-1@mail.example.test>" };
+    const first = await ingestInboundEmail(org.slug, token, payload);
+    const second = await ingestInboundEmail(org.slug, token, payload);
+    expect(second).toMatchObject({ logged: true, duplicate: true, communicationId: first.communicationId });
+    expect(await adminDb.communication.count({ where: { organizationId: org.id } })).toBe(1);
+    expect((await adminDb.communication.findUniqueOrThrow({ where: { id: first.communicationId! } })).counterpartyName).toBe("Pat Lee");
   });
 
   it("logs an inbound communication linked to the matching contact and company, with no author", async () => {

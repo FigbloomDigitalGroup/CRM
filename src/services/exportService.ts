@@ -1,4 +1,4 @@
-import { stringify } from "csv-stringify/sync";
+import { stringifyCsv as stringify } from "../lib/csv";
 import type { AuthContext } from "../auth/context";
 import { deny, hasPermission, requirePermission } from "../auth/context";
 import { adminDb } from "../db/adminClient";
@@ -9,6 +9,7 @@ import type { ListLeadsFilters } from "../repositories/leads";
 import type { ListDealsFilters } from "../repositories/deals";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { iterateInBatches } from "../lib/pagination";
+import { consumeExportApproval, loadExportRights } from "./privacySettings";
 import { countCompanies, listCompanies } from "./companyService";
 import { countContacts, listContacts } from "./contactService";
 import { countLeads, listLeads } from "./leadService";
@@ -26,13 +27,22 @@ import {
   type OrganizationMetricsFilters,
 } from "./reportingService";
 
-/** Exports above this many rows need the bulk-export permission (Management) until the approvals engine arrives (FIG-1034, B6.13). */
+/**
+ * Exports above the organisation's row threshold (default 500, FIG-1062, B4.05) need the bulk-export permission or a role the organisation
+ * allows, or an approval from Management for this person and this kind of export (`approvalId`, spent once).
+ */
 export const BULK_EXPORT_ROW_LIMIT = 500;
 
-export function assertBulkExportAllowed(ctx: AuthContext, rowCount: number): void {
-  if (rowCount > BULK_EXPORT_ROW_LIMIT && !hasPermission(ctx, "export.bulk")) {
-    throw deny(ctx, "export.bulk", ["export.bulk"]);
-  }
+export async function assertBulkExportAllowed(
+  ctx: AuthContext,
+  rowCount: number,
+  options: { approvalId?: string; entity?: string } = {},
+): Promise<void> {
+  const rights = await loadExportRights(ctx.organizationId);
+  if (rowCount <= rights.approvalThreshold) return;
+  if (hasPermission(ctx, "export.bulk") || rights.allowedRoleKeys.includes(ctx.roleKey)) return;
+  if (options.approvalId && options.entity && (await consumeExportApproval(ctx.organizationId, ctx.membershipId, options.approvalId, options.entity, rowCount))) return;
+  throw deny(ctx, `export.bulk, or an approved export request (more than ${rights.approvalThreshold} rows)`, ["export.bulk"]);
 }
 
 export interface CsvExport {
@@ -108,7 +118,7 @@ export async function exportCompaniesCsv(
   ]);
   const lifecycleName = new Map(lifecycleStates.map((s) => [s.id, s.name]));
 
-  assertBulkExportAllowed(ctx, total);
+  await assertBulkExportAllowed(ctx, total);
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,
@@ -169,7 +179,7 @@ export async function exportContactsCsv(
     membershipLookup(ctx.organizationId),
   ]);
 
-  assertBulkExportAllowed(ctx, total);
+  await assertBulkExportAllowed(ctx, total);
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,
@@ -233,7 +243,7 @@ export async function exportLeadsCsv(
   ]);
   const serviceName = new Map(services.map((s) => [s.id, s.name]));
 
-  assertBulkExportAllowed(ctx, total);
+  await assertBulkExportAllowed(ctx, total);
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,
@@ -302,7 +312,7 @@ export async function exportDealsCsv(
     membershipLookup(ctx.organizationId),
   ]);
 
-  assertBulkExportAllowed(ctx, total);
+  await assertBulkExportAllowed(ctx, total);
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,

@@ -20,3 +20,9 @@ blob-report/
 openapi/
 Figbloom CRM- Final Design.zip
 .data/
+
+# G1.04 performance run output (docs/PERF_BASELINE.md is the record)
+perf-results.json
+perf-export.json
+perf-import.json
+migration-rehearsal.json

@@ -221,3 +221,36 @@ are identical to the screens. Each export is audited (`reports.exported`).
 - A date-only "to" includes that whole day; unreadable dates fall back to
   the default window; a reversed range is swapped.
 - The open-pipeline snapshot excludes archived deals.
+
+## Reports v2 and My metrics (FIG-1055, B3.09)
+
+`src/services/reportsV2Service.ts` (aggregations in `src/repositories/reportsV2.ts`, all in SQL). API:
+`GET /api/orgs/<org>/reports/v2` (every report), `.../reports/v2/<KEY>`, `.../reports/v2/<KEY>/export` (CSV),
+`.../reports/v2/my-metrics` and `.../my-metrics/export`. Forecast arrives in B6.14.
+
+Every report answers in one shape: `table` (columns, rows and a totals row), `chart` (type, the metric plotted and
+the series, **read from the same rows as the table**, so a chart and its table are the same numbers), `definition` (the
+sentence below), `scope`, `range` and `valueMasked`. A rate with nothing to divide by is **0, never NaN or
+"UNDEFINED"**; a percentage change against a zero is empty (`null`).
+
+Organisation reports need `reporting.view.all` (Management). A caller without `deals.view.value` gets every money
+column as `null` and the chart falls back to counts. CSV is the same table with its totals row; above 500 rows it needs
+`export.bulk`, like every export, and each export is audited (`report.exported`).
+
+| Key | Definition (also returned with the report) | Range |
+|---|---|---|
+| `LEAD_SOURCES` | Leads created in the date range, counted by the source they came from. A lead with no source is counted as No source. | range |
+| `CONVERSION_BY_SOURCE` | Of the leads created in the date range, how many have become a deal as of today, by source. Conversion is converted divided by created, shown as 0% when no leads were created. | range |
+| `CONVERSION_BY_STAGE` | Of the leads created in the date range, how many sit at each lead status now, and how many of those have become a deal. | range |
+| `PIPELINE_BY_STAGE` | A live snapshot of open, un-archived deals: the count and total value at each pipeline stage. | live |
+| `LOST_REASONS` | Deals marked lost in the date range, counted by the reason recorded. Share is the reason's deals divided by all lost deals. | range, by `lostAt` |
+| `PER_PERSON` | For each salesperson: leads they were given in the range, how many converted, deals they won in the range with their value, and tasks they completed. | range |
+| `MONTH_VS_LAST` | The same measures for this calendar month so far and for the whole of last month. Change is this month minus last month. | this and last month (UTC) |
+| `CUSTOMERS` | A live snapshot of customers: active, repeat and dormant, following the customer report. | live |
+| `RENEWALS` | A live snapshot of recurring services by renewal state, with their total value. | live |
+
+**My metrics** counts only the caller's own records, whatever else their role can see, and shows the cards that fit the
+role: Sales leads, conversion, deals won and value, open pipeline and calls logged; Delivery handoffs taken and
+delivered and onboarding in progress; Finance invoices created, payments recorded and the amount, and follow-up notes
+kept; everyone with tasks their tasks done, open and overdue. Technical has no reporting permission and is refused.
+Counts of "live" figures (open deals, open tasks, onboarding) ignore the date range.

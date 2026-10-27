@@ -138,6 +138,14 @@ export async function listAllMembershipsForAdmin(organizationId: string) {
     orderBy: { createdAt: "asc" },
   });
 
+  // B4.01: when each person last signed in here.
+  const lastSignIns = await adminDb.signInEvent.groupBy({
+    by: ["userId"],
+    where: { organizationId, outcome: "SUCCESS" },
+    _max: { createdAt: true },
+  });
+  const lastSignInByUser = new Map(lastSignIns.map((r) => [r.userId, r._max.createdAt]));
+
   const names = new Map(memberships.map((m) => [m.id, m.user.name]));
   const actor = (id: string | null) => (id ? (names.get(id) ?? null) : null);
   const now = Date.now();
@@ -164,6 +172,8 @@ export async function listAllMembershipsForAdmin(organizationId: string) {
     deactivatedByName: actor(m.deactivatedByMembershipId),
     removedAt: m.removedAt,
     removedByName: actor(m.removedByMembershipId),
+    /** B4.01: the most recent successful sign-in to this organisation, or null if they never have. */
+    lastSignInAt: lastSignInByUser.get(m.userId) ?? null,
     /** B1.05: set while the account is locked after repeated failed sign-ins. */
     lockedUntil: m.user.lockedUntil && m.user.lockedUntil.getTime() > now ? m.user.lockedUntil : null,
   }));

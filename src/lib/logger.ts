@@ -54,8 +54,18 @@ async function reportToSentry(args: unknown[]): Promise<void> {
   });
 }
 
+/** Where a secret can sit in what the app logs: at the top, one level down, or in request headers. */
+export const REDACTED_PATHS = [
+  "password", "newPassword", "token", "apiKey", "secret", "captchaSecret", "authorization", "cookie",
+  "*.password", "*.newPassword", "*.token", "*.apiKey", "*.secret", "*.captchaSecret", "*.authorization", "*.cookie",
+  "headers.authorization", "headers.cookie", "headers[\"x-figbloom-api-key\"]", "headers[\"x-figbloom-inbound-key\"]", "headers[\"x-cron-secret\"]",
+  "req.headers.authorization", "req.headers.cookie",
+];
+
 export const logger = pino({
   level: process.env.LOG_LEVEL ?? "info",
+  // G1.05: a secret that ends up in a log line (a request body, a header, an error context) is written as [redacted], not stored.
+  redact: { paths: REDACTED_PATHS, censor: "[redacted]" },
   transport:
     process.env.NODE_ENV === "production"
       ? undefined

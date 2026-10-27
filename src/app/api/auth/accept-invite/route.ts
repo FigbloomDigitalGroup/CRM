@@ -4,6 +4,7 @@ import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
 import { getClientInfo } from "@/app/api/_lib/clientRequest";
 import { setSessionCookie } from "@/app/api/_lib/sessionCookie";
+import { limitInviteAccept } from "@/auth/publicLimits";
 import { acceptMembershipInvite } from "@/services/authService";
 
 const AcceptInviteSchema = z.object({
@@ -15,8 +16,9 @@ const AcceptInviteSchema = z.object({
 
 export async function POST(request: Request) {
   return handleRoute(async () => {
-    const body = await parseJsonBody(request, AcceptInviteSchema);
     const client = getClientInfo(request);
+    await limitInviteAccept(client.ipAddress);
+    const body = await parseJsonBody(request, AcceptInviteSchema);
     const { token, expiresAt, userId, organizationSlug } = await acceptMembershipInvite(
       body.token,
       body.password,

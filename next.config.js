@@ -1,4 +1,5 @@
 const { withSentryConfig } = require("@sentry/nextjs/config");
+const { buildSecurityHeaders } = require("./config/securityHeaders");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -9,6 +10,10 @@ const nextConfig = {
   // mistaken for a design element while developing.
   devIndicators: {
     position: "bottom-right",
+  },
+  // G1.05: clickjacking, MIME sniffing, referrer and browser-feature defaults on every response (see config/securityHeaders.js).
+  async headers() {
+    return [{ source: "/:path*", headers: buildSecurityHeaders(process.env.NODE_ENV === "production") }];
   },
 };
 

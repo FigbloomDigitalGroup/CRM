@@ -3,7 +3,7 @@ import { ValidationError } from "@/auth/errors";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { startImport } from "@/services/dataRunService";
 
-// Starts a background import (FIG-1034): multipart with `entity` (LEAD, CONTACT or COMPANY), `file`,
+// Starts a background import (FIG-1034): multipart with `entity` (LEAD, CONTACT, COMPANY or DEAL, FIG-800), `file`,
 // `mapping` (JSON, CRM field to CSV header) and `duplicateStrategy` (skip or create). Answers at once
 // with the run; watch it under /data-runs/{id}. `tags` and `cf:<key>` columns are read as they are.
 export async function POST(
@@ -17,8 +17,8 @@ export async function POST(
     const file = form.get("file");
     if (!(file instanceof File)) throw new ValidationError("A CSV file is required.", [{ path: "file", message: "Choose a CSV file." }]);
     const entity = String(form.get("entity") ?? "").toUpperCase();
-    if (entity !== "LEAD" && entity !== "CONTACT" && entity !== "COMPANY") {
-      throw new ValidationError("Choose what to import.", [{ path: "entity", message: "Use LEAD, CONTACT or COMPANY." }]);
+    if (entity !== "LEAD" && entity !== "CONTACT" && entity !== "COMPANY" && entity !== "DEAL") {
+      throw new ValidationError("Choose what to import.", [{ path: "entity", message: "Use LEAD, CONTACT, COMPANY or DEAL." }]);
     }
     let mapping: Record<string, string | undefined> = {};
     const raw = form.get("mapping");

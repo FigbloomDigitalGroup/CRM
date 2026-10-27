@@ -3,6 +3,7 @@ import type { JsonClause } from "../lib/customFields";
 import { Prisma } from "@prisma/client";
 import { withOrgContext } from "../db/orgScopedClient";
 import { TAG_LINKS_INCLUDE, tagFilter } from "./tags";
+import { companyIdsNamed } from "./searchMatch";
 
 const DEAL_INCLUDE = {
   company: true,
@@ -105,6 +106,8 @@ export async function getDealById(organizationId: string, dealId: string) {
 
 export interface ListDealsFilters {
   query?: string;
+  /** Set by `listDeals` / `countDeals` once the companies the text names are looked up by id (searchMatch.ts); not for callers. */
+  companyIdsNamed?: string[];
   ownerMembershipId?: string;
   pipelineStageId?: string;
   outcome?: "OPEN" | "WON" | "LOST";
@@ -170,7 +173,9 @@ function baseDealsWhere(
     all.push({
       OR: [
         { notes: { contains: filters.query, mode: "insensitive" } },
-        { company: { name: { contains: filters.query, mode: "insensitive" } } },
+        ...(filters.companyIdsNamed
+          ? filters.companyIdsNamed.length ? [{ companyId: { in: filters.companyIdsNamed } }] : []
+          : [{ company: { name: { contains: filters.query, mode: "insensitive" as const } } }]),
       ],
     });
   }
@@ -222,13 +227,19 @@ export async function touchDealActivity(organizationId: string, dealId: string, 
   );
 }
 
+async function withCompanyMatch(tx: Prisma.TransactionClient, organizationId: string, filters: ListDealsFilters): Promise<ListDealsFilters> {
+  if (!filters.query) return filters;
+  const ids = await companyIdsNamed(tx, organizationId, filters.query);
+  return ids ? { ...filters, companyIdsNamed: ids } : filters;
+}
+
 export async function listDeals(
   organizationId: string,
   filters: ListDealsFilters = {},
 ) {
-  return withOrgContext(organizationId, (tx) =>
+  return withOrgContext(organizationId, async (tx) =>
     tx.deal.findMany({
-      where: dealsWhere(organizationId, filters),
+      where: dealsWhere(organizationId, await withCompanyMatch(tx, organizationId, filters)),
       include: DEAL_INCLUDE,
       orderBy: [
         { pipelineStage: { sequence: "asc" } },
@@ -254,8 +265,8 @@ export async function countDeals(
   organizationId: string,
   filters: ListDealsFilters = {},
 ) {
-  return withOrgContext(organizationId, (tx) =>
-    tx.deal.count({ where: dealsWhere(organizationId, filters) }),
+  return withOrgContext(organizationId, async (tx) =>
+    tx.deal.count({ where: dealsWhere(organizationId, await withCompanyMatch(tx, organizationId, filters)) }),
   );
 }
 

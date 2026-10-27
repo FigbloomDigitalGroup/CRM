@@ -38,6 +38,10 @@ export interface ListCompaniesFilters {
   matchIds?: string[];
   ownerMembershipId?: string;
   lifecycleStateId?: string;
+  /** A lifecycle state by key, such as DORMANT_CUSTOMER (the Dormant tab) (FIG-1056). */
+  lifecycleKey?: string;
+  /** Companies that have this service: a running company service, a recurring service, or a won deal for it (FIG-1056). */
+  serviceId?: string;
   /** Archived companies are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
   /** The archived tab: only archived records (B2.16). */
@@ -126,9 +130,20 @@ export async function getCompanyById(
 /** Adds the custom field filters on top of the plain filters. */
 function companiesWhere(...args: Parameters<typeof baseCompaniesWhere>): Prisma.CompanyWhereInput {
   const base = baseCompaniesWhere(...args);
-  const clauses = args[1].customFieldClauses;
-  if (!clauses || clauses.length === 0) return base;
-  return { AND: [base, ...clauses.map((c) => ({ customFields: c as Prisma.JsonFilter<"Company"> }))] };
+  const filters = args[1];
+  const and: Prisma.CompanyWhereInput[] = (filters.customFieldClauses ?? []).map((c) => ({ customFields: c as Prisma.JsonFilter<"Company"> }));
+  if (filters.serviceId) {
+    const serviceId = filters.serviceId;
+    and.push({
+      OR: [
+        { companyServices: { some: { serviceId, status: "ACTIVE" } } },
+        { recurringServices: { some: { serviceId, cancelledAt: null } } },
+        { deals: { some: { serviceId, outcome: "WON", archivedAt: null } } },
+      ],
+    });
+  }
+  if (and.length === 0) return base;
+  return { AND: [base, ...and] };
 }
 
 function baseCompaniesWhere(
@@ -139,6 +154,7 @@ function baseCompaniesWhere(
     organizationId,
     ownerMembershipId: filters.ownerMembershipId,
     lifecycleStateId: filters.lifecycleStateId,
+    ...(filters.lifecycleKey ? { lifecycleState: { key: filters.lifecycleKey } } : {}),
     ...archivedWhere(filters),
     ...tagFilter(filters.tagIds),
     ...(filters.query

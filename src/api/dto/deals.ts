@@ -48,6 +48,8 @@ export const DealSchema = z.strictObject({
     })
     .nullable(),
   createdByMembershipId: z.string().nullable(),
+  /** The data migration session that created this row, or null (FIG-1061). */
+  importSessionId: z.string().nullable(),
   archivedAt: isoDateTime.nullable(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,

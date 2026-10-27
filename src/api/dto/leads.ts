@@ -70,9 +70,13 @@ export const LeadSchema = z.strictObject({
   score: ScoreViewSchema.nullable(),
   lostReasonId: z.string().nullable(),
   nextFollowUpAt: isoDateTime.nullable(),
+  /** When a call or WhatsApp message to this lead was last logged as reached (quick-log, FIG-1054). */
+  lastContactedAt: isoDateTime.nullable(),
   convertedAt: isoDateTime.nullable(),
   notes: z.string().nullable(),
   createdByMembershipId: z.string().nullable(),
+  /** The data migration session that created this row, or null (FIG-1061). */
+  importSessionId: z.string().nullable(),
   archivedAt: isoDateTime.nullable(),
   createdAt: isoDateTime,
   updatedAt: isoDateTime,

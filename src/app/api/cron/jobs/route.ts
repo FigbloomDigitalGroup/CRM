@@ -1,4 +1,5 @@
 import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { secretsMatch } from "@/auth/secretCompare";
 import { UnauthorizedError } from "@/auth/errors";
 import { checkMissedRuns, runDueJobs, tickSchedules } from "@/jobs/runner";
 
@@ -20,7 +21,7 @@ function assertAuthorized(request: Request): void {
   const provided = authHeader?.toLowerCase().startsWith("bearer ")
     ? authHeader.slice("bearer ".length)
     : request.headers.get("x-cron-secret");
-  if (provided !== secret) {
+  if (!secretsMatch(provided, secret)) {
     throw new UnauthorizedError("Invalid or missing cron secret.");
   }
 }

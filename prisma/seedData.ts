@@ -561,6 +561,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "proposals.view",
     "proposals.manage",
     "finance.view.payments",
+    "finance.manage.payments",
     "reporting.view.all",
     "configuration.manage",
     "audit.view",

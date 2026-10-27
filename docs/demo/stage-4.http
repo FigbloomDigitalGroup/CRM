@@ -1,0 +1,151 @@
+### Stage 4 demo (B4.10). Run the dev server (`npm run dev`), `npm run migrate:deploy`, seed the dev accounts (`npm run seed:dev`),
+### start the job worker in another terminal (`npm run jobs:worker`), then sign in as each dev account and send these with that session cookie.
+### The same walk-through runs automatically in tests/stage4ExitGate.test.ts.
+
+@base = http://localhost:3000
+@org = figbloom
+
+### 1. As Management: settings overview, then rotate the website key; the old key keeps working for 6 hours
+GET {{base}}/api/orgs/{{org}}/settings/overview
+
+###
+POST {{base}}/api/orgs/{{org}}/integrations/website-key
+Content-Type: application/json
+
+{ "graceHours": 6 }
+
+###
+GET {{base}}/api/orgs/{{org}}/integrations/website-key/rejected
+
+###
+PUT {{base}}/api/orgs/{{org}}/integrations/whatsapp
+Content-Type: application/json
+
+{ "number": "0700 123 456", "defaultMessage": "Hello {{name}}, this is Figbloom." }
+
+###
+GET {{base}}/api/orgs/{{org}}/integrations
+
+### 2. Automations: switch the follow-up task off, then see what the rules did
+GET {{base}}/api/orgs/{{org}}/automations
+
+###
+PATCH {{base}}/api/orgs/{{org}}/automations/NEW_LEAD_FOLLOW_UP_TASK
+Content-Type: application/json
+
+{ "enabled": false }
+
+###
+GET {{base}}/api/orgs/{{org}}/automations/runs
+
+### 3. Reference data: a value in use can be hidden, not deleted
+GET {{base}}/api/orgs/{{org}}/reference-admin/services
+
+###
+DELETE {{base}}/api/orgs/{{org}}/reference-admin/services/<serviceId>
+
+###
+PATCH {{base}}/api/orgs/{{org}}/reference-admin/services/<serviceId>
+Content-Type: application/json
+
+{ "hidden": true }
+
+### 4. Data migration with a bad row: create, upload, map, validate, dry run, import, review, roll back
+POST {{base}}/api/orgs/{{org}}/data-migration/sessions
+Content-Type: application/json
+
+{ "entity": "COMPANY" }
+
+###
+POST {{base}}/api/orgs/{{org}}/data-migration/sessions/<sessionId>/file?fileName=companies.csv
+Content-Type: text/csv
+
+name,email
+Gate One,one@x.test
+Gate Bad,nope
+Gate Two,two@x.test
+
+###
+PUT {{base}}/api/orgs/{{org}}/data-migration/sessions/<sessionId>/mapping
+Content-Type: application/json
+
+{ "mapping": { "name": "name", "email": "email" } }
+
+###
+POST {{base}}/api/orgs/{{org}}/data-migration/sessions/<sessionId>/validate
+
+###
+POST {{base}}/api/orgs/{{org}}/data-migration/sessions/<sessionId>/dry-run
+
+###
+POST {{base}}/api/orgs/{{org}}/data-migration/sessions/<sessionId>/import
+Content-Type: application/json
+
+{ "confirm": true }
+
+###
+GET {{base}}/api/orgs/{{org}}/data-migration/sessions/<sessionId>
+
+###
+GET {{base}}/api/orgs/{{org}}/data-migration/sessions/<sessionId>/errors
+
+###
+POST {{base}}/api/orgs/{{org}}/data-migration/sessions/<sessionId>/rollback
+
+### 5. Data and privacy: file an erasure; two different Management members confirm
+POST {{base}}/api/orgs/{{org}}/privacy/requests
+Content-Type: application/json
+
+{ "kind": "ERASURE", "contactId": "<contactId>", "evidenceNotes": "Requester verified by email and ID" }
+
+###
+POST {{base}}/api/orgs/{{org}}/privacy/requests/<requestId>/confirm-erasure
+
+### (sign in as a second Management member)
+POST {{base}}/api/orgs/{{org}}/privacy/requests/<requestId>/confirm-erasure
+
+###
+GET {{base}}/api/orgs/{{org}}/privacy
+
+### 6. As Sales: capture a lead, then replay an offline batch twice
+POST {{base}}/api/orgs/{{org}}/quick-capture
+Content-Type: application/json
+Idempotency-Key: demo-capture-0001
+
+{ "name": "Amina Odhiambo", "phone": "0722 123 456", "note": "Met at the expo", "followUp": { "title": "Send the quote" } }
+
+###
+POST {{base}}/api/orgs/{{org}}/sync/batch
+Content-Type: application/json
+
+{ "mutations": [
+  { "clientId": "demo-sync-capture-0001", "kind": "QUICK_CAPTURE", "payload": { "name": "Offline Person", "phone": "0712 345 678" } },
+  { "clientId": "demo-sync-task-0001", "kind": "TASK_CREATE", "payload": { "title": "Offline task", "leadId": "ref:demo-sync-capture-0001" } }
+] }
+
+### Send the same batch again: every item answers DUPLICATE and nothing new is created
+POST {{base}}/api/orgs/{{org}}/sync/batch
+Content-Type: application/json
+
+{ "mutations": [
+  { "clientId": "demo-sync-capture-0001", "kind": "QUICK_CAPTURE", "payload": { "name": "Offline Person", "phone": "0712 345 678" } },
+  { "clientId": "demo-sync-task-0001", "kind": "TASK_CREATE", "payload": { "title": "Offline task", "leadId": "ref:demo-sync-capture-0001" } }
+] }
+
+###
+GET {{base}}/api/orgs/{{org}}/sync/status
+
+### 7. Push and the installable app
+GET {{base}}/api/orgs/{{org}}/push/config
+
+###
+GET {{base}}/api/orgs/{{org}}/pwa/manifest
+
+###
+GET {{base}}/api/orgs/{{org}}/pwa/version
+
+### 8. As Management: the audit log shows all of it, filtered, and as CSV
+GET {{base}}/api/orgs/{{org}}/audit/events?action=data_migration.*&dateFrom=2026-10-01
+
+###
+GET {{base}}/api/orgs/{{org}}/audit/events/export?entityType=ImportSession

@@ -1,0 +1,6118 @@
+{
+  "GET /api/orgs/{orgSlug}/activities": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/audit/events": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "actorMembershipId": {
+          "type": "string"
+        },
+        "entityType": {
+          "type": "string"
+        },
+        "entityId": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "dateFrom": {
+          "type": "string"
+        },
+        "dateTo": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/automations/runs": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "ruleKey": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "entityType": {
+          "type": "string"
+        },
+        "entityId": {
+          "type": "string"
+        },
+        "dateFrom": {
+          "type": "string"
+        },
+        "dateTo": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/calendar": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "view": {
+          "type": "string",
+          "enum": [
+            "month",
+            "week",
+            "day",
+            "list"
+          ]
+        },
+        "date": {
+          "type": "string"
+        },
+        "membershipId": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/companies": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "tagId": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "q": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "includeArchived": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "archivedOnly": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/companies/directory": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "tab": {
+          "type": "string"
+        },
+        "q": {
+          "type": "string"
+        },
+        "lifecycle": {
+          "type": "string"
+        },
+        "serviceId": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "tagId": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/companies/{companyId}/360": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "sections": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/contacts": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "tagId": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "q": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "includeArchived": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "archivedOnly": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/contacts/directory": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "q": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "standalone": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "missingEmail": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "missingPhone": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "archived": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "tagId": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/conversations": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "tab": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "q": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/conversations/needs-linking": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "q": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/custom-fields": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "entityType": {
+          "type": "string",
+          "enum": [
+            "LEAD",
+            "CONTACT",
+            "COMPANY",
+            "DEAL"
+          ]
+        },
+        "section": {
+          "type": "string",
+          "enum": [
+            "GENERAL",
+            "QUALIFICATION"
+          ]
+        },
+        "includeInactive": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/data-migration/presets": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "entity": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/data-migration/sessions": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "entity": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/data-migration/sessions/{sessionId}/issues": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "phase": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/data-runs": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "IMPORT",
+            "EXPORT"
+          ]
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/data-runs/{runId}/download": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "which": {
+          "default": "result",
+          "type": "string",
+          "enum": [
+            "result",
+            "errors"
+          ]
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/deals": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "tagId": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "q": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "pipelineStageId": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "OPEN",
+            "WON",
+            "LOST"
+          ]
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "includeArchived": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "archivedOnly": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "stalled": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "closeDatePassed": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/deals/board": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "includeArchived": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/email-templates": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "includeInactive": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/handoffs": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "mine": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/integrations/website-key/rejected": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/invoices": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "overdue": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        },
+        "dueFrom": {
+          "type": "string"
+        },
+        "dueTo": {
+          "type": "string"
+        },
+        "q": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/jobs": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "QUEUED",
+            "RUNNING",
+            "SUCCEEDED",
+            "DEAD",
+            "CANCELLED"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/lead-pool/requests": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/leads": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "tagId": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "q": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "leadStatusId": {
+          "type": "string"
+        },
+        "leadSourceId": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "string",
+          "enum": [
+            "HOT",
+            "WARM",
+            "COLD"
+          ]
+        },
+        "includeArchived": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "archivedOnly": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/leads/pool": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "q": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/my-work": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "groups": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/notifications": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "unreadOnly": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "archived": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/payments/deals": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/privacy/export-approvals": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/privacy/requests": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "overdue": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/quick-log/prompt": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "contactId": {
+          "type": "string"
+        },
+        "leadId": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/recurring-services": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "serviceId": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/reports/customers": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "dormantAfterDays": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "segment": {
+          "type": "string",
+          "enum": [
+            "active",
+            "repeat",
+            "dormant"
+          ]
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/reports/customers-export": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "dormantAfterDays": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "withinDays": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "dateFrom": {
+          "type": "string"
+        },
+        "dateTo": {
+          "type": "string"
+        },
+        "period": {
+          "type": "string",
+          "enum": [
+            "total",
+            "month"
+          ]
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/reports/renewals": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "withinDays": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/reports/sales-by-salesperson": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "serviceId": {
+          "type": "string"
+        },
+        "dateFrom": {
+          "type": "string"
+        },
+        "dateTo": {
+          "type": "string"
+        },
+        "period": {
+          "type": "string",
+          "enum": [
+            "total",
+            "month"
+          ]
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/reports/v2": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "dateFrom": {
+          "type": "string"
+        },
+        "dateTo": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/reports/v2/my-metrics": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "dateFrom": {
+          "type": "string"
+        },
+        "dateTo": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/reports/v2/my-metrics/export": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "dateFrom": {
+          "type": "string"
+        },
+        "dateTo": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/reports/v2/{report}": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "dateFrom": {
+          "type": "string"
+        },
+        "dateTo": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/reports/v2/{report}/export": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "dateFrom": {
+          "type": "string"
+        },
+        "dateTo": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/retention": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "list": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/search": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "q": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "companies",
+            "contacts",
+            "leads",
+            "deals",
+            "tasks"
+          ]
+        },
+        "archived": {
+          "type": "string",
+          "enum": [
+            "exclude",
+            "include",
+            "only"
+          ]
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/security/sign-in-events": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "membershipId": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "SUCCESS",
+            "FAILURE",
+            "LOCKOUT",
+            "NEW_DEVICE"
+          ]
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/tags": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "q": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "includeHidden": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/tasks": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "IN_PROGRESS",
+            "COMPLETED",
+            "CANCELLED"
+          ]
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "leadId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        },
+        "overdueOnly": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "includeArchived": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "archivedOnly": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/tasks/groups": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "groups": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "assigneeMembershipId": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "leadId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        },
+        "q": {
+          "type": "string",
+          "maxLength": 100
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/tasks/groups/{group}": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "assigneeMembershipId": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "leadId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        },
+        "q": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "limit": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "cursor": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sort": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/automations/{ruleKey}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": [
+              "number",
+              "string"
+            ]
+          }
+        },
+        "audience": {
+          "type": "string",
+          "enum": [
+            "OWNER",
+            "OWNER_AND_MANAGEMENT"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/comments/{commentId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "mentions": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/companies/{companyId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "customFields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "industry": {
+          "type": "string"
+        },
+        "website": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "lifecycleStateId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ownerMembershipId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/companies/{companyId}/tags": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "addTagIds": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "addTagNames": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "removeTagIds": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/contacts/{contactId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "customFields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "firstName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "jobTitle": {
+          "type": "string"
+        },
+        "department": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/contacts/{contactId}/tags": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "addTagIds": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "addTagNames": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "removeTagIds": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/custom-fields/{fieldId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "label"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "helpText": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 300
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "requiredOnQualify": {
+          "type": "boolean"
+        },
+        "serviceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sortOrder": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/deal-rules": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "defaultStalledDays": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "stages": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/deals/{dealId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "customFields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "primaryContactId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "serviceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pipelineStageId": {
+          "type": "string"
+        },
+        "lostReasonId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "currency": {
+          "type": "string"
+        },
+        "expectedCloseDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "handoff": {
+          "type": "object",
+          "properties": {
+            "deliveryOwnerMembershipId": {
+              "type": "string"
+            },
+            "ownerLater": {
+              "type": "boolean"
+            },
+            "templateOff": {
+              "type": "boolean"
+            },
+            "lifecycleOff": {
+              "type": "boolean"
+            },
+            "startDate": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "scope": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "requirements": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "deliverables": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "teamMembershipIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/deals/{dealId}/handoff": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "scope": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requirements": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "startDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "deliverables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "done": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "title"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "teamMembershipIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ONBOARDING",
+            "DELIVERED"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/deals/{dealId}/proposals/{proposalId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "DRAFT",
+            "SENT",
+            "VIEWED",
+            "ACCEPTED",
+            "REJECTED",
+            "EXPIRED"
+          ]
+        }
+      },
+      "required": [
+        "status"
+      ]
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/deals/{dealId}/tags": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "addTagIds": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "addTagNames": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "removeTagIds": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/email-templates/{templateId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/features": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "toggles": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      },
+      "required": [
+        "toggles"
+      ]
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/invoices/{invoiceId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "string"
+        },
+        "amount": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "dueOn": {
+          "type": "string"
+        },
+        "issuedOn": {
+          "type": "string"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/lead-pool/settings": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "approval",
+            "auto"
+          ]
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/leads/{leadId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "customFields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "leadStatusId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "companyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contactId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "leadSourceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "temperature": {
+          "type": "string",
+          "enum": [
+            "HOT",
+            "WARM",
+            "COLD"
+          ]
+        },
+        "serviceInterestId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "qualificationData": {},
+        "lostReasonId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nextFollowUpAt": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/leads/{leadId}/qualification": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "answers": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "answers"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/leads/{leadId}/tags": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "addTagIds": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "addTagNames": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "removeTagIds": {
+          "maxItems": 50,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/look": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "logoFileId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "defaultTheme": {
+          "type": "string"
+        },
+        "defaultPageColour": {
+          "type": "string"
+        },
+        "showLogoOnClientPages": {
+          "type": "boolean"
+        },
+        "allowPersonalisation": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/me/notification-preferences": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "preset": {
+          "type": "string"
+        },
+        "types": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "inApp": {
+                "type": "boolean"
+              },
+              "email": {
+                "type": "boolean"
+              },
+              "push": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "quietHours": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "start": {
+              "type": "string"
+            },
+            "end": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "dailyEmailCap": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/me/preferences": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "theme": {
+          "type": "string"
+        },
+        "pageColour": {
+          "type": "string"
+        },
+        "toggle": {
+          "type": "object",
+          "properties": {
+            "light": {
+              "type": "string"
+            },
+            "dark": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "density": {
+          "type": "string"
+        },
+        "startPage": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sidebar": {
+          "type": "object",
+          "properties": {
+            "collapsed": {
+              "type": "boolean"
+            },
+            "hidden": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "hourFormat": {
+          "type": "string"
+        },
+        "firstDayOfWeek": {
+          "type": "string"
+        },
+        "dateFormat": {
+          "type": "string"
+        },
+        "ownColours": {
+          "anyOf": [
+            {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {}
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "textSize": {},
+        "bold": {},
+        "higherContrast": {},
+        "reduceMotion": {}
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/me/profile": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timeZone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/profile": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "timezone": {
+          "type": "string"
+        },
+        "defaultCurrency": {
+          "type": "string"
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "website": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "workingDays": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "workingHoursStart": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "workingHoursEnd": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/recurring-services/{serviceId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "billingCycle": {
+          "type": "string",
+          "enum": [
+            "MONTHLY",
+            "QUARTERLY",
+            "YEARLY"
+          ]
+        },
+        "value": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "startsOn": {
+          "type": "string"
+        },
+        "renewsOn": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "autoRenew": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/reference-admin/{kind}/{valueId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "hidden": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/scoring/weights": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "lead": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "health": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/security/session-policy": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "lifetimeHours": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "lifetimeHours"
+      ]
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/tags/{tagId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "colour": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/tasks/{taskId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requirements": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 5000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assigneeMembershipId": {
+          "type": "string"
+        },
+        "dueAt": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "IN_PROGRESS",
+            "COMPLETED",
+            "CANCELLED"
+          ]
+        }
+      }
+    }
+  },
+  "POST /api/orgs/{orgSlug}/activities": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "CALL",
+            "MEETING",
+            "NOTE",
+            "EMAIL",
+            "WHATSAPP",
+            "OTHER"
+          ]
+        },
+        "subject": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "occurredAt": {},
+        "outcome": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "leadId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/calendar": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "task",
+            "activity"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "CALL",
+            "MEETING"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "assigneeMembershipId": {
+          "type": "string"
+        },
+        "link": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "Lead",
+                "Deal",
+                "Company",
+                "Contact"
+              ]
+            },
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "kind",
+        "title",
+        "start"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/communications": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "enum": [
+            "EMAIL",
+            "PHONE",
+            "WHATSAPP",
+            "SMS",
+            "MEETING",
+            "SOCIAL",
+            "OTHER"
+          ]
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "INBOUND",
+            "OUTBOUND"
+          ]
+        },
+        "occurredAt": {},
+        "subject": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "externalReference": {
+          "type": "string"
+        },
+        "activityId": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "leadId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel",
+        "direction",
+        "summary"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/communications/send-email": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "to": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "body": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "leadId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        },
+        "templateId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "to",
+        "subject",
+        "body"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/companies": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "customFields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "industry": {
+          "type": "string"
+        },
+        "website": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "lifecycleStateId": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/companies/check-duplicates": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "POST /api/orgs/{orgSlug}/companies/{companyId}/archive": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/companies/{companyId}/attachments": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "checksumSha256": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "shared": {
+          "type": "boolean"
+        },
+        "proposalReferenceId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "mimeType",
+        "sizeBytes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/companies/{companyId}/comments": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "mentions": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/companies/{companyId}/merge": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "intoCompanyId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "winner",
+              "loser"
+            ]
+          }
+        }
+      },
+      "required": [
+        "intoCompanyId"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/company-services": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "serviceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "COMPLETED",
+            "CANCELLED"
+          ]
+        },
+        "startDate": {
+          "type": "string"
+        },
+        "endDate": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "companyId",
+        "serviceId"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/company-services/{companyServiceId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "COMPLETED",
+            "CANCELLED"
+          ]
+        },
+        "startDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "endDate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "POST /api/orgs/{orgSlug}/contacts": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "customFields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "firstName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "jobTitle": {
+          "type": "string"
+        },
+        "department": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "firstName"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/contacts/{contactId}/archive": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/contacts/{contactId}/attachments": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "checksumSha256": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "shared": {
+          "type": "boolean"
+        },
+        "proposalReferenceId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "mimeType",
+        "sizeBytes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/contacts/{contactId}/comments": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "mentions": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/contacts/{contactId}/merge": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "intoContactId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "winner",
+              "loser"
+            ]
+          }
+        }
+      },
+      "required": [
+        "intoContactId"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/conversations": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "enum": [
+            "EMAIL",
+            "PHONE",
+            "WHATSAPP",
+            "SMS",
+            "MEETING",
+            "OTHER"
+          ]
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "INBOUND",
+            "OUTBOUND"
+          ]
+        },
+        "summary": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "occurredAt": {
+          "type": "string"
+        },
+        "counterpartyName": {
+          "type": "string"
+        },
+        "counterpartyEmail": {
+          "type": "string"
+        },
+        "counterpartyPhone": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel",
+        "direction",
+        "summary"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/conversations/{conversationId}/create-lead": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string"
+        },
+        "serviceInterestId": {
+          "type": "string"
+        },
+        "leadStatusId": {
+          "type": "string"
+        },
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "confirmDuplicate": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/conversations/{conversationId}/dismiss": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/conversations/{conversationId}/link": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string"
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "leadId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/custom-fields": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "entityType": {
+          "type": "string",
+          "enum": [
+            "LEAD",
+            "CONTACT",
+            "COMPANY",
+            "DEAL"
+          ]
+        },
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "fieldType": {
+          "type": "string",
+          "enum": [
+            "TEXT",
+            "NUMBER",
+            "DATE",
+            "SELECT",
+            "MULTISELECT",
+            "BOOLEAN"
+          ]
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "label"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "helpText": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 300
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "section": {
+          "type": "string",
+          "enum": [
+            "GENERAL",
+            "QUALIFICATION"
+          ]
+        },
+        "requiredOnQualify": {
+          "type": "boolean"
+        },
+        "serviceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sortOrder": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "entityType",
+        "key",
+        "label"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/data-migration/presets": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "entity": {
+          "type": "string"
+        },
+        "mapping": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "valueMappings": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "required": [
+        "name",
+        "entity",
+        "mapping"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/data-migration/sessions": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "entity": {
+          "type": "string"
+        },
+        "sourceKind": {
+          "type": "string",
+          "enum": [
+            "TEMPLATE",
+            "GENERIC"
+          ]
+        },
+        "presetId": {
+          "type": "string"
+        },
+        "duplicatePolicy": {
+          "type": "string",
+          "enum": [
+            "SKIP",
+            "UPDATE",
+            "CREATE"
+          ]
+        },
+        "createMissingCompanies": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "entity"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/data-migration/sessions/{sessionId}/import": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "confirm": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/deals": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "customFields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "companyId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "primaryContactId": {
+          "type": "string"
+        },
+        "serviceId": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "pipelineStageId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "currency": {
+          "type": "string"
+        },
+        "expectedCloseDate": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "companyId",
+        "pipelineStageId"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/deals/{dealId}/archive": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/deals/{dealId}/assign": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "ownerMembershipId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "ownerMembershipId"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/deals/{dealId}/attachments": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "checksumSha256": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "shared": {
+          "type": "boolean"
+        },
+        "proposalReferenceId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "mimeType",
+        "sizeBytes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/deals/{dealId}/comments": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "mentions": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/deals/{dealId}/move": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "pipelineStageId": {
+          "type": "string"
+        },
+        "lostReasonId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "handoff": {
+          "type": "object",
+          "properties": {
+            "deliveryOwnerMembershipId": {
+              "type": "string"
+            },
+            "ownerLater": {
+              "type": "boolean"
+            },
+            "templateOff": {
+              "type": "boolean"
+            },
+            "lifecycleOff": {
+              "type": "boolean"
+            },
+            "startDate": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "scope": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "requirements": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "deliverables": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "teamMembershipIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "pipelineStageId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/deals/{dealId}/move-check": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "pipelineStageId": {
+          "type": "string"
+        },
+        "lostReasonId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "handoff": {
+          "type": "object",
+          "properties": {
+            "deliveryOwnerMembershipId": {
+              "type": "string"
+            },
+            "ownerLater": {
+              "type": "boolean"
+            },
+            "templateOff": {
+              "type": "boolean"
+            },
+            "lifecycleOff": {
+              "type": "boolean"
+            },
+            "startDate": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "scope": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "requirements": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "deliverables": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "teamMembershipIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "pipelineStageId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/deals/{dealId}/proposals": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "proposalNumber": {
+          "type": "string",
+          "minLength": 1
+        },
+        "amount": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "currency": {
+          "type": "string"
+        },
+        "documentReference": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "proposalNumber"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/duplicates/check": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "entity": {
+          "type": "string",
+          "enum": [
+            "lead",
+            "contact",
+            "company"
+          ]
+        },
+        "companyName": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 200
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "firstName": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 100
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lastName": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 100
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "email": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 200
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "phone": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 40
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "website": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 300
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "companyId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "contactId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "excludeId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "entity"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/email-templates": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "subject",
+        "body"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/email-templates/{templateId}/render": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "contactId": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "leadId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/exports": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "entity": {
+          "type": "string",
+          "enum": [
+            "LEAD",
+            "CONTACT",
+            "COMPANY",
+            "DEAL"
+          ]
+        },
+        "filters": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "entity"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/files": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "AVATAR",
+            "LOGO",
+            "ATTACHMENT",
+            "IMPORT",
+            "EXPORT"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "checksumSha256": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "purpose",
+        "name",
+        "mimeType",
+        "sizeBytes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/integrations/website-key": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "graceHours": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/integrations/website-key/acknowledgement": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/integrations/website-key/assignment": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "ROUND_ROBIN",
+            "UNASSIGNED"
+          ]
+        }
+      },
+      "required": [
+        "mode"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/integrations/website-key/settings": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "allowedOrigins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "honeypotFieldName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "captchaSecret": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "POST /api/orgs/{orgSlug}/invoices": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": "string"
+        },
+        "amount": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "currency": {
+          "type": "string"
+        },
+        "issuedOn": {
+          "type": "string"
+        },
+        "dueOn": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        },
+        "recurringServiceId": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "sent": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "number",
+        "amount",
+        "issuedOn",
+        "dueOn"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/invoices/{invoiceId}/payments": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "paidOn": {
+          "type": "string"
+        },
+        "methodLabel": {
+          "type": "string"
+        },
+        "reference": {
+          "type": "string"
+        },
+        "allowOverpayment": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "amount"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/invoices/{invoiceId}/void": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/lead-pool/requests/{requestId}/decide": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "APPROVE",
+            "DECLINE"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "required": [
+        "decision"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/leads": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "leadStatusId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "leadSourceId": {
+          "type": "string"
+        },
+        "temperature": {
+          "type": "string",
+          "enum": [
+            "HOT",
+            "WARM",
+            "COLD"
+          ]
+        },
+        "serviceInterestId": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "qualificationData": {},
+        "customFields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "leadStatusId"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/leads/check-duplicates": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "contactEmail": {
+          "type": "string"
+        },
+        "contactPhone": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "POST /api/orgs/{orgSlug}/leads/{leadId}/archive": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/leads/{leadId}/ask-to-take": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/leads/{leadId}/assign": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "ownerMembershipId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "ownerMembershipId"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/leads/{leadId}/attachments": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "checksumSha256": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "shared": {
+          "type": "boolean"
+        },
+        "proposalReferenceId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "mimeType",
+        "sizeBytes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/leads/{leadId}/comments": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "mentions": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/leads/{leadId}/convert": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string"
+        },
+        "newCompany": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "industry": {
+              "type": "string"
+            },
+            "website": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ]
+        },
+        "newContact": {
+          "type": "object",
+          "properties": {
+            "firstName": {
+              "type": "string",
+              "minLength": 1
+            },
+            "lastName": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "jobTitle": {
+              "type": "string"
+            },
+            "department": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "firstName"
+          ]
+        },
+        "ownerMembershipId": {
+          "type": "string"
+        },
+        "pipelineStageId": {
+          "type": "string"
+        },
+        "serviceId": {
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "expectedCloseDate": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "POST /api/orgs/{orgSlug}/me/avatar": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "fileId": {
+          "type": "string"
+        },
+        "crop": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "size": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "x",
+                "y",
+                "size"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "fileId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/me/preferences/undo": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "token"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/memberships": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "roleKey": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "email",
+        "name",
+        "roleKey"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/memberships/{membershipId}/reassign": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "toMembershipId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "tasks",
+              "leads",
+              "deals",
+              "companies",
+              "contacts",
+              "proposals"
+            ]
+          }
+        }
+      },
+      "required": [
+        "toMembershipId"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/memberships/{membershipId}/role": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "roleKey": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "roleKey"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/notification-preferences": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "LEAD_ASSIGNED",
+            "TASK_DUE",
+            "TASK_OVERDUE",
+            "DEAL_WON_HANDOFF",
+            "MENTION",
+            "RENEWAL_DUE",
+            "PROPOSAL_UNANSWERED",
+            "STALLED_DEAL",
+            "SUPPORT_ACCESS_REQUEST",
+            "LEAD_POOL",
+            "PAYMENT_OVERDUE",
+            "DORMANT_CUSTOMER"
+          ]
+        },
+        "emailEnabled": {
+          "type": "boolean"
+        },
+        "inAppEnabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/payments/{paymentId}/reverse": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/privacy/export-approvals": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "entity": {
+          "type": "string"
+        },
+        "filters": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/privacy/export-approvals/{approvalId}/decision": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "approve": {
+          "type": "boolean"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "approve"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/privacy/organisation-requests": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "EXPORT",
+            "DELETE"
+          ]
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/privacy/requests": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "evidenceNotes": {
+          "type": "string"
+        },
+        "dueOn": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "contactId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/privacy/requests/{requestId}/evidence": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "note"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/privacy/requests/{requestId}/rectify": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "jobTitle": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "department": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/privacy/requests/{requestId}/reject": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/push/subscriptions": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "endpoint": {
+          "type": "string"
+        },
+        "keys": {
+          "type": "object",
+          "properties": {
+            "p256dh": {
+              "type": "string"
+            },
+            "auth": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "p256dh",
+            "auth"
+          ],
+          "additionalProperties": false
+        },
+        "userAgent": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "endpoint",
+        "keys"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/quick-capture": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "company": {
+          "type": "string"
+        },
+        "serviceId": {
+          "type": "string"
+        },
+        "sourceId": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        },
+        "followUp": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "dueOn": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "title"
+          ],
+          "additionalProperties": false
+        },
+        "duplicateDecision": {
+          "type": "string",
+          "enum": [
+            "OPEN_EXISTING",
+            "CREATE_ANYWAY",
+            "MERGE"
+          ]
+        },
+        "duplicateId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/quick-log": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "channel": {
+          "type": "string",
+          "enum": [
+            "CALL",
+            "WHATSAPP"
+          ]
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "REACHED",
+            "NO_ANSWER",
+            "LEFT_MESSAGE"
+          ]
+        },
+        "note": {
+          "type": "string"
+        },
+        "durationSeconds": {
+          "type": "number"
+        },
+        "phoneUsed": {
+          "type": "string"
+        },
+        "followUp": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "dueOn": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "title"
+          ],
+          "additionalProperties": false
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "leadId": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "channel",
+        "outcome"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/recurring-services": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "companyId": {
+          "type": "string"
+        },
+        "serviceId": {
+          "type": "string"
+        },
+        "billingCycle": {
+          "type": "string",
+          "enum": [
+            "MONTHLY",
+            "QUARTERLY",
+            "YEARLY"
+          ]
+        },
+        "value": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        },
+        "currency": {
+          "type": "string"
+        },
+        "startsOn": {
+          "type": "string"
+        },
+        "renewsOn": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "autoRenew": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "companyId",
+        "serviceId",
+        "startsOn",
+        "renewsOn"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/recurring-services/{serviceId}/cancel": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/recurring-services/{serviceId}/renew": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "task": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "dueOn": {
+              "type": "string"
+            },
+            "assigneeMembershipId": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "invoice": {
+          "type": "object",
+          "properties": {
+            "number": {
+              "type": "string"
+            },
+            "amount": {
+              "type": [
+                "number",
+                "string"
+              ]
+            },
+            "dueOn": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "number"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/reference-admin/{kind}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": {}
+    }
+  },
+  "POST /api/orgs/{orgSlug}/reference-admin/{kind}/{valueId}/merge": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "intoId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "intoId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/reference-admin/{kind}/{valueId}/reorder": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "direction": {
+          "type": "string",
+          "enum": [
+            "up",
+            "down"
+          ]
+        }
+      },
+      "required": [
+        "direction"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/reference-catalogs/{catalogKey}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "probability": {
+          "type": "number"
+        },
+        "isWon": {
+          "type": "boolean"
+        },
+        "isLost": {
+          "type": "boolean"
+        },
+        "category": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/reference-catalogs/{catalogKey}/{entryId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    }
+  },
+  "POST /api/orgs/{orgSlug}/reference-catalogs/{catalogKey}/{entryId}/move": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "direction": {
+          "type": "string",
+          "enum": [
+            "up",
+            "down"
+          ]
+        }
+      },
+      "required": [
+        "direction"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/search/recents": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/sync/batch": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "mutations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "clientId": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "payload": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {}
+              },
+              "clientCreatedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "clientId",
+              "kind"
+            ],
+            "additionalProperties": {}
+          }
+        }
+      },
+      "required": [
+        "mutations"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/tags": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "colour": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/tags/{tagId}/merge": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "intoTagId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "intoTagId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/tasks": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "requirements": {
+          "type": "string",
+          "maxLength": 5000
+        },
+        "assigneeMembershipId": {
+          "type": "string"
+        },
+        "dueAt": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "LOW",
+            "MEDIUM",
+            "HIGH"
+          ]
+        },
+        "companyId": {
+          "type": "string"
+        },
+        "contactId": {
+          "type": "string"
+        },
+        "leadId": {
+          "type": "string"
+        },
+        "dealId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/tasks/{taskId}/archive": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "maxLength": 500
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/tasks/{taskId}/attachments": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "mimeType": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "checksumSha256": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "shared": {
+          "type": "boolean"
+        },
+        "proposalReferenceId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "mimeType",
+        "sizeBytes"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/tasks/{taskId}/comments": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "body": {
+          "type": "string"
+        },
+        "mentions": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "body"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/website-lead-assignment-rules": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "leadSourceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "serviceId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "assigneeMembershipId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "assigneeMembershipIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/website-lead-assignment-rules/{ruleId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    }
+  },
+  "POST /api/orgs/{orgSlug}/website-lead-assignment-rules/{ruleId}/move": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "direction": {
+          "type": "string",
+          "enum": [
+            "up",
+            "down"
+          ]
+        }
+      },
+      "required": [
+        "direction"
+      ]
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/companies/{companyId}/lifecycle": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "stateId": {
+          "type": "string"
+        },
+        "stateKey": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/data-migration/sessions/{sessionId}/mapping": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "mapping": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "valueMappings": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "duplicatePolicy": {
+          "type": "string",
+          "enum": [
+            "SKIP",
+            "UPDATE",
+            "CREATE"
+          ]
+        },
+        "createMissingCompanies": {
+          "type": "boolean"
+        },
+        "savePresetAs": {
+          "type": "string"
+        },
+        "presetId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/deals/{dealId}/payment-note": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string"
+        },
+        "ownerMembershipId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nextOn": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "note"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/handoff-settings": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "dueInDays": {
+                "type": "number"
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "LOW",
+                  "MEDIUM",
+                  "HIGH"
+                ]
+              }
+            },
+            "required": [
+              "title",
+              "dueInDays",
+              "priority"
+            ]
+          }
+        },
+        "customerLifecycleStateId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "managementCanMarkDelivered": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "tasks"
+      ]
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/integrations/whatsapp": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "defaultMessage": {
+          "type": "string"
+        },
+        "templates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "body": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "label",
+              "body"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/privacy/export-rights": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "allowedRoleKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "approvalThreshold": {
+          "type": "number"
+        },
+        "approvalExpiryHours": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/privacy/legal-hold": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "active"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/privacy/retention": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "string",
+            "const": "DEFAULT"
+          }
+        ]
+      }
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/recurring-services/{serviceId}/state": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "state": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "DUE_SOON",
+                "LAPSED",
+                "STARTS_LATER"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/reminder-settings": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "proposalFollowUp": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "days": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "renewal": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "daysAhead": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "dormant": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "overdueInvoices": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/renewal-settings": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "dueSoonDays": {
+          "type": "number"
+        },
+        "graceDays": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/reports/settings": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "dormancyDays": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "dormancyDays"
+      ]
+    }
+  }
+}

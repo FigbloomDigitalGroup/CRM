@@ -40,7 +40,7 @@ function parseDays(value: unknown, label: string, max: number): number {
 // Dormancy threshold (the per-organisation default)
 // ---------------------------------------------------------------------------
 
-async function loadDormancyDays(organizationId: string): Promise<number> {
+export async function loadDormancyDays(organizationId: string): Promise<number> {
   const row = await adminDb.organizationSetting.findUnique({
     where: { organizationId_key: { organizationId, key: DORMANCY_SETTING_KEY } },
   });
