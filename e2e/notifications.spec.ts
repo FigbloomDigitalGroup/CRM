@@ -30,12 +30,13 @@ test("a lead assigned to Dev Sales shows up in their bell and can be read", asyn
   await loginAs(salesPage, "dev.sales@figbloom.local");
   await gotoAndSettle(salesPage, "/o/figbloom");
 
-  const bell = salesPage.getByRole("button", { name: "Notifications" });
-  await expect(bell.locator(".notification-badge")).toBeVisible();
+  // The bell is the M7 one (G3): the button's name carries the unread count, the count shows on the icon, and an unread notice in the panel is marked.
+  const bell = salesPage.getByRole("button", { name: /^Notifications/ });
+  await expect(bell.locator(".fb-bell__badge")).toBeVisible();
   await bell.click();
 
-  const item = salesPage.locator(".notification-panel li", { hasText: "New lead assigned to you" }).first();
-  await expect(item).toHaveClass(/notification-unread/);
+  const item = salesPage.locator(".fb-notifpanel li", { hasText: "New lead assigned to you" }).first();
+  await expect(item).toHaveAttribute("data-unread", "true");
 
   const [readResponse] = await Promise.all([
     salesPage.waitForResponse(

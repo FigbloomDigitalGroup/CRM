@@ -3,13 +3,14 @@ import { redirect } from "next/navigation";
 import { UnauthorizedError } from "@/auth/errors";
 import { resolveRequestContext, resolveUserContext } from "@/auth/requestContext";
 import { getMemberContext } from "@/services/meContextService";
+import { MemberProvider } from "@/ui/data/member";
 import { AppShell } from "@/ui/shell/AppShell";
 import { buildNav, buildQuickCreate } from "@/ui/shell/navigation";
 import { NoFlashScript } from "@/ui/theme/NoFlashScript";
 import { ThemeProvider } from "@/ui/theme/ThemeProvider";
 import { defaultLook, type LookInput } from "@/ui/theme/resolve";
-import { NotificationBell } from "./_shared/NotificationBell";
-import { GlobalSearch } from "./_shared/GlobalSearch";
+import { NotificationBell } from "@/ui/screens/home/Notifications";
+import { GlobalSearch } from "@/ui/screens/home/Search";
 
 /**
  * The authenticated frame (F1.01 to F1.04): one call for everything the shell draws (`getMemberContext`, the same data as `GET /api/me/context`),
@@ -71,6 +72,17 @@ export default async function OrgLayout({
   return (
     <ThemeProvider initialLook={look} initialDensity={me.preferences?.density}>
       <NoFlashScript />
+      <MemberProvider
+        value={{
+          orgSlug,
+          membershipId: ctx.membershipId,
+          userName: me.user.name,
+          roleName: me.role?.name ?? "No role",
+          permissionKeys: ctx.permissionKeys,
+          timeZone: me.timeZone.effective,
+          hour12: me.preferences?.hourFormat === "H12",
+        }}
+      >
       <AppShell
         orgSlug={orgSlug}
         sections={buildNav(navInput)}
@@ -78,8 +90,8 @@ export default async function OrgLayout({
         dateLabel={dateLabel}
         initialSidebarCollapsed={me.preferences?.sidebar.collapsed ?? false}
         session={session}
-        search={<GlobalSearch orgSlug={orgSlug} />}
-        bell={<NotificationBell orgSlug={orgSlug} />}
+        search={<GlobalSearch />}
+        bell={<NotificationBell />}
         identity={{
           name: me.user.name,
           roleName: me.role?.name ?? "No role",
@@ -96,6 +108,7 @@ export default async function OrgLayout({
       >
         {children}
       </AppShell>
+      </MemberProvider>
     </ThemeProvider>
   );
 }

@@ -8,11 +8,11 @@ import { gotoAndSettle, loginAs, ORG_SLUG } from "./helpers";
 
 /** What each seeded role sees in the sidebar: written by hand from the design's navigation map and the signed permission model. */
 const NAV: { email: string; label: string; links: string[] }[] = [
-  { email: "dev.management@figbloom.local", label: "Management", links: ["Dashboard", "Leads", "Deals", "Tasks", "Companies", "Contacts", "Reports", "Settings"] },
-  { email: "dev.sales@figbloom.local", label: "Sales", links: ["Dashboard", "Leads", "Deals", "Tasks", "Companies", "Contacts", "My metrics", "Settings"] },
-  { email: "dev.delivery@figbloom.local", label: "Delivery", links: ["Dashboard", "Won deals", "Tasks", "Companies", "Contacts", "My metrics", "Settings"] },
+  { email: "dev.management@figbloom.local", label: "Management", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Companies", "Contacts", "Handoffs", "Reports", "Settings"] },
+  { email: "dev.sales@figbloom.local", label: "Sales", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Companies", "Contacts", "Handoffs", "My metrics", "Settings"] },
+  { email: "dev.delivery@figbloom.local", label: "Delivery", links: ["Dashboard", "Won deals", "Tasks", "Calendar", "Companies", "Contacts", "Handoffs", "My metrics", "Settings"] },
   { email: "dev.finance@figbloom.local", label: "Finance", links: ["Dashboard", "Won deals", "Companies", "Contacts", "My metrics", "Settings"] },
-  { email: "dev.tech@figbloom.local", label: "Restricted Technical", links: ["My work", "Tasks", "Settings"] },
+  { email: "dev.tech@figbloom.local", label: "Restricted Technical", links: ["My work", "Tasks", "Calendar", "Settings"] },
 ];
 
 async function sidebarLinks(page: Page): Promise<string[]> {

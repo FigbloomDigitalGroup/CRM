@@ -67,3 +67,7 @@ Behaviour is built in: focus traps that return focus, Escape, arrow keys in menu
 4. **Status tints are derived from the card colour** rather than fixed, so a status badge reads on any page colour a member can choose.
 5. **Frozen-page pictures are per platform** (`-linux`, `-win32`).
 6. **The light/dark switch is disabled, with the reason, while the organisation locks the look**, and accessibility modes are never blocked.
+
+## Screens (M7 onwards)
+
+Screens live in `src/ui/screens/<area>/` and import from `@/ui`. A route's `page.tsx` stays a thin server component; the screen is a client component. `useMember()` gives it the organisation, the membership and the permission keys the organisation layout already resolved. Each area has its own stylesheet, imported by `ui.css`; every selector's first compound must carry a `.fb-` class (`tests/uiGuards.test.ts`). The older global stylesheet still styles bare `button`, `th`, `td`, `label`; a screen stylesheet re-asserts the look of anything those rules would touch.

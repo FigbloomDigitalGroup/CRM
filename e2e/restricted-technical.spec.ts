@@ -17,7 +17,7 @@ test.describe("Restricted Technical", () => {
     await expect(page.getByRole("link", { name: "Deals", exact: true })).toHaveCount(0);
     await gotoAndSettle(page, "/o/figbloom/deals");
     await expect(
-      page.getByRole("heading", { name: /Deals aren.t available for your role/ }),
+      page.getByRole("heading", { name: /Deals isn.t part of your workspace/ }),
     ).toBeVisible();
     await expect(page.getByText(/\b(USD|EUR|GBP|ZAR)\s?[\d,]+/)).toHaveCount(0);
   });

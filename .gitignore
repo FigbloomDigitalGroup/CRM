@@ -27,3 +27,5 @@ perf-results.json
 perf-export.json
 perf-import.json
 migration-rehearsal.json
+
+.next-*/
