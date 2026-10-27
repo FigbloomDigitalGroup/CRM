@@ -82,7 +82,14 @@ describe("the frozen sign-in pages (hard rule 1)", () => {
   });
 
   it("the design system stylesheet styles only its own classes, never a bare element, so nothing outside the app can change", () => {
-    const css = readFileSync("src/ui/ui.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    // The base stylesheet plus every screen stylesheet it imports: all of them are held to the same rule.
+    const files = (readdirSync("src/ui", { recursive: true }) as string[]).map(norm).filter((f) => f.endsWith(".css"));
+    expect(files).toContain("ui.css");
+    const css = files
+      .map((f) => readFileSync(`src/ui/${f}`, "utf8"))
+      .join("\n")
+      .replace(/@import[^;]*;/g, "")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
     const bad: string[] = [];
     // @keyframes bodies (percentages, from, to) and @media preludes are not selectors; :is()/:where() lists are not separate selectors.
     const stripped = css

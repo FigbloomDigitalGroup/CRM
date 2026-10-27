@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { loginAs, uniqueSuffix } from "./helpers";
+import { gotoAndSettle, loginAs, uniqueSuffix } from "./helpers";
 
 /**
  * One continuous journey through every CRM-record flow FIG-602 asks for
@@ -22,105 +22,99 @@ test("create lead -> assign -> convert -> move stage -> log activity -> complete
   const suffix = uniqueSuffix();
   await loginAs(page, "dev.management@figbloom.local");
 
-  await test.step("create a lead with no company/contact yet", async () => {
-    await page.goto("/o/figbloom/leads");
-    await page.getByLabel("Notes").fill(`E2E lead ${suffix}`);
-
+  let leadUrl = "";
+  await test.step("create a lead from the New lead drawer (F2.01, F2.03)", async () => {
+    await gotoAndSettle(page, "/o/figbloom/leads");
+    await page.getByRole("button", { name: "New lead" }).first().click();
+    const drawer = page.getByRole("dialog", { name: "New lead" });
+    await drawer.getByRole("combobox", { name: /Company or person/ }).fill(`E2E Inline Co ${suffix}`);
+    await drawer.getByLabel("Notes").fill(`E2E lead ${suffix}`);
     const [response] = await Promise.all([
-      page.waitForResponse(
-        (r) => r.url().includes("/api/orgs/figbloom/leads") && r.request().method() === "POST",
-      ),
-      page.getByRole("button", { name: "Create lead" }).click(),
+      page.waitForResponse((r) => r.url().includes("/api/orgs/figbloom/leads") && r.request().method() === "POST"),
+      drawer.getByRole("button", { name: /Create lead/ }).click(),
     ]);
     expect(response.ok()).toBe(true);
     const body = await response.json();
-    await page.goto(`/o/figbloom/leads/${body.lead.id}`);
+    await page.waitForURL(`**/leads/${body.lead.id}`);
+    leadUrl = page.url();
+    await expect(page.getByRole("heading", { level: 1, name: `E2E Inline Co ${suffix}` })).toBeVisible();
   });
 
-  await test.step("assign the lead to a different member", async () => {
-    // Ownership lives in the lead edit form's "Owner" Combobox (Sprint 5
-    // lead UI): pick the member, then "Save changes" fires the assign POST.
-    const editForm = page.locator("form.lead-edit-form");
-    const ownerTrigger = editForm.getByRole("button", { name: "Owner" });
-    await expect(ownerTrigger).toBeVisible();
-    // A click before the client component hydrates is silently lost, so
-    // click until the panel is actually open (never toggling it shut).
-    await expect(async () => {
-      if ((await ownerTrigger.getAttribute("aria-expanded")) !== "true") {
-        await ownerTrigger.click();
-      }
-      await expect(ownerTrigger).toHaveAttribute("aria-expanded", "true", { timeout: 1000 });
-    }).toPass({ timeout: 10_000 });
-
-    // Scoped to the open listbox: the page also has native <option>s (the
-    // task assignee <select>) whose text matches "Dev Sales".
-    await page
-      .getByRole("listbox")
-      .getByRole("option")
-      .filter({ has: page.locator(".combo-option-label", { hasText: /^Dev Sales$/ }) })
-      .click();
-
-    // Wait for the actual assign response rather than reloading straight
-    // after the click, which raced the POST.
+  await test.step("assign the lead to a different member, from the lead page (F2.02)", async () => {
+    const owner = page.getByRole("combobox", { name: /^Owner/ });
+    await expect(owner).toBeEnabled();
     const [response] = await Promise.all([
-      page.waitForResponse(
-        (r) => /\/leads\/.+\/assign$/.test(r.url()) && r.request().method() === "POST",
-      ),
-      editForm.getByRole("button", { name: "Save changes" }).click(),
+      page.waitForResponse((r) => /\/leads\/.+\/assign$/.test(r.url()) && r.request().method() === "POST"),
+      owner.selectOption({ label: "Dev Sales (Sales)" }),
     ]);
     expect(response.ok()).toBe(true);
-
-    // Confirm the reassignment actually persisted, not just the picker's
-    // own local state.
+    // Confirm the reassignment actually persisted, not just the select's own local state.
     await page.reload();
-    await expect(
-      page.locator("form.lead-edit-form").getByRole("button", { name: "Owner" }),
-    ).toHaveText(/Dev Sales/);
+    await expect(page.getByRole("combobox", { name: /^Owner/ }).locator("option:checked")).toHaveText(/^Dev Sales/);
   });
 
   let dealUrl = "";
-  await test.step("convert to a deal, creating a new company inline (FIG-601)", async () => {
-    await page.getByLabel("Create a new company").check();
-    await page.getByLabel("New company name").fill(`E2E Inline Co ${suffix}`);
-    await page.getByRole("button", { name: "Convert to deal" }).click();
+  await test.step("convert to a deal from the Convert dialog (F2.03)", async () => {
+    await page.goto(leadUrl);
+    await page.getByRole("button", { name: "Convert to deal" }).first().click();
+    const dialog = page.getByRole("dialog", { name: /^Convert .* to a deal$/ });
+    await expect(dialog.getByText("Existing company found · linked")).toBeVisible();
+    await dialog.getByRole("button", { name: "Convert to deal" }).click();
     await page.waitForURL(/\/o\/figbloom\/deals\//);
     dealUrl = page.url();
-    await expect(page.getByText(`E2E Inline Co ${suffix}`)).toBeVisible();
+    await expect(page.getByText(`E2E Inline Co ${suffix}`).first()).toBeVisible();
   });
 
-  await test.step("move the deal to the next pipeline stage", async () => {
+  await test.step("move the deal to the next pipeline stage, from its page (F2.05)", async () => {
     await page.goto(dealUrl);
-    const stageSelect = page.locator("form", { hasText: "Stage" }).locator("select").first();
-    const options = await stageSelect.locator("option").allTextContents();
-    const nextStage = options[1] ?? options[0];
-    await stageSelect.selectOption({ label: nextStage! });
-    await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText(nextStage!, { exact: false }).first()).toBeVisible();
+    const steps = page.getByRole("region", { name: "Deal stages" });
+    const next = steps.locator("button:not([disabled])").first();
+    const nextStage = (await next.innerText()).trim();
+    await next.click();
+    await expect(steps.getByRole("button", { name: nextStage })).toHaveAttribute("aria-current", "step");
+  });
+
+  await test.step("drag the deal to another stage on the board and put it back with Undo (FIG-790)", async () => {
+    await gotoAndSettle(page, "/o/figbloom/deals");
+    const card = page.locator(".fb-dcard", { hasText: `E2E Inline Co ${suffix}` });
+    await expect(card).toBeVisible();
+    const from = await card.locator("xpath=ancestor::div[@role='group'][1]").getAttribute("aria-label");
+    // Proposal Sent needs no proposal reference to enter and Negotiation does, so the drag goes to whichever of the first two stages the deal is not in.
+    const target = from?.startsWith("Solution Presented") ? /^Proposal Sent, \d+ deals?$/ : /^Solution Presented, \d+ deals?$/;
+    await card.dragTo(page.getByRole("group", { name: target }), { targetPosition: { x: 120, y: 40 } });
+    await expect(page.getByRole("group", { name: target }).locator(".fb-dcard", { hasText: `E2E Inline Co ${suffix}` })).toBeVisible();
+    await page.getByRole("button", { name: /Undo/ }).click();
+    await expect(page.getByRole("group", { name: from! }).locator(".fb-dcard", { hasText: `E2E Inline Co ${suffix}` })).toBeVisible();
   });
 
   await test.step("log an activity against the deal", async () => {
     await page.goto(dealUrl);
     const activitySubject = `E2E activity ${suffix}`;
-    // "Subject" also appears on this page's Communication forms -- scope
-    // to the Activity timeline card specifically to avoid an ambiguous
-    // (strict-mode-violating) match.
-    const activityCard = page.locator(".card", { hasText: "Activity timeline" });
-    await activityCard.getByLabel("Subject").fill(activitySubject);
-    await activityCard.getByRole("button", { name: "Log activity" }).click();
+    await page.getByRole("button", { name: "Log activity" }).first().click();
+    const drawer = page.getByRole("dialog", { name: "Log a call or note" });
+    await drawer.getByRole("button", { name: "Note" }).click();
+    await drawer.getByLabel("Note").fill(activitySubject);
+    await drawer.getByRole("button", { name: "Log it" }).click();
     await expect(page.getByText(activitySubject)).toBeVisible();
   });
 
-  await test.step("create and complete a task against the deal", async () => {
+  await test.step("create a task against the deal, and complete it", async () => {
     await page.goto(dealUrl);
     const taskTitle = `E2E task ${suffix}`;
-    const taskCard = page.locator(".card", { hasText: "Tasks" });
-    await taskCard.getByLabel("Title").fill(taskTitle);
-    await taskCard.getByRole("button", { name: "Create task" }).click();
+    await page.getByRole("button", { name: "+ Add task" }).click();
+    const drawer = page.getByRole("dialog", { name: "New task" });
+    await drawer.getByLabel(/^Title/).fill(taskTitle);
+    await drawer.getByRole("button", { name: "Create task" }).click();
+    await expect(page.getByText(taskTitle)).toBeVisible();
 
-    const taskRow = page.getByRole("row", { name: new RegExp(taskTitle) });
-    await expect(taskRow).toBeVisible();
-    await taskRow.locator("select").selectOption("COMPLETED");
+    // A deal's page lists the open tasks; completing one is a Tasks-page action (T1), so it is completed through the same API that page uses
+    // and the deal's list then no longer shows it.
+    const open = await (await page.request.get(`/api/orgs/figbloom/tasks?dealId=${dealUrl.split("/").pop()}`)).json();
+    const task = open.items.find((x: { title: string }) => x.title === taskTitle);
+    expect(task).toBeTruthy();
+    const done = await page.request.patch(`/api/orgs/figbloom/tasks/${task.id}`, { data: { status: "COMPLETED" }, headers: { origin: new URL(page.url()).origin } });
+    expect(done.ok()).toBe(true);
     await page.reload();
-    await expect(taskRow.locator("select")).toHaveValue("COMPLETED");
+    await expect(page.getByText(taskTitle)).toHaveCount(0);
   });
 });

@@ -60,11 +60,11 @@ const DEFS: Def[] = [
     built: true,
   },
   { section: "workspace", key: "tasks", label: () => "Tasks", path: "/tasks", icon: "tasks", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
-  { section: "workspace", key: "calendar", label: () => "Calendar", path: "/calendar", icon: "calendar", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: false },
+  { section: "workspace", key: "calendar", label: () => "Calendar", path: "/calendar", icon: "calendar", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
   { section: "customers", key: "companies", label: () => "Companies", path: "/companies", icon: "companies", tint: "o", allowed: (c) => has(c, "companies.view"), built: true },
   { section: "customers", key: "contacts", label: () => "Contacts", path: "/contacts", icon: "contacts", tint: "o", allowed: (c) => has(c, "contacts.view"), built: true },
   { section: "customers", key: "conversations", label: () => "Conversations", path: "/conversations", icon: "conversations", tint: "o", allowed: (c) => has(c, "communications.view"), built: false },
-  { section: "after-sale", key: "handoffs", label: () => "Handoffs", path: "/handoffs", icon: "handoffs", tint: "o", allowed: (c) => any(c, "handoff.manage", "deals.handoff"), built: false },
+  { section: "after-sale", key: "handoffs", label: () => "Handoffs", path: "/handoffs", icon: "handoffs", tint: "o", allowed: (c) => any(c, "handoff.manage", "deals.handoff"), built: true },
   { section: "after-sale", key: "renewals", label: () => "Renewals", path: "/renewals", icon: "renewals", tint: "o", allowed: (c) => has(c, "company_services.view"), built: false },
   { section: "after-sale", key: "payments", label: () => "Payments", path: "/payments", icon: "payments", tint: "o", allowed: (c) => has(c, "finance.view.payments"), built: false },
   {

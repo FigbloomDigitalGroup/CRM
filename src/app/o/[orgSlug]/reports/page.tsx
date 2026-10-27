@@ -22,6 +22,7 @@ import {
 } from "../_shared/icons";
 import { ReportBarChart } from "./charts/ReportBarChart";
 import { ReportDonutChart } from "./charts/ReportDonutChart";
+import { MyMetricsScreen } from "@/ui/screens/home/MyMetrics";
 
 const PAGE_DISPLAY_NAMES: Record<string, string> = {
   dashboard: "Dashboard",
@@ -91,6 +92,8 @@ export default async function ReportsPage({
   }
 
   const canViewAll = scope.mode === "organization";
+  // Without organisation reports the page is My metrics (R2, M7). The organisation reports are rebuilt in M8.
+  if (!canViewAll) return <MyMetricsScreen />;
   const canExport = hasPermission(ctx, "export.bulk");
 
   const [referenceData, myWork, orgMetrics, myMetrics, pageUsage] = await Promise.all([

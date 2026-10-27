@@ -67,7 +67,9 @@ export const logger = pino({
   // G1.05: a secret that ends up in a log line (a request body, a header, an error context) is written as [redacted], not stored.
   redact: { paths: REDACTED_PATHS, censor: "[redacted]" },
   transport:
-    process.env.NODE_ENV === "production"
+    // LOG_PLAIN=1 turns the pretty worker off in development: pino-pretty's worker thread cannot be found under `next dev` on some machines (see above), and
+    // every request that logs then fails with a 500. Unset, nothing changes.
+    process.env.NODE_ENV === "production" || process.env.LOG_PLAIN === "1"
       ? undefined
       : { target: "pino-pretty", options: { colorize: true } },
   hooks: {

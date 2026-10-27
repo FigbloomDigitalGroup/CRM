@@ -14,26 +14,26 @@ One row per Screen Checklist ID (92 rows: 54 V1, 29 V1.1, 9 V2), built from `Fig
 | A3 | Forgot / reset password, accept invite | V1 | existing (frozen) | F1.07 (FIG-1082) |  | | Frozen (live) |
 | A4 | Session expired | V1 | B1.04 (FIG-1020) | F1.07 (FIG-1082) |  | | Not started |
 | G1 | App shell: sidebar, top bar, quick create, review bar | V1 | B1.10 (FIG-1026)† | F1.06 (FIG-1081)<br>F1.03 (FIG-1078)<br>F1.02 (FIG-1077) |  | `src/ui/shell/`, `src/app/o/[orgSlug]/layout.tsx` | Frontend done |
-| G2 | Global search dropdown + results page | V1 | B2.12 (FIG-1041) | F2.11 (FIG-1093) | FIG-787 | | Not started |
-| G3 | Notification bell + notification centre | V1 | B2.11 (FIG-1040) | F2.12 (FIG-1094) |  | | Not started |
-| D1 | Home: Sales “Today” | V1 | B2.13 (FIG-1042) | F2.09 (FIG-1091) | FIG-443 | | Not started |
-| D2 | Home: Management | V1 | B2.14 (FIG-1043)<br>B2.13 (FIG-1042) | F2.09 (FIG-1091) | FIG-443 | | Not started |
-| D3 | Home: Delivery, Finance, Technical | V1 | B3.04 (FIG-1050)<br>B1.03 (FIG-1019)<br>B2.13 (FIG-1042)<br>B2.09 (FIG-1038) | F2.10 (FIG-1092)<br>F2.07 (FIG-1089) | FIG-443 | | Not started |
-| L1 | Leads list + bulk actions | V1 | B1.03 (FIG-1019)<br>B2.16 (FIG-1045)<br>B2.02 (FIG-1031) | F2.01 (FIG-1083) | FIG-789 | | Not started |
-| L2 | Lead detail + progress strip + qualification | V1 | B2.04 (FIG-1033)<br>B2.16 (FIG-1045)<br>B2.01 (FIG-1030) | F2.02 (FIG-1084) |  | | Not started |
-| L3 | Lead drawer, convert, lost reason, import/export | V1 | B2.04 (FIG-1033)<br>B2.05 (FIG-1034) | F2.03 (FIG-1085) | FIG-596 | | Not started |
-| P1 | Deals board (drag + Move to…) and list | V1 | B2.07 (FIG-1036)<br>B2.06 (FIG-1035) | F2.04 (FIG-1086) | FIG-790 | | Not started |
-| P2 | Deal detail + proposals | V1 | B2.16 (FIG-1045)<br>B2.07 (FIG-1036)<br>B2.06 (FIG-1035) | F2.05 (FIG-1087) | FIG-789 | | Not started |
-| P3 | Won-deal handoff dialog | V1 | B2.08 (FIG-1037) | F2.06 (FIG-1088) | FIG-792 | | Not started |
-| P4 | Delivery receiving view (Handoffs) | V1 | B1.03 (FIG-1019)<br>B2.08 (FIG-1037) | F2.06 (FIG-1088) | FIG-792 | | Not started |
-| T1 | Tasks grouped by due state | V1 | B1.03 (FIG-1019)<br>B2.09 (FIG-1038) | F2.07 (FIG-1089) | FIG-789 | | Not started |
-| T2 | Calendar month / week / day / list | V1 | B2.10 (FIG-1039) | F2.08 (FIG-1090) | FIG-794 | | Not started |
+| G2 | Global search dropdown + results page | V1 | B2.12 (FIG-1041) | F2.11 (FIG-1093) | FIG-787 | `src/ui/screens/home/Search.tsx` | Frontend done |
+| G3 | Notification bell + notification centre | V1 | B2.11 (FIG-1040) | F2.12 (FIG-1094) |  | `src/ui/screens/home/Notifications.tsx` | Frontend done |
+| D1 | Home: Sales “Today” | V1 | B2.13 (FIG-1042) | F2.09 (FIG-1091) | FIG-443 | `src/ui/screens/home/Home.tsx`, `blocks.tsx` | Frontend done |
+| D2 | Home: Management | V1 | B2.14 (FIG-1043)<br>B2.13 (FIG-1042) | F2.09 (FIG-1091) | FIG-443 | `src/ui/screens/home/Home.tsx`, `blocks.tsx` | Frontend done |
+| D3 | Home: Delivery, Finance, Technical | V1 | B3.04 (FIG-1050)<br>B1.03 (FIG-1019)<br>B2.13 (FIG-1042)<br>B2.09 (FIG-1038) | F2.10 (FIG-1092)<br>F2.07 (FIG-1089) | FIG-443 | `src/ui/screens/home/roles.tsx`, `src/ui/screens/tasks/Panels.tsx` | Frontend done |
+| L1 | Leads list + bulk actions | V1 | B1.03 (FIG-1019)<br>B2.16 (FIG-1045)<br>B2.02 (FIG-1031) | F2.01 (FIG-1083) | FIG-789 | `src/ui/screens/leads/LeadsScreen.tsx` | Frontend done |
+| L2 | Lead detail + progress strip + qualification | V1 | B2.04 (FIG-1033)<br>B2.16 (FIG-1045)<br>B2.01 (FIG-1030) | F2.02 (FIG-1084) |  | `src/ui/screens/leads/LeadDetailScreen.tsx` | Frontend done |
+| L3 | Lead drawer, convert, lost reason, import/export | V1 | B2.04 (FIG-1033)<br>B2.05 (FIG-1034) | F2.03 (FIG-1085) | FIG-596 | `src/ui/screens/leads/` (LeadDrawer, ConvertDialog, LostDialog, ImportWizard, ExportDialog) | Frontend done |
+| P1 | Deals board (drag + Move to…) and list | V1 | B2.07 (FIG-1036)<br>B2.06 (FIG-1035) | F2.04 (FIG-1086) | FIG-790 | `src/ui/screens/deals/DealsScreen.tsx`, `useDealMover.tsx` | Frontend done |
+| P2 | Deal detail + proposals | V1 | B2.16 (FIG-1045)<br>B2.07 (FIG-1036)<br>B2.06 (FIG-1035) | F2.05 (FIG-1087) | FIG-789 | `src/ui/screens/deals/DealDetailScreen.tsx` | Frontend done |
+| P3 | Won-deal handoff dialog | V1 | B2.08 (FIG-1037) | F2.06 (FIG-1088) | FIG-792 | `src/ui/screens/deals/useDealMover.tsx` (handoff dialog) | Frontend done |
+| P4 | Delivery receiving view (Handoffs) | V1 | B1.03 (FIG-1019)<br>B2.08 (FIG-1037) | F2.06 (FIG-1088) | FIG-792 | `src/ui/screens/deals/HandoffsScreen.tsx` | Frontend done |
+| T1 | Tasks grouped by due state | V1 | B1.03 (FIG-1019)<br>B2.09 (FIG-1038) | F2.07 (FIG-1089) | FIG-789 | `src/ui/screens/tasks/TasksScreen.tsx` | Frontend done |
+| T2 | Calendar month / week / day / list | V1 | B2.10 (FIG-1039) | F2.08 (FIG-1090) | FIG-794 | `src/ui/screens/tasks/CalendarScreen.tsx` | Frontend done |
 | C1 | Companies list | V1 | B3.10 (FIG-1056)<br>B3.02 (FIG-1048)<br>B2.16 (FIG-1045) | F3.01 (FIG-1095) | FIG-789 | | Not started |
 | C2 | Customer 360 | V1 | B3.05 (FIG-1051)<br>B3.03 (FIG-1049)<br>B3.02 (FIG-1048)<br>B3.01 (FIG-1047)<br>B2.16 (FIG-1045)<br>B2.07 (FIG-1036) | F3.01 (FIG-1095) |  | | Not started |
 | C3 | Contacts list + contact detail (call / WhatsApp → log prompt) | V1 | B3.10 (FIG-1056)<br>B3.08 (FIG-1054) | F3.02 (FIG-1096) | FIG-791 | | Not started |
 | C4 | Merge duplicates | V1 | B2.04 (FIG-1033) | F3.03 (FIG-1097) |  | | Not started |
 | R1 | Reports (organisation) incl. customer reports | V1 | B3.09 (FIG-1055) | F3.07 (FIG-1101) | FIG-793 | | Not started |
-| R2 | My metrics (personal) | V1 | B3.09 (FIG-1055)<br>B2.13 (FIG-1042) | F2.10 (FIG-1092) | FIG-443 | | Not started |
+| R2 | My metrics (personal) | V1 | B3.09 (FIG-1055)<br>B2.13 (FIG-1042) | F2.10 (FIG-1092) | FIG-443 | `src/ui/screens/home/MyMetrics.tsx` | Frontend done |
 | F1 | Payments tracker | V1 | B3.04 (FIG-1050)<br>B3.03 (FIG-1049)<br>B1.03 (FIG-1019) | F3.06 (FIG-1100) |  | | Not started |
 | S1 | Settings: profile, members, website, email, reference data, template | V1 | B4.01 (FIG-1058)<br>B1.12 (FIG-1028) | F4.04 (FIG-1106) | FIG-750 | | Not started |
 | S2 | Organisation audit log | V1 | FIG-799 | F4.05 (FIG-1107) | FIG-799 | | Not started |

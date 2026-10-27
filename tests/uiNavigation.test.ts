@@ -17,8 +17,9 @@ describe("sidebar navigation per role", () => {
   it("Management sees the whole workspace and the organisation reports", () => {
     expect(menu("MANAGEMENT")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Leads, Deals, Tasks",
+      "Sales workspace: Leads, Deals, Tasks, Calendar",
       "Customers: Companies, Contacts",
+      "After the sale: Handoffs",
       "Insights and settings: Reports, Settings",
     ]);
   });
@@ -26,8 +27,9 @@ describe("sidebar navigation per role", () => {
   it("Sales sees the pipeline and its own metrics, not the organisation's reports", () => {
     expect(menu("SALES")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Leads, Deals, Tasks",
+      "Sales workspace: Leads, Deals, Tasks, Calendar",
       "Customers: Companies, Contacts",
+      "After the sale: Handoffs",
       "Insights and settings: My metrics, Settings",
     ]);
   });
@@ -35,8 +37,9 @@ describe("sidebar navigation per role", () => {
   it("Delivery sees won deals only, under the design's Pipeline heading, and no Leads", () => {
     expect(menu("DELIVERY")).toEqual([
       "Overview: Dashboard",
-      "Pipeline: Won deals, Tasks",
+      "Pipeline: Won deals, Tasks, Calendar",
       "Customers: Companies, Contacts",
+      "After the sale: Handoffs",
       "Insights and settings: My metrics, Settings",
     ]);
   });
@@ -51,13 +54,13 @@ describe("sidebar navigation per role", () => {
   });
 
   it("Restricted Technical sees My work and their tasks, and nothing about leads, deals or customers", () => {
-    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks", "Insights and settings: Settings"]);
+    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Insights and settings: Settings"]);
   });
 
   it("Customer Support (behind its flag) sees customers and tasks, no pipeline", () => {
     expect(menu("CUSTOMER_SUPPORT")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Tasks",
+      "Sales workspace: Tasks, Calendar",
       "Customers: Companies, Contacts",
       "Insights and settings: Settings",
     ]);
@@ -70,7 +73,7 @@ describe("sidebar navigation per role", () => {
 
   it("never links to a page that is not built yet, even when the role could use it", () => {
     const all = buildNav({ permissionKeys: ROLE_PERMISSIONS.MANAGEMENT!, membershipId: "m1" }).flatMap((s) => s.items.map((i) => i.key));
-    for (const unbuilt of ["calendar", "conversations", "handoffs", "renewals", "payments", "preferences"]) expect(all).not.toContain(unbuilt);
+    for (const unbuilt of ["conversations", "renewals", "payments", "preferences"]) expect(all).not.toContain(unbuilt);
   });
 
   it("badges appear only where the owning screen supplied a count", () => {

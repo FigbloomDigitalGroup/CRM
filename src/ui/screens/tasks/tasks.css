@@ -1,0 +1,305 @@
+/*
+ * Tasks and calendar screens (F2.07, F2.08, M7): the tasks list (T1), the calendar (T2), the New task drawer and the My work cards (D3).
+ * Values follow design-spec/CrmTasks.dc.html and CrmOverlays.dc.html. Every selector starts with a .fb- class (tests/uiGuards.test.ts).
+ */
+
+.fb-tk-page { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+/* Header ------------------------------------------------------------------------------------------------------------------------ */
+.fb-tk-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.fb-tk-title { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+.fb-tk-scoperow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+.fb-tk-scope { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 999px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.fb-tk-scope__dot { width: 6px; height: 6px; border-radius: 99px; background: currentColor; }
+.fb-tk-scope--org { background: var(--primary-soft); color: var(--primary-text); }
+.fb-tk-scope--own { background: var(--orange-soft); color: var(--orange-text); }
+.fb-tk-hint { font-size: 13.5px; color: var(--text-2); }
+.fb-tk-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+.fb-tk-views { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--surface-3); border: 1px solid var(--border); }
+.fb-tk-views__opt { display: flex; gap: 6px; align-items: center; border: 0; padding: 6px 12px; border-radius: 8px; background: transparent; color: var(--text-2); font-size: 13.5px; font-weight: 600; text-decoration: none; }
+.fb-tk-views__opt[data-on="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.fb-tk-views__opt:hover { color: var(--text); }
+
+.fb-tk-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 10px; border: 1px solid transparent;
+  font: inherit; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.fb-tk-btn--tall { height: 40px; }
+.fb-tk-btn--md { height: 36px; padding: 0 14px; font-weight: 600; }
+.fb-tk-btn--primary { background: var(--primary-btn); color: var(--on-primary); }
+.fb-tk-btn--primary:hover:not([aria-disabled="true"]) { background: var(--primary-hover); }
+.fb-tk-btn--secondary { background: var(--surface); color: var(--text); border-color: var(--border-strong); font-weight: 600; }
+.fb-tk-btn--secondary:hover { background: var(--surface-2); }
+.fb-tk-btn--secondary[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary-text); border-color: var(--primary); }
+.fb-tk-btn--ghost { background: transparent; color: var(--text-2); font-weight: 600; }
+.fb-tk-btn--ghost:hover { background: var(--surface-3); color: var(--text); }
+.fb-tk-btn[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+.fb-tk-btn:focus-visible, .fb-tk-views__opt:focus-visible, .fb-tk-modes__opt:focus-visible, .fb-tk-sqbtn:focus-visible, .fb-tk-stat:focus-visible,
+.fb-tk-group__btn:focus-visible, .fb-tk-check:focus-visible, .fb-tk-titlebtn:focus-visible, .fb-tk-linkchip:focus-visible, .fb-tk-iconbtn:focus-visible,
+.fb-tk-snooze:focus-visible, .fb-tk-chip:focus-visible, .fb-tk-weekitem:focus-visible, .fb-tk-dayitem:focus-visible, .fb-tk-agenda__item:focus-visible,
+.fb-tk-cellbtn:focus-visible, .fb-tk-week__head:focus-visible, .fb-tk-hour__add:focus-visible, .fb-tk-more:focus-visible, .fb-tk-kpi:focus-visible,
+.fb-tk-seg__opt:focus-visible, .fb-tk-prio__opt:focus-visible, .fb-tk-drawer__close:focus-visible, .fb-tk-linkbtn:focus-visible, .fb-tk-logbtn:focus-visible,
+.fb-tk-panel__all:focus-visible, .fb-tk-picked__clear:focus-visible {
+  outline: 2px solid var(--focus); outline-offset: 2px;
+}
+
+/* Stats and filters ------------------------------------------------------------------------------------------------------------- */
+.fb-tk-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.fb-tk-stat {
+  display: flex; flex-direction: column; text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px;
+  box-shadow: var(--shadow-sm); font: inherit; color: inherit; cursor: pointer; min-width: 0;
+}
+.fb-tk-stat:hover { border-color: var(--border-strong); }
+.fb-tk-stat__label { display: flex; align-items: center; gap: 7px; font-size: 14px; color: var(--text-2); }
+.fb-tk-stat__n { font-size: 26px; font-weight: 700; margin-top: 8px; }
+.fb-tk-stat__sub { font-size: 12.5px; color: var(--text-3); margin-top: 3px; }
+.fb-tk-dot { width: 7px; height: 7px; border-radius: 99px; flex: none; }
+.fb-tk-dot--lg { width: 8px; height: 8px; }
+
+.fb-tk-filters { display: flex; gap: 10px; flex-wrap: wrap; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); align-items: center; }
+.fb-tk-search { position: relative; flex: 1 1 240px; display: flex; }
+.fb-tk-search svg { position: absolute; left: 12px; top: 12px; color: var(--text-3); pointer-events: none; }
+.fb-tk-search input {
+  width: 100%; height: 40px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); padding: 0 12px 0 36px; font: inherit; font-size: 14px;
+}
+.fb-tk-search input:focus, .fb-tk-select:focus, .fb-tk-quick input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.fb-tk-select { height: 40px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); padding: 0 10px; font: inherit; font-size: 14px; }
+.fb-tk-select--md { height: 36px; border-radius: 9px; }
+.fb-tk-select--sm { height: 34px; padding: 0 8px; font-size: 13px; min-width: 0; width: 100%; }
+.fb-tk-select:disabled { background: var(--surface-3); color: var(--text-2); cursor: not-allowed; }
+
+.fb-tk-recordchip { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 14px; border-radius: 12px; background: var(--surface-2); color: var(--text-2); font-size: 13.5px; }
+.fb-tk-linkbtn { border: 0; background: transparent; color: var(--primary-text); font: inherit; font-weight: 600; cursor: pointer; padding: 0; text-decoration: underline; }
+.fb-tk-quick input {
+  width: 100%; height: 40px; border-radius: 10px; border: 1px dashed var(--border-strong); background: var(--surface); color: var(--text); padding: 0 14px; font: inherit; font-size: 14px;
+}
+.fb-tk-quick input::placeholder { color: var(--text-3); }
+.fb-tk-bulk { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; border-radius: 12px; background: var(--primary-soft); color: var(--primary-text); font-weight: 600; }
+
+/* Loading, error, empty --------------------------------------------------------------------------------------------------------- */
+.fb-tk-skeletons { display: flex; flex-direction: column; gap: 10px; }
+.fb-tk-skel { height: 64px; border-radius: 12px; background: linear-gradient(90deg, var(--skel) 0%, var(--skel-2) 50%, var(--skel) 100%); background-size: 1200px 100%; animation: fb-shimmer 1.4s linear infinite; }
+.fb-tk-skel--tall { height: 150px; border-radius: 16px; }
+.fb-tk-skel--grid { height: 520px; border-radius: 14px; }
+@keyframes fb-shimmer { from { background-position: -600px 0; } to { background-position: 600px 0; } }
+.fb-tk-error { padding: 40px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.fb-tk-error__title { font-weight: 700; }
+.fb-tk-error__body { margin: 0; color: var(--text-2); max-width: 52ch; }
+.fb-tk-empty .fb-empty { align-items: center; text-align: center; padding: 52px 24px; background: var(--surface); border: 1px solid var(--border); border-style: solid; border-radius: 14px; }
+.fb-tk-empty .fb-empty__title { font-size: 18px; }
+
+/* Groups and rows --------------------------------------------------------------------------------------------------------------- */
+.fb-tk-group { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.fb-tk-group__h { margin: 0; font-size: inherit; }
+.fb-tk-group__btn { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: var(--surface-2); padding: 12px 18px; text-align: left; color: var(--text); font: inherit; cursor: pointer; border-radius: 13px 13px 0 0; }
+.fb-tk-group__btn[aria-expanded="false"] { border-radius: 13px; }
+.fb-tk-group__btn strong { font-size: 14px; }
+.fb-tk-count { font-size: 12.5px; color: var(--text-3); }
+.fb-tk-none { padding: 16px 18px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--text-3); }
+.fb-tk-more { display: flex; justify-content: center; padding: 10px; border-top: 1px solid var(--border); }
+
+.fb-tk-row {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) 170px 200px 90px 140px 36px; gap: 12px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--border);
+}
+.fb-tk-row:hover { background: var(--surface-2); }
+.fb-tk-row:last-child { border-radius: 0 0 13px 13px; }
+.fb-tk-check {
+  width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--border-strong); background: var(--surface); color: #fff; display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; cursor: pointer; flex: none; min-height: 0; min-width: 0; box-sizing: border-box; align-self: center;
+}
+.fb-tk-check[data-on="true"] { background: var(--primary); border-color: var(--primary); }
+.fb-tk-check:hover:not([aria-disabled="true"]):not([data-on="true"]) { border-color: var(--primary); background: var(--primary-soft); }
+.fb-tk-check[aria-disabled="true"] { cursor: not-allowed; opacity: 0.5; }
+.fb-tk-check--work { margin-top: 2px; }
+.fb-tk-pick { width: 18px; height: 18px; accent-color: var(--primary); margin: 0 2px; }
+.fb-tk-main { min-width: 0; }
+.fb-tk-titlebtn { display: block; border: 0; background: transparent; padding: 0; font: inherit; font-weight: 600; font-size: 14px; color: var(--text); text-align: left; cursor: pointer; max-width: 100%; }
+.fb-tk-titlebtn:hover { text-decoration: underline; }
+.fb-tk-titlebtn[data-closed="true"] { text-decoration: line-through; color: var(--text-3); }
+.fb-tk-desc { font-size: 12.5px; color: var(--text-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fb-tk-linkchip { display: inline-block; margin-top: 5px; border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--text-2); text-decoration: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-tk-linkchip:hover { color: var(--text); border-color: var(--border-strong); }
+.fb-tk-who { display: flex; align-items: center; gap: 8px; font-size: 13.5px; min-width: 0; }
+.fb-tk-who__name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fb-tk-avatar { flex: none; width: 24px; height: 24px; border-radius: 99px; background: var(--primary-soft); color: var(--primary-text); font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.fb-tk-due { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--text-2); }
+.fb-tk-due[data-state="overdue"] { color: var(--red); }
+.fb-tk-due[data-state="today"] { color: var(--orange-text); }
+.fb-tk-due[data-state="overdue"]::before { content: "▲"; font-size: 8px; } /* a shape, not only a colour, marks what is late */
+.fb-tk-snooze { min-height: 0; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 0; border-radius: 7px; background: transparent; color: var(--text-3); cursor: pointer; padding: 0; }
+.fb-tk-snooze:hover { background: var(--surface-3); color: var(--text); }
+.fb-tk-pill { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; display: inline-block; }
+.fb-tk-pill--sm { font-size: 11.5px; }
+.fb-tk-pill--high { background: var(--red-soft); color: var(--red); }
+.fb-tk-pill--medium { background: var(--orange-soft); color: var(--orange-text); }
+.fb-tk-pill--low, .fb-tk-pill--neutral { background: var(--surface-3); color: var(--text-2); }
+.fb-tk-iconbtn { width: 32px; height: 32px; border-radius: 8px; border: 0; background: transparent; color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.fb-tk-iconbtn:hover { background: var(--surface-3); }
+.fb-tk-iconbtn--off { opacity: 0.4; cursor: not-allowed; }
+.fb-tk-iconbtn--off:hover { background: transparent; }
+
+/* The New task drawer ----------------------------------------------------------------------------------------------------------- */
+.fb-tk-scrim { position: fixed; inset: 0; z-index: 400; background: var(--overlay); display: flex; justify-content: flex-end; animation: fb-fade 0.15s ease; }
+.fb-tk-drawer {
+  width: min(480px, 100vw); height: 100%; background: var(--surface); color: var(--text); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; animation: fb-slide 0.2s ease;
+}
+.fb-tk-drawer__head { flex: none; display: flex; align-items: flex-start; gap: 12px; padding: 22px 24px 16px; border-bottom: 1px solid var(--border); }
+.fb-tk-drawer__title { margin: 0; font-size: 20px; letter-spacing: -0.02em; }
+.fb-tk-drawer__sub { margin: 4px 0 0; font-size: 13px; color: var(--text-2); }
+.fb-tk-drawer__close { width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.fb-tk-drawer__body { flex: 1; overflow: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+.fb-tk-drawer__foot { flex: none; display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border); }
+.fb-tk-drawer__foot .fb-tk-btn { height: 40px; }
+.fb-tk-field { display: flex; flex-direction: column; gap: 6px; }
+.fb-tk-seg, .fb-tk-prio { display: grid; gap: 8px; }
+.fb-tk-seg { grid-template-columns: repeat(3, 1fr); }
+.fb-tk-prio { grid-template-columns: repeat(3, 1fr); }
+.fb-tk-seg__opt, .fb-tk-prio__opt { height: 40px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
+.fb-tk-seg__opt[data-on="true"], .fb-tk-prio__opt[data-on="true"] { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-text); }
+.fb-tk-picked { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 6px 0 12px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); }
+.fb-tk-picked__type { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--surface-3); color: var(--text-2); }
+.fb-tk-picked__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.fb-tk-picked__clear { border: 0; background: transparent; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 18px; color: var(--text-2); }
+
+/* Calendar ---------------------------------------------------------------------------------------------------------------------- */
+.fb-tk-calbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); }
+.fb-tk-calbar__nav, .fb-tk-calbar__tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.fb-tk-sqbtn { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.fb-tk-sqbtn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+.fb-tk-caltitle { font-size: 18px; letter-spacing: -0.02em; margin-left: 8px; }
+.fb-tk-modes { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--surface-3); }
+.fb-tk-modes__opt { border: 0; padding: 6px 12px; border-radius: 8px; background: transparent; color: var(--text-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.fb-tk-modes__opt[data-on="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.fb-tk-lockline { font-size: 12.5px; color: var(--text-3); display: flex; gap: 6px; align-items: center; margin-top: -8px; }
+
+.fb-tk-cal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.fb-tk-month__dows { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); background: var(--surface-2); border-bottom: 1px solid var(--border); }
+.fb-tk-month__dows div { padding: 9px 10px; font-family: var(--fb-mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--text-3); }
+.fb-tk-month__cells { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.fb-tk-month__cell { position: relative; min-height: 112px; padding: 8px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fb-tk-month__cell[data-out="true"] { background: var(--surface-2); }
+.fb-tk-month__cell:hover { background: var(--surface-2); }
+.fb-tk-month__cell:nth-child(7n) { border-right: 0; }
+.fb-tk-cellbtn { position: absolute; inset: 0; border: 0; background: transparent; cursor: copy; padding: 0; z-index: 0; }
+.fb-tk-cellbtn:focus-visible { outline-offset: -3px; }
+.fb-tk-daynum {
+  position: relative; z-index: 1; pointer-events: none; align-self: flex-start; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 99px; font-size: 12.5px; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; color: var(--text);
+}
+.fb-tk-month__cell[data-out="true"] .fb-tk-daynum { color: var(--text-3); }
+.fb-tk-daynum[data-today="true"] { background: #ff9400; color: #1b1d1a; }
+.fb-tk-chip { position: relative; z-index: 1; display: flex; align-items: center; gap: 5px; width: 100%; border: 0; border-radius: 6px; padding: 3px 6px; font: inherit; font-size: 11.5px; font-weight: 600; text-align: left; white-space: nowrap; overflow: hidden; cursor: pointer; }
+.fb-tk-chip__dot { flex: none; width: 6px; height: 6px; border-radius: 99px; background: var(--red); }
+.fb-tk-chip__text { overflow: hidden; text-overflow: ellipsis; }
+.fb-tk-more { position: relative; z-index: 1; align-self: flex-start; border: 0; background: transparent; font: inherit; font-size: 11.5px; color: var(--text-3); padding: 0 4px; cursor: pointer; text-decoration: underline; }
+.fb-tk-chip[data-tone="red"], .fb-tk-weekitem[data-tone="red"], .fb-tk-dayitem[data-tone="red"] { background: var(--red-soft); color: var(--red); }
+.fb-tk-chip[data-tone="orange"], .fb-tk-weekitem[data-tone="orange"], .fb-tk-dayitem[data-tone="orange"] { background: var(--orange-soft); color: var(--orange-text); }
+.fb-tk-chip[data-tone="green"], .fb-tk-weekitem[data-tone="green"], .fb-tk-dayitem[data-tone="green"] { background: var(--primary-soft); color: var(--primary-text); }
+.fb-tk-chip[data-tone="blue"], .fb-tk-weekitem[data-tone="blue"], .fb-tk-dayitem[data-tone="blue"] { background: var(--blue-soft); color: var(--blue); }
+
+.fb-tk-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.fb-tk-week__col { border-right: 1px solid var(--border); min-height: 360px; display: flex; flex-direction: column; min-width: 0; }
+.fb-tk-week__col:last-child { border-right: 0; }
+.fb-tk-week__head { text-align: left; padding: 10px; border: 0; border-bottom: 1px solid var(--border); background: var(--surface-2); color: var(--text); cursor: copy; font: inherit; width: 100%; display: block; }
+.fb-tk-week__head[data-today="true"] { background: var(--orange-soft); color: var(--orange-text); }
+.fb-tk-week__dow { display: block; font-family: var(--fb-mono); font-size: 10.5px; color: var(--text-3); }
+.fb-tk-week__head[data-today="true"] .fb-tk-week__dow { color: inherit; }
+.fb-tk-week__d { display: block; font-size: 18px; font-weight: 700; }
+.fb-tk-week__items { padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.fb-tk-weekitem { border: 0; border-left: 3px solid currentColor; border-radius: 6px; padding: 6px 8px; text-align: left; font: inherit; font-size: 12px; cursor: pointer; display: block; }
+.fb-tk-weekitem__time { display: block; font-weight: 700; }
+.fb-tk-weekitem__title { display: block; color: var(--text); margin-top: 2px; line-height: 1.3; overflow-wrap: anywhere; }
+
+.fb-tk-hour { position: relative; display: grid; grid-template-columns: 72px 1fr; min-height: 52px; border-bottom: 1px solid var(--border); }
+.fb-tk-hour:hover { background: var(--surface-2); }
+.fb-tk-hour__add { position: absolute; inset: 0; border: 0; background: transparent; cursor: copy; padding: 0; }
+.fb-tk-hour__add:focus-visible { outline-offset: -3px; }
+.fb-tk-hour__label { padding: 10px 12px; font-family: var(--fb-mono); font-size: 11.5px; color: var(--text-3); border-right: 1px solid var(--border); position: relative; pointer-events: none; }
+.fb-tk-hour__items { padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; position: relative; min-width: 0; pointer-events: none; }
+.fb-tk-dayitem { pointer-events: auto; border: 0; border-left: 3px solid currentColor; border-radius: 6px; padding: 7px 10px; text-align: left; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.fb-tk-dayitem__who { font-weight: 500; color: var(--text-2); }
+
+.fb-tk-agenda__day { margin: 0; padding: 12px 18px; background: var(--surface-2); border-bottom: 1px solid var(--border); font-weight: 700; font-size: 13.5px; }
+.fb-tk-agenda__item { display: flex; gap: 14px; width: 100%; border: 0; border-bottom: 1px solid var(--border); background: transparent; padding: 12px 18px; text-align: left; font: inherit; color: var(--text); cursor: pointer; align-items: baseline; }
+.fb-tk-agenda__item:hover { background: var(--surface-2); }
+.fb-tk-agenda__time { width: 78px; flex: none; font-family: var(--fb-mono); font-size: 12px; color: var(--text-3); }
+.fb-tk-agenda__title { flex: 1; min-width: 0; font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.fb-tk-agenda__who { font-size: 12.5px; color: var(--text-2); }
+.fb-tk-mobileagenda { display: none; }
+
+/* My work (D3) and the "Do these today" panel ----------------------------------------------------------------------------------- */
+.fb-tk-mywork { display: flex; flex-direction: column; gap: 16px; }
+.fb-tk-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.fb-tk-kpi {
+  text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column;
+  gap: 14px; min-height: 132px; text-decoration: none; color: var(--text);
+}
+.fb-tk-kpi:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+.fb-tk-kpi__top { display: flex; justify-content: space-between; gap: 10px; width: 100%; }
+.fb-tk-kpi__label { font-size: 14px; font-weight: 600; line-height: 1.3; }
+.fb-tk-kpi__icon { flex: none; width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; }
+.fb-tk-kpi__n { display: block; font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.fb-tk-kpi__sub { display: block; font-size: 13px; color: var(--text-2); margin-top: 6px; }
+.fb-tk-notice { display: flex; gap: 10px; align-items: flex-start; padding: 12px 16px; border-radius: 14px; background: var(--surface-2); color: var(--text-2); font-size: 13.5px; }
+.fb-tk-notice svg { flex: none; margin-top: 1px; }
+.fb-tk-emptycard { padding: 52px 24px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.fb-tk-emptycard__icon { color: var(--orange-text); display: flex; }
+.fb-tk-emptycard__title { font-weight: 700; font-size: 18px; margin-top: 4px; }
+.fb-tk-emptycard__body { margin: 0 0 8px; color: var(--text-2); font-size: 14px; max-width: 52ch; }
+.fb-tk-worklist { display: flex; flex-direction: column; gap: 14px; }
+.fb-tk-work { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; }
+.fb-tk-work__row { display: flex; gap: 12px; align-items: flex-start; }
+.fb-tk-work__head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.fb-tk-work__title { font-size: 15.5px; }
+.fb-tk-work__due { font-size: 13px; font-weight: 600; margin-top: 5px; color: var(--text-2); }
+.fb-tk-work__due[data-state="overdue"] { color: var(--red); }
+.fb-tk-work__desc { margin: 8px 0 0; font-size: 13.5px; color: var(--text-2); }
+.fb-tk-reqs { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
+.fb-tk-reqs__label { font-family: var(--fb-mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--text-3); }
+.fb-tk-reqs ul { margin: 8px 0 0; padding-left: 18px; font-size: 13.5px; line-height: 1.7; }
+.fb-tk-files { border-top: 1px solid var(--border); padding-top: 8px; margin-top: 10px !important; }
+
+.fb-tk-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-sm); }
+.fb-tk-panel__head { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 10px; }
+.fb-tk-panel__head h2 { margin: 0; font-size: 16px; letter-spacing: -0.01em; }
+.fb-tk-panel__all { color: var(--primary-text); font-weight: 600; font-size: 13px; text-decoration: none; }
+.fb-tk-panel__row { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--border); }
+.fb-tk-panel__title { font-weight: 600; font-size: 14px; line-height: 1.35; }
+.fb-tk-panel__meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.fb-tk-panel__meta .fb-tk-linkchip { margin-top: 0; }
+.fb-tk-panel__empty { padding: 26px 20px; border-top: 1px solid var(--border); color: var(--text-2); font-size: 14px; display: flex; gap: 10px; align-items: center; }
+.fb-tk-logbtn { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 12.5px; font-weight: 600; color: var(--text-2); text-decoration: none; }
+.fb-tk-logbtn:hover { background: var(--surface-2); color: var(--text); }
+
+/* Rows stay tidy as the page narrows: a card on tablet and phone, never sideways scrolling. ------------------------------------- */
+@media (max-width: 1100px) {
+  .fb-tk-row { grid-template-columns: 28px minmax(0, 1fr) 130px 190px 80px 120px 36px; gap: 10px; padding: 12px 14px; }
+}
+@media (max-width: 860px) {
+  .fb-tk-row {
+    grid-template-columns: 28px minmax(0, 1fr) 36px;
+    grid-template-areas: "check main log" ". due due" ". who prio" ". status status";
+    row-gap: 8px;
+  }
+  .fb-tk-row > .fb-tk-check, .fb-tk-row > .fb-tk-pick { grid-area: check; }
+  .fb-tk-row > .fb-tk-main { grid-area: main; }
+  .fb-tk-row > .fb-tk-due { grid-area: due; }
+  .fb-tk-row > .fb-tk-who { grid-area: who; }
+  .fb-tk-row > .fb-tk-prio-cell { grid-area: prio; justify-self: end; }
+  .fb-tk-row > .fb-tk-select { grid-area: status; }
+  .fb-tk-row > .fb-tk-iconbtn { grid-area: log; }
+  .fb-tk-desc { white-space: normal; }
+}
+@media (max-width: 640px) {
+  .fb-tk-title { font-size: 24px; }
+  .fb-tk-actions { width: 100%; }
+  .fb-tk-filters > * { flex: 1 1 100%; }
+  .fb-tk-calbar__tools { width: 100%; }
+  .fb-tk-calbar__tools .fb-tk-select { flex: 1 1 auto; }
+  .fb-tk-caltitle { margin-left: 0; width: 100%; }
+  .fb-tk-cal--grid { display: none; }
+  .fb-tk-mobileagenda { display: block; }
+  .fb-tk-drawer { width: 100vw; }
+  .fb-tk-agenda__item { flex-wrap: wrap; gap: 4px 12px; }
+}
