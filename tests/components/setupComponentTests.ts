@@ -14,6 +14,23 @@ afterEach(() => {
 // must no-op under the "node" environment the integration suite uses, where
 // `Element`/`ResizeObserver` don't exist at all, rather than throwing.
 if (typeof Element !== "undefined") {
+  // Node 25 and later define a `localStorage` global that is undefined unless `--localstorage-file` is given, and it shadows jsdom's. Components
+  // read and write localStorage (device settings, drafts), so give the DOM tests a working in-memory one whenever the real one is missing.
+  if (typeof localStorage === "undefined" || typeof localStorage.getItem !== "function") {
+    const data = new Map<string, string>();
+    const memory = {
+      getItem: (k: string) => (data.has(k) ? data.get(k)! : null),
+      setItem: (k: string, v: string) => void data.set(k, String(v)),
+      removeItem: (k: string) => void data.delete(k),
+      clear: () => data.clear(),
+      key: (i: number) => Array.from(data.keys())[i] ?? null,
+      get length() {
+        return data.size;
+      },
+    };
+    vi.stubGlobal("localStorage", memory);
+  }
+
   // recharts' <ResponsiveContainer> (FIG-603) observes its own size via
   // ResizeObserver, which jsdom doesn't implement -- without a stub it
   // throws "ResizeObserver is not defined" the moment a chart mounts.

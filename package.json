@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "check:build-output": "tsx scripts/check-build-output.ts",
     "start": "next start",
     "prisma:generate": "prisma generate",
     "migrate:dev": "prisma migrate dev",
@@ -36,6 +37,7 @@
     "@prisma/client": "^5.20.0",
     "@sentry/core": "^11.7.0",
     "@sentry/nextjs": "^11.7.0",
+    "@tanstack/react-query": "^5.105.0",
     "bcryptjs": "^3.0.3",
     "csv-parse": "^7.0.3",
     "csv-stringify": "^6.9.0",
@@ -67,6 +69,7 @@
     "@typescript-eslint/parser": "^8.70.1",
     "@vitejs/plugin-react": "^4.7.0",
     "@vitest/coverage-v8": "^2.1.9",
+    "axe-core": "^4.14.0",
     "dotenv": "^16.4.5",
     "eslint": "^8.57.0",
     "jsdom": "^30.1.2",

@@ -44,6 +44,8 @@ export default defineConfig({
     // together with ALLOW_DEV_ACCOUNTS=true; nothing else sets it.
     env: {
       E2E_ALLOW_DEV_ACCOUNTS: "true",
+      // The component gallery (src/app/o/[orgSlug]/dev/gallery) is a 404 everywhere except development and this suite (F1.02).
+      E2E_UI_GALLERY: "true",
       ALLOW_DEV_ACCOUNTS: "true",
       // Every spec signs in through the real /login, and the suite as a whole
       // signs in far more often than the production limit (5 per email per 15

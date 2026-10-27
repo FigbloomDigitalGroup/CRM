@@ -110,3 +110,6 @@ export function createClient(options: ClientOptions = {}) {
 export type ApiClient = ReturnType<typeof createClient>;
 export { operations };
 export type { OperationId, Operations };
+
+/** The arguments of one call (`params`, `query`, `body`, `idempotencyKey`), as the operation's own types say they must be. */
+export type CallArgs<K extends OperationId> = Args<K>;

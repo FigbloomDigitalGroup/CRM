@@ -4,6 +4,9 @@ const { buildSecurityHeaders } = require("./config/securityHeaders");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // `next dev` and `next build` both write to `.next`, so a dev server left running corrupts a production build made beside it (and the
+  // other way round). Setting NEXT_DIST_DIR (for example `.next-e2e`) lets the end-to-end build live in its own folder. Unset, nothing changes.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // Next's own dev-mode build-activity badge defaults to bottom-left,
   // which collides with the app's sidebar user pill there -- dev-only,
   // never shown in production, but move it out of the way so it isn't

@@ -13,7 +13,7 @@ One row per Screen Checklist ID (92 rows: 54 V1, 29 V1.1, 9 V2), built from `Fig
 | A2 | Sign up → awaiting access | V1 | existing (frozen) | F1.07 (FIG-1082) |  | | Frozen (live) |
 | A3 | Forgot / reset password, accept invite | V1 | existing (frozen) | F1.07 (FIG-1082) |  | | Frozen (live) |
 | A4 | Session expired | V1 | B1.04 (FIG-1020) | F1.07 (FIG-1082) |  | | Not started |
-| G1 | App shell: sidebar, top bar, quick create, review bar | V1 | B1.10 (FIG-1026)† | F1.06 (FIG-1081)<br>F1.03 (FIG-1078)<br>F1.02 (FIG-1077) |  | | Not started |
+| G1 | App shell: sidebar, top bar, quick create, review bar | V1 | B1.10 (FIG-1026)† | F1.06 (FIG-1081)<br>F1.03 (FIG-1078)<br>F1.02 (FIG-1077) |  | `src/ui/shell/`, `src/app/o/[orgSlug]/layout.tsx` | Frontend done |
 | G2 | Global search dropdown + results page | V1 | B2.12 (FIG-1041) | F2.11 (FIG-1093) | FIG-787 | | Not started |
 | G3 | Notification bell + notification centre | V1 | B2.11 (FIG-1040) | F2.12 (FIG-1094) |  | | Not started |
 | D1 | Home: Sales “Today” | V1 | B2.13 (FIG-1042) | F2.09 (FIG-1091) | FIG-443 | | Not started |
@@ -38,7 +38,7 @@ One row per Screen Checklist ID (92 rows: 54 V1, 29 V1.1, 9 V2), built from `Fig
 | S1 | Settings: profile, members, website, email, reference data, template | V1 | B4.01 (FIG-1058)<br>B1.12 (FIG-1028) | F4.04 (FIG-1106) | FIG-750 | | Not started |
 | S2 | Organisation audit log | V1 | FIG-799 | F4.05 (FIG-1107) | FIG-799 | | Not started |
 | S3 | Notification preferences + PWA install | V1 | B4.07 (FIG-1064)<br>B1.11 (FIG-1027) | F4.12 (FIG-1114)<br>F4.03 (FIG-1105) | FIG-791 | | Not started |
-| S4 | No access (explained) | V1 | B1.01 (FIG-1017)<br>B1.02 (FIG-1018) | F1.05 (FIG-1080)<br>F1.02 (FIG-1077) |  | | Not started |
+| S4 | No access (explained) | V1 | B1.01 (FIG-1017)<br>B1.02 (FIG-1018) | F1.05 (FIG-1080)<br>F1.02 (FIG-1077) |  | `src/ui/components/states.tsx`, `src/ui/copy.ts` (used by real screens from M7) | Frontend done |
 | E1 | Conversations hub + Needs-linking queue | V1 | B3.07 (FIG-1053) | F3.04 (FIG-1098) |  | | Not started |
 | E2 | Renewals & retention | V1 | B7.08 (FIG-1190)<br>B3.06 (FIG-1052)<br>B3.05 (FIG-1051)<br>B3.02 (FIG-1048)<br>B2.18 (FIG-1066) | F3.05 (FIG-1099) |  | | Not started |
 | S5 | Settings: Automations | V1 | B4.02 (FIG-1059) | F4.06 (FIG-1108) |  | | Not started |
@@ -63,7 +63,7 @@ One row per Screen Checklist ID (92 rows: 54 V1, 29 V1.1, 9 V2), built from `Fig
 | S8#2 | Settings: roles & field access, developers (API tokens, webhooks) | V2 | B7.06 (FIG-1188) | F7.03 (FIG-1194) |  | | Not started |
 | A5 | Two-step sign-in code screen (after the frozen sign-in) | V1.1 | B6.02 (FIG-1134) | F6.08 (FIG-1167) | FIG-437 | | Not started |
 | M4 | Mobile: camera attachments, business-card capture, waiting-to-sync queue | V1.1 | B6.22 (FIG-1154)<br>B4.07 (FIG-1064) | F6.18 (FIG-1177) | FIG-791 | | Not started |
-| A6 | Sign-in chips: Dev Super Admin, Dev Customer Support | V1.1 | B0.09 (FIG-1196)<br>B0.08 (FIG-1016) | F6.04 (FIG-1163)<br>F1.07 (FIG-1082) |  | | Frozen (live) |
+| A6 | Sign-in chips: Dev Super Admin, Dev Customer Support | V1.1 | B0.09 (FIG-1196)<br>B0.08 (FIG-1016) | F6.04 (FIG-1163)<br>F1.07 (FIG-1082) |  | `src/app/_dev/` (chips) | Frozen (live) |
 | PL1 | Platform home | V1.1 | B6.07 (FIG-1139)<br>B0.09 (FIG-1196) | F6.01 (FIG-1160) |  | | Not started |
 | PL2 | Organisations list | V1.1 | B6.04 (FIG-1136)<br>B0.09 (FIG-1196) | F6.02 (FIG-1161) |  | | Not started |
 | PL3 | Provision organisation wizard | V1.1 | B6.04 (FIG-1136)<br>B0.09 (FIG-1196) | F6.02 (FIG-1161) |  | | Not started |
@@ -95,11 +95,11 @@ One row per Screen Checklist ID (92 rows: 54 V1, 29 V1.1, 9 V2), built from `Fig
 | AP7 | Security: my sessions, sign-in history, password, two-step | V1 | B6.02 (FIG-1134)<br>B1.04 (FIG-1020) | F4.03 (FIG-1105) | FIG-437 | | Not started |
 | AP8 | Reset to default confirmation | V1 | B1.08 (FIG-1024) | F4.01 (FIG-1103)<br>F1.01 (FIG-1076) |  | | Not started |
 | AP9 | Organisation profile: logo, default theme, allow personalisation | V1 | B1.09 (FIG-1025) | F4.04 (FIG-1106)<br>F1.01 (FIG-1076) |  | | Not started |
-| TB1 | Top bar with identity block, per role | V1 | B1.10 (FIG-1026)<br>B1.09 (FIG-1025) | F1.04 (FIG-1079) |  | | Not started |
-| TB2 | Identity popover | V1 | B1.10 (FIG-1026)<br>B1.04 (FIG-1020) | F1.04 (FIG-1079) |  | | Not started |
-| TB3 | Session-expiring prompt | V1 | B1.04 (FIG-1020) | F1.04 (FIG-1079) | FIG-437 | | Not started |
+| TB1 | Top bar with identity block, per role | V1 | B1.10 (FIG-1026)<br>B1.09 (FIG-1025) | F1.04 (FIG-1079) |  | `src/ui/shell/TopBar.tsx` (IdentityBlock) | Frontend done |
+| TB2 | Identity popover | V1 | B1.10 (FIG-1026)<br>B1.04 (FIG-1020) | F1.04 (FIG-1079) |  | `src/ui/shell/TopBar.tsx` (IdentityBlock popover) | Frontend done |
+| TB3 | Session-expiring prompt | V1 | B1.04 (FIG-1020) | F1.04 (FIG-1079) | FIG-437 | `src/ui/shell/SessionGuard.tsx` | Frontend done |
 | TB4 | Organisation switcher | V1.1 | B6.01 (FIG-1133) | F6.06 (FIG-1165) | FIG-437 | | Not started |
-| TB5 | Top bar at tablet and 375px | V1 | B1.10 (FIG-1026) | F1.04 (FIG-1079) |  | | Not started |
+| TB5 | Top bar at tablet and 375px | V1 | B1.10 (FIG-1026) | F1.04 (FIG-1079) |  | `src/ui/ui.css` (breakpoints), `e2e/ui-shell.spec.ts` | Frontend done |
 | TB6 | Top bar in support view and in Platform console | V1.1 | B1.10 (FIG-1026)<br>B6.03 (FIG-1135)† | F6.01 (FIG-1160) |  | | Not started |
 
 ## Coverage

@@ -21,6 +21,17 @@ export interface MockOptions {
 
 const ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"];
 
+/** The real explained denial names roles the way people do ("Restricted Technical"), not by key; the mock does the same so screens show the right words. */
+const ROLE_LABEL: Record<string, string> = {
+  MANAGEMENT: "Management",
+  SALES: "Sales",
+  DELIVERY: "Delivery",
+  FINANCE: "Finance",
+  RESTRICTED_TECHNICAL: "Restricted Technical",
+  CUSTOMER_SUPPORT: "Customer Support",
+};
+const labelOf = (key: string) => ROLE_LABEL[key] ?? key;
+
 interface Route {
   method: string;
   template: string;
@@ -49,7 +60,7 @@ export function mockResponse(options: MockOptions, method: string, pathname: str
   if (role === "none") return envelope(401, "UNAUTHORIZED", "Not signed in.");
   const allowed: string[] | undefined = route.op["x-allowed-roles"];
   if (allowed && !allowed.includes(role)) {
-    return envelope(403, "FORBIDDEN", "Your role cannot do this.", { denial: { yourRole: role, ownerRoles: allowed.slice(0, 3), whoToAsk: ["Management"] } });
+    return envelope(403, "FORBIDDEN", "Your role cannot do this.", { denial: { yourRole: labelOf(role), ownerRoles: allowed.slice(0, 3).map(labelOf), whoToAsk: ["Management"] } });
   }
   const key = `${method} ${route.template}`;
   const recorded = options.examples[key];
