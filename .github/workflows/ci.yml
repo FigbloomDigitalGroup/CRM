@@ -112,6 +112,10 @@ jobs:
       - name: Build
         run: npm run build
 
+      # F1.07: nothing that exists only for development (the dev sign-in chips) may be in the production build.
+      - name: Check the production build has no dev-only code
+        run: npm run check:build-output
+
       - name: Install Playwright's Chromium
         run: npm run e2e:install
 

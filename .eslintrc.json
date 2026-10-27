@@ -5,15 +5,103 @@
     "ecmaVersion": 2022,
     "sourceType": "module"
   },
-  "plugins": ["@typescript-eslint"],
-  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+  "plugins": [
+    "@typescript-eslint"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
   "env": {
     "node": true,
     "es2022": true
   },
-  "ignorePatterns": ["dist", "node_modules", "prisma/migrations", ".next", "next-env.d.ts"],
+  "ignorePatterns": [
+    "dist",
+    "node_modules",
+    "prisma/migrations",
+    ".next",
+    "next-env.d.ts"
+  ],
   "rules": {
-    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_"
+      }
+    ],
     "@typescript-eslint/no-explicit-any": "off"
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "src/app/**/*.ts",
+        "src/app/**/*.tsx",
+        "src/ui/**/*.ts",
+        "src/ui/**/*.tsx"
+      ],
+      "excludedFiles": [
+        "src/app/api/**",
+        "src/ui/data/client.ts",
+        "src/app/accept-invite/AcceptInviteForm.tsx",
+        "src/app/dev-login/DevLoginForm.tsx",
+        "src/app/dev-sentry-test/SentryTestButtons.tsx",
+        "src/app/forgot-password/ForgotPasswordForm.tsx",
+        "src/app/login/LoginForm.tsx",
+        "src/app/o/[[]orgSlug[]]/LogoutButton.tsx",
+        "src/app/o/[[]orgSlug[]]/_shared/AccountRowActions.tsx",
+        "src/app/o/[[]orgSlug[]]/_shared/ActivityTimeline.tsx",
+        "src/app/o/[[]orgSlug[]]/_shared/ArchiveControl.tsx",
+        "src/app/o/[[]orgSlug[]]/_shared/CommunicationTimeline.tsx",
+        "src/app/o/[[]orgSlug[]]/_shared/GlobalSearch.tsx",
+        "src/app/o/[[]orgSlug[]]/_shared/MergeControl.tsx",
+        "src/app/o/[[]orgSlug[]]/_shared/NotificationBell.tsx",
+        "src/app/o/[[]orgSlug[]]/_shared/OwnerControl.tsx",
+        "src/app/o/[[]orgSlug[]]/_shared/TaskSection.tsx",
+        "src/app/o/[[]orgSlug[]]/companies/CompanyServicesSection.tsx",
+        "src/app/o/[[]orgSlug[]]/companies/CreateCompanyForm.tsx",
+        "src/app/o/[[]orgSlug[]]/companies/[[]companyId[]]/EditCompanyForm.tsx",
+        "src/app/o/[[]orgSlug[]]/contacts/CreateContactForm.tsx",
+        "src/app/o/[[]orgSlug[]]/contacts/[[]contactId[]]/EditContactForm.tsx",
+        "src/app/o/[[]orgSlug[]]/deals/CreateDealForm.tsx",
+        "src/app/o/[[]orgSlug[]]/deals/DealCardActions.tsx",
+        "src/app/o/[[]orgSlug[]]/deals/[[]dealId[]]/AssignDealControl.tsx",
+        "src/app/o/[[]orgSlug[]]/deals/[[]dealId[]]/EditDealForm.tsx",
+        "src/app/o/[[]orgSlug[]]/deals/[[]dealId[]]/ProposalReferences.tsx",
+        "src/app/o/[[]orgSlug[]]/leads/AssignLeadControl.tsx",
+        "src/app/o/[[]orgSlug[]]/leads/CreateLeadForm.tsx",
+        "src/app/o/[[]orgSlug[]]/leads/LeadRowActions.tsx",
+        "src/app/o/[[]orgSlug[]]/leads/[[]leadId[]]/ConvertLeadControl.tsx",
+        "src/app/o/[[]orgSlug[]]/leads/[[]leadId[]]/EditLeadForm.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/CatalogEditor.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/InviteMemberForm.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/MembersTable.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/NotificationPreferencesForm.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/OrganizationProfileForm.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/RegenerateInboundEmailKeyButton.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/RegenerateWebsiteKeyButton.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/RevokeInboundEmailKeyButton.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/RevokeWebsiteKeyButton.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/WebsiteAcknowledgementToggle.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/WebsiteAssignmentModeToggle.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/WebsiteLeadAssignmentRulesEditor.tsx",
+        "src/app/o/[[]orgSlug[]]/settings/WebsiteSecuritySettingsForm.tsx",
+        "src/app/o/[[]orgSlug[]]/tasks/CreateTaskForm.tsx",
+        "src/app/o/[[]orgSlug[]]/tasks/EditTaskDrawer.tsx",
+        "src/app/o/[[]orgSlug[]]/tasks/TaskTable.tsx",
+        "src/app/platform/PlatformSignOut.tsx",
+        "src/app/reset-password/ResetPasswordForm.tsx",
+        "src/app/signup/SignupForm.tsx"
+      ],
+      "rules": {
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "fetch",
+            "message": "Screens do not call fetch. Use the typed client through the hooks in @/ui (useApiQuery, useApiMutation). See src/ui/data/hooks.tsx (F1.06)."
+          }
+        ]
+      }
+    }
+  ]
 }
