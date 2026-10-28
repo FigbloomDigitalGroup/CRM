@@ -81,3 +81,12 @@ export function newIdempotencyKey(): string {
     ? crypto.randomUUID()
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
+
+/**
+ * Sends a file's bytes to the signed link the API handed out for it (B1.07). This is the one non-API network call a screen makes, so it lives
+ * here with the others; the API then checks the bytes when the upload is completed.
+ */
+export async function putSignedUpload(upload: { url: string; method?: string; headers?: Record<string, string> }, body: Blob): Promise<void> {
+  const response = await fetch(upload.url, { method: upload.method ?? "PUT", headers: upload.headers ?? {}, body, credentials: "same-origin" });
+  if (!response.ok) throw new Error(`The upload was refused (${response.status}).`);
+}

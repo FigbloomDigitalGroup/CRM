@@ -15,6 +15,7 @@ import { LostDialog } from "./LostDialog";
 import { NoteDrawer, TaskDrawer, type CommKind } from "./QuickDrawers";
 import { DUE_COLOUR, statusTone, TEMPERATURES, TEMPERATURE_LABEL, tempTone, type Temperature } from "./format";
 import { Icon } from "./icons";
+import { RecordExtras } from "../extras/RecordExtras";
 
 interface ActivityItem {
   id: string;
@@ -754,6 +755,8 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
           </section>
         </div>
       </div>
+
+      <RecordExtras kind="lead" id={leadId} archived={c.archived} showScore={false} />
 
       {edit ? <LeadDrawer leadId={leadId} onClose={() => setEdit(false)} onSaved={() => setEdit(false)} /> : null}
       {convert ? (

@@ -18,8 +18,8 @@ describe("sidebar navigation per role", () => {
     expect(menu("MANAGEMENT")).toEqual([
       "Overview: Dashboard",
       "Sales workspace: Leads, Deals, Tasks, Calendar",
-      "Customers: Companies, Contacts",
-      "After the sale: Handoffs",
+      "Customers: Companies, Contacts, Conversations",
+      "After the sale: Handoffs, Renewals, Payments",
       "Insights and settings: Reports, Settings",
     ]);
   });
@@ -28,8 +28,8 @@ describe("sidebar navigation per role", () => {
     expect(menu("SALES")).toEqual([
       "Overview: Dashboard",
       "Sales workspace: Leads, Deals, Tasks, Calendar",
-      "Customers: Companies, Contacts",
-      "After the sale: Handoffs",
+      "Customers: Companies, Contacts, Conversations",
+      "After the sale: Handoffs, Renewals",
       "Insights and settings: My metrics, Settings",
     ]);
   });
@@ -38,7 +38,7 @@ describe("sidebar navigation per role", () => {
     expect(menu("DELIVERY")).toEqual([
       "Overview: Dashboard",
       "Pipeline: Won deals, Tasks, Calendar",
-      "Customers: Companies, Contacts",
+      "Customers: Companies, Contacts, Conversations",
       "After the sale: Handoffs",
       "Insights and settings: My metrics, Settings",
     ]);
@@ -49,19 +49,20 @@ describe("sidebar navigation per role", () => {
       "Overview: Dashboard",
       "Pipeline: Won deals",
       "Customers: Companies, Contacts",
+      "After the sale: Payments",
       "Insights and settings: My metrics, Settings",
     ]);
   });
 
   it("Restricted Technical sees My work and their tasks, and nothing about leads, deals or customers", () => {
-    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Insights and settings: Settings"]);
+    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Customers: Conversations", "Insights and settings: Settings"]);
   });
 
   it("Customer Support (behind its flag) sees customers and tasks, no pipeline", () => {
     expect(menu("CUSTOMER_SUPPORT")).toEqual([
       "Overview: Dashboard",
       "Sales workspace: Tasks, Calendar",
-      "Customers: Companies, Contacts",
+      "Customers: Companies, Contacts, Conversations",
       "Insights and settings: Settings",
     ]);
   });
@@ -73,7 +74,9 @@ describe("sidebar navigation per role", () => {
 
   it("never links to a page that is not built yet, even when the role could use it", () => {
     const all = buildNav({ permissionKeys: ROLE_PERMISSIONS.MANAGEMENT!, membershipId: "m1" }).flatMap((s) => s.items.map((i) => i.key));
-    for (const unbuilt of ["conversations", "renewals", "payments", "preferences"]) expect(all).not.toContain(unbuilt);
+    // Conversations, Renewals and Payments landed in M8 (F3.04, F3.05, F3.06); they are linked now. Preferences is M9.
+    for (const unbuilt of ["preferences"]) expect(all).not.toContain(unbuilt);
+    expect(all).toEqual(expect.arrayContaining(["conversations", "renewals", "payments"]));
   });
 
   it("badges appear only where the owning screen supplied a count", () => {

@@ -13,6 +13,7 @@ import { AddProposalDialog, AddTaskDrawer, LogActivityDrawer } from "./DealDrawe
 import { useMemberName, useRefData, useRefreshDeals } from "./data";
 import { ago, dateLong, dateShort, initials, kes, stageTone, when, type DealDetail, type HandoffView, type Stage } from "./model";
 import { useDealMover } from "./useDealMover";
+import { RecordExtras } from "../extras/RecordExtras";
 
 /**
  * F2.05 / P2: one deal. The stage stepper (every move goes through the same checks as the board), the summary, the proposals, the timeline,
@@ -555,6 +556,8 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
           ) : null}
         </div>
       </div>
+
+      <RecordExtras kind="deal" id={dealId} archived={archived} />
 
       {mover.host}
       {drawer === "log" ? <LogActivityDrawer dealId={dealId} onClose={() => setDrawer(null)} /> : null}
