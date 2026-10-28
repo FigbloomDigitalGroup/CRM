@@ -28,19 +28,19 @@ One row per Screen Checklist ID (92 rows: 54 V1, 29 V1.1, 9 V2), built from `Fig
 | P4 | Delivery receiving view (Handoffs) | V1 | B1.03 (FIG-1019)<br>B2.08 (FIG-1037) | F2.06 (FIG-1088) | FIG-792 | `src/ui/screens/deals/HandoffsScreen.tsx` | Frontend done |
 | T1 | Tasks grouped by due state | V1 | B1.03 (FIG-1019)<br>B2.09 (FIG-1038) | F2.07 (FIG-1089) | FIG-789 | `src/ui/screens/tasks/TasksScreen.tsx` | Frontend done |
 | T2 | Calendar month / week / day / list | V1 | B2.10 (FIG-1039) | F2.08 (FIG-1090) | FIG-794 | `src/ui/screens/tasks/CalendarScreen.tsx` | Frontend done |
-| C1 | Companies list | V1 | B3.10 (FIG-1056)<br>B3.02 (FIG-1048)<br>B2.16 (FIG-1045) | F3.01 (FIG-1095) | FIG-789 | | Not started |
-| C2 | Customer 360 | V1 | B3.05 (FIG-1051)<br>B3.03 (FIG-1049)<br>B3.02 (FIG-1048)<br>B3.01 (FIG-1047)<br>B2.16 (FIG-1045)<br>B2.07 (FIG-1036) | F3.01 (FIG-1095) |  | | Not started |
-| C3 | Contacts list + contact detail (call / WhatsApp → log prompt) | V1 | B3.10 (FIG-1056)<br>B3.08 (FIG-1054) | F3.02 (FIG-1096) | FIG-791 | | Not started |
-| C4 | Merge duplicates | V1 | B2.04 (FIG-1033) | F3.03 (FIG-1097) |  | | Not started |
-| R1 | Reports (organisation) incl. customer reports | V1 | B3.09 (FIG-1055) | F3.07 (FIG-1101) | FIG-793 | | Not started |
+| C1 | Companies list | V1 | B3.10 (FIG-1056)<br>B3.02 (FIG-1048)<br>B2.16 (FIG-1045) | F3.01 (FIG-1095) | FIG-789 | `src/ui/screens/customers/CompaniesScreen.tsx` | Frontend done |
+| C2 | Customer 360 | V1 | B3.05 (FIG-1051)<br>B3.03 (FIG-1049)<br>B3.02 (FIG-1048)<br>B3.01 (FIG-1047)<br>B2.16 (FIG-1045)<br>B2.07 (FIG-1036) | F3.01 (FIG-1095) |  | `src/ui/screens/customers/CompanyDetailScreen.tsx` | Frontend done |
+| C3 | Contacts list + contact detail (call / WhatsApp → log prompt) | V1 | B3.10 (FIG-1056)<br>B3.08 (FIG-1054) | F3.02 (FIG-1096) | FIG-791 | `src/ui/screens/contacts/`, `docs/M8_CONTACTS.md` | Frontend done |
+| C4 | Merge duplicates | V1 | B2.04 (FIG-1033) | F3.03 (FIG-1097) |  | `src/ui/screens/customers/merge/MergeDialog.tsx` | Frontend done |
+| R1 | Reports (organisation) incl. customer reports | V1 | B3.09 (FIG-1055) | F3.07 (FIG-1101) | FIG-793 | `src/ui/screens/reports/ReportsScreen.tsx`, `ReportCard.tsx`, `CustomerReports.tsx` | Frontend done |
 | R2 | My metrics (personal) | V1 | B3.09 (FIG-1055)<br>B2.13 (FIG-1042) | F2.10 (FIG-1092) | FIG-443 | `src/ui/screens/home/MyMetrics.tsx` | Frontend done |
-| F1 | Payments tracker | V1 | B3.04 (FIG-1050)<br>B3.03 (FIG-1049)<br>B1.03 (FIG-1019) | F3.06 (FIG-1100) |  | | Not started |
+| F1 | Payments tracker | V1 | B3.04 (FIG-1050)<br>B3.03 (FIG-1049)<br>B1.03 (FIG-1019) | F3.06 (FIG-1100) |  | `src/ui/screens/finance/PaymentsScreen.tsx`, `InvoiceDialog.tsx` | Frontend done |
 | S1 | Settings: profile, members, website, email, reference data, template | V1 | B4.01 (FIG-1058)<br>B1.12 (FIG-1028) | F4.04 (FIG-1106) | FIG-750 | | Not started |
 | S2 | Organisation audit log | V1 | FIG-799 | F4.05 (FIG-1107) | FIG-799 | | Not started |
 | S3 | Notification preferences + PWA install | V1 | B4.07 (FIG-1064)<br>B1.11 (FIG-1027) | F4.12 (FIG-1114)<br>F4.03 (FIG-1105) | FIG-791 | | Not started |
 | S4 | No access (explained) | V1 | B1.01 (FIG-1017)<br>B1.02 (FIG-1018) | F1.05 (FIG-1080)<br>F1.02 (FIG-1077) |  | `src/ui/components/states.tsx`, `src/ui/copy.ts` (used by real screens from M7) | Frontend done |
-| E1 | Conversations hub + Needs-linking queue | V1 | B3.07 (FIG-1053) | F3.04 (FIG-1098) |  | | Not started |
-| E2 | Renewals & retention | V1 | B7.08 (FIG-1190)<br>B3.06 (FIG-1052)<br>B3.05 (FIG-1051)<br>B3.02 (FIG-1048)<br>B2.18 (FIG-1066) | F3.05 (FIG-1099) |  | | Not started |
+| E1 | Conversations hub + Needs-linking queue | V1 | B3.07 (FIG-1053) | F3.04 (FIG-1098) |  | `src/ui/screens/engage/ConversationsScreen.tsx`, `src/app/o/[orgSlug]/conversations/` | Frontend done |
+| E2 | Renewals & retention | V1 | B7.08 (FIG-1190)<br>B3.06 (FIG-1052)<br>B3.05 (FIG-1051)<br>B3.02 (FIG-1048)<br>B2.18 (FIG-1066) | F3.05 (FIG-1099) |  | `src/ui/screens/engage/RenewalsScreen.tsx`, `src/app/o/[orgSlug]/renewals/` | Frontend done |
 | S5 | Settings: Automations | V1 | B4.02 (FIG-1059) | F4.06 (FIG-1108) |  | | Not started |
 | S6 | Settings: Integrations | V1 | B4.03 (FIG-1060) | F4.06 (FIG-1108) |  | | Not started |
 | S7 | Settings: Data migration wizard | V1 | B4.04 (FIG-1061)<br>B2.18 (FIG-1066)<br>B1.07 (FIG-1023) | F4.08 (FIG-1110) |  | | Not started |
@@ -53,7 +53,7 @@ One row per Screen Checklist ID (92 rows: 54 V1, 29 V1.1, 9 V2), built from `Fig
 | Q2 | Client e-signature + deposit request | V2 | B7.05 (FIG-1187)<br>B7.07 (FIG-1189)<br>B7.04 (FIG-1186) | F7.02 (FIG-1193) |  | | Not started |
 | Q3 | Approvals inbox | V1.1 | B6.13 (FIG-1145) | F6.10 (FIG-1169) |  | | Not started |
 | Q4 | Forecast & targets (mine / team) | V1.1 | B6.14 (FIG-1146) | F6.11 (FIG-1170) | FIG-793 | | Not started |
-| X1 | Record extras: attachments, tags, custom fields, comments, follow, score, health | V1 | B2.15 (FIG-1044)<br>B2.03 (FIG-1032)<br>B1.07 (FIG-1023) | F3.08 (FIG-1102)<br>F1.06 (FIG-1081)<br>F1.05 (FIG-1080) |  | | Not started |
+| X1 | Record extras: attachments, tags, custom fields, comments, follow, score, health | V1 | B2.15 (FIG-1044)<br>B2.03 (FIG-1032)<br>B1.07 (FIG-1023) | F3.08 (FIG-1102)<br>F1.06 (FIG-1081)<br>F1.05 (FIG-1080) |  | `src/ui/screens/extras/` (`RecordExtras`) | Frontend done |
 | X2 | Ask Figbloom assistant | V1.1 | B7.08 (FIG-1190)<br>B6.20 (FIG-1152) | F6.12 (FIG-1171) |  | | Not started |
 | X3 | Command palette (Ctrl/Cmd+K), Help and What’s new | V1.1 | B6.17 (FIG-1149) | F6.13 (FIG-1172) |  | | Not started |
 | X4 | Saved views pinned in the sidebar | V1.1 | B6.16 (FIG-1148) | F6.14 (FIG-1173) |  | | Not started |

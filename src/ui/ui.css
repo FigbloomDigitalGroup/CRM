@@ -1,8 +1,14 @@
 @import "./screens/leads/leads.css";
+@import "./screens/customers/customers.css";
 @import "./screens/deals/deals.css";
 @import "./screens/tasks/tasks.css";
 @import "./screens/home/home.css";
 @import "./screens/shared/shared.css";
+@import "./screens/contacts/contacts.css";
+@import "./screens/engage/engage.css";
+@import "./screens/extras/extras.css";
+@import "./screens/finance/finance.css";
+@import "./screens/reports/reports.css";
 /*
  * The design system's one stylesheet for the authenticated app (F1.01, F1.02).
  *

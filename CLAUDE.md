@@ -82,7 +82,9 @@ npm run seed
 
 **M7 (sales workspace): built on branch `makeover/m7-sales-workspace`.** FIG-1083 to FIG-1094 and FIG-790: leads, deals and handoffs, tasks and calendar, role homes and My metrics, global search, notifications, all on `@/ui` and the frozen API. Docs: `docs/M7_LEADS.md`, `docs/M7_DEALS.md`, `docs/M7_TASKS.md`, `docs/M7_HOME.md`, the Stage 7 section of `IMPLEMENTATION_NOTES.md`. Screens live in `src/ui/screens/<area>/` (each with its own stylesheet imported by `ui.css`); `useMember()` gives a screen the organisation and permission keys.
 
-**Next: M8 (customers, delivery, finance, reports), M9 (settings, preferences, mobile),** against the frozen API and `@/ui`.
+**M8 (customers, delivery, finance, reports): built on branch `makeover/m7-sales-workspace` (committed to `dev-given`).** FIG-1095 to FIG-1102: companies and Customer 360, merge, contacts with the log prompt, record extras, conversations, renewals, payments, reports. Docs: `docs/M8_*.md`, the Stage 8 section of `IMPLEMENTATION_NOTES.md`.
+
+**Next: M9 (settings, preferences, mobile),** against the frozen API and `@/ui`.
 
 Ops reminders: new migrations need `npm run migrate:deploy`; `ALLOW_DEV_ACCOUNTS=true` in local `.env` for dev sign-in; Docker Desktop must be running for the test database (`docker compose up -d --wait`).
 
