@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={brandFont.variable}>
+    <html lang="en" className={brandFont.variable} suppressHydrationWarning>
       <body>
         {children}
         {/* Dev sign-in chips (F1.07): nothing in production, and not part of any frozen page. */}

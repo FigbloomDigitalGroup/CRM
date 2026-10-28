@@ -82,7 +82,7 @@ describe("reading and following the organisation's look", () => {
     const view = await prefs.getMyPreferences(sales);
     expect(view.appearance.theme).toBeNull();
     expect(view.appearance.effective).toMatchObject({ source: "organisation", theme: "OCEAN", pageColour: "MINT", locked: false });
-    expect(view.appearance.effective.colours.sidebar).toBe("#123A5C");
+    expect(view.appearance.effective.colours.sidebar).toBe("#14365C");
     expect(view.appearance.organisationDefault).toEqual({ theme: "OCEAN", pageColour: "MINT" });
   });
 
@@ -100,7 +100,7 @@ describe("reading and following the organisation's look", () => {
     await updateOrganizationLook(mgmt, { defaultTheme: "OCEAN" });
     const view = await prefs.updateMyPreferences(sales, { theme: "ROSEWOOD", pageColour: "BLUSH" });
     expect(view.appearance.effective).toMatchObject({ source: "own", theme: "ROSEWOOD", pageColour: "BLUSH" });
-    expect(view.appearance.effective.colours.page.hex).toBe("#FBEEF0");
+    expect(view.appearance.effective.colours.page.hex).toBe("#FAF1F1");
     expect(view.ignored).toEqual([]);
   });
 
@@ -320,7 +320,7 @@ describe("reset and undo", () => {
       density: "COMFORTABLE",
       ownColours: null,
     });
-    expect(preferences.appearance.effective.colours).toMatchObject({ sidebar: "#14342B", accent: "#1F7A4D", page: { hex: "#FFFFFF" } });
+    expect(preferences.appearance.effective.colours).toMatchObject({ sidebar: "#203E2A", accent: "#275B3A", page: { hex: "#FAF9F7" } });
     expect(preferences.startPage.key).toBe("leads");
     expect(preferences.regional.hourFormat).toBe("H24");
     expect(undo.expiresInSeconds).toBe(600);

@@ -77,10 +77,10 @@ describe("contrast of every token pair (AA)", () => {
   });
 
   it("keeps the design's own Forest and white values where they already pass (no needless drift)", () => {
-    const forest = buildPalette(schemeLook(lookWith("FOREST", { key: "WHITE", hex: "#FFFFFF", dark: false }), false));
+    const forest = buildPalette(schemeLook(lookWith("FOREST", { key: "WHITE", hex: "#FAF9F7", dark: false }), false));
     expect(forest["--text"]).toBe("#1B1D1A");
-    expect(forest["--primary-soft"]).toBe("#E3F1E8");
-    expect(forest["--side"]).toBe("#14342B");
+    expect(forest["--primary-soft"]).toBe("#E9F1EB");
+    expect(forest["--side"]).toBe("#203E2A");
   });
 
   it("ensureContrast moves a colour only as far as it must", () => {
@@ -96,7 +96,7 @@ describe("the resolver: account, device and the organisation's lock", () => {
 
   it("starts in the scheme of the page colour; Match my device follows the operating system", () => {
     expect(defaultScheme(forestWhite, true)).toBe("light");
-    const dark = { ...forestWhite, colours: { ...forestWhite.colours, page: { key: "DARK", hex: "#1C2120", dark: true } } };
+    const dark = { ...forestWhite, colours: { ...forestWhite.colours, page: { key: "DARK", hex: "#0F1512", dark: true } } };
     expect(defaultScheme(dark, false)).toBe("dark");
     const device = { ...forestWhite, colours: { ...forestWhite.colours, page: { key: "MATCH_DEVICE", hex: null, dark: false } } };
     expect(defaultScheme(device, true)).toBe("dark");
@@ -107,21 +107,21 @@ describe("the resolver: account, device and the organisation's lock", () => {
     expect(resolveScheme(forestWhite, { ...DEFAULT_DEVICE, scheme: "dark" }, false)).toBe("dark");
     const darkSide = schemeLook(forestWhite, true);
     expect(darkSide.dark).toBe(true);
-    expect(darkSide.pageHex).toBe("#1C2120"); // the toggle's dark page colour (DARK)
-    expect(schemeLook(forestWhite, false).pageHex).toBe("#FFFFFF");
+    expect(darkSide.pageHex).toBe("#0F1512"); // the toggle's dark page colour (DARK)
+    expect(schemeLook(forestWhite, false).pageHex).toBe("#FAF9F7");
   });
 
   it("the toggle pair is honoured when the member chose other page colours for it", () => {
     const look: LookInput = { ...forestWhite, toggle: { light: "MINT", dark: "NAVY_NIGHT" } };
-    expect(schemeLook(look, false).pageHex).toBe("#FFFFFF"); // the chosen page is white and light, so it stays
-    expect(schemeLook(look, true).pageHex).toBe("#0E1A2B");
+    expect(schemeLook(look, false).pageHex).toBe("#FAF9F7"); // the chosen page is white and light, so it stays
+    expect(schemeLook(look, true).pageHex).toBe("#0C1220");
   });
 
   it("while the organisation locks the look, the device switch changes nothing and both schemes use the organisation's page", () => {
     const locked: LookInput = { ...forestWhite, locked: true };
     expect(resolveScheme(locked, { ...DEFAULT_DEVICE, scheme: "dark" }, true)).toBe("light");
-    expect(schemeLook(locked, true).pageHex).toBe("#FFFFFF");
-    const lockedDark: LookInput = { ...forestWhite, locked: true, colours: { ...forestWhite.colours, page: { key: "DARK", hex: "#1C2120", dark: true } } };
+    expect(schemeLook(locked, true).pageHex).toBe("#FAF9F7");
+    const lockedDark: LookInput = { ...forestWhite, locked: true, colours: { ...forestWhite.colours, page: { key: "DARK", hex: "#0F1512", dark: true } } };
     expect(resolveScheme(lockedDark, { ...DEFAULT_DEVICE, scheme: "light" }, false)).toBe("dark");
   });
 

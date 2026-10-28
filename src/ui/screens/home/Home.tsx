@@ -265,7 +265,7 @@ function SalesHome({ sections, retry }: RoleProps) {
       alertWhenPositive: true,
       numeric: d.myDay.tasksOverdue ?? 0,
     },
-    { key: "new", label: "New leads since last visit", value: leads.loading ? "…" : fresh.length >= 20 ? "20+" : fresh.length, sub: "yours", icon: "users", tone: "blue", href: `/o/${m.orgSlug}/leads` },
+    { key: "new", label: "New leads since last visit", value: leads.loading ? "…" : fresh.length >= 20 ? "20+" : fresh.length, sub: "yours and the shared pool", icon: "users", tone: "blue", href: `/o/${m.orgSlug}/leads` },
     { key: "stalled", label: "Stalled deals", value: d.stalledDeals ?? 0, sub: "no activity for 10+ days", icon: "briefcase", tone: "orange", href: `/o/${m.orgSlug}/deals` },
   ];
   return (

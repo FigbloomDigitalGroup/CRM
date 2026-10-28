@@ -8,7 +8,7 @@ import { connectivity } from "../../../src/ui/data/connectivity";
 import { ConnectionBanners } from "../../../src/ui/shell/AppShell";
 import { SessionGuard, formatCountdown } from "../../../src/ui/shell/SessionGuard";
 import { Sidebar, SIDEBAR_DEVICE_KEY } from "../../../src/ui/shell/Sidebar";
-import { IdentityBlock, QuickCreate, ThemeSwitch } from "../../../src/ui/shell/TopBar";
+import { OrgIdentity, QuickCreate, ThemeSwitch, UserMenu } from "../../../src/ui/shell/TopBar";
 import { ThemeProvider, useAppearance } from "../../../src/ui/theme/ThemeProvider";
 import { defaultLook, DEVICE_STORAGE_KEY, type LookInput } from "../../../src/ui/theme/resolve";
 import type { NavSection } from "../../../src/ui/shell/navModel";
@@ -165,13 +165,17 @@ describe("ThemeProvider and the light/dark switch", () => {
   });
 });
 
-describe("IdentityBlock", () => {
+describe("OrgIdentity and UserMenu", () => {
   const identity = {
     name: "Dev Sales",
+    email: "dev.sales@figbloom.local",
     roleName: "Sales",
+    workspaceLabel: "Sales workspace",
     organisation: "Figbloom",
     avatarUrl: null,
     signedInLocal: "Tuesday, 27 October, 10:04",
+    signedInTime: "10:04",
+    sessionLeft: "7 h 52 min left",
     device: "Chrome on Windows",
     place: "Nairobi",
     timeZone: "Africa/Nairobi",
@@ -180,39 +184,52 @@ describe("IdentityBlock", () => {
     preferencesHref: "/o/figbloom/settings",
   };
 
-  it("shows who you are, where, since when and the time zone, and the support notice when there is one", async () => {
+  it("the organisation block shows where you are and since when, and opens the session card", async () => {
     const user = userEvent.setup();
-    render(providers(vi.fn(), <IdentityBlock identity={identity} />));
-    const trigger = screen.getByRole("button", { name: "Account: Dev Sales" });
-    expect(trigger).toHaveTextContent("Dev Sales");
-    expect(trigger).toHaveTextContent("Sales · Figbloom");
+    render(providers(vi.fn(), <OrgIdentity identity={identity} />));
+    const trigger = screen.getByRole("button", { name: "Organisation and session" });
+    expect(trigger).toHaveTextContent("Figbloom");
+    expect(trigger).toHaveTextContent("Sales workspace · Signed in 10:04");
     await user.click(trigger);
-    const pop = screen.getByRole("dialog", { name: "Account: Dev Sales" });
+    const pop = screen.getByRole("dialog", { name: "Organisation and session" });
+    expect(pop).toHaveTextContent("You’re Sales here");
     expect(pop).toHaveTextContent("Tuesday, 27 October, 10:04");
     expect(pop).toHaveTextContent("Africa/Nairobi (organisation: Europe/London)");
-    expect(pop).toHaveTextContent("Chrome on Windows · Nairobi");
+    expect(pop).toHaveTextContent("Chrome on Windows, Nairobi");
+    expect(pop).toHaveTextContent("7 h 52 min left");
     expect(pop).toHaveTextContent("Figbloom Support is viewing this organisation");
     expect(within(pop).getByRole("link", { name: "Profile and preferences" })).toHaveAttribute("href", "/o/figbloom/settings");
   });
 
-  it("signs out through the typed client and returns to the sign-in page", async () => {
-    const user = userEvent.setup();
-    const call = vi.fn().mockResolvedValue({});
-    render(providers(call, <IdentityBlock identity={identity} />));
-    await user.click(screen.getByRole("button", { name: "Account: Dev Sales" }));
-    await user.click(screen.getByRole("button", { name: /Sign out$/ }));
-    expect(call).toHaveBeenCalledWith("logout", { params: {} });
-    expect(push).toHaveBeenCalledWith("/login");
+  it("falls back to the role name when the role has no workspace label", () => {
+    render(providers(vi.fn(), <OrgIdentity identity={{ ...identity, workspaceLabel: null }} />));
+    expect(screen.getByRole("button", { name: "Organisation and session" })).toHaveTextContent("Sales · Signed in 10:04");
   });
 
   it("signs out the other devices and says so", async () => {
     const user = userEvent.setup();
     const call = vi.fn().mockResolvedValue({});
-    render(providers(call, <IdentityBlock identity={{ ...identity, supportNotice: null }} />));
-    await user.click(screen.getByRole("button", { name: "Account: Dev Sales" }));
+    render(providers(call, <OrgIdentity identity={{ ...identity, supportNotice: null }} />));
+    await user.click(screen.getByRole("button", { name: "Organisation and session" }));
     await user.click(screen.getByRole("button", { name: "Sign out other devices" }));
     expect(call).toHaveBeenCalledWith("signOutOtherSessions", { params: {} });
     expect(await screen.findByText("Signed out of your other devices.")).toBeInTheDocument();
+  });
+
+  it("the user chip shows your name and role, and its menu has your email, the profile link and sign out", async () => {
+    const user = userEvent.setup();
+    const call = vi.fn().mockResolvedValue({});
+    render(providers(call, <UserMenu identity={identity} />));
+    const trigger = screen.getByRole("button", { name: "Account: Dev Sales" });
+    expect(trigger).toHaveTextContent("Dev Sales");
+    expect(trigger).toHaveTextContent("Sales");
+    await user.click(trigger);
+    const pop = screen.getByRole("dialog", { name: "Account: Dev Sales" });
+    expect(pop).toHaveTextContent("dev.sales@figbloom.local");
+    expect(within(pop).getByRole("link", { name: "Profile and preferences" })).toHaveAttribute("href", "/o/figbloom/settings");
+    await user.click(within(pop).getByRole("button", { name: /Sign out$/ }));
+    expect(call).toHaveBeenCalledWith("logout", { params: {} });
+    expect(push).toHaveBeenCalledWith("/login");
   });
 });
 

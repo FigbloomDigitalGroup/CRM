@@ -16,7 +16,11 @@ const nextConfig = {
   },
   // G1.05: clickjacking, MIME sniffing, referrer and browser-feature defaults on every response (see config/securityHeaders.js).
   async headers() {
-    return [{ source: "/:path*", headers: buildSecurityHeaders(process.env.NODE_ENV === "production") }];
+    return [
+      { source: "/:path*", headers: buildSecurityHeaders(process.env.NODE_ENV === "production") },
+      // FIG-791, F4.12: the service worker file lives at the site root but may only control the signed-in app (/o/), never the sign-in pages.
+      { source: "/sw.js", headers: [{ key: "Service-Worker-Allowed", value: "/o/" }, { key: "Cache-Control", value: "no-cache" }] },
+    ];
   },
 };
 

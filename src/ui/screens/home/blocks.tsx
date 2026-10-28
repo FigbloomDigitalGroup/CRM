@@ -9,7 +9,7 @@ import { useMember } from "../../data/member";
 import { initialsOf } from "../../components/basics";
 import { dueLabel, moneyShort } from "./format";
 import { HIcon, Panel, stageStyle } from "./kit";
-import { leadName, recordHref, type TaskItem } from "./dash";
+import { leadName, linkChipLabel, recordHref, type TaskItem } from "./dash";
 
 /** Names for ids the dashboard answers with (stages, services, sources): one cached read, shared by every block. */
 export function useReferenceData() {
@@ -82,7 +82,7 @@ export function TodoPanel({ title = "Do these today", showOwner, groups = ["OVER
                 {showOwner && !bare && t.assigneeName ? <span className="fb-hrow__sub">{t.assigneeName}</span> : null}
                 {t.link && !bare ? (
                   <Link href={recordHref(orgSlug, t.link.type, t.link.id)} className="fb-chiplink">
-                    {t.link.label} ↗
+                    {linkChipLabel(t.link)} ↗
                   </Link>
                 ) : null}
               </div>

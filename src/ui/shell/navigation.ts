@@ -77,10 +77,9 @@ const DEFS: Def[] = [
     allowed: (c) => any(c, "reporting.view.own", "reporting.view.all"),
     built: true,
   },
-  { section: "insights", key: "preferences", label: () => "Preferences", path: "/preferences", icon: "preferences", tint: "o", allowed: () => true, built: false },
-  // Every active member reaches Settings today: it is where their own notification preferences live (FIG-785). When Preferences ships (M9)
-  // this narrows to the people who manage the organisation.
-  { section: "insights", key: "settings", label: () => "Settings", path: "/settings", icon: "settings", tint: "o", allowed: () => true, built: true },
+  { section: "insights", key: "preferences", label: () => "Preferences", path: "/preferences", icon: "preferences", tint: "o", allowed: () => true, built: true },
+  // Preferences (M9) holds every member's own settings, so Settings is only for the people who manage the organisation.
+  { section: "insights", key: "settings", label: () => "Settings", path: "/settings", icon: "settings", tint: "o", allowed: (c) => has(c, "configuration.manage"), built: true },
 ];
 
 export function buildNav(input: NavInput): NavSection[] {

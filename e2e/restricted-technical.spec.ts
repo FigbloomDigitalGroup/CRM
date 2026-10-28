@@ -32,7 +32,8 @@ test.describe("Restricted Technical", () => {
 
   test("settings shows no administration sections", async ({ page }) => {
     await gotoAndSettle(page, "/o/figbloom/settings");
-    // Self-service notification preferences are open to every member; nothing else is.
+    // Settings is Management's: this role gets the explained no-access (M9, F4.04), and its own choices live in Preferences.
+    await expect(page.getByRole("region", { name: /Settings isn’t part of your workspace/ })).toBeVisible();
     for (const hidden of [
       "Organization profile",
       "Members",

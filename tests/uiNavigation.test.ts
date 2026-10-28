@@ -20,7 +20,7 @@ describe("sidebar navigation per role", () => {
       "Sales workspace: Leads, Deals, Tasks, Calendar",
       "Customers: Companies, Contacts, Conversations",
       "After the sale: Handoffs, Renewals, Payments",
-      "Insights and settings: Reports, Settings",
+      "Insights and settings: Reports, Preferences, Settings",
     ]);
   });
 
@@ -30,7 +30,7 @@ describe("sidebar navigation per role", () => {
       "Sales workspace: Leads, Deals, Tasks, Calendar",
       "Customers: Companies, Contacts, Conversations",
       "After the sale: Handoffs, Renewals",
-      "Insights and settings: My metrics, Settings",
+      "Insights and settings: My metrics, Preferences",
     ]);
   });
 
@@ -40,7 +40,7 @@ describe("sidebar navigation per role", () => {
       "Pipeline: Won deals, Tasks, Calendar",
       "Customers: Companies, Contacts, Conversations",
       "After the sale: Handoffs",
-      "Insights and settings: My metrics, Settings",
+      "Insights and settings: My metrics, Preferences",
     ]);
   });
 
@@ -50,12 +50,12 @@ describe("sidebar navigation per role", () => {
       "Pipeline: Won deals",
       "Customers: Companies, Contacts",
       "After the sale: Payments",
-      "Insights and settings: My metrics, Settings",
+      "Insights and settings: My metrics, Preferences",
     ]);
   });
 
   it("Restricted Technical sees My work and their tasks, and nothing about leads, deals or customers", () => {
-    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Customers: Conversations", "Insights and settings: Settings"]);
+    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Customers: Conversations", "Insights and settings: Preferences"]);
   });
 
   it("Customer Support (behind its flag) sees customers and tasks, no pipeline", () => {
@@ -63,20 +63,19 @@ describe("sidebar navigation per role", () => {
       "Overview: Dashboard",
       "Sales workspace: Tasks, Calendar",
       "Customers: Companies, Contacts, Conversations",
-      "Insights and settings: Settings",
+      "Insights and settings: Preferences",
     ]);
   });
 
-  it("a person with no permissions at all (a platform identity has no tenant membership) is left with the dashboard and settings only", () => {
+  it("a person with no permissions at all (a platform identity has no tenant membership) is left with the dashboard and preferences only", () => {
     const nav = buildNav({ permissionKeys: [], membershipId: "none" }).map((s) => s.items.map((i) => i.label));
-    expect(nav).toEqual([["Dashboard"], ["Settings"]]);
+    expect(nav).toEqual([["Dashboard"], ["Preferences"]]);
   });
 
   it("never links to a page that is not built yet, even when the role could use it", () => {
     const all = buildNav({ permissionKeys: ROLE_PERMISSIONS.MANAGEMENT!, membershipId: "m1" }).flatMap((s) => s.items.map((i) => i.key));
-    // Conversations, Renewals and Payments landed in M8 (F3.04, F3.05, F3.06); they are linked now. Preferences is M9.
-    for (const unbuilt of ["preferences"]) expect(all).not.toContain(unbuilt);
-    expect(all).toEqual(expect.arrayContaining(["conversations", "renewals", "payments"]));
+    // Conversations, Renewals and Payments landed in M8 and Preferences in M9 (F4.01); they are linked now.
+    expect(all).toEqual(expect.arrayContaining(["conversations", "renewals", "payments", "preferences"]));
   });
 
   it("badges appear only where the owning screen supplied a count", () => {
@@ -95,8 +94,12 @@ describe("sidebar navigation per role", () => {
     expect(nav.flat()).toContain("leads");
   });
 
-  it("FIG-785 still holds: every active member can reach Settings (their own notification preferences live there)", () => {
-    for (const role of Object.keys(ROLE_PERMISSIONS)) expect(menu(role).join("|")).toContain("Settings");
+  it("every active member can reach Preferences (their own look and notifications), and only Management sees Settings", () => {
+    for (const role of Object.keys(ROLE_PERMISSIONS)) {
+      expect(menu(role).join("|")).toContain("Preferences");
+      if (role === "MANAGEMENT") expect(menu(role).join("|")).toContain("Settings");
+      else expect(menu(role).join("|")).not.toContain("Settings");
+    }
   });
 });
 

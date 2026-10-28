@@ -98,6 +98,13 @@ export function recordHref(orgSlug: string, type: string, id: string): string {
   }
 }
 
+/** The chip on a task row: "Lead · Name", "Deal · Company", "Customer · Name", as the design writes it. */
+export function linkChipLabel(link: { type: string; label: string }): string {
+  if (link.label.includes(" · ")) return link.label;
+  const kind = { lead: "Lead", deal: "Deal", company: "Customer", contact: "Contact" }[link.type.toLowerCase() as "lead"];
+  return kind ? `${kind} · ${link.label}` : link.label;
+}
+
 /** The person's name for a lead row: the company first, then the contact. */
 export function leadName(l: { company?: { name: string } | null; contact?: { firstName: string; lastName?: unknown } | null }): string {
   if (l.company?.name) return l.company.name;

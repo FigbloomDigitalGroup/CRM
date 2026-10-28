@@ -24,25 +24,30 @@ test("a public website submission becomes a visible lead", async ({ page, reques
 
   let apiKey = "";
   await test.step("generate a website API key from Settings", async () => {
-    await page.goto(`/o/${ORG_SLUG}/settings`);
-    const integrationCard = page.locator(".card", { hasText: "Website lead capture" });
-    // Regenerating an already-configured key confirms via window.confirm()
-    // first; Playwright dismisses dialogs by default, which would silently
-    // abort the click, so accept it explicitly regardless of whether this
-    // run hits that branch.
-    page.once("dialog", (dialog) => dialog.accept());
-    const [response] = await Promise.all([
+    await page.goto(`/o/${ORG_SLUG}/settings?tab=website`);
+    // M9 (F4.04): a configured key is rotated (a confirmation dialog first), a missing one is created; either way the new key is shown once.
+    const create = page.getByRole("button", { name: "Create key" });
+    const rotate = page.getByRole("button", { name: "Rotate" });
+    await expect(create.or(rotate)).toBeVisible();
+    const responseFor = () =>
       page.waitForResponse(
         (r) =>
           r.url().includes(`/api/orgs/${ORG_SLUG}/integrations/website-key`) &&
           r.request().method() === "POST",
-      ),
-      integrationCard.getByRole("button", { name: /Generate key|Regenerate key/ }).click(),
-    ]);
+      );
+    const pending = responseFor();
+    if (await create.isVisible()) {
+      await create.click();
+    } else {
+      await rotate.click();
+      await page.getByRole("dialog", { name: "Rotate the website key?" }).getByRole("button", { name: "Create new key" }).click();
+    }
+    const response = await pending;
     expect(response.ok()).toBe(true);
     const body = await response.json();
     apiKey = body.apiKey;
     expect(apiKey).toBeTruthy();
+    await expect(page.getByTestId("new-website-key")).toHaveText(apiKey);
   });
 
   await test.step("submit a public website lead using the generated key", async () => {

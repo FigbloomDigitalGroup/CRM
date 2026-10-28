@@ -38,7 +38,12 @@ export async function getPwaManifest(ctx: AuthContext) {
     theme_color: look.colours.accent,
     categories: ["business", "productivity"],
     // A signed logo link expires in minutes, so it cannot be an install icon; the brand icon is a static file.
-    icons: [{ src: "/figbloom-logo.jpg", sizes: "any", type: "image/jpeg", purpose: "any" }],
+    // Chrome and Android install only with 192 and 512 px PNGs; the maskable one fills the circle or squircle a phone crops it to (FIG-791).
+    icons: [
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
   };
 }
 
