@@ -30,7 +30,7 @@
 a.fb-kpi2:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); text-decoration: none; color: var(--text); }
 .fb-kpi2__top { display: flex; justify-content: space-between; gap: 10px; width: 100%; }
 .fb-kpi2__label { font-size: 14px; font-weight: 600; line-height: 1.3; }
-.fb-kpi2__tile { flex: none; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.fb-kpi2__tile { flex: none; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-kpi2__n { font-size: 30px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
 .fb-kpi2__n[data-alert="true"] { color: var(--red); }
 .fb-kpi2__sub { font-size: 13px; color: var(--text-2); margin-top: 6px; }
@@ -49,6 +49,16 @@ a.fb-kpi2:hover { border-color: var(--border-strong); box-shadow: var(--shadow-m
 .fb-hgrid--wide { grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); }
 .fb-hgrid--narrow { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
 
+/* Two independent columns (HCols): no empty gap under the shorter card. One column below 1000px of available width. */
+.fb-hcols { container-type: inline-size; }
+.fb-hcols__in { display: flex; flex-direction: column; gap: 16px; }
+.fb-hcol { display: contents; }
+.fb-hcol__item { min-width: 0; }
+@container (min-width: 1000px) {
+  .fb-hcols__in { flex-direction: row; align-items: flex-start; }
+  .fb-hcol { display: flex; flex-direction: column; gap: 16px; flex: 1 1 0; min-width: 0; }
+}
+
 /* Panels */
 .fb-hp { min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-sm); overflow: hidden; }
 .fb-hp__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 18px 20px 10px; }
@@ -62,7 +72,7 @@ a.fb-kpi2:hover { border-color: var(--border-strong); box-shadow: var(--shadow-m
 .fb-hp--failed { border-style: dashed; }
 .fb-hfail { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding-top: 18px; }
 .fb-hfail > div { flex: 1; min-width: 200px; }
-.fb-hfail__icon { flex: none; width: 40px; height: 40px; border-radius: 999px; background: var(--red-soft); color: var(--red); display: flex; align-items: center; justify-content: center; }
+.fb-hfail__icon { flex: none; width: 40px; height: 40px; border-radius: 999px; background: var(--red-soft); color: var(--red); display: flex; align-items: center; justify-content: center; padding: 0; }
 
 /* Rows */
 .fb-hrow { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-top: 1px solid var(--border); color: var(--text); text-align: left; text-decoration: none; background: transparent; width: 100%; }
@@ -92,12 +102,12 @@ a.fb-kpi2:hover { border-color: var(--border-strong); box-shadow: var(--shadow-m
 .fb-logbtn:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
 .fb-chiplink { border: 1px solid var(--border); background: var(--surface-2); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--text-2); text-decoration: none; }
 .fb-chiplink:hover { background: var(--surface-3); text-decoration: none; color: var(--text); }
-.fb-hav { flex: none; width: 34px; height: 34px; border-radius: 999px; background: var(--orange-soft); color: var(--orange-text); font-weight: 700; font-size: 12.5px; display: inline-flex; align-items: center; justify-content: center; }
+.fb-hav { flex: none; width: 34px; height: 34px; border-radius: 999px; background: var(--orange-soft); color: var(--orange-text); font-weight: 700; font-size: 12.5px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .fb-hav--sm { width: 26px; height: 26px; font-size: 11px; background: var(--primary-soft); color: var(--primary-text); }
 .fb-temp { flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 999px; }
 .fb-flag { flex: none; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-text); display: inline-flex; align-items: center; gap: 5px; }
 .fb-flag[data-stalled="true"] { background: var(--orange-soft); color: var(--orange-text); }
-.fb-tile { flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.fb-tile { flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-tile--lg { width: 38px; height: 38px; border-radius: 12px; }
 .fb-when { font-size: 12.5px; font-weight: 600; background: transparent !important; white-space: nowrap; }
 .fb-pill { display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--surface-3); color: var(--text-2); white-space: nowrap; }
@@ -218,3 +228,10 @@ a.fb-kpi2:hover { border-color: var(--border-strong); box-shadow: var(--shadow-m
   .fb-homehead__title { font-size: 24px; }
   .fb-firstrun { gap: 12px; }
 }
+
+/* Customer Support home (the design's "Support" dashboard) */
+.fb-suphome__main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.fb-suphome__title { font-weight: 600; font-size: 14px; color: var(--text); text-decoration: none; }
+.fb-suphome__company { font-size: 12.5px; color: var(--primary-text); text-decoration: none; }
+.fb-suphome__title:hover, .fb-suphome__company:hover { text-decoration: underline; }
+.fb-suphome__status { height: 34px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); padding: 0 8px; font-size: 13px; }

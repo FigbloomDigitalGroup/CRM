@@ -3,7 +3,9 @@
  * (login, sign-up, forgot and reset password, accept invite) which must stay exactly as they are.
  *
  * What it does, and on purpose does not do:
- *  - keeps the built app files (/_next/static) and the brand icons, so the app opens fast and the shell is there on a poor connection;
+ *  - keeps the built app files (/_next/static) and the brand icons, so the app opens fast and the shell is there on a poor connection. A build
+ *    file is kept only when its name carries a content hash (every production file does), because a file without one can change under the same
+ *    name: the development server serves such files, and keeping them showed a developer the first version of the app forever;
  *  - shows /offline.html when a page cannot be fetched at all;
  *  - never stores an API answer or an HTML page: those hold one organisation's data, masked by the signed-in person's role, and a copy kept
  *    on the phone could outlive the session. Reading offline is limited to what is already open on screen;
@@ -11,7 +13,7 @@
  * Saves made offline are not handled here: the page keeps its own queue and sends it to /api/.../sync/batch when the connection returns.
  */
 
-const STATIC_CACHE = "figbloom-static-v1";
+const STATIC_CACHE = "figbloom-static-v2";
 const OFFLINE_URL = "/offline.html";
 const PRECACHE = [OFFLINE_URL, "/figbloom-logo.jpg", "/icons/icon-192.png", "/icons/icon-512.png"];
 
@@ -41,8 +43,10 @@ self.addEventListener("message", (event) => {
   }
 });
 
+const HASHED_BUILD_FILE = /^\/_next\/static\/.+[./-][0-9a-f]{8,}\.(?:js|css|woff2?|png|jpe?g|svg|webp|avif)$/;
+
 function isStaticAsset(url) {
-  return url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname === "/figbloom-logo.jpg";
+  return HASHED_BUILD_FILE.test(url.pathname) || url.pathname.startsWith("/icons/") || url.pathname === "/figbloom-logo.jpg";
 }
 
 self.addEventListener("fetch", (event) => {

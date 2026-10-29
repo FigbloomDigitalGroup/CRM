@@ -10,8 +10,14 @@
 @import "./screens/finance/finance.css";
 @import "./screens/reports/reports.css";
 @import "./screens/mobile/mobile.css";
+@import "./screens/mobile/capture/capture.css";
+@import "./screens/assistant/assistant.css";
 @import "./screens/preferences/preferences.css";
 @import "./screens/settings/settings.css";
+@import "./screens/orgside/orgside.css";
+@import "./screens/support/support.css";
+@import "./screens/commercial/commercial.css";
+@import "./screens/settingsplus/settingsplus.css";
 /*
  * The design system's one stylesheet for the authenticated app (F1.01, F1.02).
  *
@@ -326,7 +332,7 @@ textarea.fb-input { padding: var(--space-3); min-height: 96px; resize: vertical;
 .fb-kanban-card { padding: var(--space-3) var(--space-4); border-radius: var(--r-xl); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 6px; }
 .fb-tl { list-style: none; margin: 0; padding: 0; }
 .fb-tl__item { display: flex; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
-.fb-tl__icon { width: 32px; height: 32px; border-radius: 10px; background: var(--primary-soft); color: var(--primary-text); display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.fb-tl__icon { width: 32px; height: 32px; border-radius: 10px; background: var(--primary-soft); color: var(--primary-text); display: inline-flex; align-items: center; justify-content: center; flex: none; padding: 0; }
 .fb-tl__meta { font-size: 12.5px; color: var(--text-2); }
 .fb-owner { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; }
 
@@ -354,7 +360,7 @@ textarea.fb-input { padding: var(--space-3); min-height: 96px; resize: vertical;
 }
 @keyframes fb-shimmer { 0% { background-position: -600px 0; } 100% { background-position: 600px 0; } }
 .fb-empty { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); padding: var(--space-6); border-radius: var(--r-xl); border: 1px dashed var(--border-strong); }
-.fb-empty__icon { width: 40px; height: 40px; border-radius: 12px; background: var(--orange-soft); color: var(--orange-text); display: inline-flex; align-items: center; justify-content: center; }
+.fb-empty__icon { width: 40px; height: 40px; border-radius: 12px; background: var(--orange-soft); color: var(--orange-text); display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .fb-empty__title { margin: 0; font-size: 16px; font-weight: 700; }
 .fb-empty__body { margin: 0; color: var(--text-2); max-width: 52ch; }
 .fb-noaccess { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-4); border-radius: var(--r-xl); background: var(--surface-2); border: 1px solid var(--border); }
@@ -404,7 +410,7 @@ textarea.fb-input { padding: var(--space-3); min-height: 96px; resize: vertical;
 .fb-navlink__badge { margin-left: auto; min-width: 20px; padding: 0 6px; border-radius: var(--r-pill); background: #ff9400; color: #1b1d1a; font-size: 11.5px; font-weight: 700; text-align: center; }
 .fb-sidebar__foot { flex: none; margin: 4px 10px 12px; padding: 10px; border-radius: 14px; background: rgba(255, 255, 255, 0.08); }
 .fb-sideuser { display: flex; align-items: center; gap: 10px; }
-.fb-sideuser__dot { flex: none; width: 34px; height: 34px; border-radius: 999px; background: #fff; color: var(--side); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+.fb-sideuser__dot { flex: none; width: 34px; height: 34px; border-radius: 999px; background: #fff; color: var(--side); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; padding: 0; }
 .fb-sideuser__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .fb-sideuser__name { font-size: 14px; font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fb-sideuser__role { font-size: 10.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: color-mix(in srgb, var(--side-text) 62%, transparent); white-space: nowrap; }
@@ -453,7 +459,7 @@ textarea.fb-input { padding: var(--space-3); min-height: 96px; resize: vertical;
 .fb-topbar button.fb-roundbtn--primary:hover:not(:disabled) { background: var(--primary-hover, var(--primary)); border-color: transparent; color: #fff; }
 .fb-userchip { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px 0 4px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font: inherit; white-space: nowrap; cursor: pointer; }
 .fb-topbar button.fb-userchip:hover:not(:disabled) { background: var(--surface-3); border-color: var(--border); }
-.fb-userchip__dot { width: 28px; height: 28px; border-radius: 999px; background: var(--side); color: #fff; font-weight: 700; font-size: 12.5px; display: flex; align-items: center; justify-content: center; }
+.fb-userchip__dot { width: 28px; height: 28px; border-radius: 999px; background: var(--side); color: #fff; font-weight: 700; font-size: 12.5px; display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-userchip__text { display: flex; flex-direction: column; line-height: 1.15; text-align: left; }
 .fb-userchip__name { font-size: 13.5px; font-weight: 600; }
 .fb-userchip__role { font-size: 11px; color: var(--text-3); }
@@ -509,3 +515,21 @@ textarea.fb-input { padding: var(--space-3); min-height: 96px; resize: vertical;
   .fb-dialog { padding: var(--space-5); }
   .fb-toasts { left: var(--space-3); right: var(--space-3); bottom: var(--space-3); max-width: none; }
 }
+
+
+/* Top-bar command chip and the assistant's floating button, as in the design (X2, X3) */
+.fb-topbar button.fb-cmdchip, .fb-cmdchip { flex: none; height: 36px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); display: inline-flex; align-items: center; gap: 4px; font-family: var(--fb-mono, 'IBM Plex Mono', monospace); font-size: 11.5px; cursor: pointer; }
+.fb-topbar button.fb-cmdchip:hover:not(:disabled) { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+.fb-fab { position: fixed; right: 24px; bottom: 24px; z-index: 380; width: 56px; height: 56px; padding: 0; border-radius: 999px; border: 0; background: var(--primary-btn, var(--primary)); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 28px rgba(32, 62, 42, 0.32); cursor: pointer; transition: transform 0.15s ease; }
+.fb-app button.fb-fab:hover:not(:disabled) { background: var(--primary-hover, var(--primary)); transform: scale(1.05); border: 0; color: #fff; }
+/* The command chip is a keyboard hint; on a phone its room goes to the buttons that matter. */
+@media (max-width: 640px) {
+  .fb-topbar button.fb-cmdchip, .fb-cmdchip { display: none; }
+}
+
+/* Sidebar icon colours, from the design: white for the dashboard, light green for the sales workspace, orange for customers, after the sale and insights;
+   the current page's icon is the dark green of the white pill it sits on. */
+.fb-navlink__icon { display: flex; color: #fff; }
+.fb-navlink[data-tint="g"] .fb-navlink__icon { color: #9bd3a8; }
+.fb-navlink[data-tint="o"] .fb-navlink__icon { color: #ffa733; }
+.fb-navlink[aria-current="page"] .fb-navlink__icon { color: #275b3a; }

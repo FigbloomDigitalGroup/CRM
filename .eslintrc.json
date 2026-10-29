@@ -44,7 +44,6 @@
         "src/app/api/**",
         "src/ui/data/client.ts",
         "src/app/accept-invite/AcceptInviteForm.tsx",
-        "src/app/dev-login/DevLoginForm.tsx",
         "src/app/dev-sentry-test/SentryTestButtons.tsx",
         "src/app/forgot-password/ForgotPasswordForm.tsx",
         "src/app/login/LoginForm.tsx",

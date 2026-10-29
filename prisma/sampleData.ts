@@ -11,7 +11,7 @@
  * later). Not generated at runtime: edit this file directly.
  */
 
-export type DevUserId = "mg" | "s1" | "s2" | "dl" | "fn" | "tc";
+export type DevUserId = "mg" | "s1" | "s2" | "dl" | "fn" | "tc" | "cs";
 
 export interface SampleCompany {
   id: string; name: string; industry?: string | null; lifecycle: string; ownerId?: DevUserId | null;

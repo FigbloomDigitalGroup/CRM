@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ROLE_PERMISSIONS } from "../prisma/seedData";
 import { buildNav, buildQuickCreate } from "../src/ui/shell/navigation";
-import { filterNav, isActivePath } from "../src/ui/shell/navModel";
+import { filterNav, isActivePath, sectionBadge, sectionHasActive } from "../src/ui/shell/navModel";
 
 /**
  * F1.03: "each role sees only the navigation the matrix allows". The expected menus below are written out by hand from the signed permission
@@ -10,7 +10,7 @@ import { filterNav, isActivePath } from "../src/ui/shell/navModel";
 
 function menu(role: keyof typeof ROLE_PERMISSIONS | string, badges?: Record<string, number>) {
   const keys = ROLE_PERMISSIONS[role]!;
-  return buildNav({ permissionKeys: keys, membershipId: "m1", badges }).map((s) => `${s.label}: ${s.items.map((i) => i.label).join(", ")}`);
+  return buildNav({ permissionKeys: keys, membershipId: "m1", badges, demoScreens: true }).map((s) => `${s.label}: ${s.items.map((i) => i.label).join(", ")}`);
 }
 
 describe("sidebar navigation per role", () => {
@@ -18,9 +18,10 @@ describe("sidebar navigation per role", () => {
     expect(menu("MANAGEMENT")).toEqual([
       "Overview: Dashboard",
       "Sales workspace: Leads, Deals, Tasks, Calendar",
-      "Customers: Companies, Contacts, Conversations",
+      "Customers: Companies, Contacts",
+      "Communication: Conversations, Mail, Chat, Video Conference",
       "After the sale: Handoffs, Renewals, Payments",
-      "Insights and settings: Reports, Preferences, Settings",
+      "Insights & settings: Forecast & targets, Approvals, Reports, Preferences, Settings",
     ]);
   });
 
@@ -28,9 +29,10 @@ describe("sidebar navigation per role", () => {
     expect(menu("SALES")).toEqual([
       "Overview: Dashboard",
       "Sales workspace: Leads, Deals, Tasks, Calendar",
-      "Customers: Companies, Contacts, Conversations",
+      "Customers: Companies, Contacts",
+      "Communication: Conversations, Mail, Chat, Video Conference",
       "After the sale: Handoffs, Renewals",
-      "Insights and settings: My metrics, Preferences",
+      "Insights & settings: Forecast & targets, My metrics, Preferences",
     ]);
   });
 
@@ -38,9 +40,10 @@ describe("sidebar navigation per role", () => {
     expect(menu("DELIVERY")).toEqual([
       "Overview: Dashboard",
       "Pipeline: Won deals, Tasks, Calendar",
-      "Customers: Companies, Contacts, Conversations",
+      "Customers: Companies, Contacts",
+      "Communication: Conversations, Mail, Chat, Video Conference",
       "After the sale: Handoffs",
-      "Insights and settings: My metrics, Preferences",
+      "Insights & settings: Forecast & targets, My metrics, Preferences",
     ]);
   });
 
@@ -49,22 +52,63 @@ describe("sidebar navigation per role", () => {
       "Overview: Dashboard",
       "Pipeline: Won deals",
       "Customers: Companies, Contacts",
+      "Communication: Chat",
       "After the sale: Payments",
-      "Insights and settings: My metrics, Preferences",
+      "Insights & settings: Forecast & targets, My metrics, Preferences",
     ]);
   });
 
   it("Restricted Technical sees My work and their tasks, and nothing about leads, deals or customers", () => {
-    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Customers: Conversations", "Insights and settings: Preferences"]);
+    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Communication: Conversations, Chat, Video Conference", "Insights & settings: Preferences"]);
   });
 
   it("Customer Support (behind its flag) sees customers and tasks, no pipeline", () => {
     expect(menu("CUSTOMER_SUPPORT")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Tasks, Calendar",
-      "Customers: Companies, Contacts, Conversations",
-      "Insights and settings: Preferences",
+      "Sales workspace: Tasks",
+      "Customers: Companies, Contacts",
+      "Communication: Conversations, Mail, Chat, Video Conference",
+      "Insights & settings: Forecast & targets, My metrics, Preferences",
     ]);
+  });
+
+  it("draws no link to a demo-only screen (Forecast, Approvals) where demo screens are off, so production never links to a 404", () => {
+    const labels = (role: string) => buildNav({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1" }).flatMap((s) => s.items.map((i) => i.label));
+    for (const role of ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "CUSTOMER_SUPPORT"]) {
+      expect(labels(role), role).not.toContain("Forecast & targets");
+      expect(labels(role), role).not.toContain("Approvals");
+    }
+  });
+
+  it("Conversations lives in the Communication group only, never also under Customers (F6.20)", () => {
+    for (const role of Object.keys(ROLE_PERMISSIONS)) {
+      const sections = buildNav({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1", demoScreens: true });
+      const holders = sections.filter((s) => s.items.some((i) => i.key === "conversations")).map((s) => s.key);
+      expect(holders.length === 0 || (holders.length === 1 && holders[0] === "communication"), role).toBe(true);
+    }
+  });
+
+  it("the Communication group is a dropdown; with demo screens off it holds Conversations only, so production links to no 404", () => {
+    const sections = buildNav({ permissionKeys: ROLE_PERMISSIONS.MANAGEMENT!, membershipId: "m1" });
+    const group = sections.find((s) => s.key === "communication")!;
+    expect(group.collapsible).toBe(true);
+    expect(group.items.map((i) => i.label)).toEqual(["Conversations"]);
+    expect(buildNav({ permissionKeys: ROLE_PERMISSIONS.MANAGEMENT!, membershipId: "m1", demoScreens: true }).find((s) => s.key === "communication")!.items.map((i) => i.path)).toEqual(["/conversations", "/mail", "/chat", "/video"]);
+  });
+
+  it("Mail needs the right to send, Chat is for every member, Video Conference follows the calendar's task permission", () => {
+    const labels = (role: string) => buildNav({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1", demoScreens: true }).find((s) => s.key === "communication")?.items.map((i) => i.label) ?? [];
+    expect(labels("FINANCE")).toEqual(["Chat"]);
+    expect(labels("RESTRICTED_TECHNICAL")).not.toContain("Mail");
+    for (const role of Object.keys(ROLE_PERMISSIONS)) expect(labels(role), role).toContain("Chat");
+  });
+
+  it("opens the group on the page it holds and sums its links' counts for the header", () => {
+    const group = buildNav({ permissionKeys: ROLE_PERMISSIONS.MANAGEMENT!, membershipId: "m1", demoScreens: true, badges: { chat: 2, mail: 3 } }).find((s) => s.key === "communication")!;
+    expect(sectionHasActive(group, "/o/acme", "/o/acme/chat")).toBe(true);
+    expect(sectionHasActive(group, "/o/acme", "/o/acme/leads")).toBe(false);
+    expect(sectionBadge(group)).toBe(5);
+    expect(sectionBadge({ ...group, items: group.items.map((i) => ({ ...i, badge: undefined })) })).toBeUndefined();
   });
 
   it("a person with no permissions at all (a platform identity has no tenant membership) is left with the dashboard and preferences only", () => {

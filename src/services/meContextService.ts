@@ -19,13 +19,16 @@ import { getPlatformPreferences } from "./platformPreferenceService";
  * `null`. See `src/api/dto/meContext.ts` for the contract.
  */
 
+/** Roles the design still shows as proposed, wherever the person sees their own role. */
+const ROLE_NAME_SUFFIX: Record<string, string> = { CUSTOMER_SUPPORT: " (proposed)" };
+
 export const WORKSPACE_LABELS: Record<string, string> = {
   MANAGEMENT: "Management dashboard",
   SALES: "Sales workspace",
   DELIVERY: "Delivery workspace",
   FINANCE: "Finance workspace",
   RESTRICTED_TECHNICAL: "Technical workspace",
-  CUSTOMER_SUPPORT: "Support workspace",
+  CUSTOMER_SUPPORT: "Support workspace (proposed)",
 };
 
 function formatLocal(date: Date, timeZone: string | null, hourFormat: string): string {
@@ -101,7 +104,8 @@ export async function getMemberContext(req: MeContextRequest) {
       },
       role: {
         key: ctx.roleKey,
-        name: roleRow?.name ?? ctx.roleKey,
+        // The design shows the proposed role as such wherever the person sees their own role (the identity block, the user chip).
+        name: `${roleRow?.name ?? ctx.roleKey}${ROLE_NAME_SUFFIX[ctx.roleKey] ?? ""}`,
         workspaceLabel: WORKSPACE_LABELS[ctx.roleKey] ?? "Workspace",
       },
       permissions: [...ctx.permissionKeys].sort(),

@@ -1,0 +1,45 @@
+/* Commercial and developer settings editors (M10: FIG-1174, FIG-1194). Every selector starts with a .fb-sp class (tests/uiGuards.test.ts). */
+
+.fb-sp-impact { border: 1px solid var(--border-strong); border-left: 4px solid var(--blue); border-radius: 12px; background: var(--surface-2); padding: 12px 16px; font-size: 13.5px; }
+.fb-sp-impact ul { margin: 6px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.fb-sp-audit { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; font-size: 13px; }
+.fb-sp-audit__title { margin: 0 0 6px; font-size: 13px; }
+.fb-sp-audit ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+
+.fb-sp-add { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; border: 1px dashed var(--border-strong); border-radius: 12px; padding: 14px; margin: 0; }
+.fb-sp-toggle { display: flex; align-items: center; gap: 12px; font-size: 14px; }
+.fb-sp-twocol { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; align-items: start; }
+.fb-sp-stack { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+.fb-sp-pipes { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.fb-sp-pipe { border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.fb-sp-pipe--default { border-color: var(--primary); }
+.fb-sp-pipe__head { display: flex; gap: 8px; align-items: center; }
+.fb-sp-stages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fb-sp-stages li { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13.5px; }
+.fb-sp-stages__name { flex: 1 1 auto; font-weight: 600; }
+
+.fb-sp-seq { border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.fb-sp-seq__head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.fb-sp-seq__name { max-width: 280px; font-weight: 700; }
+.fb-sp-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fb-sp-steps li { display: flex; gap: 10px; align-items: center; }
+.fb-sp-steps__n { flex: none; width: 24px; height: 24px; border-radius: 99px; background: var(--surface-3); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; padding: 0; }
+
+.fb-sp-preview { border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); }
+.fb-sp-preview__head { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+.fb-sp-preview__form { display: flex; flex-direction: column; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.fb-sp-previewlist { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px 18px; font-size: 13.5px; }
+.fb-sp-previewlist > div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--border); padding: 6px 0; }
+.fb-sp-previewlist dt { color: var(--text-2); }
+.fb-sp-previewlist dd { margin: 0; text-align: right; }
+
+.fb-sp-rule { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.fb-sp-rule__main { flex: 1 1 240px; }
+.fb-sp-rule__n { display: flex; align-items: center; gap: 8px; }
+
+.fb-sp-cell { border: 0; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; min-height: 32px; }
+.fb-sp-cell:disabled { cursor: not-allowed; opacity: 0.75; }
+.fb-sp-cell:focus-visible { outline: 2px solid var(--focus-ring, var(--primary)); outline-offset: 2px; }
+.fb-sp-mask { flex: 0 1 200px; }
+.fb-sp-scopes { border: 0; padding: 0; margin: 12px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px; }

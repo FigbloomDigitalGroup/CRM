@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { describeError } from "../../errors";
 import { ErrorState, LoadingState, NoAccess } from "../../components/states";
@@ -58,6 +59,11 @@ export function ConversationsScreen() {
   const [page, setPage] = useState(1);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const search = useDebounced(q.trim(), 300);
+  // "Log a note" on the Customer Support home lands here with the log dialog already open.
+  const wantsLog = useSearchParams()?.get("log");
+  useEffect(() => {
+    if (wantsLog) setDialog({ kind: "log" });
+  }, [wantsLog]);
 
   // The channel filter is remembered per organisation on this device.
   const storeKey = `figbloom-conversations-tab:${orgSlug}`;

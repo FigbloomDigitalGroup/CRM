@@ -18,6 +18,7 @@ import { ImportWizard } from "./ImportWizard";
 import { LeadDrawer } from "./LeadDrawer";
 import { DUE_COLOUR, personInitials, statusTone, tempTone, TEMPERATURE_LABEL, TEMPERATURES } from "./format";
 import { Icon } from "./icons";
+import { SavedViewsBar } from "../views/SavedViewsBar";
 
 type TabId = "all" | "hot" | "pool" | "unassigned" | "converted" | "archived";
 interface Filters {
@@ -450,6 +451,17 @@ export function LeadsScreen() {
           </fieldset>
         </Popover>
       </div>
+
+      <SavedViewsBar
+        page="leads"
+        current={{ tab, filters: { ...filters } }}
+        onApply={(v) => {
+          setTab(v.tab as TabId);
+          setFilters({ ...NO_FILTERS, ...v.filters });
+          setPage(1);
+          setSelected(new Set());
+        }}
+      />
 
       {saved.length ? (
         <div className="fb-ld-pills" role="group" aria-label="Saved filters">

@@ -95,8 +95,8 @@ describe("Sales Today (D1)", () => {
     expect(await screen.findByTestId("kpi-today")).toHaveTextContent(/Follow-ups due today\s*1/);
     expect(screen.getByTestId("kpi-overdue")).toHaveTextContent(/Overdue\s*2/);
     expect(screen.getByTestId("kpi-stalled")).toHaveTextContent(/Stalled deals\s*2/);
-    // The overdue tile turns red, and says so with more than colour: the number and the words "needs a look".
-    expect(screen.getByTestId("kpi-overdue")).toHaveTextContent("needs a look");
+    // The overdue tile turns red, and says so with more than colour: the number and how old the oldest one is, as in the design.
+    expect(screen.getByTestId("kpi-overdue")).toHaveTextContent(/oldest \d+ days?/);
 
     expect(await screen.findByText("Send inventory proposal to Brookside")).toBeInTheDocument();
     // The design's wording: the date and time it was due, not a count of days.
@@ -107,7 +107,7 @@ describe("Sales Today (D1)", () => {
     expect(screen.getByText(/unassigned/)).toBeInTheDocument();
 
     expect(await screen.findByText(/Solution Presented · 1/)).toBeInTheDocument();
-    expect(screen.getByText("KES 450K")).toBeInTheDocument();
+    expect(screen.getByText("KES 450,000")).toBeInTheDocument();
     expect(screen.getByText("Stalled · 18 days")).toBeInTheDocument();
     expect(screen.getByText(/Stages only change when someone moves them/)).toBeInTheDocument();
     await expectNoAxeViolations(container);

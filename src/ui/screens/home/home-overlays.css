@@ -16,7 +16,7 @@
 .fb-gsearch__clear { border: 0; background: transparent; color: var(--primary-text); font-size: 12px; font-weight: 600; }
 .fb-gsearch__opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 10px; border-radius: 10px; cursor: pointer; }
 .fb-gsearch__opt[data-active="true"] { background: var(--surface-2); outline: 2px solid var(--focus); outline-offset: -2px; }
-.fb-gsearch__ico { flex: none; width: 28px; height: 28px; border-radius: 8px; background: var(--surface-3); color: var(--text-2); display: flex; align-items: center; justify-content: center; }
+.fb-gsearch__ico { flex: none; width: 28px; height: 28px; border-radius: 8px; background: var(--surface-3); color: var(--text-2); display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-gsearch__main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .fb-gsearch__title { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fb-gsearch__sub { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -50,7 +50,7 @@
 
 /* Notification bell */
 .fb-bellwrap { position: relative; display: inline-flex; }
-.fb-bell { position: relative; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); display: flex; align-items: center; justify-content: center; }
+.fb-bell { position: relative; width: 36px; height: 36px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-bell svg { flex: none; width: 17px; height: 17px; }
 .fb-bell:hover { background: var(--surface-2); color: var(--text); }
 .fb-bell__badge { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ff9400; color: #1b1d1a; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid var(--surface); }

@@ -1,7 +1,18 @@
-# FIG-595: runs on every PR (and every push to main) against a real
-# Postgres service container -- not mocked, since tenant isolation (RLS,
-# composite FKs) and the least-privilege figbloom_app role are the whole
-# point of this schema and can't be meaningfully checked against a stub.
+# FIG-595: runs on every PR (and every push to main) against real Postgres service containers -- not mocked, since tenant isolation (RLS,
+# composite FKs) and the least-privilege figbloom_app role are the whole point of this schema and can't be meaningfully checked against a stub.
+#
+# Shape (the whole run used to be one serial job of 14 to 27 minutes; the longest job here is a few minutes):
+#
+#   static  (lint + typecheck)  ─┐
+#   build   (next build, once) ──┼─► e2e x4 (Playwright shards, each against that one build) ─┐
+#   migrate (migrations, role, OpenAPI)                                                       │
+#   unit x6 (Vitest shards, each with its own Postgres) ─► coverage (merge + thresholds) ────┼─► ci ─┐
+#   docker  (image builds, layer cache) ─────────────────────────────────────────────────────┘       ├─► automerge
+#                                                                                                    │   (opt-in, see below)
+# The `ci` job keeps the name the old single job had ("Lint, typecheck, migrate, test, e2e"), so anything that refers to that check still works.
+#
+# Merge when green: put the `automerge` label on a pull request into dev-given. When every check has passed, the last job merges it. Without the
+# label nothing merges by itself. (dev-staging and main are approved by Mike, so they never auto-merge.)
 name: CI
 
 on:
@@ -9,11 +20,83 @@ on:
   push:
     branches: [main]
 
-jobs:
-  test:
-    name: Lint, typecheck, migrate, test, e2e
-    runs-on: ubuntu-latest
+# A new push to a pull request cancels the run it replaces, so superseded commits never hold up the runners.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: postgresql://figbloom:figbloom@localhost:55432/figbloom_crm_dev?schema=public
+  TEST_DATABASE_URL: postgresql://figbloom:figbloom@localhost:55432/figbloom_crm_test?schema=public
+  # Local-only, throwaway values -- never the real staging/production secrets, which live in this repo's Actions secrets (or the deploy
+  # platform's own secret store) and are never this workflow's concern.
+  APP_DB_PASSWORD: figbloom_app_ci_only
+  APP_DATABASE_URL: postgresql://figbloom_app:figbloom_app_ci_only@localhost:55432/figbloom_crm_dev?schema=public
+  TEST_APP_DATABASE_URL: postgresql://figbloom_app:figbloom_app_ci_only@localhost:55432/figbloom_crm_test?schema=public
+  DEV_SESSION_SECRET: figbloom_ci_dev_session_secret
+  # The dev seed (npm run seed:dev) refuses to run without this (FIG-1016).
+  ALLOW_DEV_ACCOUNTS: "true"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  static:
+    name: Lint and typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # Independent of each other, so they run side by side; the job fails if either does.
+      - name: Lint and typecheck together
+        run: |
+          npm run lint & lint=$!
+          npm run typecheck & types=$!
+          status=0
+          wait $lint || status=1
+          wait $types || status=1
+          exit $status
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # Next's own build cache: a build after the first only recompiles what changed.
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'prisma/schema.prisma', 'next.config.js') }}
+          restore-keys: |
+            next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      # One build, reused by every e2e shard below (which drive a real `next start`, not `next dev`). Linting and the type check are their own
+      # parallel job, so the build does not repeat them.
+      - name: Build
+        run: npm run build -- --no-lint
+        env:
+          SKIP_BUILD_TYPECHECK: "true"
+      # F1.07: nothing that exists only for development (the dev sign-in chips) may be in the production build.
+      - name: Check the production build has no dev-only code
+        run: npm run check:build-output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: |
+            .next
+            !.next/cache
+          retention-days: 1
+          compression-level: 1
+          include-hidden-files: true
+          if-no-files-found: error
+
+  migrate:
+    name: Migrations, app role and OpenAPI
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:16-alpine
@@ -25,115 +108,201 @@ jobs:
           - 55432:5432
         options: >-
           --health-cmd "pg_isready -U figbloom"
-          --health-interval 5s
+          --health-interval 3s
           --health-timeout 5s
-          --health-retries 10
-
-    env:
-      DATABASE_URL: postgresql://figbloom:figbloom@localhost:55432/figbloom_crm_dev?schema=public
-      TEST_DATABASE_URL: postgresql://figbloom:figbloom@localhost:55432/figbloom_crm_test?schema=public
-      # Local-only, throwaway values -- never the real staging/production
-      # secrets, which live in this repo's Actions secrets (or the deploy
-      # platform's own secret store) and are never this CI job's concern.
-      APP_DB_PASSWORD: figbloom_app_ci_only
-      APP_DATABASE_URL: postgresql://figbloom_app:figbloom_app_ci_only@localhost:55432/figbloom_crm_dev?schema=public
-      TEST_APP_DATABASE_URL: postgresql://figbloom_app:figbloom_app_ci_only@localhost:55432/figbloom_crm_test?schema=public
-      DEV_SESSION_SECRET: figbloom_ci_dev_session_secret
-      # The dev seed (npm run seed:dev) refuses to run without this (FIG-1016).
-      ALLOW_DEV_ACCOUNTS: "true"
-
+          --health-retries 15
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      # GitHub Actions' `services` don't support the docker-compose-style
-      # init-script volume mount (docker/init-test-db.sql) that local dev
-      # uses -- creating the second database explicitly here is the direct
-      # equivalent.
+      - uses: ./.github/actions/setup
       - name: Create the isolated test database
         run: PGPASSWORD=figbloom psql -h localhost -p 55432 -U figbloom -d figbloom_crm_dev -c "CREATE DATABASE figbloom_crm_test;"
-
-      - run: npm run lint
-
-      - run: npm run typecheck
-
+      # The Vitest shards run this same sequence themselves (tests/globalSetup.ts); keeping it as its own job gives a clearly labelled,
+      # individually failing signal for "migrations" as an acceptance criterion, not a side effect buried in a test run.
       - name: Apply migrations
         run: npm run migrate:deploy
-
       - name: Provision the figbloom_app least-privilege role
         run: npm run db:bootstrap-role && npm run db:grant-role
-
-      # Runs the same migrate-deploy/bootstrap-role/grant-role sequence
-      # again itself (tests/globalSetup.ts) -- redundant with the explicit
-      # steps above, which is intentional: those steps give a clearly
-      # labeled, individually-failing CI signal for "migrations" as its
-      # own acceptance criterion, not just a side effect buried inside the
-      # test run. Coverage thresholds (vitest.config.ts) are enforced here
-      # too -- a drop below the floor fails this step the same way a
-      # failing test would (FIG-602).
-      - run: npm run test:coverage
-
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage/
-          retention-days: 14
-
-      # FIG-1014 (B0.06): the OpenAPI document generated from the Zod
-      # schemas, kept as an artifact so the contract can be diffed between
-      # builds and fed to the typed client.
+      # FIG-1014 (B0.06): the OpenAPI document generated from the Zod schemas, kept as an artifact so the contract can be diffed between builds
+      # and fed to the typed client.
       - name: Export the OpenAPI document
         run: npm run openapi:export
-
-      - name: Upload the OpenAPI document
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: openapi
           path: openapi/
           retention-days: 30
 
-      # Seeds the dev-fixture org/users/permissions into figbloom_crm_dev
-      # (not the test database the Vitest suite above used) -- the e2e
-      # suite below logs in as a real seeded user through the real app,
-      # not a fixture it creates for itself the way the Vitest suite does.
-      - name: Seed dev data for e2e
-        run: npm run seed:dev
+  unit:
+    name: Unit and integration tests (shard ${{ matrix.shard }} of 6)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: figbloom
+          POSTGRES_PASSWORD: figbloom
+          POSTGRES_DB: figbloom_crm_dev
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U figbloom"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # GitHub Actions' `services` don't support the docker-compose-style init-script volume mount (docker/init-test-db.sql) that local dev
+      # uses -- creating the second database explicitly here is the direct equivalent.
+      - name: Create the isolated test database
+        run: PGPASSWORD=figbloom psql -h localhost -p 55432 -U figbloom -d figbloom_crm_dev -c "CREATE DATABASE figbloom_crm_test;"
+      # Each shard runs its slice of the files with coverage on and writes the raw numbers. The thresholds are not judged per shard (a shard sees
+      # only part of the code); the `coverage` job merges every shard's numbers and enforces the floor on the whole (FIG-602).
+      - name: Run this shard
+        run: >-
+          npx vitest run --coverage --shard=${{ matrix.shard }}/6
+          --coverage.reporter=json --coverage.reportsDirectory=coverage
+          --coverage.thresholds.lines=0 --coverage.thresholds.statements=0
+          --coverage.thresholds.functions=0 --coverage.thresholds.branches=0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.shard }}
+          path: coverage/coverage-final.json
+          retention-days: 1
+          if-no-files-found: error
 
-      # One build, reused by both the build-succeeds check and the e2e
-      # suite below (which drives a real `next start`, not `next dev`).
-      - name: Build
-        run: npm run build
+  coverage:
+    name: Coverage floor
+    needs: unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: shards
+      - name: Merge the shards and enforce the floor (the thresholds of vitest.config.ts)
+        run: |
+          mkdir -p .nyc_output
+          for f in shards/*/coverage-final.json; do cp "$f" ".nyc_output/$(basename "$(dirname "$f")").json"; done
+          npx --yes nyc@15.1.0 report --reporter=text-summary --reporter=html --report-dir=coverage \
+            --check-coverage --lines 42 --statements 42 --functions 69 --branches 80
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage
+          path: coverage/
+          retention-days: 14
 
-      # F1.07: nothing that exists only for development (the dev sign-in chips) may be in the production build.
-      - name: Check the production build has no dev-only code
-        run: npm run check:build-output
-
+  e2e:
+    name: End-to-end tests (shard ${{ matrix.shard }} of 4)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: figbloom
+          POSTGRES_PASSWORD: figbloom
+          POSTGRES_DB: figbloom_crm_dev
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U figbloom"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-build
+          path: .next
+      - name: Create the isolated test database
+        run: PGPASSWORD=figbloom psql -h localhost -p 55432 -U figbloom -d figbloom_crm_dev -c "CREATE DATABASE figbloom_crm_test;"
+      # Each shard has its own database, migrated and seeded here. The suite logs in as a real seeded user through the real app, not a fixture
+      # it creates for itself the way the Vitest suite does.
+      - name: Migrate, provision the app role and seed
+        run: npm run migrate:deploy && npm run db:bootstrap-role && npm run db:grant-role && npm run seed:dev
+      - name: Cache Playwright's Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Install Playwright's Chromium
         run: npm run e2e:install
-
-      - name: Run Playwright e2e tests (FIG-602)
-        run: npm run e2e
-
+      - name: Run this shard (FIG-602)
+        run: npx playwright test --shard=${{ matrix.shard }}/4
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: playwright-report/
           retention-days: 14
 
   docker:
     name: Docker image builds and runs
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # Layer cache between runs: an unchanged `npm ci` layer is not rebuilt.
       - name: Build the image
-        run: docker build -t figbloom-crm:ci .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: figbloom-crm:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # The single result everything else keys on. Named as the old one-job check was, so a required-check rule written against that name keeps working.
+  ci:
+    name: Lint, typecheck, migrate, test, e2e
+    if: ${{ always() }}
+    needs: [static, build, migrate, unit, coverage, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every check passed
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}
+        run: |
+          echo "At least one check did not pass: ${{ join(needs.*.result, ', ') }}"
+          exit 1
+
+  automerge:
+    name: Merge when green
+    needs: [ci, docker]
+    if: ${{ github.event_name == 'pull_request' && github.base_ref == 'dev-given' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR: ${{ github.event.pull_request.number }}
+      REPO: ${{ github.repository }}
+    steps:
+      # Read the label now, not from the event: it may have been added while the checks were running.
+      - name: Merge the pull request if it carries the automerge label
+        run: |
+          labels=$(gh pr view "$PR" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")')
+          case ",$labels," in
+            *,automerge,*) gh pr merge "$PR" --repo "$REPO" --merge ;;
+            *) echo "No automerge label on #$PR; leaving it for a person to merge." ;;
+          esac

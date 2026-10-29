@@ -16,6 +16,7 @@ import { useReference } from "../leads/data";
 import { isNetworkFailure, useFieldWrite, useQueue, useSyncNow } from "./data";
 import { DESKTOP_VIEW_KEY } from "./PwaClient";
 import { PushToggle } from "./PushToggle";
+import { ScanCard, ScannedBanner, type Scanned } from "./capture/ScanCard";
 import { dismissInstall, installDismissed, installState, isIos, isStandalone } from "./pwa";
 import type { QueueItem } from "./queue";
 
@@ -118,6 +119,7 @@ export function CaptureSheet({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dupes, setDupes] = useState<Candidate[] | null>(null);
+  const [scanned, setScanned] = useState<Scanned | null>(null);
   // One key per intent: a double tap or a retry after a dropped connection is the same save.
   const key = useRef(newIdempotencyKey());
   const nameRef = useRef<HTMLInputElement>(null);
@@ -178,6 +180,17 @@ export function CaptureSheet({ onClose }: { onClose: () => void }) {
     <Sheet label="Quick capture" onClose={onClose}>
       <h2>Quick capture</h2>
       <p className="fb-m-sheet__sub">Name is enough. You can fill in the rest later.</p>
+      <ScanCard
+        onScanned={(s) => {
+          // The card only fills the form. Nothing is saved until the person has checked it and presses Save lead (M4, FIG-1177).
+          setName(s.fields.name);
+          setPhone(s.fields.phone);
+          setEmail(s.fields.email);
+          setNote(s.fields.note);
+          setScanned(s);
+        }}
+      />
+      {scanned ? <ScannedBanner scanned={scanned} /> : null}
       <form
         className="fb-m-form"
         onSubmit={(e) => {
@@ -493,6 +506,9 @@ export function QueueSheet({ onClose }: { onClose: () => void }) {
           {busy ? "Sending…" : "Send now"}
         </button>
         {!conn.online ? <div className="fb-m-muted" style={{ marginTop: 8, fontSize: 12.5 }}>You are offline. They send on their own when you are back.</div> : null}
+        <a className="fb-m-link" href={`/o/${orgSlug}/m/sync`} onClick={onClose}>
+          Open the full sync queue
+        </a>
       </div>
     </Sheet>
   );

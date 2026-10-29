@@ -31,12 +31,14 @@ import {
   Users,
   Wallet,
   X,
+  PenLine,
 } from "lucide-react";
 import Link from "next/link";
 import { useId, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
 /** The design's icon names, drawn with the app's one icon set. */
 const ICONS: Record<string, LucideIcon> = {
+  note: PenLine,
   alert: AlertTriangle,
   banknote: Banknote,
   bell: Bell,
@@ -160,6 +162,33 @@ export function KpiGrid({ items }: { items: KpiDef[] }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * Two independent columns of cards. Cards sit one under the other in each column, so a short card never leaves an empty gap beside a tall one
+ * (a two-card grid row does). Narrow, it becomes one column in the reading order left[0], right[0], left[1], right[1].
+ */
+export function HCols({ left, right }: { left: ReactNode[]; right: ReactNode[] }) {
+  return (
+    <div className="fb-hcols">
+      <div className="fb-hcols__in">
+        <div className="fb-hcol">
+          {left.map((n, i) => (
+            <div key={i} className="fb-hcol__item" style={{ order: 2 * i + 1 }}>
+              {n}
+            </div>
+          ))}
+        </div>
+        <div className="fb-hcol">
+          {right.map((n, i) => (
+            <div key={i} className="fb-hcol__item" style={{ order: 2 * i + 2 }}>
+              {n}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

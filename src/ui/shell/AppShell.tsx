@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 import { MobileFrame } from "../screens/mobile/MobileFrame";
 import { PwaClient } from "../screens/mobile/PwaClient";
+import { ToolsOverlays, ToolsTriggers } from "../screens/assistant/ToolsHost";
+import { SavedViewsNav } from "../screens/views/SavedViewsNav";
 import { OfflineBanner } from "../components/states";
 import { ToastProvider } from "../components/toast";
 import { connectivity, watchBrowserConnectivity } from "../data/connectivity";
@@ -44,10 +46,12 @@ export interface AppShellProps {
   bell: ReactNode;
   /** The V1.1 organisation switcher. Left out in V1: the slot exists, nothing renders in it. */
   organisationSwitcher?: ReactNode;
+  /** Platform messages above the page (support banner, announcements, approval card; FIG-1192). Left out in V1. */
+  banners?: ReactNode;
   children: ReactNode;
 }
 
-function Shell({ orgSlug, sections, quickCreate, identity, initialSidebarCollapsed, session, search, bell, organisationSwitcher, children }: AppShellProps) {
+function Shell({ orgSlug, sections, quickCreate, identity, initialSidebarCollapsed, session, search, bell, organisationSwitcher, banners, children }: AppShellProps) {
   const api = useApi();
   const [navOpen, setNavOpen] = useState(false);
 
@@ -67,25 +71,28 @@ function Shell({ orgSlug, sections, quickCreate, identity, initialSidebarCollaps
         initialCollapsed={initialSidebarCollapsed}
         onCollapsedChange={saveCollapsed}
         footer={<SidebarUser name={identity.name} roleName={identity.roleName} />}
+        extra={<SavedViewsNav onNavigate={() => setNavOpen(false)} />}
         mobileOpen={navOpen}
         onMobileClose={() => setNavOpen(false)}
       />
       <div className="fb-main">
         <TopBar
-          orgIdentity={<OrgIdentity identity={identity} />}
+          orgIdentity={<OrgIdentity identity={identity} switcher={organisationSwitcher} />}
           search={search}
           bell={bell}
           quickCreate={<QuickCreate orgSlug={orgSlug} items={quickCreate} />}
           userMenu={<UserMenu identity={identity} />}
-          organisationSwitcher={organisationSwitcher}
+          tools={<ToolsTriggers />}
           onOpenNav={() => setNavOpen(true)}
         />
         <ConnectionBanners />
+        {banners}
         <main className="fb-content" id="main">
           {/* The older pages are built on `.page`; the new containers (fb-page-*) go inside it as screens are rebuilt. */}
           <div className="page">{children}</div>
         </main>
       </div>
+      <ToolsOverlays />
       {session ? <SessionGuard initial={session} /> : null}
     </div>
   );

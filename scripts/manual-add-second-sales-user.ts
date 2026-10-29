@@ -21,7 +21,7 @@ async function main() {
   });
 
   // Same shared local-dev password as prisma/seed.ts's dev users, so this
-  // user can also sign in through the real /login flow, not just /dev-login.
+  // user can also sign in through the real /login flow, not just the dev sign-in chips.
   const passwordHash = await hashPassword(DEV_FIXTURE_PASSWORD);
   const user = await adminDb.user.upsert({
     where: { email: "dev.sales2@figbloom.local" },
