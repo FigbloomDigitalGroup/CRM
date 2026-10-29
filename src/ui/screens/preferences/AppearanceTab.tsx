@@ -8,6 +8,7 @@ import { PAGE_COLOURS, THEMES, findPageColour, findTheme, lookColours } from "@/
 import { ConfirmDialog, ErrorState, LoadingState, Select, useAppearance, useApiMutation, useMember, useToast } from "@/ui";
 import { DEFAULT_DEVICE, TEXT_SIZES, type LookInput, type TextSize } from "@/ui/theme/resolve";
 import { usePreferencesQuery, useSavePreferences } from "./hooks";
+import { OwnColours } from "./OwnColours";
 import type { EffectiveLookView, PreferencesView } from "./model";
 
 const TEXT_LABEL: Record<TextSize, string> = { SMALL: "Small", DEFAULT: "Default", LARGE: "Large", EXTRA_LARGE: "Largest" };
@@ -191,6 +192,8 @@ export function AppearanceTab({ resetOpen, onResetClose }: { resetOpen: boolean;
           })}
         </div>
       </section>
+
+      <OwnColours view={view} />
 
       <div className="fb-prefs__grid">
         <section className="fb-prefs__card" aria-labelledby="prefs-density">

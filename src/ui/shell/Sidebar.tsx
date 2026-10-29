@@ -56,6 +56,7 @@ export function Sidebar({
   initialCollapsed,
   onCollapsedChange,
   footer,
+  extra,
   mobileOpen,
   onMobileClose,
 }: {
@@ -64,6 +65,8 @@ export function Sidebar({
   initialCollapsed: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
   footer?: ReactNode;
+  /** Groups drawn from the browser after the role's own sections, such as Saved views (X4). Hidden while the filter box is in use. */
+  extra?: ReactNode;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
 }) {
@@ -144,6 +147,7 @@ export function Sidebar({
         </div>
         <nav className="fb-sidebar__nav" aria-label="Main">
           {top.map(renderSection)}
+          {query ? null : extra}
           {query && shown.length === 0 ? <p className="fb-sidebar__text" style={{ padding: "8px 10px", opacity: 0.8 }}>No matching pages.</p> : null}
         </nav>
         {bottom.length > 0 ? <div className="fb-sidebar__bottom">{bottom.map(renderSection)}</div> : null}

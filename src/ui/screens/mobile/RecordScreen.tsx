@@ -10,6 +10,7 @@ import { contactOf, leadName, useReference, type LeadDetail } from "../leads/dat
 import { Icon } from "../leads/icons";
 import { ago, dueLabel, initialsOf } from "./data";
 import { useMobile } from "./MobileFrame";
+import { PhotoAttach } from "./capture/PhotoAttach";
 
 export type RecordType = "lead" | "contact" | "company" | "deal";
 
@@ -162,6 +163,8 @@ export function RecordScreen({ type, id }: { type: RecordType; id: string }) {
           </button>
         </div>
       ) : null}
+
+      {can("activities.create") ? <PhotoAttach record={`${type}:${id}`} /> : null}
 
       <dl className="fb-m-facts">
         {shown.facts.map((f) => (

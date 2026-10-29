@@ -278,6 +278,7 @@ export function TopBar({
   quickCreate,
   userMenu,
   organisationSwitcher,
+  tools,
   onOpenNav,
 }: {
   /** The organisation and session block at the left. */
@@ -288,6 +289,8 @@ export function TopBar({
   userMenu: ReactNode;
   /** The switcher slot: present in the layout, empty until V1.1 turns it on. */
   organisationSwitcher?: ReactNode;
+  /** Ask Figbloom, the command palette and Help buttons (X2, X3). Left out when the tools are off. */
+  tools?: ReactNode;
   onOpenNav: () => void;
 }) {
   return (
@@ -300,6 +303,7 @@ export function TopBar({
       <div className="fb-topbar__right">
         {organisationSwitcher}
         {quickCreate}
+        {tools}
         {bell}
         <ThemeSwitch />
         {userMenu}

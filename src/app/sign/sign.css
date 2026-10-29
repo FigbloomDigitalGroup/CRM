@@ -1,0 +1,30 @@
+/* The public quote-signing page (Q2, FIG-1193). Standalone: it is outside the organisation layout, so it does not read the app's tokens or ui.css. Mobile first. */
+.sgn { --sgn-bg: #f4f3ee; --sgn-surface: #fff; --sgn-text: #1b1d1a; --sgn-muted: #50564d; --sgn-border: #cfd3c9; --sgn-primary: #1f6b3a; --sgn-primary-text: #fff; --sgn-ok: #e3f1e6; --sgn-warn: #fff2d6;
+  min-height: 100vh; background: var(--sgn-bg); color: var(--sgn-text); font-family: "Instrument Sans", system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+@media (prefers-color-scheme: dark) { .sgn { --sgn-bg: #14170f; --sgn-surface: #1d2118; --sgn-text: #f1f3ec; --sgn-muted: #b8beaf; --sgn-border: #3a4034; --sgn-primary: #7fd197; --sgn-primary-text: #0f2417; --sgn-ok: #1e3324; --sgn-warn: #3a3017; } }
+.sgn__wrap { max-width: 640px; margin: 0 auto; padding: 16px 16px 48px; display: flex; flex-direction: column; gap: 16px; }
+.sgn__bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.sgn__brand { font-weight: 700; }
+.sgn__lang { display: inline-flex; border: 1px solid var(--sgn-border); border-radius: 10px; overflow: hidden; }
+.sgn__lang button { border: 0; background: transparent; color: var(--sgn-text); min-height: 44px; min-width: 52px; font: inherit; font-weight: 600; cursor: pointer; }
+.sgn__lang button[aria-pressed="true"] { background: var(--sgn-primary); color: var(--sgn-primary-text); }
+.sgn__card { background: var(--sgn-surface); border: 1px solid var(--sgn-border); border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.sgn__h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+.sgn__muted { color: var(--sgn-muted); font-size: 14px; margin: 0; }
+.sgn__table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.sgn__table th, .sgn__table td { text-align: left; padding: 8px 4px; border-bottom: 1px solid var(--sgn-border); vertical-align: top; }
+.sgn__table .sgn__num { text-align: right; white-space: nowrap; }
+.sgn__total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; padding-top: 4px; }
+.sgn__label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; }
+.sgn__input { min-height: 48px; border-radius: 10px; border: 1px solid var(--sgn-border); background: var(--sgn-surface); color: var(--sgn-text); padding: 0 12px; font: inherit; }
+.sgn__input:focus-visible, .sgn__btn:focus-visible, .sgn__lang button:focus-visible, .sgn__check input:focus-visible { outline: 3px solid var(--sgn-primary); outline-offset: 2px; }
+.sgn__sig { font-family: "Brush Script MT", "Segoe Script", cursive; font-size: 30px; min-height: 44px; border-bottom: 1px solid var(--sgn-border); }
+.sgn__check { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; }
+.sgn__check input { width: 24px; height: 24px; flex: none; margin-top: 2px; }
+.sgn__btn { min-height: 52px; border-radius: 12px; border: 0; background: var(--sgn-primary); color: var(--sgn-primary-text); font: inherit; font-weight: 700; font-size: 17px; cursor: pointer; }
+.sgn__btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+.sgn__btn--quiet { background: transparent; color: var(--sgn-text); border: 1px solid var(--sgn-border); }
+.sgn__notice { border-radius: 12px; padding: 12px 14px; background: var(--sgn-ok); font-weight: 600; }
+.sgn__notice--warn { background: var(--sgn-warn); }
+.sgn__error { color: #b3261e; font-size: 14px; }
+@media (prefers-color-scheme: dark) { .sgn__error { color: #ffb4ab; } }

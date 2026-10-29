@@ -1,4 +1,5 @@
 import "@/ui/ui.css";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { UnauthorizedError } from "@/auth/errors";
 import { resolveRequestContext, resolveUserContext } from "@/auth/requestContext";
@@ -11,6 +12,11 @@ import { ThemeProvider } from "@/ui/theme/ThemeProvider";
 import { defaultLook, type LookInput } from "@/ui/theme/resolve";
 import { NotificationBell } from "@/ui/screens/home/Notifications";
 import { GlobalSearch } from "@/ui/screens/home/Search";
+import { ApiProvider } from "@/ui/data/hooks";
+import { demoScreensEnabled } from "@/ui/demo/enabled";
+import { OrgBanners } from "@/ui/screens/orgside/OrgBanners";
+import { OrgSwitcher } from "@/ui/screens/orgside/OrgSwitcher";
+import { SuspendedScreen } from "@/ui/screens/orgside/SuspendedScreen";
 
 /** `cover` lets the phone layout's bottom bar and sheets sit above the home indicator (env(safe-area-inset-bottom)). The sign-in pages are unaffected. */
 export const viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" } as const;
@@ -45,6 +51,19 @@ export default async function OrgLayout({
           <p className="error">{err instanceof Error ? err.message : "Access denied."}</p>
         </div>
       </div>
+    );
+  }
+
+  // OS1 (FIG-1166): a suspended organisation gets the paused screen instead of the shell, whatever page was asked for. Demo cookie until B6.05.
+  const demoScreens = demoScreensEnabled();
+  if (demoScreens && (await cookies()).get("fb_demo_suspended")?.value === "1") {
+    return (
+      <ThemeProvider initialLook={defaultLook()} initialDensity={me.preferences?.density}>
+        <NoFlashScript />
+        <ApiProvider>
+          <SuspendedScreen organisation={me.organisation?.shownName ?? me.organisation?.name ?? ""} demo />
+        </ApiProvider>
+      </ThemeProvider>
     );
   }
 
@@ -104,6 +123,8 @@ export default async function OrgLayout({
         session={session}
         search={<GlobalSearch />}
         bell={<NotificationBell />}
+        organisationSwitcher={demoScreens ? <OrgSwitcher /> : undefined}
+        banners={demoScreens ? <OrgBanners /> : undefined}
         identity={{
           name: me.user.name,
           email: me.user.email,

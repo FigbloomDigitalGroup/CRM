@@ -18,6 +18,8 @@ export interface EffectiveLookView {
   pageColour: string;
   toggle: { light: string; dark: string };
   colours: { sidebar: string; accent: string; highlight: string; page: { key: string; label?: string; hex: string | null; dark: boolean } };
+  /** The member's own colours (AP4), when they have set some and the organisation allows them. */
+  ownColours?: Partial<Record<"sidebar" | "accent" | "highlight" | "page", string>> | null;
 }
 
 export interface PreferencesView {

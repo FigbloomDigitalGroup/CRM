@@ -1,0 +1,13 @@
+/* Mobile capture (M10, FIG-1177): camera attachments, business-card scan, sync queue page. Every selector starts with a .fb-m- class (tests/uiGuards.test.ts). */
+
+.fb-m-scan { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 46px; margin: 0 0 14px; border-radius: 14px; border: 1px dashed var(--border-strong); background: var(--surface-2); color: var(--text); font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; }
+.fb-m-scan[aria-disabled="true"] { opacity: 0.6; cursor: progress; }
+.fb-m-scanned { display: flex; gap: 8px; padding: 10px 12px; border-radius: 12px; background: var(--primary-soft); color: var(--text); font-size: 13px; margin-bottom: 12px; }
+.fb-m-scanned__demo { color: var(--text-2); font-size: 12px; }
+.fb-m-photos { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fb-m-photos li { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); font-size: 13.5px; }
+.fb-m-photos__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-m-photos__state { font-size: 12px; color: var(--text-2); }
+.fb-m-photos__state[data-state="WAITING"] { color: var(--orange-text); font-weight: 600; }
+.fb-m-synced { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 28px 16px; margin-top: 12px; border-radius: 16px; background: var(--primary-soft); color: var(--text); text-align: center; }
+.fb-m-link { display: inline-block; margin-top: 12px; color: var(--primary-text); font-weight: 700; font-size: 13.5px; }

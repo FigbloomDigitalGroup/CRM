@@ -61,9 +61,15 @@ const DEFS: Def[] = [
   },
   { section: "workspace", key: "tasks", label: () => "Tasks", path: "/tasks", icon: "tasks", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
   { section: "workspace", key: "calendar", label: () => "Calendar", path: "/calendar", icon: "calendar", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
+  // V1.1 commercial screens (M10, demo data): the permissions below are stripped until the organisation's release reaches V1.1.
+  { section: "workspace", key: "quotes", label: () => "Quotes", path: "/quotes", icon: "deals", tint: "g", allowed: (c) => any(c, "quotes.create", "quotes.approve"), built: true },
+  { section: "workspace", key: "approvals", label: () => "Approvals", path: "/approvals", icon: "handoffs", tint: "g", allowed: (c) => any(c, "quotes.approve", "quotes.create"), built: true },
+  { section: "insights", key: "forecast", label: () => "Forecast", path: "/forecast", icon: "reports", tint: "o", allowed: (c) => any(c, "forecast.view.all", "quotes.create"), built: true },
   { section: "customers", key: "companies", label: () => "Companies", path: "/companies", icon: "companies", tint: "o", allowed: (c) => has(c, "companies.view"), built: true },
   { section: "customers", key: "contacts", label: () => "Contacts", path: "/contacts", icon: "contacts", tint: "o", allowed: (c) => has(c, "contacts.view"), built: true },
   { section: "customers", key: "conversations", label: () => "Conversations", path: "/conversations", icon: "conversations", tint: "o", allowed: (c) => has(c, "communications.view"), built: true },
+  // Customer Support workspace (FIG-1178, demo data): only the proposed role's ticket permission shows it.
+  { section: "customers", key: "support", label: () => "Support", path: "/support", icon: "conversations", tint: "o", allowed: (c) => has(c, "tickets.manage"), built: true },
   { section: "after-sale", key: "handoffs", label: () => "Handoffs", path: "/handoffs", icon: "handoffs", tint: "o", allowed: (c) => any(c, "handoff.manage", "deals.handoff"), built: true },
   { section: "after-sale", key: "renewals", label: () => "Renewals", path: "/renewals", icon: "renewals", tint: "o", allowed: (c) => has(c, "company_services.manage"), built: true },
   { section: "after-sale", key: "payments", label: () => "Payments", path: "/payments", icon: "payments", tint: "o", allowed: (c) => has(c, "finance.view.payments"), built: true },
