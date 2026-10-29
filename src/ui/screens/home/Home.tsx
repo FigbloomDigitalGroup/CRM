@@ -7,6 +7,7 @@ import { describeError } from "../../errors";
 import { NoAccess } from "../../components/states";
 import { useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
+import { demoScreensEnabledClient } from "../../demo/enabled";
 import { SupportHome } from "./SupportHome";
 import { HCols, HIcon, KpiGrid, KpiSkeleton, Panel, SectionFailed, type KpiDef } from "./kit";
 import { NewLeadsPanel, MovingAndStalled, PipelineByStage, TodoPanel, useLastVisit, useNewLeads } from "./blocks";
@@ -101,7 +102,7 @@ export function HomeScreen() {
   const retry = () => void qc.invalidateQueries({ queryKey: ["getDashboard"] });
 
   // The proposed Customer Support role: tickets, no leads. It has its own home (the design's "Support"), which does not wait for the dashboard call.
-  if (m.can("tickets.manage") && !m.can("leads.view.own") && !m.can("leads.view.all")) {
+  if (demoScreensEnabledClient() && m.can("tickets.manage") && !m.can("leads.view.own") && !m.can("leads.view.all")) {
     return (
       <div className="fb-home">
         <Header kind="support" timeZone={m.timeZone} quick={quickFor("support", m.orgSlug, m.can)} />

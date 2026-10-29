@@ -9,6 +9,13 @@ import { gotoAndSettle, loginAs, ORG_SLUG } from "./helpers";
 
 const BASE = `/o/${ORG_SLUG}`;
 
+// These screens exist only on demo data, so a production build (what CI runs) answers 404 for them. They run against a server built and started
+// with DEMO_SCREENS=true NEXT_PUBLIC_DEMO_SCREENS=true ACTIVE_RELEASE=v2 and E2E_DEMO_SCREENS=true; otherwise they are skipped, not failed.
+const demoServer = process.env.E2E_DEMO_SCREENS === "true";
+test.beforeEach(() => {
+  test.skip(!demoServer, "needs a demo-screens server (DEMO_SCREENS, NEXT_PUBLIC_DEMO_SCREENS, ACTIVE_RELEASE=v2)");
+});
+
 test.describe("command palette, help and shortcuts (X3)", () => {
   test("Ctrl+K opens the palette, lists only what Sales may do, and Enter opens a page", async ({ page }) => {
     await loginAs(page, "dev.sales@figbloom.local");

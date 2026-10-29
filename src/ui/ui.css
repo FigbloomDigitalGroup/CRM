@@ -522,6 +522,10 @@ textarea.fb-input { padding: var(--space-3); min-height: 96px; resize: vertical;
 .fb-topbar button.fb-cmdchip:hover:not(:disabled) { background: var(--surface-2); border-color: var(--border); color: var(--text); }
 .fb-fab { position: fixed; right: 24px; bottom: 24px; z-index: 380; width: 56px; height: 56px; padding: 0; border-radius: 999px; border: 0; background: var(--primary-btn, var(--primary)); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 12px 28px rgba(32, 62, 42, 0.32); cursor: pointer; transition: transform 0.15s ease; }
 .fb-app button.fb-fab:hover:not(:disabled) { background: var(--primary-hover, var(--primary)); transform: scale(1.05); border: 0; color: #fff; }
+/* The command chip is a keyboard hint; on a phone its room goes to the buttons that matter. */
+@media (max-width: 640px) {
+  .fb-topbar button.fb-cmdchip, .fb-cmdchip { display: none; }
+}
 
 /* Sidebar icon colours, from the design: white for the dashboard, light green for the sales workspace, orange for customers, after the sale and insights;
    the current page's icon is the dark green of the white pill it sits on. */

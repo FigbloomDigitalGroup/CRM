@@ -17,6 +17,9 @@ const NAV: { email: string; label: string; links: string[] }[] = [
 
 async function sidebarLinks(page: Page): Promise<string[]> {
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+  // Conversations lives in the Communication dropdown (F6.20), which starts closed on the dashboard: open it to list its links.
+  const group = sidebar.getByRole("button", { name: /Communication/ });
+  if ((await group.count()) > 0 && (await group.getAttribute("aria-expanded")) === "false") await group.click();
   return (await sidebar.getByRole("link").allInnerTexts()).map((t) => t.trim()).filter(Boolean);
 }
 
@@ -61,12 +64,12 @@ test.describe("top bar identity", () => {
 
   test("Quick create offers only what the role may create", async ({ page }) => {
     await loginAs(page, "dev.sales@figbloom.local");
-    await page.getByRole("button", { name: "New" }).click();
+    await page.getByRole("button", { name: "New", exact: true }).click();
     await expect(page.getByRole("menuitem")).toHaveText(["New lead", "New contact", "New company", "New task", "Log a call or note"]);
     await page.keyboard.press("Escape");
     await page.context().clearCookies();
     await loginAs(page, "dev.finance@figbloom.local");
-    await expect(page.getByRole("button", { name: "New" })).toHaveCount(0); // Finance may create nothing
+    await expect(page.getByRole("button", { name: "New", exact: true })).toHaveCount(0); // Finance may create nothing
   });
 });
 

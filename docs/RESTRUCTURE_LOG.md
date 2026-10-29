@@ -82,6 +82,14 @@ The dates are my proposal to fit the fixed 22 Nov date; they are not signed off.
 | Settings: catalogue, pipelines and stage rules, sequences, web forms, approval rules (S6#2) | FIG-1174 | yes (`src/ui/screens/settingsplus/demo/`) | no |
 | E-signature page and deposit request (Q2) | FIG-1193 | yes (`src/app/sign/[token]/demoSigning.ts`, tokens `demo-unsigned`, `demo-signed`, `demo-deposit`) | no |
 | Settings: roles and field access, developers (S8#2) | FIG-1194 | yes (`settingsplus/demo/`) | no |
+| Communication group in the sidebar (Conversations moved in, not duplicated) | FIG-1378 | built 29 Oct 2026; the group is real navigation, the Mail, Chat and Video links are demo-only (`src/ui/shell/navigation.ts`, see docs/M10_COMMUNICATION.md) | no |
+| Chat workspace | FIG-1379 | yes (`src/ui/screens/communication/demo/`) | no (B6.24 to B6.27) |
+| Mail workspace | FIG-1380 | yes (`communication/demo/`) | no (FIG-806, FIG-807, FIG-1153) |
+| Video Conference | FIG-1381 | yes (`communication/demo/`) | no (FIG-808, FIG-1153) |
+
+### Scope added on 29 Oct 2026: the Communication group
+
+Given added a sidebar dropdown "Communication" (Mail, Chat, Video Conference) and asked that Conversations move into it. Nine issues were created (FIG-1378 to FIG-1386) and six existing issues got extra scope (FIG-807, 808, 1153, 1156, 1179, 1180). **V1 side effect:** Conversations left the Customers section, so the V1 role journeys and sidebar pixel baselines (FIG-1115, FIG-1117) need re-recording; `e2e/ui-shell.spec.ts` already opens the group. Scope, decisions and the cut-order proposal: `docs/COMMUNICATION_HUB_SCOPE.md`.
 
 ## Clean-up list after the presentation
 

@@ -72,7 +72,7 @@ export default async function OrgLayout({
     );
   }
 
-  const navInput = { permissionKeys: ctx.permissionKeys, membershipId: ctx.membershipId, hidden: me.preferences?.sidebar.hidden ?? [] };
+  const navInput = { permissionKeys: ctx.permissionKeys, membershipId: ctx.membershipId, demoScreens, hidden: me.preferences?.sidebar.hidden ?? [] };
   const look: LookInput = me.look
     ? { locked: me.look.locked, toggle: me.look.toggle, colours: me.look.colours }
     : defaultLook();

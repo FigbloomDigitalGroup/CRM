@@ -7,6 +7,9 @@ const nextConfig = {
   // `next dev` and `next build` both write to `.next`, so a dev server left running corrupts a production build made beside it (and the
   // other way round). Setting NEXT_DIST_DIR (for example `.next-e2e`) lets the end-to-end build live in its own folder. Unset, nothing changes.
   distDir: process.env.NEXT_DIST_DIR || ".next",
+  // CI runs the type check as its own parallel job, so its build step sets SKIP_BUILD_TYPECHECK=true and does not repeat it. Anywhere else (a
+  // deploy, a local build, the Docker image) the build still refuses to ship a type error.
+  typescript: { ignoreBuildErrors: process.env.SKIP_BUILD_TYPECHECK === "true" },
   // Next's own dev-mode build-activity badge defaults to bottom-left,
   // which collides with the app's sidebar user pill there -- dev-only,
   // never shown in production, but move it out of the way so it isn't

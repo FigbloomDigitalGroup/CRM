@@ -1,0 +1,148 @@
+/* Communication group (M10: F6.20 to F6.23). Every selector starts with a .fb- class (tests/uiGuards.test.ts). */
+
+/* The sidebar dropdown (F6.20) ------------------------------------------------------------------------------------------------------ */
+.fb-navgroup {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; margin-top: 8px; border: 0; border-radius: 10px; background: transparent;
+  color: inherit; font: inherit; font-size: 15px; font-weight: 600; white-space: nowrap; text-align: left; cursor: pointer;
+}
+.fb-navgroup:hover { background: var(--side-2); }
+.fb-navgroup[aria-expanded="true"] { background: color-mix(in srgb, var(--side-text) 10%, transparent); }
+.fb-navgroup[data-active] { background: var(--sidebar-active-bg); color: var(--sidebar-active-text); }
+.fb-navgroup:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.fb-navgroup__chev { margin-left: auto; transition: transform 0.15s ease; }
+.fb-navgroup__chev[data-open] { transform: rotate(180deg); }
+.fb-navgroup__panel { display: flex; flex-direction: column; gap: 3px; }
+.fb-navgroup__panel[hidden] { display: none; }
+.fb-navlink[data-nested] { padding-left: 34px; font-size: 14.5px; }
+@media (prefers-reduced-motion: reduce) { .fb-navgroup__chev { transition: none; } }
+
+/* Shared page frame ---------------------------------------------------------------------------------------------------------------- */
+.fb-comm { display: flex; flex-direction: column; gap: 16px; min-width: 0; max-width: 1280px; }
+.fb-comm__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.fb-comm__title { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+.fb-comm__sub { margin: 4px 0 0; font-size: 13.5px; color: var(--text-2); max-width: 640px; }
+.fb-comm__note { margin: 0; font-size: 12.5px; color: var(--text-3); }
+.fb-comm__back { display: none; }
+
+/* Chat (F6.21) ----------------------------------------------------------------------------------------------------------------------- */
+.fb-chat { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 600px; height: calc(100vh - 220px); max-height: 820px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.fb-chat__side { display: flex; flex-direction: column; border-right: 1px solid var(--border); min-height: 0; overflow-y: auto; background: var(--surface); }
+.fb-chat__brand { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--side, #17402b); color: var(--side-text, #fff); }
+.fb-chat__brand strong { display: block; font-size: 16px; }
+.fb-chat__brand span:not(.fb-chat__brandicon) { font-size: 12px; opacity: 0.85; }
+.fb-chat__brandicon { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; background: rgba(255, 255, 255, 0.16); padding: 0; }
+.fb-chat__group { padding: 12px 12px 4px; display: flex; flex-direction: column; gap: 8px; }
+.fb-chat__grouphead { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; }
+.fb-chat__grouphead > span:first-child { flex: 1; }
+.fb-chat__add { margin-left: auto; }
+.fb-chat__count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-text); font-size: 11.5px; font-weight: 700; text-align: center; }
+.fb-chat__count[data-zero] { background: var(--surface-3); color: var(--text-3); }
+.fb-chat__search { display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 36px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); color: var(--text-3); }
+.fb-chat__search input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 13.5px; outline: none; }
+.fb-chat__search:focus-within { outline: 2px solid var(--primary); outline-offset: 1px; }
+.fb-chat__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.fb-chat__none { margin: 4px 6px; font-size: 12.5px; color: var(--text-3); }
+.fb-chat__item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: transparent; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.fb-chat__item:hover { background: var(--surface-2); }
+.fb-chat__item[aria-current="true"] { background: var(--surface-3); font-weight: 600; }
+.fb-chat__icon { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; color: var(--text-3); padding: 0; }
+.fb-chat__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-chat__avatar { position: relative; display: inline-flex; flex: none; }
+.fb-chat__dot { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 999px; border: 2px solid var(--surface); background: var(--text-3); }
+.fb-chat__dot[data-presence="online"] { background: #22a559; }
+.fb-chat__dot[data-presence="away"] { background: #e09b1a; }
+.fb-chat__me { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--border); }
+.fb-chat__me strong { display: block; font-size: 13.5px; }
+.fb-chat__me span:not(.fb-chat__avatar) { font-size: 12px; color: var(--text-3); }
+.fb-chat__main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.fb-chat__top { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.fb-chat__topicon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 999px; background: var(--primary); color: #fff; flex: none; padding: 0; }
+.fb-chat__topmain { flex: 1; min-width: 0; }
+.fb-chat__topmain h2 { margin: 0; font-size: 18px; }
+.fb-chat__topmain p { margin: 2px 0 0; font-size: 12.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-chat__tools { display: flex; align-items: center; gap: 4px; }
+.fb-chat__find { padding: 8px 16px; border-bottom: 1px solid var(--border); }
+.fb-chat__scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); }
+.fb-chat__day { display: flex; justify-content: center; margin: 10px 0 2px; }
+.fb-chat__day span { padding: 4px 16px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); font-size: 12.5px; color: var(--text-2); }
+.fb-chat__msg { display: flex; gap: 10px; align-items: flex-start; max-width: 78%; }
+.fb-chat__msg[data-mine] { align-self: flex-end; flex-direction: row-reverse; }
+.fb-chat__bubble { min-width: 0; padding: 8px 12px 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); }
+.fb-chat__msg[data-mine] .fb-chat__bubble { background: var(--primary-soft); border-color: transparent; }
+.fb-chat__who { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.fb-chat__who time { margin-left: auto; font-size: 11.5px; color: var(--text-3); }
+.fb-chat__city { font-size: 11.5px; color: var(--text-3); }
+.fb-chat__react { opacity: 0; width: 24px; height: 24px; }
+.fb-chat__bubble:hover .fb-chat__react, .fb-chat__react:focus-visible { opacity: 1; }
+.fb-chat__bubble p { margin: 4px 0 0; font-size: 14.5px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+.fb-chat__mention { color: var(--primary-text); background: var(--primary-soft); border-radius: 4px; padding: 0 3px; font-weight: 600; }
+.fb-chat__reactions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.fb-chat__reaction { padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); font: inherit; font-size: 12.5px; cursor: pointer; }
+.fb-chat__reaction[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); }
+.fb-chat__files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.fb-chat__file { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 8px; background: var(--surface-3); font-size: 12.5px; }
+.fb-chat__file button { border: 0; background: transparent; color: inherit; cursor: pointer; font-size: 14px; line-height: 1; }
+.fb-chat__card { margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border); border-left: 3px solid var(--primary); border-radius: 10px; background: var(--surface); min-width: 240px; }
+.fb-chat__card[data-denied] { border-left-color: var(--orange-text, #b45309); display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--text-2); }
+.fb-chat__cardhead { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+.fb-chat__cardhead a { color: var(--primary-text); text-decoration: none; }
+.fb-chat__cardhead a:hover { text-decoration: underline; }
+.fb-chat__card dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; margin: 8px 0 0; font-size: 13px; }
+.fb-chat__card dt { color: var(--text-3); }
+.fb-chat__card dd { margin: 0; }
+.fb-chat__composer { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 14px; border-top: 1px solid var(--border); background: var(--surface); }
+.fb-chat__input { resize: none; min-height: 56px; }
+.fb-chat__actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fb-chat__suggest { position: absolute; left: 16px; bottom: calc(100% - 4px); z-index: 5; list-style: none; margin: 0; padding: 4px; min-width: 260px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14); }
+.fb-chat__suggest button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; }
+.fb-chat__suggest button:hover, .fb-chat__suggest button:focus-visible { background: var(--surface-3); }
+.fb-chat__suggest span { margin-left: auto; font-size: 12px; color: var(--text-3); }
+.fb-chat__members { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.fb-chat__members li { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.fb-chat__members span:not(.fb-badge):not(.fb-avatar) { color: var(--text-3); font-size: 12.5px; flex: 1; }
+
+/* Mail (F6.22) ----------------------------------------------------------------------------------------------------------------------- */
+.fb-mail { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.fb-mail__list, .fb-mail__pane { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 12px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.fb-mail__list ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.fb-mail__row { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 10px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.fb-mail__row:hover { background: var(--surface-2); }
+.fb-mail__row[aria-current="true"] { background: var(--surface-3); }
+.fb-mail__row[data-unread] .fb-mail__subject, .fb-mail__row[data-unread] strong { font-weight: 700; }
+.fb-mail__top { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; }
+.fb-mail__top strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.fb-mail__top time { font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
+.fb-mail__subject { font-size: 14px; font-weight: 500; }
+.fb-mail__preview { font-size: 12.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-mail__badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.fb-mail__head h2 { margin: 0; font-size: 20px; }
+.fb-mail__head p { margin: 4px 0 0; font-size: 13px; color: var(--text-2); }
+.fb-mail__link { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: 13px; flex-wrap: wrap; }
+.fb-mail__picker { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+.fb-mail__body { margin: 0; font: inherit; font-size: 14.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.fb-mail__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.fb-mail__compose { display: flex; flex-direction: column; gap: 12px; min-width: min(560px, 80vw); }
+
+/* Video Conference (F6.23) ----------------------------------------------------------------------------------------------------------- */
+.fb-vid__start { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+.fb-vid__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.fb-vid__row { display: flex; align-items: center; gap: 12px; padding: 14px 4px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.fb-vid__icon { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--blue-soft); color: var(--blue); display: flex; align-items: center; justify-content: center; padding: 0; }
+.fb-vid__main { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--text-3); }
+.fb-vid__main strong { font-size: 15px; color: var(--text); }
+.fb-vid__actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.fb-vid__attendees { display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; margin: 0; }
+.fb-vid__attendees legend { padding: 0 4px; font-size: 13px; font-weight: 600; }
+.fb-vid__when { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+
+/* Phones: one pane at a time in Chat; Mail stacks ------------------------------------------------------------------------------------ */
+@media (max-width: 860px) {
+  .fb-chat { grid-template-columns: minmax(0, 1fr); height: calc(100vh - 200px); }
+  .fb-chat__main { display: none; }
+  .fb-comm[data-conv-open] .fb-chat__side { display: none; }
+  .fb-comm[data-conv-open] .fb-chat__main { display: flex; }
+  .fb-comm__back { display: inline-flex; }
+  .fb-chat__msg { max-width: 94%; }
+  .fb-mail { grid-template-columns: minmax(0, 1fr); }
+  .fb-mail__compose { min-width: 0; }
+}

@@ -12,6 +12,10 @@ export type NavIcon =
   | "companies"
   | "contacts"
   | "conversations"
+  | "communication"
+  | "mail"
+  | "chat"
+  | "video"
   | "handoffs"
   | "renewals"
   | "payments"
@@ -39,6 +43,10 @@ export interface NavSection {
   items: NavItem[];
   /** The bottom group ("Insights and settings"). */
   bottom?: boolean;
+  /** A dropdown group (the Communication group, F6.20): the label is a button that opens and closes its links. */
+  collapsible?: boolean;
+  /** The icon beside a collapsible group's label. */
+  icon?: NavIcon;
 }
 
 export interface QuickCreateItem {
@@ -53,6 +61,17 @@ export function filterNav(sections: NavSection[], query: string): NavSection[] {
   const q = query.trim().toLowerCase();
   if (!q) return sections;
   return sections.map((s) => ({ ...s, items: s.items.filter((i) => i.label.toLowerCase().includes(q)) })).filter((s) => s.items.length > 0);
+}
+
+/** True when any link of the group is the current page, so a collapsible group opens by itself on the page it holds. */
+export function sectionHasActive(section: NavSection, base: string, pathname: string | null): boolean {
+  return section.items.some((i) => isActivePath(i, base, pathname));
+}
+
+/** The count on a collapsible group's header: the sum of its links' badges (nothing when none has one). */
+export function sectionBadge(section: NavSection): number | undefined {
+  const total = section.items.reduce((n, i) => n + (i.badge ?? 0), 0);
+  return total > 0 ? total : undefined;
 }
 
 export function isActivePath(item: NavItem, base: string, pathname: string | null): boolean {
