@@ -70,7 +70,7 @@ function pageFor(look: LookInput, dark: boolean): { hex: string; dark: boolean }
   if (page.hex && (page.dark === dark || look.locked)) return { hex: page.hex, dark: page.dark };
   const swap = findPageColour(dark ? look.toggle.dark : look.toggle.light);
   if (swap?.hex) return { hex: swap.hex, dark: swap.dark };
-  return dark ? { hex: "#1C2120", dark: true } : { hex: "#FFFFFF", dark: false };
+  return dark ? { hex: "#0F1512", dark: true } : { hex: "#FAF9F7", dark: false };
 }
 
 export function schemeLook(look: LookInput, dark: boolean): SchemeLook {

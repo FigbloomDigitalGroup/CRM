@@ -1,8 +1,9 @@
 "use client";
 
-import { LogOut, Menu as MenuIcon, Moon, Plus, Sun, Users } from "lucide-react";
+import { ChevronDown, LogOut, Menu as MenuIcon, Moon, Plus, Sun, User, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { BrandMark } from "@/app/_shared/BrandMark";
 import { Avatar, Banner } from "../components/basics";
 import { Menu, Popover, type MenuItem } from "../components/overlays";
 import { useToast } from "../components/toast";
@@ -13,16 +14,16 @@ import type { QuickCreateItem } from "./navModel";
 /* Quick create ---------------------------------------------------------------------------------------------------------------- */
 
 /**
- * The "+ New" menu: only what this person may create. Inside an archived or read-only record the whole menu is disabled with the reason
- * rather than disappearing, so the person is not left wondering where it went.
+ * The round "+" at the right of the bar (named "New" for assistive technology, "Add new" on hover): only what this person may create. Inside an
+ * archived or read-only record it is disabled with the reason rather than disappearing, so the person is not left wondering where it went.
  */
 export function QuickCreate({ orgSlug, items, disabledReason }: { orgSlug: string; items: QuickCreateItem[]; disabledReason?: string }) {
   if (items.length === 0) return null;
   if (disabledReason) {
     return (
-      <button type="button" className="fb-btn fb-btn--primary" aria-disabled="true" title={disabledReason}>
-        <Plus size={16} aria-hidden="true" /> New
-        <span className="fb-sr-only"> (unavailable: {disabledReason})</span>
+      <button type="button" className="fb-roundbtn fb-roundbtn--primary" aria-disabled="true" title={disabledReason}>
+        <Plus size={18} strokeWidth={2.2} aria-hidden="true" />
+        <span className="fb-sr-only">New (unavailable: {disabledReason})</span>
       </button>
     );
   }
@@ -30,13 +31,10 @@ export function QuickCreate({ orgSlug, items, disabledReason }: { orgSlug: strin
   return (
     <Menu
       label="New"
-      trigger={
-        <>
-          <Plus size={16} aria-hidden="true" /> New
-        </>
-      }
+      align="end"
+      trigger={<Plus size={18} strokeWidth={2.2} aria-hidden="true" />}
       items={menu}
-      triggerClassName="fb-btn fb-btn--primary"
+      triggerClassName="fb-roundbtn fb-roundbtn--primary"
     />
   );
 }
@@ -50,8 +48,8 @@ export function ThemeSwitch() {
   const dark = appearance.scheme === "dark";
   const label = appearance.locked ? "Your organisation has set the colours, so light and dark cannot be switched" : dark ? "Switch to light" : "Switch to dark";
   return (
-    <button type="button" className="fb-iconbtn" aria-label={label} title={label} aria-disabled={appearance.locked || undefined} onClick={appearance.toggleScheme}>
-      {dark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+    <button type="button" className="fb-roundbtn" aria-label={label} title={label} aria-disabled={appearance.locked || undefined} onClick={appearance.toggleScheme}>
+      {dark ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
     </button>
   );
 }
@@ -60,13 +58,22 @@ export function ThemeSwitch() {
 
 export interface IdentityInfo {
   name: string;
+  email?: string | null;
   roleName: string;
+  /** The role's workspace label ("Sales", "Finance"), shown beside the sign-in time. Falls back to the role name. */
+  workspaceLabel?: string | null;
   organisation: string;
+  /** The organisation's logo, when it has uploaded one. Without it the tile shows the Figbloom mark. */
+  logoUrl?: string | null;
   avatarUrl: string | null;
   /** "Tuesday, 27 October, 10:04", written in the person's own zone and hour format. */
   signedInLocal: string | null;
+  /** Just the clock time, "10:04", shown under the organisation name. */
+  signedInTime?: string | null;
   device: string | null;
   place: string | null;
+  /** "7 h 52 min left", worked out when the page was built. */
+  sessionLeft?: string | null;
   timeZone: string | null;
   /** The organisation's zone, when it differs from the person's. */
   organisationTimeZone: string | null;
@@ -74,26 +81,24 @@ export interface IdentityInfo {
   preferencesHref: string;
 }
 
+function OrgTile({ identity, size }: { identity: IdentityInfo; size: number }) {
+  return (
+    <span className="fb-orgtile" style={{ width: size, height: size, borderRadius: size >= 44 ? 12 : 10 }} aria-hidden="true">
+      {identity.logoUrl ? <img src={identity.logoUrl} alt="" /> : <BrandMark className="fb-orgtile__mark" idSuffix={`-org${size}`} />}
+    </span>
+  );
+}
+
 /**
- * Who you are, where you are and since when (TB1 to TB3): avatar or initials, name, role, organisation, the sign-in time and time zone. The
- * popover has the profile and preferences link, sign out, sign out other devices and, while Figbloom Support is looking at the organisation, a notice.
- * At phone width the popover becomes a bottom sheet (CSS) and the text collapses to the avatar.
+ * Where you are and since when (TB1 and TB2), at the left of the bar: the organisation's tile and name, the workspace and the sign-in time.
+ * Opens the organisation and session card: who you are here, device, session time left, time zone, and the links to profile and to signing
+ * out the other devices. At phone width the card becomes a bottom sheet (CSS) and the text collapses to the tile.
  */
-export function IdentityBlock({ identity }: { identity: IdentityInfo }) {
+export function OrgIdentity({ identity }: { identity: IdentityInfo }) {
   const api = useApi();
-  const router = useRouter();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
 
-  async function signOut() {
-    setBusy(true);
-    try {
-      await api.call("logout", { params: {} });
-    } finally {
-      router.push("/login");
-      router.refresh();
-    }
-  }
   async function signOutOthers() {
     setBusy(true);
     try {
@@ -106,62 +111,155 @@ export function IdentityBlock({ identity }: { identity: IdentityInfo }) {
     }
   }
 
+  const label = identity.workspaceLabel || identity.roleName;
+  return (
+    <div className="fb-orgblock">
+      <Popover
+        label="Organisation and session"
+        align="start"
+        className="fb-orgpop"
+        triggerClassName="fb-orgblock__trigger"
+        trigger={
+          <>
+            <OrgTile identity={identity} size={36} />
+            <span className="fb-orgblock__text">
+              <span className="fb-orgblock__name">{identity.organisation}</span>
+              <span className="fb-orgblock__meta">
+                {label}
+                {identity.signedInTime ? ` · Signed in ${identity.signedInTime}` : ""}
+              </span>
+            </span>
+          </>
+        }
+      >
+        {(close) => (
+          <div>
+            <div className="fb-orgpop__head">
+              <OrgTile identity={identity} size={44} />
+              <div>
+                <div className="fb-orgpop__name">{identity.organisation}</div>
+                <div className="fb-orgpop__role">
+                  You’re <strong>{identity.roleName}</strong> here
+                </div>
+              </div>
+            </div>
+            {identity.supportNotice ? (
+              <div className="fb-orgpop__notice">
+                <Banner tone="info" icon={<Users size={16} />}>
+                  {identity.supportNotice}
+                </Banner>
+              </div>
+            ) : null}
+            <dl>
+              {identity.signedInLocal ? (
+                <>
+                  <dt>Signed in</dt>
+                  <dd>{identity.signedInLocal}</dd>
+                </>
+              ) : null}
+              {identity.device ? (
+                <>
+                  <dt>Device</dt>
+                  <dd>{[identity.device, identity.place].filter(Boolean).join(", ")}</dd>
+                </>
+              ) : null}
+              {identity.sessionLeft ? (
+                <>
+                  <dt>Session</dt>
+                  <dd>{identity.sessionLeft}</dd>
+                </>
+              ) : null}
+              {identity.timeZone ? (
+                <>
+                  <dt>Time zone</dt>
+                  <dd className={identity.organisationTimeZone ? "fb-orgpop__warn" : undefined}>
+                    {identity.timeZone}
+                    {identity.organisationTimeZone ? ` (organisation: ${identity.organisationTimeZone})` : ""}
+                  </dd>
+                </>
+              ) : null}
+            </dl>
+            <div className="fb-orgpop__links">
+              <a className="fb-menuitem" href={identity.preferencesHref} onClick={close}>
+                <User size={15} aria-hidden="true" /> Profile and preferences
+              </a>
+              <button type="button" className="fb-menuitem" aria-disabled={busy || undefined} onClick={signOutOthers}>
+                <LogOut size={15} aria-hidden="true" /> Sign out other devices
+              </button>
+            </div>
+          </div>
+        )}
+      </Popover>
+    </div>
+  );
+}
+
+/**
+ * Your name at the right of the bar: a round chip with your initial, name and role. Opens your card (name, email, role), the profile link, the
+ * light/dark switch and Sign out.
+ */
+export function UserMenu({ identity }: { identity: IdentityInfo }) {
+  const api = useApi();
+  const router = useRouter();
+  const appearance = useAppearanceOptional();
+  const [busy, setBusy] = useState(false);
+
+  async function signOut() {
+    setBusy(true);
+    try {
+      await api.call("logout", { params: {} });
+    } finally {
+      router.push("/login");
+      router.refresh();
+    }
+  }
+
+  const dark = appearance?.scheme === "dark";
+  const themeLocked = Boolean(appearance?.locked);
   return (
     <Popover
       label={`Account: ${identity.name}`}
       align="end"
-      className="fb-identity-pop"
-      triggerClassName="fb-identity"
+      className="fb-usermenu"
+      triggerClassName="fb-userchip"
       trigger={
         <>
-          <Avatar name={identity.name} src={identity.avatarUrl} size={36} />
-          <span className="fb-identity__text">
-            <span className="fb-identity__name">{identity.name}</span>
-            <span className="fb-identity__meta">
-              {identity.roleName} · {identity.organisation}
-            </span>
+          <span className="fb-userchip__dot" aria-hidden="true">
+            {identity.name.trim().charAt(0).toUpperCase() || "?"}
           </span>
+          <span className="fb-userchip__text">
+            <span className="fb-userchip__name">{identity.name}</span>
+            <span className="fb-userchip__role">{identity.roleName}</span>
+          </span>
+          <ChevronDown size={15} aria-hidden="true" />
         </>
       }
     >
       {(close) => (
         <div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", padding: 8 }}>
-            <Avatar name={identity.name} src={identity.avatarUrl} size={44} />
-            <div>
-              <strong>{identity.name}</strong>
-              <div className="fb-help">{identity.roleName}</div>
+          <div className="fb-usermenu__head">
+            <div className="fb-usermenu__name">
+              <Avatar name={identity.name} src={identity.avatarUrl} size={28} /> {identity.name}
             </div>
+            {identity.email ? <div className="fb-usermenu__email">{identity.email}</div> : null}
+            <span className="fb-usermenu__role">{identity.roleName}</span>
           </div>
-          <dl>
-            <dt>Organisation</dt>
-            <dd>{identity.organisation}</dd>
-            {identity.signedInLocal ? (
-              <>
-                <dt>Signed in</dt>
-                <dd>{identity.signedInLocal}</dd>
-              </>
-            ) : null}
-            {identity.timeZone ? (
-              <>
-                <dt>Time zone</dt>
-                <dd>
-                  {identity.timeZone}
-                  {identity.organisationTimeZone ? ` (organisation: ${identity.organisationTimeZone})` : ""}
-                </dd>
-              </>
-            ) : null}
-            {identity.device ? (
-              <>
-                <dt>Device</dt>
-                <dd>{[identity.device, identity.place].filter(Boolean).join(" · ")}</dd>
-              </>
-            ) : null}
-          </dl>
-          {identity.supportNotice ? <div style={{ marginBottom: 8 }}><Banner tone="info" icon={<Users size={16} />}>{identity.supportNotice}</Banner></div> : null}
-          <a className="fb-menuitem" href={identity.preferencesHref} onClick={close}>Profile and preferences</a>
-          <button type="button" className="fb-menuitem" aria-disabled={busy || undefined} onClick={signOutOthers}>Sign out other devices</button>
-          <hr style={{ border: 0, borderTop: "1px solid var(--border)", margin: "6px 0" }} />
+          <a className="fb-menuitem" href={identity.preferencesHref} onClick={close}>
+            <User size={16} aria-hidden="true" /> Profile and preferences
+          </a>
+          {appearance ? (
+            <button
+              type="button"
+              className="fb-menuitem"
+              aria-disabled={themeLocked || undefined}
+              title={themeLocked ? "Your organisation has set the colours, so light and dark cannot be switched" : undefined}
+              onClick={() => {
+                if (!themeLocked) appearance.toggleScheme();
+              }}
+            >
+              {dark ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />} {dark ? "Light mode" : "Dark mode"}
+            </button>
+          ) : null}
           <button type="button" className="fb-menuitem fb-menuitem--danger" aria-disabled={busy || undefined} onClick={signOut}>
             <LogOut size={16} aria-hidden="true" /> Sign out
           </button>
@@ -174,19 +272,20 @@ export function IdentityBlock({ identity }: { identity: IdentityInfo }) {
 /* The bar ---------------------------------------------------------------------------------------------------------------------- */
 
 export function TopBar({
-  dateLabel,
+  orgIdentity,
   search,
   bell,
   quickCreate,
-  identity,
+  userMenu,
   organisationSwitcher,
   onOpenNav,
 }: {
-  dateLabel: string;
+  /** The organisation and session block at the left. */
+  orgIdentity: ReactNode;
   search: ReactNode;
   bell: ReactNode;
   quickCreate: ReactNode;
-  identity: ReactNode;
+  userMenu: ReactNode;
   /** The switcher slot: present in the layout, empty until V1.1 turns it on. */
   organisationSwitcher?: ReactNode;
   onOpenNav: () => void;
@@ -196,14 +295,14 @@ export function TopBar({
       <button type="button" className="fb-iconbtn fb-sheet-trigger" aria-label="Open navigation" onClick={onOpenNav}>
         <MenuIcon size={20} aria-hidden="true" />
       </button>
-      <span className="fb-topbar__date">{dateLabel}</span>
+      {orgIdentity}
       <div className="fb-topbar__search">{search}</div>
       <div className="fb-topbar__right">
         {organisationSwitcher}
         {quickCreate}
         {bell}
         <ThemeSwitch />
-        {identity}
+        {userMenu}
       </div>
     </header>
   );

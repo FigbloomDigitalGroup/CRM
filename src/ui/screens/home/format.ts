@@ -14,7 +14,7 @@ export function ago(iso: string | null | undefined, now: number = Date.now()): s
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
-/** "Today, 3:00 PM", "Tomorrow", "2 days overdue": the due wording the design uses, in the person's own time zone. */
+/** The design's due wording: "Overdue · 9 Oct, 3:17 PM", "Today · 3:00 PM", "Tomorrow, 10:00 AM", "21 Oct, 10:00 AM", in the person's own time zone. */
 export function dueLabel(iso: string | null | undefined, opts: { now?: number; timeZone?: string | null; hour12?: boolean } = {}): { text: string; state: "overdue" | "today" | "later" | "none" } {
   if (!iso) return { text: "No due date", state: "none" };
   const now = opts.now ?? Date.now();
@@ -22,11 +22,12 @@ export function dueLabel(iso: string | null | undefined, opts: { now?: number; t
   const day = (t: number) => new Date(t).toLocaleDateString("en-CA", { timeZone: tz });
   const due = Date.parse(iso);
   const dayDiff = Math.round((Date.parse(day(due)) - Date.parse(day(now))) / 86_400_000);
-  const time = new Date(due).toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: opts.hour12 ?? true, timeZone: tz });
-  if (dayDiff < 0) return { text: dayDiff === -1 ? "Overdue · yesterday" : `Overdue · ${-dayDiff} days`, state: "overdue" };
-  if (dayDiff === 0) return { text: due < now ? `Overdue · today ${time}` : `Today ${time}`, state: due < now ? "overdue" : "today" };
-  if (dayDiff === 1) return { text: `Tomorrow ${time}`, state: "later" };
-  return { text: new Date(due).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: tz }), state: "later" };
+  const time = new Date(due).toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: opts.hour12 ?? true, timeZone: tz }).toUpperCase();
+  const short = new Date(due).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: tz });
+  if (due < now) return { text: `Overdue · ${short}, ${time}`, state: "overdue" };
+  if (dayDiff === 0) return { text: `Today · ${time}`, state: "today" };
+  if (dayDiff === 1) return { text: `Tomorrow, ${time}`, state: "later" };
+  return { text: `${short}, ${time}`, state: "later" };
 }
 
 /** Whole-number money without a currency we do not know here: the API formats nothing, the organisation's currency comes from the record. */

@@ -1,6 +1,9 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { MobileFrame } from "../screens/mobile/MobileFrame";
+import { PwaClient } from "../screens/mobile/PwaClient";
 import { OfflineBanner } from "../components/states";
 import { ToastProvider } from "../components/toast";
 import { connectivity, watchBrowserConnectivity } from "../data/connectivity";
@@ -8,7 +11,8 @@ import { ApiProvider, useApi } from "../data/hooks";
 import { copy } from "../copy";
 import { SessionGuard, type SessionTimes } from "./SessionGuard";
 import { Sidebar } from "./Sidebar";
-import { IdentityBlock, QuickCreate, TopBar, type IdentityInfo } from "./TopBar";
+import { SidebarUser } from "./SidebarUser";
+import { OrgIdentity, QuickCreate, TopBar, UserMenu, type IdentityInfo } from "./TopBar";
 import type { NavSection, QuickCreateItem } from "./navModel";
 
 /** The offline banner and the slow-connection bar, driven by the connectivity service (shared with the offline queue, F4.12). */
@@ -33,7 +37,6 @@ export interface AppShellProps {
   sections: NavSection[];
   quickCreate: QuickCreateItem[];
   identity: IdentityInfo;
-  dateLabel: string;
   initialSidebarCollapsed: boolean;
   session: SessionTimes | null;
   /** Server-rendered pieces the shell lays out: the global search box and the notification bell. */
@@ -44,7 +47,7 @@ export interface AppShellProps {
   children: ReactNode;
 }
 
-function Shell({ orgSlug, sections, quickCreate, identity, dateLabel, initialSidebarCollapsed, session, search, bell, organisationSwitcher, children }: AppShellProps) {
+function Shell({ orgSlug, sections, quickCreate, identity, initialSidebarCollapsed, session, search, bell, organisationSwitcher, children }: AppShellProps) {
   const api = useApi();
   const [navOpen, setNavOpen] = useState(false);
 
@@ -63,16 +66,17 @@ function Shell({ orgSlug, sections, quickCreate, identity, dateLabel, initialSid
         sections={sections}
         initialCollapsed={initialSidebarCollapsed}
         onCollapsedChange={saveCollapsed}
+        footer={<SidebarUser name={identity.name} roleName={identity.roleName} />}
         mobileOpen={navOpen}
         onMobileClose={() => setNavOpen(false)}
       />
       <div className="fb-main">
         <TopBar
-          dateLabel={dateLabel}
+          orgIdentity={<OrgIdentity identity={identity} />}
           search={search}
           bell={bell}
           quickCreate={<QuickCreate orgSlug={orgSlug} items={quickCreate} />}
-          identity={<IdentityBlock identity={identity} />}
+          userMenu={<UserMenu identity={identity} />}
           organisationSwitcher={organisationSwitcher}
           onOpenNav={() => setNavOpen(true)}
         />
@@ -92,8 +96,25 @@ export function AppShell(props: AppShellProps) {
   return (
     <ApiProvider>
       <ToastProvider>
-        <Shell {...props} />
+        <ShellOrPhone {...props} />
+        {/* The service worker, install offer, offline queue sender and the phone redirect (F4.12, FIG-791): signed-in app only. */}
+        <PwaClient />
       </ToastProvider>
     </ApiProvider>
   );
+}
+
+/** Every route under /o/{org}/m has its own phone frame (M9, F4.10): the desktop sidebar and top bar are not drawn there. */
+function ShellOrPhone(props: AppShellProps) {
+  const pathname = usePathname() ?? "";
+  const phoneRoot = `/o/${props.orgSlug}/m`;
+  if (pathname === phoneRoot || pathname.startsWith(`${phoneRoot}/`)) {
+    return (
+      <>
+        <MobileFrame identity={props.identity}>{props.children}</MobileFrame>
+        {props.session ? <SessionGuard initial={props.session} /> : null}
+      </>
+    );
+  }
+  return <Shell {...props} />;
 }

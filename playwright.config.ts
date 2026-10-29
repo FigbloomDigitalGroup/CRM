@@ -28,7 +28,11 @@ export default defineConfig({
     trace: "on-first-retry",
   },
 
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", testIgnore: /mobile-.*\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    // M9 (F4.10 to F4.12, FIG-791): the phone journeys run on a mid-range Android profile at 375 px wide with touch.
+    { name: "mobile-chrome", testMatch: /mobile-.*\.spec\.ts/, use: { ...devices["Pixel 5"], viewport: { width: 375, height: 812 } } },
+  ],
 
   // Reuses an already-running server locally (start one with `npm run
   // dev` or `npm start` on port 3100 yourself) so repeated local runs
@@ -63,6 +67,9 @@ export default defineConfig({
       // secret; nothing here is a real secret.
       STORAGE_DRIVER: "local",
       STORAGE_SIGNING_SECRET: "figbloom_e2e_only_storage_signing_secret",
+      // The migration wizard runs its phases as background jobs; the Settings migration spec asks /api/cron/jobs to run them (e2e/settings-migration.spec.ts).
+      // A throwaway value for this server only.
+      CRON_SECRET: "figbloom_e2e_only_cron_secret",
     },
   },
 });

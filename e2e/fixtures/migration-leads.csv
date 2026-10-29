@@ -1,0 +1,7 @@
+contactName,contactEmail,contactPhone,company,leadStatus,leadSource,serviceInterest,temperature,notes,ownerEmail,tags,createdAt
+Wanjiku Mwangi __SUFFIX__,wanjiku.__SUFFIX__@example.test,__PHONE1__,Mwangi Traders __SUFFIX__,New,,,WARM,Good row one,,,
+Otieno Odhiambo __SUFFIX__,otieno.__SUFFIX__@example.test,__PHONE2__,Odhiambo Ltd __SUFFIX__,New,,,HOT,Good row two,,,
+Bad Email __SUFFIX__,not-an-email,__PHONE3__,Bad Email Co __SUFFIX__,New,,,,Bad row: the email is not valid,,,
+Unknown Owner __SUFFIX__,owner.__SUFFIX__@example.test,__PHONE4__,Owner Co __SUFFIX__,New,,,,Bad row: nobody has this owner email,nobody.here@example.test,,
+Dup Row __SUFFIX__,otieno.__SUFFIX__@example.test,__PHONE5__,Odhiambo Ltd __SUFFIX__,New,,,,Duplicate of row two,,,
+Good Six __SUFFIX__,six.__SUFFIX__@example.test,__PHONE6__,Six Co __SUFFIX__,New,,,COLD,Good row six,,,

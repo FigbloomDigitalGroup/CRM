@@ -83,7 +83,7 @@ describe("organisation look", () => {
       showLogoOnClientPages: false,
       allowPersonalisation: true,
     });
-    expect(view.colours.accent).toBe("#1F7A4D");
+    expect(view.colours.accent).toBe("#275B3A");
   });
 
   it("is changed by Management and read by everyone, with an audit trail", async () => {

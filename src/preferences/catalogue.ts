@@ -17,16 +17,16 @@ export interface ThemeDef {
 }
 
 export const THEMES: readonly ThemeDef[] = [
-  { key: "FOREST", label: "Forest", sidebar: "#14342B", accent: "#1F7A4D", highlight: "#E3F1E8" },
-  { key: "OCEAN", label: "Ocean", sidebar: "#123A5C", accent: "#1D6AA0", highlight: "#E1EEF8" },
-  { key: "MIDNIGHT", label: "Midnight", sidebar: "#14172E", accent: "#3F51B5", highlight: "#E6E8F7" },
-  { key: "AUBERGINE", label: "Aubergine", sidebar: "#3B1F3F", accent: "#843B89", highlight: "#F0E4F1" },
-  { key: "TEAL", label: "Teal", sidebar: "#0F4A4C", accent: "#0E7C75", highlight: "#DFF1EF" },
-  { key: "ROSEWOOD", label: "Rosewood", sidebar: "#4A1F28", accent: "#A33A4F", highlight: "#F5E3E7" },
-  { key: "CHARCOAL_AMBER", label: "Charcoal and amber", sidebar: "#26282B", accent: "#9A5700", highlight: "#FBEBD3" },
-  { key: "MIST", label: "Mist", sidebar: "#44546A", accent: "#3A6AA3", highlight: "#E8EEF5" },
-  { key: "SAND", label: "Sand", sidebar: "#5A4630", accent: "#8A5A1F", highlight: "#F3EADB" },
-  { key: "SKY", label: "Sky", sidebar: "#2B5C8A", accent: "#1A67AB", highlight: "#E3F0FA" },
+  { key: "FOREST", label: "Forest", sidebar: "#203E2A", accent: "#275B3A", highlight: "#E9F1EB" },
+  { key: "OCEAN", label: "Ocean", sidebar: "#14365C", accent: "#1F5FA3", highlight: "#E1EEF8" },
+  { key: "MIDNIGHT", label: "Midnight", sidebar: "#151A2E", accent: "#4A5BD6", highlight: "#E6E8F7" },
+  { key: "AUBERGINE", label: "Aubergine", sidebar: "#3A1F3D", accent: "#7A3E7F", highlight: "#F0E4F1" },
+  { key: "TEAL", label: "Teal", sidebar: "#0F3B3E", accent: "#16777A", highlight: "#DFF1EF" },
+  { key: "ROSEWOOD", label: "Rosewood", sidebar: "#4A1F24", accent: "#9C3B45", highlight: "#F5E3E7" },
+  { key: "CHARCOAL_AMBER", label: "Charcoal and amber", sidebar: "#232323", accent: "#4D4D4D", highlight: "#FBEBD3" },
+  { key: "MIST", label: "Mist", sidebar: "#3E4A52", accent: "#4F6B7A", highlight: "#E8EEF5" },
+  { key: "SAND", label: "Sand", sidebar: "#5A4632", accent: "#8A6A3F", highlight: "#F3EADB" },
+  { key: "SKY", label: "Sky", sidebar: "#1C4E6E", accent: "#2A7BB0", highlight: "#E3F0FA" },
 ];
 
 export interface PageColourDef {
@@ -38,15 +38,15 @@ export interface PageColourDef {
 }
 
 export const PAGE_COLOURS: readonly PageColourDef[] = [
-  { key: "WHITE", label: "White", hex: "#FFFFFF", dark: false },
-  { key: "COOL_GREY", label: "Cool grey", hex: "#F2F4F7", dark: false },
-  { key: "WARM_SAND", label: "Warm sand", hex: "#F7F2E8", dark: false },
-  { key: "MINT", label: "Mint", hex: "#EBF6F0", dark: false },
-  { key: "SKY", label: "Sky", hex: "#EAF3FB", dark: false },
-  { key: "LAVENDER", label: "Lavender", hex: "#F2EEFA", dark: false },
-  { key: "BLUSH", label: "Blush", hex: "#FBEEF0", dark: false },
-  { key: "DARK", label: "Dark", hex: "#1C2120", dark: true },
-  { key: "NAVY_NIGHT", label: "Navy night", hex: "#0E1A2B", dark: true },
+  { key: "WHITE", label: "White", hex: "#FAF9F7", dark: false },
+  { key: "COOL_GREY", label: "Cool grey", hex: "#F3F5F7", dark: false },
+  { key: "WARM_SAND", label: "Warm sand", hex: "#F6F1E8", dark: false },
+  { key: "MINT", label: "Mint", hex: "#EFF6F1", dark: false },
+  { key: "SKY", label: "Sky", hex: "#EEF4FA", dark: false },
+  { key: "LAVENDER", label: "Lavender", hex: "#F3F1FA", dark: false },
+  { key: "BLUSH", label: "Blush", hex: "#FAF1F1", dark: false },
+  { key: "DARK", label: "Dark", hex: "#0F1512", dark: true },
+  { key: "NAVY_NIGHT", label: "Navy night", hex: "#0C1220", dark: true },
   { key: "BLACK", label: "Black", hex: "#000000", dark: true },
   { key: "MATCH_DEVICE", label: "Match my device", hex: null, dark: false },
 ];

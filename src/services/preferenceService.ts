@@ -395,8 +395,8 @@ export async function updateMyPreferences(
       await requireFeature(ctx.organizationId, OWN_COLOURS_TOGGLE);
       const theme = (data.theme as string | undefined) ?? row?.theme ?? org.defaultTheme;
       const page = (data.pageColour as string | undefined) ?? row?.pageColour ?? org.defaultPageColour;
-      const light = findPageColour((data.toggleLightPage as string | undefined) ?? row?.toggleLightPage ?? BRAND_TOGGLE_LIGHT)?.hex ?? "#FFFFFF";
-      const dark = findPageColour((data.toggleDarkPage as string | undefined) ?? row?.toggleDarkPage ?? BRAND_TOGGLE_DARK)?.hex ?? "#1C2120";
+      const light = findPageColour((data.toggleLightPage as string | undefined) ?? row?.toggleLightPage ?? BRAND_TOGGLE_LIGHT)?.hex ?? "#FAF9F7";
+      const dark = findPageColour((data.toggleDarkPage as string | undefined) ?? row?.toggleDarkPage ?? BRAND_TOGGLE_DARK)?.hex ?? "#0F1512";
       const matchDevice = findPageColour(page)?.hex === null;
       // "Match my device" can land on either side of the switch, so both must stay readable.
       const bases = matchDevice && input.ownColours.page === undefined ? [light, dark] : [light];

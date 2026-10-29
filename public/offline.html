@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Offline · Figbloom CRM</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #faf9f7; color: #1a1c19; }
+  main { max-width: 360px; text-align: center; }
+  h1 { font-size: 22px; margin: 16px 0 8px; letter-spacing: -0.02em; }
+  p { font-size: 15px; line-height: 1.5; color: #4a4d47; margin: 0 0 12px; }
+  button { min-height: 48px; padding: 0 22px; border: 0; border-radius: 999px; background: #203e2a; color: #fff; font-weight: 700; font-size: 16px; cursor: pointer; }
+  img { width: 56px; height: 56px; border-radius: 14px; }
+  #queued { font-weight: 600; color: #7a4a00; }
+  @media (prefers-color-scheme: dark) { body { background: #131513; color: #f2f5f1; } p { color: #b9beb6; } #queued { color: #ffb347; } button { background: #3f7a56; } }
+</style>
+</head>
+<body>
+<main>
+  <img src="/figbloom-logo.jpg" alt="">
+  <h1>You are offline</h1>
+  <p>Figbloom CRM could not reach the internet. Anything you already saved on this phone is kept and will be sent when you are back online.</p>
+  <p id="queued" role="status" hidden></p>
+  <button type="button" onclick="location.reload()">Try again</button>
+</main>
+<script>
+  // Reads only the count of waiting changes this phone is holding (the app keeps one queue per person and organisation).
+  try {
+    var n = 0;
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf("figbloom-offline-queue:") === 0) {
+        var items = JSON.parse(localStorage.getItem(k) || "[]");
+        for (var j = 0; j < items.length; j++) if (items[j].state === "WAITING") n++;
+      }
+    }
+    if (n > 0) {
+      var el = document.getElementById("queued");
+      el.textContent = n + (n === 1 ? " change is" : " changes are") + " waiting to sync.";
+      el.hidden = false;
+    }
+  } catch (e) {}
+</script>
+</body>
+</html>

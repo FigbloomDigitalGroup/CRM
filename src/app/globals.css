@@ -2578,7 +2578,8 @@ details.card ul {
 }
 
 /* Buttons in page content: a touch taller, consistent with the fields */
-.page button {
+/* Legacy buttons only: the new design's own classes (fb-*) set their own height and radius, and this must not inflate them. */
+.page button:not([class*="fb-"]) {
   min-height: 40px;
   border-radius: 10px;
 }

@@ -99,7 +99,8 @@ describe("Sales Today (D1)", () => {
     expect(screen.getByTestId("kpi-overdue")).toHaveTextContent("needs a look");
 
     expect(await screen.findByText("Send inventory proposal to Brookside")).toBeInTheDocument();
-    expect(screen.getByText(/Overdue · 9 days/)).toBeInTheDocument();
+    // The design's wording: the date and time it was due, not a count of days.
+    expect(screen.getByText(/^Overdue · \d{1,2} [A-Z][a-z]{2}, \d{1,2}:\d{2}( [AP]M)?$/)).toBeInTheDocument();
     expect(screen.getByText("Call Wanjiku about the retainer")).toBeInTheDocument();
     expect(await screen.findByText("Java House Africa")).toBeInTheDocument();
     expect(screen.getByText("Amara Osei")).toBeInTheDocument();

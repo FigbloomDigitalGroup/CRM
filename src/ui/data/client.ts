@@ -1,4 +1,4 @@
-import { createClient, type ApiClient } from "@/api-client";
+import { ApiRequestError, createClient, type ApiClient } from "@/api-client";
 import { connectivity, type Connectivity } from "./connectivity";
 import { currentDataSource, type DataSource } from "./source";
 
@@ -89,4 +89,24 @@ export function newIdempotencyKey(): string {
 export async function putSignedUpload(upload: { url: string; method?: string; headers?: Record<string, string> }, body: Blob): Promise<void> {
   const response = await fetch(upload.url, { method: upload.method ?? "PUT", headers: upload.headers ?? {}, body, credentials: "same-origin" });
   if (!response.ok) throw new Error(`The upload was refused (${response.status}).`);
+}
+
+/**
+ * Reads a CSV the API answers with as text (the audit log export, a migration's error report and template). The frozen contract marks these three
+ * operations as JSON, so the typed client would try to parse the file and fail; until the contract says `text/csv` for them (`npm run contract:update`),
+ * Settings reads them here. Errors keep the API's envelope so the screens describe them like any other (`ApiRequestError`).
+ */
+export async function getCsvText(path: string, query?: Record<string, string | undefined>): Promise<string> {
+  const search = new URLSearchParams(Object.entries(query ?? {}).filter((e): e is [string, string] => e[1] !== undefined));
+  const response = await fetch(`${path}${search.size ? `?${search}` : ""}`, { headers: { accept: "text/csv" }, credentials: "same-origin" });
+  if (!response.ok) {
+    let envelope: ConstructorParameters<typeof ApiRequestError>[1];
+    try {
+      envelope = (await response.json()) as typeof envelope;
+    } catch {
+      envelope = { error: response.statusText, code: "INTERNAL_ERROR", message: response.statusText, fieldErrors: [], requestId: "" };
+    }
+    throw new ApiRequestError(response.status, envelope, "getCsvText");
+  }
+  return response.text();
 }

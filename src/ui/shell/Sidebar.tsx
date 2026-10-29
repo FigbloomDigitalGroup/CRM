@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Package,
+  Search,
   PanelLeftClose,
   PanelLeftOpen,
   RefreshCw,
@@ -138,13 +139,14 @@ export function Sidebar({
           </button>
         </div>
         <div className="fb-sidebar__filter">
-          <input type="search" className="fb-input" placeholder="Filter pages" aria-label="Filter navigation" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Search size={15} aria-hidden="true" className="fb-sidebar__filtericon" />
+          <input type="search" className="fb-input" placeholder="Search..." aria-label="Filter navigation" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
         <nav className="fb-sidebar__nav" aria-label="Main">
           {top.map(renderSection)}
           {query && shown.length === 0 ? <p className="fb-sidebar__text" style={{ padding: "8px 10px", opacity: 0.8 }}>No matching pages.</p> : null}
         </nav>
-        {bottom.length > 0 ? <div style={{ padding: "0 8px 8px" }}>{bottom.map(renderSection)}</div> : null}
+        {bottom.length > 0 ? <div className="fb-sidebar__bottom">{bottom.map(renderSection)}</div> : null}
         {footer ? <div className="fb-sidebar__foot">{footer}</div> : null}
       </aside>
     </>

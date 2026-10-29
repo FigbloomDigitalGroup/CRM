@@ -8,11 +8,11 @@ import { gotoAndSettle, loginAs, ORG_SLUG } from "./helpers";
 
 /** What each seeded role sees in the sidebar: written by hand from the design's navigation map and the signed permission model. */
 const NAV: { email: string; label: string; links: string[] }[] = [
-  { email: "dev.management@figbloom.local", label: "Management", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Handoffs", "Renewals", "Payments", "Reports", "Settings"] },
-  { email: "dev.sales@figbloom.local", label: "Sales", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Handoffs", "Renewals", "My metrics", "Settings"] },
-  { email: "dev.delivery@figbloom.local", label: "Delivery", links: ["Dashboard", "Won deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Handoffs", "My metrics", "Settings"] },
-  { email: "dev.finance@figbloom.local", label: "Finance", links: ["Dashboard", "Won deals", "Companies", "Contacts", "Payments", "My metrics", "Settings"] },
-  { email: "dev.tech@figbloom.local", label: "Restricted Technical", links: ["My work", "Tasks", "Calendar", "Conversations", "Settings"] },
+  { email: "dev.management@figbloom.local", label: "Management", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Handoffs", "Renewals", "Payments", "Reports", "Preferences", "Settings"] },
+  { email: "dev.sales@figbloom.local", label: "Sales", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Handoffs", "Renewals", "My metrics", "Preferences"] },
+  { email: "dev.delivery@figbloom.local", label: "Delivery", links: ["Dashboard", "Won deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Handoffs", "My metrics", "Preferences"] },
+  { email: "dev.finance@figbloom.local", label: "Finance", links: ["Dashboard", "Won deals", "Companies", "Contacts", "Payments", "My metrics", "Preferences"] },
+  { email: "dev.tech@figbloom.local", label: "Restricted Technical", links: ["My work", "Tasks", "Calendar", "Conversations", "Preferences"] },
 ];
 
 async function sidebarLinks(page: Page): Promise<string[]> {
@@ -38,15 +38,22 @@ test.describe("navigation per role", () => {
 });
 
 test.describe("top bar identity", () => {
-  test("shows who you are, the organisation, and signs out", async ({ page }) => {
+  test("shows the organisation and who you are, and signs out", async ({ page }) => {
     await loginAs(page, "dev.sales@figbloom.local");
-    const identity = page.getByRole("button", { name: /Account: Dev Sales/ });
-    await expect(identity).toContainText("Dev Sales");
-    await expect(identity).toContainText("Sales");
-    await identity.click();
+    const org = page.getByRole("button", { name: "Organisation and session" });
+    await expect(org).toContainText("Signed in");
+    await org.click();
+    const orgCard = page.getByRole("dialog", { name: "Organisation and session" });
+    await expect(orgCard).toContainText("Signed in");
+    await expect(orgCard).toContainText("Time zone");
+    await expect(orgCard.getByRole("link", { name: "Profile and preferences" })).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    const user = page.getByRole("button", { name: /Account: Dev Sales/ });
+    await expect(user).toContainText("Dev Sales");
+    await expect(user).toContainText("Sales");
+    await user.click();
     const popover = page.getByRole("dialog", { name: /Account: Dev Sales/ });
-    await expect(popover).toContainText("Signed in");
-    await expect(popover).toContainText("Time zone");
     await expect(popover.getByRole("link", { name: "Profile and preferences" })).toBeVisible();
     await popover.getByRole("button", { name: /Sign out$/ }).click();
     await page.waitForURL(/\/login/);
@@ -109,8 +116,8 @@ test.describe("layout at desktop, tablet and 375px", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await loginAs(page, "dev.management@figbloom.local");
     const box = await page.getByRole("complementary", { name: "Sidebar" }).boundingBox();
-    expect(box!.width).toBeGreaterThan(240);
-    await expect(page.locator(".fb-identity__text")).toBeVisible();
+    expect(box!.width).toBeGreaterThan(260);
+    await expect(page.locator(".fb-orgblock__text")).toBeVisible();
     expect(await overflow(page)).toBeLessThanOrEqual(0);
   });
 
@@ -122,11 +129,13 @@ test.describe("layout at desktop, tablet and 375px", () => {
     expect(await overflow(page)).toBeLessThanOrEqual(0);
   });
 
-  test("375px: the sidebar becomes a menu, the identity collapses to the avatar, the popover is a bottom sheet, and nothing scrolls sideways", async ({ page }) => {
+  test("375px: the sidebar becomes a menu, the organisation block collapses to its tile, the popover is a bottom sheet, and nothing scrolls sideways", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
+    // This checks the responsive desktop shell at phone width; a phone's own layout (M9, /m) would otherwise take over the home page.
+    await page.addInitScript(() => window.sessionStorage.setItem("figbloom-desktop-view", "1"));
     await loginAs(page, "dev.management@figbloom.local");
     await expect(page.getByRole("complementary", { name: "Sidebar" })).toBeHidden();
-    await expect(page.locator(".fb-identity__text")).toBeHidden();
+    await expect(page.locator(".fb-orgblock__text")).toBeHidden();
     expect(await overflow(page)).toBeLessThanOrEqual(0);
 
     await page.getByRole("button", { name: "Open navigation" }).click();

@@ -79,6 +79,7 @@ a.fb-kpi2:hover { border-color: var(--border-strong); box-shadow: var(--shadow-m
 .fb-linkname { font-weight: 600; font-size: 14px; color: var(--primary-text); text-align: left; }
 .fb-linkname--bold { font-weight: 700; }
 .fb-tick { flex: none; width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid var(--border-strong); background: var(--surface); color: var(--primary); padding: 0; }
+.page .fb-tick { min-height: 0; border-radius: 7px; }
 .fb-tick:hover:not(:disabled) { border-color: var(--primary); background: var(--primary-soft); }
 .fb-tick:disabled { opacity: 0.5; cursor: not-allowed; }
 .fb-tick--top { margin-top: 2px; }
