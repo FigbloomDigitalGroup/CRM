@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { MaskedValue, NoAccess, ReleaseTag, useMember } from "@/ui";
-import { DemoNotice } from "../../demo/DemoBadge";
 import { deals, DEMO_NOW } from "./demo/data";
 import { setTarget, useDemoStore } from "./demo/store";
 import { isOpen, monthBuckets, probabilityOf, targetProgress, weightedValue } from "./forecastMath";
@@ -62,7 +61,7 @@ export function Forecast() {
 
   return (
     <div className="fb-com" data-screen-label="Forecast and targets">
-      <DemoNotice what="The forecast" />
+      
       <header className="fb-com-head">
         <div>
           <div className="fb-com-titlerow">

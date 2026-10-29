@@ -24,7 +24,7 @@
 .fb-sp-seq__name { max-width: 280px; font-weight: 700; }
 .fb-sp-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .fb-sp-steps li { display: flex; gap: 10px; align-items: center; }
-.fb-sp-steps__n { flex: none; width: 24px; height: 24px; border-radius: 99px; background: var(--surface-3); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.fb-sp-steps__n { flex: none; width: 24px; height: 24px; border-radius: 99px; background: var(--surface-3); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; padding: 0; }
 
 .fb-sp-preview { border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); }
 .fb-sp-preview__head { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }

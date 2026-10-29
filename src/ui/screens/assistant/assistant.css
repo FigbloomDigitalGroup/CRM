@@ -3,10 +3,10 @@
 /* Ask Figbloom (X2) ------------------------------------------------------------------------------------------------------------ */
 .fb-ask { position: fixed; top: 66px; right: 0; bottom: 0; width: min(420px, 100vw); z-index: 390; display: flex; flex-direction: column; background: var(--surface); color: var(--text); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg); }
 .fb-ask__head { flex: none; display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--border); }
-.fb-ask__logo { width: 34px; height: 34px; border-radius: 11px; background: var(--orange-soft); color: var(--orange-text); display: flex; align-items: center; justify-content: center; }
+.fb-ask__logo { width: 34px; height: 34px; border-radius: 11px; background: var(--orange-soft); color: var(--orange-text); display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-ask__title { flex: 1; display: flex; flex-direction: column; font-size: 15.5px; min-width: 0; }
 .fb-ask__title span { font-size: 12px; color: var(--text-2); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.fb-ask__x { width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--text-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.fb-ask__x { flex: none; width: 36px; height: 36px; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .fb-ask__x:hover { background: var(--surface-3); }
 .fb-ask__x:focus-visible, .fb-ask__chip:focus-visible, .fb-ask__prompt:focus-visible, .fb-ask__send:focus-visible, .fb-ask__confirm:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .fb-ask__off { margin: 18px; padding: 16px; border-radius: 14px; background: var(--surface-2); font-size: 13.5px; color: var(--text-2); line-height: 1.5; }
@@ -34,7 +34,7 @@
 .fb-ask__done { display: inline-flex; gap: 6px; align-items: center; color: var(--primary-text); font-weight: 600; }
 .fb-ask__foot { display: flex; gap: 4px; margin-top: 8px; align-items: center; font-size: 11.5px; color: var(--text-2); }
 .fb-ask__foot span { flex: 1; }
-.fb-ask__foot button { width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.fb-ask__foot button { width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .fb-ask__foot button[aria-pressed="true"] { color: var(--primary-text); background: var(--primary-soft); }
 .fb-ask__try { font-size: 12.5px; font-weight: 600; color: var(--text-2); margin-bottom: 8px; }
 .fb-ask__prompts { display: flex; flex-direction: column; gap: 6px; }
@@ -65,13 +65,12 @@
 .fb-pal__item kbd { margin-left: auto; }
 .fb-pal__empty { padding: 22px; text-align: center; color: var(--text-2); font-size: 13.5px; }
 .fb-pal__foot { display: flex; gap: 16px; padding: 10px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-2); flex-wrap: wrap; }
-.fb-pal__demo { margin-left: auto; }
 
 /* Help panel and Help centre (X3) ------------------------------------------------------------------------------------------- */
 .fb-help-panel { position: fixed; top: 66px; right: 0; bottom: 0; width: min(360px, 100vw); z-index: 391; display: flex; flex-direction: column; background: var(--surface); color: var(--text); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg); overflow: auto; outline: none; }
 .fb-help-panel__head { display: flex; align-items: center; gap: 10px; padding: 16px 18px; border-bottom: 1px solid var(--border); font-size: 15.5px; }
 .fb-help-panel__head strong { flex: 1; }
-.fb-help-panel__head button { width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--text-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.fb-help-panel__head button { flex: none; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .fb-help-panel__tips { padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
 .fb-help-panel__tip { display: flex; gap: 10px; padding: 12px; border-radius: 12px; background: var(--surface-2); font-size: 13.5px; line-height: 1.45; }
 .fb-help-panel section { padding: 4px 18px 16px; }
@@ -112,7 +111,7 @@
 .fb-sv__rowmain { display: flex; flex-direction: column; gap: 2px; min-width: 160px; }
 .fb-sv__meta { font-size: 12.5px; color: var(--text-2); }
 .fb-sv__acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.fb-sv__icon { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.fb-sv__icon { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .fb-sv__icon[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
 .fb-sv__err { color: var(--red); font-size: 12.5px; }
 .fb-sv__empty { color: var(--text-2); font-size: 13.5px; }
@@ -150,4 +149,3 @@
 .fb-conn-steps__mark { width: 22px; height: 22px; border-radius: 99px; border: 1.5px solid currentColor; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
 .fb-conn-steps li[data-state="done"] .fb-conn-steps__mark { background: var(--primary-btn); border-color: transparent; color: var(--on-primary); }
 
-/* Demo marker lives in ui.css (.fb-demo-badge). */

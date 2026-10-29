@@ -18,7 +18,7 @@ test.describe("commercial screens on demo data", () => {
   test("Sales builds a quote, margin stays hidden, and a deep discount waits for Management who then decides it", async ({ page, browser }) => {
     await loginAs(page, "dev.sales@figbloom.local");
     await gotoAndSettle(page, `/o/${ORG_SLUG}/quotes/d6`);
-    await expect(page.getByText("Demo data").first()).toBeVisible();
+    await expect(page.getByText("Demo data")).toHaveCount(0);
     await expect(page.getByRole("columnheader", { name: "Margin" })).toHaveCount(0);
 
     await page.getByLabel("Add a catalogue item").selectOption("cat4");

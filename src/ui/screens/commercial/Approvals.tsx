@@ -4,7 +4,6 @@ import { Briefcase, Download, Percent, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { Button, EmptyState, NoAccess, ReleaseTag, Tabs, useMember, useToast } from "@/ui";
-import { DemoNotice } from "../../demo/DemoBadge";
 import type { ApprovalKind, DemoApproval } from "./demo/data";
 import { decideApproval, useDemoStore } from "./demo/store";
 
@@ -105,7 +104,7 @@ export function Approvals() {
 
   return (
     <div className="fb-com" data-screen-label="Approvals inbox">
-      <DemoNotice what="The approvals inbox" />
+      
       <header>
         <div className="fb-com-titlerow">
           <h1 className="fb-com__title">Approvals</h1>

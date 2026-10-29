@@ -1,13 +1,12 @@
 "use client";
 
-import { Info, LifeBuoy } from "lucide-react";
+import { LifeBuoy } from "lucide-react";
 import Link from "next/link";
 import { Badge, Button, KpiTile } from "../../components/basics";
 import { Tabs } from "../../components/overlays";
 import { EmptyState, NoAccess } from "../../components/states";
 import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
-import { DemoNotice } from "../../demo/DemoBadge";
 import { DEMO_CUSTOMERS, type TicketStatus } from "./demo/data";
 import { supportDemo, useTickets } from "./demo/store";
 
@@ -118,17 +117,11 @@ export function SupportWorkspace() {
           <h1 className="fb-sup__title">Support</h1>
           <p className="fb-sup__sub">Maintenance clients and open tickets</p>
         </div>
-        <Button variant="primary" onClick={() => toast.show({ message: "Opens the log-a-note drawer on the customer you pick (demo)." })}>
+        <Button variant="primary" onClick={() => toast.show({ message: "Opens the log-a-note drawer on the customer you pick." })}>
           Log a note
         </Button>
       </div>
-      <DemoNotice what="The support workspace" />
-      <div className="fb-sup__note" role="note">
-        <Info size={17} aria-hidden="true" />
-        <span>
-          <strong>Proposed role.</strong> Customer Support is named in FIG-297 §23 but isn’t one of the five V1 roles. This view shows what it would need: maintenance tickets, customer lookup and their own tasks.
-        </span>
-      </div>
+      
       <div className="fb-sup__kpis">
         <KpiTile label="Open tickets" value={open} trend="need a first response" />
         <KpiTile label="Waiting on client" value={waiting} trend="nothing to do yet" />

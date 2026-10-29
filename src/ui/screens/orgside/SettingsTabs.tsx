@@ -7,7 +7,6 @@ import { Badge, Button } from "../../components/basics";
 import { Input, Select, Textarea } from "../../components/forms";
 import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
-import { DemoNotice } from "../../demo/DemoBadge";
 import { demoScreensEnabled } from "../../demo/enabled";
 import { Panel } from "../settings/kit";
 import { DEMO_ANOMALIES, type DemoDataRequest } from "./demo/data";
@@ -55,7 +54,7 @@ function DataRequestsDemo() {
 
   return (
     <div className="fb-set__body" data-screen-label="OS6 Settings › Data requests">
-      <DemoNotice what="Data requests" />
+      
       <Panel title="Data requests" description="Ask Figbloom to export, delete or offboard data. A person from Figbloom confirms the request with you first; deletion and offboarding need a second platform admin to approve.">
         <div className="fb-os-form">
           <Select label="Type" value={type} onChange={(e) => setType(e.target.value as DemoDataRequest["type"])} options={REQUEST_TYPES.map((t) => ({ value: t, label: t }))} />
@@ -96,7 +95,7 @@ function DataRequestsDemo() {
             window.location.assign(`/o/${orgSlug}/suspended`);
           }}
         >
-          Preview the suspended screen (demo)
+          Preview the suspended screen
         </button>
       </p>
     </div>
@@ -113,7 +112,7 @@ function SupportHistoryDemo() {
   const tone = (s: string) => (s === "Active" ? "warning" : s === "Denied" ? "danger" : s.startsWith("Pending") ? "warning" : "neutral");
   return (
     <div className="fb-set__body" data-screen-label="Settings › Support access history">
-      <DemoNotice what="Support access history" />
+      
       <Panel title="Support access history" description="Only Management sees this. Figbloom Support can never see inside the workspace without an approved, time-limited request, and you can end a session at any time.">
         <div className="fb-set-tablewrap">
           <table className="fb-table">
@@ -169,7 +168,7 @@ function TwoStepSettingsDemo() {
   const canManage = can("security.manage") || can("configuration.manage");
   return (
     <div className="fb-set__body" data-screen-label="S7#2 Settings › Two-step sign-in">
-      <DemoNotice what="Two-step sign-in" />
+      
       <div className="fb-set-cards">
         <Panel title="Policy">
           {rows.map((r) => (

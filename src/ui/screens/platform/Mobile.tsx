@@ -4,7 +4,6 @@ import { AlertTriangle, CheckCircle2, Home, Zap } from "lucide-react";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { BrandMark } from "@/app/_shared/BrandMark";
-import { DemoNotice } from "@/ui/demo/DemoBadge";
 import { attentionHref } from "./Home";
 import { StatusPill } from "./kit";
 import { attentionItems, awaitingSecond, canApprove, dueLabel, homeTiles } from "./logic";
@@ -37,7 +36,7 @@ export function PlatformMobile({ tab, signOut }: { tab: MobileTab; signOut?: Rea
       </header>
       <div className="fb-pl-devstrip" style={{ fontSize: 11.5, padding: "6px 12px" }} role="status">Dev only: verification skipped</div>
       <main className="fb-pl-m-main">
-        <DemoNotice what="Platform mobile" />
+        
         {tab === "home" ? (
           <>
             <div className="fb-pl-m-card" style={attention.length ? { background: "var(--pl-orange-soft)", color: "var(--pl-orange-text)", fontWeight: 700, display: "flex", gap: 8, alignItems: "center" } : { background: "var(--pl-primary-soft)", color: "var(--pl-primary-text)", fontWeight: 700, display: "flex", gap: 8, alignItems: "center" }}>

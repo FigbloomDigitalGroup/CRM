@@ -3,7 +3,6 @@
 import { AlertTriangle, CheckCircle2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { DemoNotice } from "@/ui/demo/DemoBadge";
 import { PageHead } from "./kit";
 import { attentionItems, barHeights, homeTiles, TRENDS, type AttentionItem } from "./logic";
 import { usePlatform } from "./store";
@@ -28,7 +27,7 @@ export function PlatformHome() {
   return (
     <>
       <PageHead title="Platform home" release="V1.1" sub="Health, counts and requests across organisations. No customer records are shown here.">
-        <div className="fb-pl-seg" role="group" aria-label="Demo: state of this page">
+        <div className="fb-pl-seg" role="group" aria-label="State of this page">
           {STATES.map(([id, label]) => (
             <button key={id} type="button" aria-pressed={view === id} onClick={() => setView(id)}>
               {label}
@@ -36,7 +35,7 @@ export function PlatformHome() {
           ))}
         </div>
       </PageHead>
-      <DemoNotice what="Platform home" />
+      
 
       {view === "loading" ? (
         <div className="fb-pl-tiles" role="status" aria-label="Loading platform metrics">

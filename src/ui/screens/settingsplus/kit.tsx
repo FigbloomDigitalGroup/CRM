@@ -2,7 +2,6 @@
 
 import { useState, useSyncExternalStore, type ReactNode } from "react";
 import { Button, ConfirmDialog, FormErrorSummary, ReleaseTag, useToast } from "@/ui";
-import { DemoNotice } from "../../demo/DemoBadge";
 import { Panel } from "../settings/kit";
 
 /**
@@ -97,7 +96,7 @@ export function EditorFrame({
   const blocked = disabledReason ?? (errors.length ? "Fix the problems above first" : !dirty ? "Nothing has changed" : undefined);
   return (
     <>
-      <DemoNotice what={title} />
+      
       <Panel
         title={
           <span style={{ display: "inline-flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>

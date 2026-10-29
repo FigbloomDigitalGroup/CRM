@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { NoAccess, ReleaseTag, useMember } from "@/ui";
-import { DemoNotice } from "../../demo/DemoBadge";
 import { deals } from "./demo/data";
 import { useDemoStore } from "./demo/store";
 import { formatKes, quoteTotals } from "./quoteMath";
@@ -18,7 +17,7 @@ export function QuoteList() {
   const open = deals.filter((d) => d.stage !== "Closed Won");
   return (
     <div className="fb-com" data-screen-label="Quotes">
-      <DemoNotice what="Quotes" />
+      
       <header>
         <div className="fb-com-titlerow"><h1 className="fb-com__title">Quotes</h1><ReleaseTag release="v1.1" /></div>
         <p className="fb-com__sub">Build a quote from a deal. Each version is kept; a sent version cannot be edited.</p>

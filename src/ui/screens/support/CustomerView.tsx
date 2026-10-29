@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Badge } from "../../components/basics";
 import { EmptyState, NoAccess } from "../../components/states";
 import { useMember } from "../../data/member";
-import { DemoNotice } from "../../demo/DemoBadge";
 import type { DemoCustomer } from "./demo/data";
 import { supportDemo } from "./demo/store";
 import { useSupportAccess } from "./SupportWorkspace";
@@ -68,7 +67,7 @@ export function CustomerView({ customerId }: { customerId: string }) {
       <Link className="fb-sup__back" href={`/o/${orgSlug}/support`}>
         <ArrowLeft size={15} aria-hidden="true" /> Support
       </Link>
-      <DemoNotice what="The customer" />
+      
       {customer ? <CustomerSummary customer={customer} /> : <EmptyState title="Customer not found" body="It may not be one you can see." />}
     </div>
   );

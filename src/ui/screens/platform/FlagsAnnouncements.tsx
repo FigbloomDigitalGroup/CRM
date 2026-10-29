@@ -1,7 +1,6 @@
 "use client";
 
 import { Info, X } from "lucide-react";
-import { DemoNotice } from "@/ui/demo/DemoBadge";
 import { dateShort, PageHead } from "./kit";
 import { usePlatform } from "./store";
 
@@ -11,7 +10,7 @@ export function FlagsAndLimits() {
   return (
     <>
       <PageHead title="Flags and limits" release="V2" sub="Per organisation switches. No prices and no billing." />
-      <DemoNotice what="Flags and limits" />
+      
       <section className="fb-pl-card fb-pl-card--flush">
         <div className="fb-pl-scroll">
           <table className="fb-pl-table fb-pl-table--flags">
@@ -60,7 +59,7 @@ export function Announcements() {
   return (
     <>
       <PageHead title="Announcements" release="V2" />
-      <DemoNotice what="Announcements" />
+      
       <div className="fb-pl-grid">
         <section className="fb-pl-card" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 12 }} aria-label="Compose">
           <label className="fb-pl-field">

@@ -52,6 +52,6 @@ describe("business card capture asks before saving", () => {
     const fields = cardToCapture({ name: "A B", company: "Co", title: "Dir", phone: "1", email: "a@b.c", unsure: [] });
     act(() => undefined);
     render(<ScannedBanner scanned={{ fields, summary: "Read it. Check the fields before saving.", unsure: [] }} />);
-    expect(screen.getByTestId("scan-banner")).toHaveTextContent("Demo reading");
+    expect(screen.getByTestId("scan-banner")).toHaveTextContent("Check the fields before saving");
   });
 });

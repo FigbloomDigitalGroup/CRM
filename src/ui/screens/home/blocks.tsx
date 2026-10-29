@@ -7,7 +7,7 @@ import { MaskedValue } from "../../components/states";
 import { useApi, useApiQuery, useUndoable } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { initialsOf } from "../../components/basics";
-import { dueLabel, moneyShort } from "./format";
+import { dueLabel, money, moneyTotal } from "./format";
 import { HIcon, Panel, stageStyle } from "./kit";
 import { leadName, linkChipLabel, recordHref, type TaskItem } from "./dash";
 
@@ -210,7 +210,7 @@ export function NewLeadsPanel({ rows, since }: { rows: NewLeadRow[]; since: numb
 
 function amountsText(values: { currency: string; amount: number }[]): string {
   if (values.length === 0) return "—";
-  return values.map((v) => moneyShort(v.amount, v.currency)).join(" + ");
+  return values.map((v) => money(v.amount, v.currency)).join(" + ");
 }
 
 export function PipelineByStage() {
@@ -228,7 +228,7 @@ export function PipelineByStage() {
   const aria = open.map((c) => `${c.stage.name} ${c.count} deals${c.valuesHidden ? "" : `, ${amountsText(c.values)}`}`).join("; ");
 
   return (
-    <Panel title="Pipeline by stage" aside={q.isPending ? "Loading" : `${totalCount} open`} padded className="fb-hp--pipe">
+    <Panel title="Pipeline by stage" aside={q.isPending ? "Loading" : anyHidden ? `${totalCount} open` : `${moneyTotal(totalValue, open[0]?.values[0]?.currency ?? "KES")} open`} padded className="fb-hp--pipe">
       <div className="fb-stackbar" role="img" aria-label={open.length ? aria : "No open deals"}>
         {open.map((c, i) => (
           <div key={c.stage.id} style={stageStyle(i, share(i))} />
@@ -277,7 +277,7 @@ export function MovingAndStalled({ showOwner }: { showOwner?: boolean }) {
               </Link>
               <div className="fb-hrow__sub">
                 {(d as unknown as { pipelineStage?: { name: string } }).pipelineStage?.name ?? ""} ·{" "}
-                {value === null ? <MaskedValue reason="Deal values are shown only to roles that may see them." /> : moneyShort(value as string, d.currency)}
+                {value === null ? <MaskedValue reason="Deal values are shown only to roles that may see them." /> : money(value as string, d.currency)}
                 {showOwner && owners.get(d.ownerMembershipId) ? ` · ${owners.get(d.ownerMembershipId)}` : ""}
               </div>
             </div>

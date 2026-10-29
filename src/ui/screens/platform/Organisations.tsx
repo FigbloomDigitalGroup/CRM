@@ -3,7 +3,6 @@
 import { Info, Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { DemoNotice } from "@/ui/demo/DemoBadge";
 import { agoLabel, dateShort, PageHead, StatusPill } from "./kit";
 import { filterOrgs, type OrgSort } from "./logic";
 import { usePlatform } from "./store";
@@ -28,7 +27,7 @@ export function Organisations() {
           Provision organisation
         </Link>
       </PageHead>
-      <DemoNotice what="The organisations list" />
+      
       <div className="fb-pl-filterbar">
         <input className="fb-pl-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name or slug" aria-label="Search name or slug" />
         <select className="fb-pl-select" value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">

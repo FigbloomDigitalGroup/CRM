@@ -3,7 +3,6 @@
 import { Eye } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { DemoNotice } from "@/ui/demo/DemoBadge";
 import { PageHead, whenLabel } from "./kit";
 import { countdown, supportMsLeft, supportTone, SUPPORT_SCOPES } from "./logic";
 import { usePlatform } from "./store";
@@ -27,8 +26,8 @@ export function SupportAccess() {
   return (
     <>
       <PageHead title="Support access" release="V2" sub="Break-glass, read-only views inside an organisation. Needs a reason, a time limit and the organisation’s approval. Every page viewed is logged." />
-      <DemoNotice what="Support access" />
-      {!isV2 ? <div className="fb-pl-muted2" style={{ padding: "14px 16px", borderRadius: 12, background: "var(--pl-surface-2)", fontSize: 13.5 }}>Turn on V2 in the Demo release switch to use support access.</div> : null}
+      
+      {!isV2 ? <div className="fb-pl-muted2" style={{ padding: "14px 16px", borderRadius: 12, background: "var(--pl-surface-2)", fontSize: 13.5 }}>Turn on V2 in the release switch to use support access.</div> : null}
       {isV2 ? (
         <>
           {active ? (
@@ -107,7 +106,7 @@ export function SupportAccess() {
                     </div>
                     {s.status === "Pending organisation approval" ? (
                       <button type="button" className="fb-pl-pending-demo" onClick={() => dispatch({ type: "support-approve", id: s.id })}>
-                        Demo: approve as the organisation
+                        Approve as the organisation
                       </button>
                     ) : null}
                   </div>

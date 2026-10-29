@@ -77,12 +77,11 @@ function Shell({ orgSlug, sections, quickCreate, identity, initialSidebarCollaps
       />
       <div className="fb-main">
         <TopBar
-          orgIdentity={<OrgIdentity identity={identity} />}
+          orgIdentity={<OrgIdentity identity={identity} switcher={organisationSwitcher} />}
           search={search}
           bell={bell}
           quickCreate={<QuickCreate orgSlug={orgSlug} items={quickCreate} />}
           userMenu={<UserMenu identity={identity} />}
-          organisationSwitcher={organisationSwitcher}
           tools={<ToolsTriggers />}
           onOpenNav={() => setNavOpen(true)}
         />

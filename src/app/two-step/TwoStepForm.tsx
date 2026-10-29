@@ -42,7 +42,7 @@ export function TwoStepForm({ next = "/" }: { next?: string }) {
     <div className="auth-shell">
       <div className="auth-card" data-screen-label="A5 Two-step sign-in" style={{ maxWidth: 440 }}>
         <span style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#e8f0fa", color: "#1f5fa8", display: "inline-block", marginBottom: 12 }}>
-          Two-step sign-in · V1.1 · Demo data
+          Two-step sign-in · V1.1
         </span>
         <h1 style={{ fontSize: 24, margin: "0 0 8px" }}>{locked ? "Too many wrong codes" : useBackup ? "Enter a backup code" : "Enter your 6-digit code"}</h1>
         <p style={{ marginTop: 0 }}>

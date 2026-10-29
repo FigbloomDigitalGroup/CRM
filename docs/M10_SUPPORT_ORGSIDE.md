@@ -36,3 +36,7 @@ Replace each `demo/` module with the API (B6.01 memberships, B6.02 two-step, B6.
 - The switcher sits in the top bar slot as a popover (the design puts the list inside the identity card); same content and Alt+O.
 - Switching an organisation here only shows the toast; it does not reload the app until B6.01 exists.
 - The Support nav item reuses the Conversations icon (no new sidebar icon was added).
+
+## Update 29 Oct 2026: shell matches the design's single-organisation look
+
+The announcement and support banners and the organisation switcher are now **opt-in demo states**, so the default shell is the design's. Switch them on in the browser console: `document.cookie = "fb_demo_banners=1; path=/"` (banners and the approval card) and `document.cookie = "fb_demo_multiorg=1; path=/"` (switcher). The switcher now lives inside the identity popover (TB4), and the identity block shows a chevron only when it is present. Alt+O opens that popover.

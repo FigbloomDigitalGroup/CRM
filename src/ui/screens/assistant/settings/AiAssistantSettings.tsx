@@ -3,7 +3,6 @@
 import { Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useToast } from "../../../components/toast";
-import { DemoNotice } from "../../../demo/DemoBadge";
 import { Panel, Switch } from "../../settings/kit";
 import { DEFAULT_AI_SETTINGS, readAiSettings, writeAiSettings, type AiSettings } from "../demo/data";
 
@@ -33,7 +32,7 @@ export function AiAssistantSettings() {
 
   return (
     <div className="fb-set-cols" style={{ maxWidth: 760, gridTemplateColumns: "1fr" }}>
-      <DemoNotice what="AI assistant settings" />
+      
       <Panel title="AI assistant" description="What Ask Figbloom may help with in this organisation." flush>
         {OPTIONS.map((o) => (
           <div key={o.key} className="fb-set-row">

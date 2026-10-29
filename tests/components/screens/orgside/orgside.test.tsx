@@ -43,7 +43,7 @@ describe("Organisation switcher (FIG-1165, TB4)", () => {
   it("lists organisations with the role in each, disables a suspended one with the reason, and accepts an invitation", async () => {
     const { client } = stubClient({});
     renderScreen(<OrgSwitcher />, client, SALES);
-    await userEvent.click(screen.getByRole("button", { name: "Switch organisation" }));
+    // The switcher is the panel inside the identity popover (design TB4); it has no trigger of its own.
     expect(screen.getByText("SWITCH ORGANISATION · ALT+O")).toBeInTheDocument();
     expect(screen.getByText("Suspended by Figbloom on 14 Oct")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Westlands Clinics/ })).toHaveAttribute("aria-disabled", "true");
@@ -51,11 +51,20 @@ describe("Organisation switcher (FIG-1165, TB4)", () => {
     expect(await screen.findByText(/Joined Nyeri Coffee Co-op as Delivery/)).toBeInTheDocument();
   });
 
-  it("Alt+O opens it", async () => {
+  it("Alt+O opens the identity popover that holds it", async () => {
     const { client } = stubClient({});
-    renderScreen(<OrgSwitcher />, client, SALES);
+    renderScreen(
+      <>
+        <button type="button" className="fb-orgblock__trigger" onClick={() => (document.body.dataset.identityOpened = "yes")}>
+          Organisation
+        </button>
+        <OrgSwitcher />
+      </>,
+      client,
+      SALES,
+    );
     await userEvent.keyboard("{Alt>}o{/Alt}");
-    expect(screen.getByRole("dialog", { name: "Switch organisation" })).toBeInTheDocument();
+    expect(document.body.dataset.identityOpened).toBe("yes");
   });
 });
 

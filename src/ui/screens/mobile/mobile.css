@@ -38,7 +38,7 @@
 .fb-m-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; max-width: 640px; margin: 0 auto; display: flex; justify-content: space-around; align-items: center; padding: 8px 8px calc(10px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border); }
 .fb-m-nav__btn { flex: 1; min-width: 44px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; background: transparent; color: var(--text-3); font-size: 11px; font-weight: 600; padding: 0; cursor: pointer; }
 .fb-m-nav__btn[aria-current="page"] { color: var(--primary-text); }
-.fb-m-nav__icon { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 999px; }
+.fb-m-nav__icon { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 999px; padding: 0; }
 .fb-m-nav__btn--center .fb-m-nav__icon { width: 52px; height: 52px; margin-top: -18px; background: #ff9400; color: #1b1d1a; box-shadow: 0 8px 20px rgba(255, 148, 0, 0.35); }
 .fb-m-nav__btn--center { color: var(--text-2); }
 
@@ -53,7 +53,7 @@ button.fb-m-card, a.fb-m-card { cursor: pointer; width: 100%; min-height: 56px; 
 .fb-m-due--today { color: var(--orange-text); }
 .fb-m-list { display: flex; flex-direction: column; gap: 8px; }
 .fb-m-empty { padding: 22px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); text-align: center; color: var(--text-2); font-size: 14px; }
-.fb-m-avatar { flex: none; width: 40px; height: 40px; border-radius: 99px; background: var(--primary-soft); color: var(--primary-text); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+.fb-m-avatar { flex: none; width: 40px; height: 40px; border-radius: 99px; background: var(--primary-soft); color: var(--primary-text); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-m-avatar--orange { background: var(--orange-soft); color: var(--orange-text); }
 .fb-m-avatar--big { width: 72px; height: 72px; font-size: 24px; }
 .fb-m-temp { flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 999px; }
@@ -67,7 +67,7 @@ button.fb-m-card, a.fb-m-card { cursor: pointer; width: 100%; min-height: 56px; 
 .fb-m-count__l { font-size: 12px; color: var(--text-2); margin-top: 2px; line-height: 1.25; }
 
 .fb-m-check { flex: none; width: 44px; height: 44px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; margin: -8px; padding: 0; }
-.fb-m-check__box { width: 28px; height: 28px; border-radius: 9px; border: 2px solid var(--border-strong); background: var(--surface); color: #fff; display: flex; align-items: center; justify-content: center; }
+.fb-m-check__box { width: 28px; height: 28px; border-radius: 9px; border: 2px solid var(--border-strong); background: var(--surface); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-m-check[aria-pressed="true"] .fb-m-check__box { background: var(--primary); border-color: var(--primary); }
 .fb-m-callbtn { flex: none; width: 44px; height: 44px; border-radius: 999px; background: var(--primary-btn); color: var(--on-primary); display: flex; align-items: center; justify-content: center; }
 .fb-m-groupl { margin: 0 0 8px; font-size: 13px; font-family: "IBM Plex Mono", ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -95,7 +95,7 @@ button.fb-m-card, a.fb-m-card { cursor: pointer; width: 100%; min-height: 56px; 
 .fb-m-facts dd { margin: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
 .fb-m-tl { list-style: none; margin: 0; padding: 0; }
 .fb-m-tl li { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-.fb-m-tl__icon { flex: none; width: 30px; height: 30px; border-radius: 99px; background: var(--surface-3); color: var(--text-2); display: flex; align-items: center; justify-content: center; }
+.fb-m-tl__icon { flex: none; width: 30px; height: 30px; border-radius: 99px; background: var(--surface-3); color: var(--text-2); display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-m-tl__text { font-size: 13.5px; line-height: 1.4; overflow-wrap: anywhere; }
 .fb-m-tl__when { font-size: 12px; color: var(--text-3); margin-top: 2px; }
 .fb-m-note { display: flex; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); font-size: 13px; color: var(--text-2); }
@@ -111,7 +111,7 @@ button.fb-m-card, a.fb-m-card { cursor: pointer; width: 100%; min-height: 56px; 
 
 /* Install card ------------------------------------------------------------------------------------------------------------------ */
 .fb-m-install { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--border); }
-.fb-m-install__mark { flex: none; width: 38px; height: 38px; border-radius: 11px; background: var(--side); display: flex; align-items: center; justify-content: center; }
+.fb-m-install__mark { flex: none; width: 38px; height: 38px; border-radius: 11px; background: var(--side); display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-m-install__text { flex: 1; min-width: 0; }
 .fb-m-install__text strong { display: block; font-size: 14px; }
 .fb-m-install__text span { font-size: 12px; color: var(--text-2); }

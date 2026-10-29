@@ -16,8 +16,8 @@ describe("Customer Support workspace (FIG-1178)", () => {
     const { client } = stubClient({});
     const { container } = renderScreen(<SupportWorkspace />, client, SUPPORT);
     expect(screen.getByText("Payroll export misses the overtime column")).toBeInTheDocument();
-    expect(screen.getByText(/Demo data/)).toBeInTheDocument();
-    expect(screen.getByText(/Proposed role/)).toBeInTheDocument();
+    expect(screen.queryByText(/Demo data/)).toBeNull();
+    expect(screen.queryByText(/Proposed role/)).toBeNull();
     await userEvent.click(screen.getByRole("tab", { name: "Satisfaction" }));
     expect(screen.getByText(/Smooth launch and quick support/)).toBeInTheDocument();
     expect(await violations(container)).toEqual([]);

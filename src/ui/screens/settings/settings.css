@@ -59,7 +59,7 @@
 .fb-set-days { display: flex; gap: 14px; flex-wrap: wrap; }
 .fb-set-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .fb-set-step { display: flex; gap: 8px; align-items: center; padding: 6px 12px 6px 6px; border-radius: 999px; background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--text-2); }
-.fb-set-step__n { width: 24px; height: 24px; border-radius: 99px; background: var(--surface-3); color: var(--text-2); font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.fb-set-step__n { width: 24px; height: 24px; border-radius: 99px; background: var(--surface-3); color: var(--text-2); font-size: 12px; display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-set-step[data-state="done"] { color: var(--primary-text); }
 .fb-set-step[data-state="done"] .fb-set-step__n { background: var(--primary-btn); color: var(--on-primary, #fff); }
 .fb-set-step[data-state="current"] { background: var(--orange-soft); color: var(--orange-text); }

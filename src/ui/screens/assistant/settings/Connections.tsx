@@ -6,7 +6,6 @@ import { Button } from "../../../components/basics";
 import { ConfirmDialog } from "../../../components/overlays";
 import { useToast } from "../../../components/toast";
 import { useMember } from "../../../data/member";
-import { DemoNotice } from "../../../demo/DemoBadge";
 import { Panel } from "../../settings/kit";
 
 type Kind = "email" | "calendar";
@@ -87,7 +86,7 @@ export function Connections() {
 
   return (
     <div className="fb-set-cols" style={{ maxWidth: "none", gridTemplateColumns: "1fr" }}>
-      <DemoNotice what="Email and calendar connections" />
+      
       <div className="fb-set-cards">
         {DEFS.map((def) => {
           const n = done[def.kind];

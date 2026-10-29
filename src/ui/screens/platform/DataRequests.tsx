@@ -3,7 +3,6 @@
 import { Clock, Download, File, Users } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { DemoNotice } from "@/ui/demo/DemoBadge";
 import type { RequestStatus } from "./demo/data";
 import { dateShort, PageHead, StatusPill } from "./kit";
 import { canApprove, hasTwoApprovals, needsTwoAdmins, retentionDaysLeft, stepLocked } from "./logic";
@@ -26,7 +25,7 @@ export function DataRequests() {
   return (
     <>
       <PageHead title="Data requests" release="V1.1" sub="Tenant offboarding, data-subject deletion and export requests (FIG-444). Deletion needs a second platform admin." />
-      <DemoNotice what="Data requests" />
+      
       <div className="fb-pl-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))" }}>
         <section className="fb-pl-card fb-pl-card--flush" aria-label="Requests">
           {state.requests.map((x) => {
@@ -129,7 +128,7 @@ function TwoPerson({ requestId }: { requestId: string }) {
       ) : null}
       {!two && !can.ok && other ? (
         <button type="button" className="fb-pl-pending-demo" style={{ marginTop: 0 }} onClick={() => dispatch({ type: "request-approve", id: r.id, as: other.id })}>
-          Demo: approve as {other.name}
+          Approve as {other.name}
         </button>
       ) : null}
     </div>

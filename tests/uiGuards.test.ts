@@ -91,10 +91,10 @@ describe("the frozen sign-in pages (hard rule 1)", () => {
       .replace(/@import[^;]*;/g, "")
       .replace(/\/\*[\s\S]*?\*\//g, "");
     const bad: string[] = [];
-    // @keyframes bodies (percentages, from, to) and @media preludes are not selectors; :is()/:where() lists are not separate selectors.
+    // @keyframes bodies (percentages, from, to) and @media / @container preludes are not selectors; :is()/:where() lists are not separate selectors.
     const stripped = css
       .replace(/@keyframes[^{]*{(?:[^{}]*{[^{}]*})*[^{}]*}/g, "")
-      .replace(/@media[^{]*/g, "")
+      .replace(/@(?:media|container)[^{]*/g, "")
       .replace(/:(?:is|where|not)([^)]*)/g, "");
     for (const m of stripped.matchAll(/([^{}]+){/g)) {
       for (const sel of m[1]!.split(",")) {

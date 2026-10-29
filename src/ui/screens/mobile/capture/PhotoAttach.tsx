@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { useToast } from "../../../components/toast";
-import { DemoBadge } from "../../../demo/DemoBadge";
 import { Icon } from "../../leads/icons";
 import { addPhoto, usePhotos } from "./photos";
 
@@ -18,7 +17,7 @@ export function PhotoAttach({ record }: { record: string }) {
   return (
     <section aria-labelledby="m-photos" data-testid="mobile-photos">
       <h2 className="fb-m-h2" id="m-photos">
-        Photos <DemoBadge />
+        Photos 
       </h2>
       <input
         ref={input}

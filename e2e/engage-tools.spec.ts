@@ -4,7 +4,7 @@ import { gotoAndSettle, loginAs, ORG_SLUG } from "./helpers";
 /**
  * M10 engagement tools on demo data (FIG-1171 Ask Figbloom, FIG-1172 command palette and help, FIG-1173 saved views, FIG-1175 email and calendar and
  * AI settings, FIG-1176 own colours, FIG-1177 mobile capture). Written against the dev accounts; they run with the e2e server, where demo screens
- * are on. Marked demo: each screen says "Demo data", and none of it reaches production (docs/M10_ENGAGE_TOOLS.md).
+ * are on. None of it reaches production (docs/M10_ENGAGE_TOOLS.md).
  */
 
 const BASE = `/o/${ORG_SLUG}`;

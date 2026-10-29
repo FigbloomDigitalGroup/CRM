@@ -2,7 +2,6 @@
 
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
-import { DemoNotice } from "@/ui/demo/DemoBadge";
 import { PageHead } from "./kit";
 import { canRemoveAdmin, initials, MIN_ADMINS } from "./logic";
 import { usePlatform } from "./store";
@@ -39,7 +38,7 @@ export function PlatformAdmins() {
           <button type="submit" className="fb-pl-btn fb-pl-btn--primary">Invite admin</button>
         </form>
       </PageHead>
-      <DemoNotice what="Platform admins" />
+      
       <section className="fb-pl-card fb-pl-card--flush" aria-label="Platform admins">
         {state.admins.map((a) => (
           <div key={a.id} className="fb-pl-admin">
@@ -83,7 +82,7 @@ export function PlatformSecurity() {
   return (
     <>
       <PageHead title="Platform security" />
-      <DemoNotice what="Platform security" />
+      
       <section className="fb-pl-card" style={{ maxWidth: 780, display: "flex", flexDirection: "column", gap: 4 }} aria-label="Platform security">
         {SECURITY_ROWS.map((r) => {
           const on = r.key === "verify" ? true : sec[r.key];

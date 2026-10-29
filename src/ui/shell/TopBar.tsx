@@ -94,7 +94,7 @@ function OrgTile({ identity, size }: { identity: IdentityInfo; size: number }) {
  * Opens the organisation and session card: who you are here, device, session time left, time zone, and the links to profile and to signing
  * out the other devices. At phone width the card becomes a bottom sheet (CSS) and the text collapses to the tile.
  */
-export function OrgIdentity({ identity }: { identity: IdentityInfo }) {
+export function OrgIdentity({ identity, switcher }: { identity: IdentityInfo; switcher?: ReactNode }) {
   const api = useApi();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -129,6 +129,7 @@ export function OrgIdentity({ identity }: { identity: IdentityInfo }) {
                 {identity.signedInTime ? ` · Signed in ${identity.signedInTime}` : ""}
               </span>
             </span>
+            {switcher ? <ChevronDown size={15} className="fb-orgblock__chev" aria-hidden="true" /> : null}
           </>
         }
       >
@@ -179,6 +180,7 @@ export function OrgIdentity({ identity }: { identity: IdentityInfo }) {
                 </>
               ) : null}
             </dl>
+            {switcher}
             <div className="fb-orgpop__links">
               <a className="fb-menuitem" href={identity.preferencesHref} onClick={close}>
                 <User size={15} aria-hidden="true" /> Profile and preferences
@@ -277,7 +279,6 @@ export function TopBar({
   bell,
   quickCreate,
   userMenu,
-  organisationSwitcher,
   tools,
   onOpenNav,
 }: {
@@ -287,8 +288,6 @@ export function TopBar({
   bell: ReactNode;
   quickCreate: ReactNode;
   userMenu: ReactNode;
-  /** The switcher slot: present in the layout, empty until V1.1 turns it on. */
-  organisationSwitcher?: ReactNode;
   /** Ask Figbloom, the command palette and Help buttons (X2, X3). Left out when the tools are off. */
   tools?: ReactNode;
   onOpenNav: () => void;
@@ -301,7 +300,6 @@ export function TopBar({
       {orgIdentity}
       <div className="fb-topbar__search">{search}</div>
       <div className="fb-topbar__right">
-        {organisationSwitcher}
         {quickCreate}
         {tools}
         {bell}

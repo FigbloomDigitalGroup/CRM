@@ -7,7 +7,8 @@ import { describeError } from "../../errors";
 import { NoAccess } from "../../components/states";
 import { useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
-import { HIcon, KpiGrid, KpiSkeleton, Panel, SectionFailed, type KpiDef } from "./kit";
+import { SupportHome } from "./SupportHome";
+import { HCols, HIcon, KpiGrid, KpiSkeleton, Panel, SectionFailed, type KpiDef } from "./kit";
 import { NewLeadsPanel, MovingAndStalled, PipelineByStage, TodoPanel, useLastVisit, useNewLeads } from "./blocks";
 import {
   AdoptionCard,
@@ -27,7 +28,7 @@ import {
 } from "./roles";
 import type { DeliveryData, FinanceData, ManagementData, SalesTodayData, SectionAnswer, TechnicalData } from "./dash";
 
-type Kind = "management" | "sales" | "delivery" | "finance" | "technical";
+type Kind = "management" | "sales" | "delivery" | "finance" | "technical" | "support";
 
 interface Quick {
   key: string;
@@ -43,6 +44,7 @@ const COPY: Record<Kind, { title: string; scope: string; scopeTone: "organisatio
   delivery: { title: "Today", scope: "Delivery view", scopeTone: "read-only", subtitle: "won work coming your way" },
   finance: { title: "Today", scope: "Finance view", scopeTone: "read-only", subtitle: "won value and what’s still to collect" },
   technical: { title: "My work", scope: "Assigned to me", scopeTone: "mine", subtitle: "tasks assigned to you" },
+  support: { title: "Support", scope: "My work", scopeTone: "mine", subtitle: "maintenance clients and open tickets" },
 };
 
 const EMPTY: Record<Kind, { icon: string; title: string; body: string }> = {
@@ -58,6 +60,7 @@ const EMPTY: Record<Kind, { icon: string; title: string; body: string }> = {
   },
   delivery: { icon: "package", title: "No handoffs yet", body: "When Sales marks a deal won, the scope, requirements and onboarding tasks land here with a start date. Nothing to do until then." },
   finance: { icon: "wallet", title: "No won deals yet", body: "Won deals appear here with their contract amount so you can track invoices and payments. The open pipeline stays with Sales." },
+  support: { icon: "help", title: "No open tickets", body: "When a maintenance client raises a ticket, it shows here with its status." },
   technical: { icon: "tasks", title: "No work assigned yet", body: "When someone assigns you a task, it shows here with the client requirements you need. You can also add tasks for yourself." },
 };
 
@@ -96,6 +99,16 @@ export function HomeScreen() {
   }, [sections]);
 
   const retry = () => void qc.invalidateQueries({ queryKey: ["getDashboard"] });
+
+  // The proposed Customer Support role: tickets, no leads. It has its own home (the design's "Support"), which does not wait for the dashboard call.
+  if (m.can("tickets.manage") && !m.can("leads.view.own") && !m.can("leads.view.all")) {
+    return (
+      <div className="fb-home">
+        <Header kind="support" timeZone={m.timeZone} quick={quickFor("support", m.orgSlug, m.can)} />
+        <SupportHome />
+      </div>
+    );
+  }
 
   if (dash.isError) {
     const e = describeError(dash.error);
@@ -167,6 +180,7 @@ function quickFor(kind: Kind, org: string, can: (k: string) => boolean): Quick[]
     add({ key: "note", label: "Log a note", icon: "file", href: `${base}/tasks?new=note`, primary: true }, can("activities.create"));
     add({ key: "task", label: "New task", icon: "tasks", href: `${base}/tasks?new=1` }, can("tasks.create"));
   }
+  if (kind === "support") add({ key: "note", label: "Log a note", icon: "note", href: `${base}/conversations?log=note`, primary: true }, can("activities.create"));
   if (kind === "technical") add({ key: "task", label: "New task for myself", icon: "plus", href: `${base}/tasks?new=1`, primary: true }, can("tasks.create"));
   return out;
 }
@@ -245,6 +259,10 @@ function SalesHome({ sections, retry }: RoleProps) {
   const s = section<SalesTodayData>(sections, "sales_today");
   const leads = useNewLeads();
   const since = useLastVisit(m.membershipId);
+  // The design's Overdue card says how old the oldest overdue task is ("oldest 9 days"); the list comes oldest first.
+  const oldest = useApiQuery("getTasksGroupsByGroup", { params: { orgSlug: m.orgSlug, group: "OVERDUE" }, query: { pageSize: "1" } });
+  const oldestDue = (oldest.data?.items?.[0] as { dueAt?: string | null } | undefined)?.dueAt;
+  const oldestDays = oldestDue ? Math.max(1, Math.floor((Date.now() - Date.parse(oldestDue)) / 86_400_000)) : null;
   if (s.state === "failed") return <SectionFailed title={s.title} message={s.error} onRetry={retry} />;
   if (s.state !== "ok") return null;
   const d = s.data;
@@ -258,7 +276,7 @@ function SalesHome({ sections, retry }: RoleProps) {
       key: "overdue",
       label: "Overdue",
       value: d.myDay.tasksOverdue ?? 0,
-      sub: (d.myDay.tasksOverdue ?? 0) ? "needs a look" : "all clear",
+      sub: (d.myDay.tasksOverdue ?? 0) ? (oldestDays ? `oldest ${oldestDays} day${oldestDays === 1 ? "" : "s"}` : "needs a look") : "all clear",
       icon: "alert",
       tone: "red",
       href: `/o/${m.orgSlug}/tasks`,
@@ -271,16 +289,10 @@ function SalesHome({ sections, retry }: RoleProps) {
   return (
     <>
       <KpiGrid items={kpis} />
-      <div className="fb-hgrid">
-        <TodoPanel />
-        <NewLeadsPanel rows={leads.rows} since={since} />
-      </div>
-      {d.pipeline ? (
-        <div className="fb-hgrid">
-          <PipelineByStage />
-          <MovingAndStalled />
-        </div>
-      ) : null}
+      <HCols
+        left={[<TodoPanel key="todo" />, ...(d.pipeline ? [<PipelineByStage key="pipe" />] : [])]}
+        right={[<NewLeadsPanel key="new" rows={leads.rows} since={since} />, ...(d.pipeline ? [<MovingAndStalled key="moving" />] : [])]}
+      />
     </>
   );
 }
@@ -311,21 +323,12 @@ function ManagementHome({ sections, retry }: RoleProps) {
     <>
       <FirstRunChecklist />
       <KpiGrid items={kpis} />
-      <div className="fb-hgrid">
-        <TodoPanel showOwner />
-        <NewLeadsPanel rows={leads.rows} since={since} />
-      </div>
-      <div className="fb-hgrid">
-        <PipelineByStage />
-        <MovingAndStalled showOwner />
-      </div>
+      <HCols
+        left={[<TodoPanel key="todo" showOwner />, <PipelineByStage key="pipe" />]}
+        right={[<NewLeadsPanel key="new" rows={leads.rows} since={since} />, <MovingAndStalled key="moving" showOwner />]}
+      />
       <MonthVsLast data={d} />
-      <div className="fb-hgrid fb-hgrid--narrow">
-        <RevenueByService data={d} />
-        <TeamHealth data={d} />
-        <RetentionCard />
-        <AdoptionCard data={d} />
-      </div>
+      <HCols left={[<RevenueByService key="rev" data={d} />, <RetentionCard key="ret" />]} right={[<TeamHealth key="team" data={d} />, <AdoptionCard key="adopt" data={d} />]} />
     </>
   );
 }

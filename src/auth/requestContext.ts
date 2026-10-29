@@ -30,7 +30,7 @@ export interface CookieReader {
 
 /**
  * Resolves the current request's identity: the real session cookie
- * (src/auth/session.ts) first, falling back to the dev-login placeholder
+ * (src/auth/session.ts) first, falling back to the dev sign-in
  * cookie (src/auth/devSession.ts) only when NODE_ENV is explicitly
  * "development" (FIG-605) -- this is the only place that fallback exists,
  * so anything other than a real local dev run never honors it even if a

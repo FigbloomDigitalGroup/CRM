@@ -37,7 +37,7 @@ import {
 
 /**
  * Real authentication (FIG-592) -- the production replacement for the
- * dev-login placeholder (src/auth/devSession.ts). Unlike other services,
+ * dev sign-in placeholder (src/auth/devSession.ts). Unlike other services,
  * these functions don't take an `AuthContext`: authentication is what
  * *produces* one, so there's nothing to check permissions against yet.
  *

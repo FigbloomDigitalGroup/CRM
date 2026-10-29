@@ -17,20 +17,20 @@ describe("sidebar navigation per role", () => {
   it("Management sees the whole workspace and the organisation reports", () => {
     expect(menu("MANAGEMENT")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Leads, Deals, Tasks, Calendar, Quotes, Approvals",
-      "Customers: Companies, Contacts, Conversations, Support",
+      "Sales workspace: Leads, Deals, Tasks, Calendar",
+      "Customers: Companies, Contacts, Conversations",
       "After the sale: Handoffs, Renewals, Payments",
-      "Insights and settings: Forecast, Reports, Preferences, Settings",
+      "Insights & settings: Forecast & targets, Approvals, Reports, Preferences, Settings",
     ]);
   });
 
   it("Sales sees the pipeline and its own metrics, not the organisation's reports", () => {
     expect(menu("SALES")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Leads, Deals, Tasks, Calendar, Quotes, Approvals",
+      "Sales workspace: Leads, Deals, Tasks, Calendar",
       "Customers: Companies, Contacts, Conversations",
       "After the sale: Handoffs, Renewals",
-      "Insights and settings: Forecast, My metrics, Preferences",
+      "Insights & settings: Forecast & targets, My metrics, Preferences",
     ]);
   });
 
@@ -40,7 +40,7 @@ describe("sidebar navigation per role", () => {
       "Pipeline: Won deals, Tasks, Calendar",
       "Customers: Companies, Contacts, Conversations",
       "After the sale: Handoffs",
-      "Insights and settings: My metrics, Preferences",
+      "Insights & settings: Forecast & targets, My metrics, Preferences",
     ]);
   });
 
@@ -50,20 +50,20 @@ describe("sidebar navigation per role", () => {
       "Pipeline: Won deals",
       "Customers: Companies, Contacts",
       "After the sale: Payments",
-      "Insights and settings: My metrics, Preferences",
+      "Insights & settings: Forecast & targets, My metrics, Preferences",
     ]);
   });
 
   it("Restricted Technical sees My work and their tasks, and nothing about leads, deals or customers", () => {
-    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Customers: Conversations", "Insights and settings: Preferences"]);
+    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Customers: Conversations", "Insights & settings: Preferences"]);
   });
 
   it("Customer Support (behind its flag) sees customers and tasks, no pipeline", () => {
     expect(menu("CUSTOMER_SUPPORT")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Tasks, Calendar",
-      "Customers: Companies, Contacts, Conversations, Support",
-      "Insights and settings: Preferences",
+      "Sales workspace: Tasks",
+      "Customers: Companies, Contacts, Conversations",
+      "Insights & settings: Forecast & targets, My metrics, Preferences",
     ]);
   });
 

@@ -136,7 +136,6 @@ export function CommandPalette({ open, onClose, orgSlug, permissionKeys, onNavig
           <span>Enter open</span>
           <span>G then L · go to leads</span>
           <span>N · new lead</span>
-          <span className="fb-pal__demo">Demo records</span>
         </div>
       </div>
     </>

@@ -28,7 +28,7 @@ export function SetupForm() {
     <div className="auth-shell">
       <div className="auth-card" data-screen-label="Two-step enrolment" style={{ maxWidth: 480 }}>
         <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#e8f0fa", color: "#1f5fa8", display: "inline-block", marginBottom: 12 }}>
-          Two-step sign-in · V1.1 · Demo data
+          Two-step sign-in · V1.1
         </span>
         {step === "scan" ? (
           <>
@@ -36,10 +36,10 @@ export function SetupForm() {
             <p style={{ marginTop: 0 }}>Scan the square with an authenticator app, or type the key. Then enter the 6-digit code the app shows.</p>
             <div
               role="img"
-              aria-label="Sample code square (demo)"
+              aria-label="Sample code square"
               style={{ width: 168, height: 168, borderRadius: 12, border: "1px solid #888", background: "repeating-conic-gradient(#111 0 25%, #fff 0 50%) 0 0 / 24px 24px", margin: "8px 0" }}
             />
-            <p style={{ fontFamily: "monospace", fontSize: 14 }}>Key: DEMO KEY 7K3M PQ9X A82D</p>
+            <p style={{ fontFamily: "monospace", fontSize: 14 }}>Key: JBSW Y3DP EHPK 3PXP</p>
             <form onSubmit={confirm} noValidate>
               <label htmlFor="setup-code" style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
                 Code from your app

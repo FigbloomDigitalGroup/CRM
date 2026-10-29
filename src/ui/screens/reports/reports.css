@@ -18,7 +18,7 @@
 .fb-rep__tile:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); color: var(--text); text-decoration: none; }
 .fb-rep__tiletop { display: flex; justify-content: space-between; }
 .fb-rep__tilel { font-size: 14px; font-weight: 600; }
-.fb-rep__tilei { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.fb-rep__tilei { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 0; }
 .fb-rep__tilei--red { background: var(--red-soft); color: var(--red); }
 .fb-rep__tilei--orange { background: var(--orange-soft); color: var(--orange-text); }
 .fb-rep__tilei--blue { background: var(--blue-soft); color: var(--blue); }
@@ -54,7 +54,7 @@
 .fb-rep__toggle { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--surface-3); }
 .fb-rep__toggle button { width: 28px; height: 26px; border: 0; border-radius: 6px; background: transparent; display: flex; align-items: center; justify-content: center; color: var(--text-2); }
 .fb-rep__toggle button[aria-pressed="true"] { background: var(--surface); box-shadow: var(--shadow-sm); color: var(--text); }
-.fb-rep__csv { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); display: flex; align-items: center; justify-content: center; text-decoration: none; }
+.fb-rep__csv { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-2); display: flex; align-items: center; justify-content: center; text-decoration: none; padding: 0; }
 .fb-rep__csv:hover { background: var(--surface-2); color: var(--text); text-decoration: none; }
 .fb-rep__controls { margin-top: 12px; }
 .fb-rep__ctl { display: flex; gap: 8px; flex-wrap: wrap; }

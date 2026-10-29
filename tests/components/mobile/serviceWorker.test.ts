@@ -49,6 +49,21 @@ describe("service worker (F4.12)", () => {
     expect(out.responded).toBeNull();
   });
 
+  it("keeps a content-hashed build file, but never one whose name can stay the same while its content changes", () => {
+    const { listeners } = load();
+    for (const hashed of ["https://crm.example/_next/static/chunks/main-app-3f9a1c7be2d04a55.js", "https://crm.example/_next/static/css/8a1b2c3d4e5f6a7b.css"]) {
+      const { out, event } = fetchEvent(hashed);
+      listeners.fetch!(event);
+      expect(out.responded, hashed).not.toBeNull();
+    }
+    // The development server's files (no hash in the name) must always come from the network, or the app never updates.
+    for (const dev of ["https://crm.example/_next/static/chunks/main-app.js?v=1793200000", "https://crm.example/_next/static/css/app/o/%5BorgSlug%5D/layout.css"]) {
+      const { out, event } = fetchEvent(dev);
+      listeners.fetch!(event);
+      expect(out.responded, dev).toBeNull();
+    }
+  });
+
   it("answers a page that cannot be fetched with the offline page", async () => {
     const { listeners } = load();
     const { out, event } = fetchEvent("https://crm.example/o/figbloom/m", "navigate");

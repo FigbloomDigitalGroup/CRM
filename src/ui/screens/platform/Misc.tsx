@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { DemoNotice } from "@/ui/demo/DemoBadge";
 import { PageHead } from "./kit";
 import { usePlatformTheme } from "./PlatformRoot";
 
@@ -23,7 +22,7 @@ export function PlatformPreferences() {
   return (
     <>
       <PageHead title="Preferences" sub="Your own settings as a platform admin. They apply on this device." />
-      <DemoNotice what="Platform preferences" />
+      
       <section className="fb-pl-card" style={{ maxWidth: 780 }} aria-label="Appearance">
         <h2 style={{ marginBottom: 12 }}>Appearance</h2>
         <div className="fb-pl-seg" role="group" aria-label="Colour scheme">

@@ -4,7 +4,6 @@ import { ArrowLeft, CheckCircle2, Clock, Copy, FileText, Send, X } from "lucide-
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Banner, Button, EmptyState, IconButton, Input, NoAccess, ReleaseTag, Select, Textarea, useMember, useToast } from "@/ui";
-import { DemoNotice } from "../../demo/DemoBadge";
 import { deals as demoDeals } from "./demo/data";
 import { ensureQuote, quoteActions, requestApproval, requestDeposit, setDealValue, useDemoStore } from "./demo/store";
 import { MAX_DISCOUNT, formatKes, isLocked, needsApproval, quoteTotals, type QuoteStatus } from "./quoteMath";
@@ -44,7 +43,7 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
     if (deal && mayBuild && !has) ensureQuote(deal.id, deal.title, userName);
   }, [deal, mayBuild, has, userName]);
   if (!mayBuild && !mayApprove) return <NoAccess area="Quotes" denial={{ yourRole: roleName, ownerRoles: ["Management", "Sales"], whoToAsk: ["Management"] }} />;
-  if (!deal) return <EmptyState title="This deal is not in the demo data" body="Open a quote from the Quotes list." action={<Link href={`/o/${orgSlug}/quotes`}>Back to quotes</Link>} />;
+  if (!deal) return <EmptyState title="This deal was not found" body="Open a quote from the Quotes list." action={<Link href={`/o/${orgSlug}/quotes`}>Back to quotes</Link>} />;
 
   const q = store.quotes.find((x) => x.dealId === deal.id);
   if (!q) return mayBuild ? null : <EmptyState title="No quote on this deal yet" body="Sales builds the quote; it appears here once it is sent for approval." action={<Link href={`/o/${orgSlug}/approvals`}>Back to approvals</Link>} />;
@@ -53,7 +52,7 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
   const locked = isLocked(q.status);
   const canEdit = mayBuild && !locked;
   const waiting = q.status === "Pending approval";
-  const v2 = true; // the e-signature panel shows whatever the release allows; the demo is V2-enabled (FIG-1193)
+  const v2 = true; // the e-signature panel shows whatever the release allows; this screen is V2-enabled (FIG-1193)
   const dealValue = store.dealValues[deal.id] ?? deal.value;
   const differs = totals.total > 0 && Math.abs(totals.total - dealValue) > 1 && mayBuild;
   const signed = q.status === "Signed";
@@ -76,7 +75,7 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
 
   return (
     <div className="fb-com" data-screen-label="Quote builder">
-      <DemoNotice what="The quote builder" />
+      
       <Link href={`/o/${orgSlug}/quotes`} className="fb-com-back">
         <ArrowLeft size={15} aria-hidden="true" /> {deal.company} deal
       </Link>
@@ -252,7 +251,7 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
             ) : (
               <>
                 <p className="fb-com-muted">Send a signing link with the quote. The client signs in the browser; nothing to install.</p>
-                <Button disabledReason={q.status === "Sent" ? undefined : "Send the quote first"} onClick={() => setSigning(true)}>Preview client signing (demo)</Button>
+                <Button disabledReason={q.status === "Sent" ? undefined : "Send the quote first"} onClick={() => setSigning(true)}>Preview client signing</Button>
               </>
             )}
           </section>

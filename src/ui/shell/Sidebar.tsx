@@ -10,8 +10,8 @@ import {
   MessageSquare,
   Package,
   Search,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
   RefreshCw,
   Settings,
   Users,
@@ -111,11 +111,12 @@ export function Sidebar({
             key={item.key}
             href={`${base}${item.path}`}
             className="fb-navlink"
+            data-tint={item.tint}
             aria-current={active ? "page" : undefined}
             title={collapsed ? item.label : undefined}
             onClick={onMobileClose}
           >
-            <span aria-hidden="true" style={{ display: "flex" }}>{ICONS[item.icon]}</span>
+            <span aria-hidden="true" className="fb-navlink__icon">{ICONS[item.icon]}</span>
             <span className="fb-sidebar__text">{item.label}</span>
             {item.badge ? (
               <span className="fb-navlink__badge fb-sidebar__text" aria-label={`${item.badge} need attention`}>
@@ -138,7 +139,7 @@ export function Sidebar({
             Figbloom<span className="fb-accent"> CRM</span>
           </span>
           <button type="button" className="fb-iconbtn fb-sidebar__toggle" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} onClick={toggle}>
-            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
           </button>
         </div>
         <div className="fb-sidebar__filter">

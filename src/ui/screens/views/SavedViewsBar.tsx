@@ -7,7 +7,6 @@ import { Button } from "../../components/basics";
 import { Dialog } from "../../components/overlays";
 import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
-import { DemoBadge } from "../../demo/DemoBadge";
 import { toolsEnabled } from "../assistant/ToolsHost";
 import { addView, mayEdit, moveView, nameProblem, removeView, renameView, setPinned, setShared, visibleViews, type SavedView, type ViewPage } from "./model";
 import { useSavedViews } from "./store";
@@ -104,7 +103,7 @@ export function SavedViewsBar({ page, current, onApply }: { page: ViewPage; curr
       <button type="button" className="fb-sv__add" onClick={() => setManaging(true)}>
         Manage views
       </button>
-      <DemoBadge />
+      
 
       <Dialog open={managing} onClose={() => setManaging(false)} title="Manage views" actions={<Button onClick={() => setManaging(false)}>Done</Button>}>
         <ManageList views={views} me={me} onChange={setViews} toast={(m) => toast.show({ message: m })} page={page} />

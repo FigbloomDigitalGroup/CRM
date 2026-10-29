@@ -4,7 +4,6 @@ import { AlertTriangle, ArrowLeft, CheckCircle2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { DemoNotice } from "@/ui/demo/DemoBadge";
 import { DEFAULT_LISTS } from "./demo/data";
 import { ReleaseTag } from "./kit";
 import { applyWizardField, EMPTY_WIZARD, emailIsInvited, SLUG_MESSAGES, slugState, WIZARD_STEPS, wizardStepError, type WizardForm } from "./logic";
@@ -65,7 +64,7 @@ export function ProvisionWizard() {
         <h1 className="fb-pl-h1">Provision organisation</h1>
         <ReleaseTag release="V1.1" />
       </div>
-      <DemoNotice what="The provisioning wizard" />
+      
       <ol className="fb-pl-steps" aria-label="Steps">
         {[...WIZARD_STEPS, "Done"].map((l, i) => (
           <li key={l} className="fb-pl-step" aria-current={i === step ? "step" : undefined} data-done={i < step}>
@@ -162,7 +161,7 @@ export function ProvisionWizard() {
             </dl>
             <label className="fb-pl-check fb-pl-muted2" style={{ fontSize: 13 }}>
               <input type="checkbox" checked={simFail} onChange={() => setSimFail((x) => !x)} />
-              Demo: make seeding fail
+              Make seeding fail
             </label>
           </>
         ) : null}

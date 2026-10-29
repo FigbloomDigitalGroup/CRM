@@ -677,6 +677,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "tasks.view.own",
     "tasks.create",
     "tasks.assign.own",
+    "reporting.view.own",
     "attachments.manage",
     "ai.use",
     "tickets.manage",

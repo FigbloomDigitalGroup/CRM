@@ -2,7 +2,6 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { connectivity } from "../../../data/connectivity";
-import { DemoBadge } from "../../../demo/DemoBadge";
 import { Icon } from "../../leads/icons";
 import { useQueue, useSyncNow } from "../data";
 import { discardPhoto, retryPhotos, usePhotos } from "./photos";
@@ -66,7 +65,7 @@ export function SyncQueueScreen() {
           {waitingPhotos.map((p) => (
             <li key={p.id}>
               <div className="fb-m-q__label">
-                Photo: {p.name} <DemoBadge />
+                Photo: {p.name} 
               </div>
               <div className="fb-m-q__state" data-state="WAITING">
                 {conn.online ? "Waiting to send" : "Waiting for a connection"} · {p.size}

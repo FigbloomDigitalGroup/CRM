@@ -4,12 +4,11 @@ import { useRouter } from "next/navigation";
 import { BrandMark } from "@/app/_shared/BrandMark";
 import { Button } from "../../components/basics";
 import { useApi } from "../../data/hooks";
-import { DemoBadge } from "../../demo/DemoBadge";
 
 /**
  * OS1, the suspended-organisation screen (FIG-1166): a person whose organisation Figbloom has paused sees no data, only who to contact and
  * Sign out. The organisation layout renders this instead of the shell, so nobody can navigate into the app. Until the organisation status
- * exists in the API (B6.05) the demo cookie `fb_demo_suspended` stands in for it; Reactivate (demo) clears the cookie.
+ * exists in the API (B6.05) the demo cookie `fb_demo_suspended` stands in for it; Reactivate clears the cookie.
  */
 export function SuspendedScreen({ organisation, demo = false }: { organisation: string; demo?: boolean }) {
   const api = useApi();
@@ -45,9 +44,9 @@ export function SuspendedScreen({ organisation, demo = false }: { organisation: 
                   window.location.assign("/");
                 }}
               >
-                Reactivate (demo)
+                Reactivate
               </Button>
-              <DemoBadge />
+              
             </>
           ) : null}
         </div>

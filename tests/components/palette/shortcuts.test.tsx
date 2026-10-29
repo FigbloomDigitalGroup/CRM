@@ -80,7 +80,7 @@ describe("global keyboard shortcuts (X3, FIG-1172)", () => {
 
   it("the buttons open one panel at a time", () => {
     mount([]);
-    fireEvent.click(screen.getByRole("button", { name: "Ask Figbloom" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ask Figbloom assistant" }));
     expect(screen.getByTestId("assistant-panel")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Help and what/ }));
     expect(screen.queryByTestId("assistant-panel")).toBeNull();
@@ -90,7 +90,7 @@ describe("global keyboard shortcuts (X3, FIG-1172)", () => {
   it("opens the assistant in its off state when the organisation switched it off", () => {
     localStorage.setItem("figbloom-demo-ai-settings", JSON.stringify({ assist: false }));
     mount([]);
-    fireEvent.click(screen.getByRole("button", { name: "Ask Figbloom" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ask Figbloom assistant" }));
     expect(screen.getByTestId("assistant-off")).toBeInTheDocument();
   });
 

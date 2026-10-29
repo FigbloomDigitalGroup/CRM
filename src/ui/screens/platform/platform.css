@@ -42,8 +42,6 @@
 .fb-pl :focus-visible { outline: 2px solid var(--pl-orange); outline-offset: 2px; }
 .fb-pl :where(h1, h2) { margin: 0; color: inherit; font-weight: 700; font-size: inherit; letter-spacing: inherit; }
 /* The shared "Demo data" marker (src/ui/demo/DemoBadge.tsx), restyled here because this page does not load the tenant stylesheet. */
-.fb-pl .fb-demo-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; border: 1px dashed currentColor; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; opacity: 0.85; white-space: nowrap; }
-.fb-pl .fb-demo-notice { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--pl-text-2); margin: 0; }
 .fb-pl-mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
 .fb-pl-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 

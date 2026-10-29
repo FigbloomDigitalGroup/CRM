@@ -4,7 +4,6 @@ import { Eye, Info, X } from "lucide-react";
 import { Button } from "../../components/basics";
 import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
-import { DemoBadge } from "../../demo/DemoBadge";
 import { DEMO_ANNOUNCEMENT } from "./demo/data";
 import { orgSideDemo, useOrgSideDemo } from "./demo/store";
 
@@ -49,7 +48,7 @@ export function OrgBanners() {
           <span className="fb-orgban__text">
             <strong>{DEMO_ANNOUNCEMENT.title}</strong> {DEMO_ANNOUNCEMENT.body}
           </span>
-          <DemoBadge />
+          
           <button type="button" aria-label="Dismiss announcement" className="fb-orgban__x" onClick={() => orgSideDemo.dismissAnnouncement()}>
             <X size={14} aria-hidden="true" />
           </button>
@@ -64,7 +63,7 @@ export function OrgBanners() {
             <div className="fb-supcard__title">
               <strong>Figbloom Support asks to view your workspace</strong>
               <span className="fb-supcard__tag">V2</span>
-              <DemoBadge />
+              
             </div>
             <div className="fb-supcard__reason">{pending.reason}</div>
             <div className="fb-supcard__meta">

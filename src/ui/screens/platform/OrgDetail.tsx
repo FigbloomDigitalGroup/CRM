@@ -3,7 +3,6 @@
 import { AlertTriangle, Archive, ArrowLeft, Ban, ChevronDown, Code, Download, Eye, RefreshCw, Send, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { DemoNotice } from "@/ui/demo/DemoBadge";
 import { dateShort, PlDialog, StatusPill, whenLabel } from "./kit";
 import { dialogValid, ORG_DIALOGS } from "./logic";
 import { PlatformNotFound } from "./Misc";
@@ -71,7 +70,7 @@ export function OrgDetail({ id }: { id: string }) {
           {banner.text}
         </div>
       ) : null}
-      <DemoNotice what="This organisation" />
+      
       <div className="fb-pl-head" style={{ alignItems: "flex-start" }}>
         <div>
           <div className="fb-pl-title-row">

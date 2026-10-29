@@ -48,6 +48,14 @@ export function moneyShort(value: number | string | null | undefined, currency =
   return `${currency} ${Math.round(n)}`;
 }
 
+/** The design's `kesShort`: "KES 1.43M" from a million, "KES 450k" from a thousand, otherwise the plain amount. Used for a total beside a heading. */
+export function moneyTotal(value: number, currency = "KES"): string {
+  const n = Math.abs(value);
+  if (n >= 1_000_000) return `${currency} ${(value / 1_000_000).toFixed(value % 1_000_000 ? 2 : 0).replace(/0$/, "")}M`;
+  if (n >= 1_000) return `${currency} ${Math.round(value / 1_000)}k`;
+  return `${currency} ${Math.round(value)}`;
+}
+
 export function pct(n: number, d: number): string {
   return d > 0 ? `${Math.round((n / d) * 100)}%` : "—";
 }

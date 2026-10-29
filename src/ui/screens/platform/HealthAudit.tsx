@@ -2,7 +2,6 @@
 
 import { Download, Lock } from "lucide-react";
 import { useState } from "react";
-import { DemoNotice } from "@/ui/demo/DemoBadge";
 import type { DemoHealth } from "./demo/data";
 import { PageHead, StatusPill, whenLabel } from "./kit";
 import { usePlatform } from "./store";
@@ -23,7 +22,7 @@ export function SystemHealth() {
   return (
     <>
       <PageHead title="System health" sub={<>Per component, last 8 days. <a href="#errors" onClick={(e) => { e.preventDefault(); toast("Opens the error-tracking service in a new tab"); }}>Open error tracking ↗</a></>} />
-      <DemoNotice what="System health" />
+      
       {state.health.map((c) => (
         <section key={c.k} className="fb-pl-card fb-pl-comp" aria-label={c.l}>
           <div style={{ flex: "1 1 300px" }}>
@@ -63,7 +62,7 @@ export function PlatformAudit() {
           Export
         </button>
       </PageHead>
-      <DemoNotice what="The audit log" />
+      
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         {filters.map((x) => (
           <select key={x.k} className="fb-pl-select" style={{ width: "auto", height: 38 }} aria-label={x.l} value={f[x.k]} onChange={(e) => setF({ ...f, [x.k]: e.target.value })}>

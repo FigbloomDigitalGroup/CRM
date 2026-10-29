@@ -51,9 +51,9 @@ The dates are my proposal to fit the fixed 22 Nov date; they are not signed off.
 ## Demo data convention (so it can be found and replaced)
 
 1. Demo data lives only in folders named `demo/` next to the screen that uses it (for example `src/ui/screens/platform/demo/`), and is read through one module per screen, so wiring to the API means swapping that module.
-2. Every screen that shows demo data says so on screen ("Demo data"), so nobody mistakes it for real records in the presentation or later.
+2. ~~Every screen that shows demo data says so on screen ("Demo data").~~ **Changed by Given on 29 Oct 2026: no screen shows a "Demo data" label or any demo wording any more.** Given and Claude know which screens are on demo data; this log and the `demo/` folders are now the only record. Production safety is unchanged: these screens still return 404 in production unless `DEMO_SCREENS=true` (`src/ui/demo/enabled.ts`).
 3. The platform console and Customer Support screens stay behind the V1.1 release flags and `ALLOW_DEV_ACCOUNTS`/dev rules where the code already requires them; nothing here may reach a production build without the real API behind it.
-4. Search for `demo/` and "Demo data" to list what is left to wire. Track each wired screen in the table below.
+4. Search for `demo/` and `demoScreensEnabled` to list what is left to wire. Track each wired screen in the table below.
 
 ### Screens on demo data (all in M10) (fill in as they are built and as they are wired)
 

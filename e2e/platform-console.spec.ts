@@ -29,7 +29,7 @@ test.describe("Platform console on demo data", () => {
     await expect(page.getByText("Platform console", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Platform home" })).toBeVisible();
     await expect(page.getByText("Dev only: verification skipped").first()).toBeVisible();
-    await expect(page.getByText("Demo data").first()).toBeVisible();
+    await expect(page.getByText("Demo data")).toHaveCount(0);
     const hrefs = await page.getByRole("navigation").first().getByRole("link").evaluateAll((as) => as.map((a) => a.getAttribute("href")));
     expect(hrefs.every((h) => h?.startsWith("/platform"))).toBe(true);
     await expect(page.getByText("3 things need attention")).toBeVisible();
@@ -67,7 +67,7 @@ test.describe("Platform console on demo data", () => {
     await expect(page.getByText(/Waiting for a second, different admin/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Approve as second admin" })).toHaveCount(0);
     await expect(page.getByLabel(/Delete organisation data/)).toBeDisabled();
-    await page.getByRole("button", { name: /Demo: approve as Given/ }).click();
+    await page.getByRole("button", { name: /Approve as Given/ }).click();
     await expect(page.getByText(/Approved by Dev Super Admin and Given\. Deletion can run\./)).toBeVisible();
     await expect(page.getByLabel(/Delete organisation data/)).toBeEnabled();
   });
@@ -85,11 +85,11 @@ test.describe("Platform console on demo data", () => {
     await expect(page.getByText(/added by/)).toHaveCount(2);
   });
 
-  test("support access: request, organisation approves (demo), countdown shows, ending is one click", async ({ page }) => {
+  test("support access: request, organisation approves, countdown shows, ending is one click", async ({ page }) => {
     await page.goto("/platform/support-access");
     await page.getByLabel("Reason").fill("Check the import");
     await page.getByRole("button", { name: "Send request to the organisation" }).click();
-    await page.getByRole("button", { name: "Demo: approve as the organisation" }).first().click();
+    await page.getByRole("button", { name: "Approve as the organisation" }).first().click();
     await expect(page.getByText(/Support view, read-only/)).toBeVisible();
     await page.getByRole("button", { name: "End", exact: true }).click();
     await expect(page.getByText(/Support view, read-only/)).toHaveCount(0);
@@ -113,7 +113,7 @@ test.describe("Platform console on demo data", () => {
     await page.goto("/platform");
     await page.getByRole("button", { name: /Dev Super Admin/ }).click();
     await page.getByRole("button", { name: "Sign out" }).click();
-    await page.waitForURL(/\/dev-login/);
+    await page.waitForURL(/\/login/);
     const res = await page.goto("/platform");
     expect(res?.status()).toBe(404);
   });

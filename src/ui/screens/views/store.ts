@@ -13,7 +13,7 @@ const key = (org: string) => `figbloom-saved-views:${org}`;
 const EVENT = "figbloom-saved-views";
 
 const SEED = (): SavedView[] => [
-  { id: "demo-sv1", page: "leads", name: "Hot, not yet contacted", state: { tab: "all", filters: { temp: "HOT" } }, shared: true, pinned: true, by: "demo-colleague", byName: "Wanjiru (demo)", order: 1 },
+  { id: "demo-sv1", page: "leads", name: "Hot, not yet contacted", state: { tab: "all", filters: { temp: "HOT" } }, shared: true, pinned: false, by: "demo-colleague", byName: "Wanjiru", order: 1 },
 ];
 
 const cache = new Map<string, { raw: string | null; value: SavedView[] }>();

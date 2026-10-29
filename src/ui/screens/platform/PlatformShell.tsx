@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BrandMark } from "@/app/_shared/BrandMark";
-import { DemoBadge } from "@/ui/demo/DemoBadge";
 import { cx } from "./kit";
 import { isPending, searchOrgs } from "./logic";
 import { usePlatformTheme } from "./PlatformRoot";
@@ -110,7 +109,7 @@ export function PlatformShell({ identity, signOut, children }: { identity: Platf
           })}
         </nav>
         <label className="fb-pl-demo-release">
-          <DemoBadge>Demo</DemoBadge>
+          
           <span className="fb-pl-sr">Release shown</span>
           <select aria-label="Release shown in the console" value={state.release} onChange={(e) => dispatch({ type: "release", value: e.target.value === "v2" ? "v2" : "v11" })}>
             <option value="v11">V1.1</option>

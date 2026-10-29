@@ -2,7 +2,6 @@
 
 import { Check, Sparkles, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { DemoBadge } from "@/ui/demo/DemoBadge";
 import { demoRespond } from "./demo/respond";
 import { DAILY_LIMIT, type AskContext, type AssistantMessage, type ProposedAction, type Respond } from "./types";
 
@@ -105,7 +104,7 @@ export function AssistantPanel({ open, onClose, enabled, ctx, respond = demoResp
         <div className="fb-ask__title">
           <strong>Ask Figbloom</strong>
           <span>
-            Sees what {ctx.roleName} can see · <DemoBadge />
+            Sees what {ctx.roleName} can see · 
           </span>
         </div>
         <button type="button" className="fb-ask__x" aria-label="Close Ask Figbloom" onClick={onClose}>

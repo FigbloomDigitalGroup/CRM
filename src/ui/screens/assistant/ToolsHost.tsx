@@ -56,11 +56,8 @@ export function ToolsTriggers() {
   const toggle = (p: Exclude<Panel, null>) => store.set(panel === p ? null : p);
   return (
     <>
-      <button type="button" className="fb-roundbtn" aria-label="Command palette (Ctrl or Cmd K)" title="Command palette (Ctrl/Cmd K)" aria-expanded={panel === "palette"} onClick={() => toggle("palette")}>
-        <Command size={17} aria-hidden="true" />
-      </button>
-      <button type="button" className="fb-roundbtn" aria-label="Ask Figbloom" title="Ask Figbloom" aria-expanded={panel === "assistant"} onClick={() => toggle("assistant")}>
-        <Sparkles size={17} aria-hidden="true" />
+      <button type="button" className="fb-cmdchip" aria-label="Command palette (Ctrl or Cmd K)" title="Command palette · Ctrl/Cmd+K" aria-expanded={panel === "palette"} onClick={() => toggle("palette")}>
+        <Command size={14} aria-hidden="true" />K
       </button>
       <button type="button" className="fb-roundbtn" aria-label="Help and what’s new" title="Help (?)" aria-expanded={panel === "help"} onClick={() => toggle("help")}>
         <HelpCircle size={17} aria-hidden="true" />
@@ -74,6 +71,17 @@ function recordFrom(pathname: string, orgSlug: string): AskContext["record"] {
   if (!m) return null;
   const kind = m[1] === "leads" ? "lead" : m[1] === "deals" ? "deal" : "company";
   return { kind, name: `this ${kind}` };
+}
+
+/** Ask Figbloom's round button, fixed at the bottom right of the page (design X2). Hidden while its panel is open; when the organisation switched the assistant off it still opens, and says so. */
+export function AssistantFab() {
+  const panel = usePanel();
+  if (!toolsEnabled() || panel === "assistant") return null;
+  return (
+    <button type="button" className="fb-fab" aria-label="Ask Figbloom assistant" title="Ask Figbloom" onClick={() => store.set("assistant")}>
+      <Sparkles size={24} aria-hidden="true" />
+    </button>
+  );
 }
 
 /** The panels, and the keyboard shortcuts that open them. Mounted once in the shell. */
@@ -152,6 +160,7 @@ export function ToolsOverlays() {
   if (!enabled) return null;
   return (
     <>
+      <AssistantFab />
       <CommandPalette
         open={panel === "palette"}
         onClose={() => store.set(null)}

@@ -55,7 +55,7 @@ export function ScannedBanner({ scanned }: { scanned: Scanned }) {
     <div className="fb-m-scanned" role="status" data-testid="scan-banner">
       <Icon name="check" size={15} />
       <span>
-        {scanned.summary} <span className="fb-m-scanned__demo">Demo reading: sample card, not your photo.</span>
+        {scanned.summary}
       </span>
     </div>
   );

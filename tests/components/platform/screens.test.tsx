@@ -36,7 +36,8 @@ describe("Platform home (PL1)", () => {
     renderIn(<PlatformHome />);
     expect(screen.getByText("3 things need attention")).toBeTruthy();
     expect(screen.getByText(/No customer records are shown here/)).toBeTruthy();
-    expect(screen.getAllByText("Demo data").length).toBeGreaterThan(0);
+    // No screen carries a "Demo data" label any more (Given, 29 Oct 2026).
+    expect(screen.queryByText(/Demo data/i)).toBeNull();
     expect(screen.getByRole("link", { name: /Website lead endpoint · Degraded/ })).toBeTruthy();
   });
 
@@ -88,7 +89,7 @@ describe("Provision wizard (PL3)", () => {
     await user.click(screen.getByRole("button", { name: "Continue" })); // keys
     await user.click(screen.getByRole("button", { name: "Continue" })); // review
     expect(screen.getByText("Kilimani Property Group")).toBeTruthy();
-    await user.click(screen.getByLabelText("Demo: make seeding fail"));
+    await user.click(screen.getByLabelText("Make seeding fail"));
     await user.click(screen.getByRole("button", { name: "Create organisation" }));
     expect(screen.getByRole("alert").textContent).toMatch(/Nothing was created/);
     await user.click(screen.getByRole("button", { name: "Create organisation" }));
@@ -136,7 +137,7 @@ describe("Data requests: the two-person rule (PL6)", () => {
     expect(screen.queryByRole("button", { name: "Approve as second admin" })).toBeNull();
     const del = screen.getByLabelText(/Delete organisation data/) as HTMLInputElement;
     expect(del.disabled).toBe(true);
-    await user.click(screen.getByRole("button", { name: /Demo: approve as Given/ }));
+    await user.click(screen.getByRole("button", { name: /Approve as Given/ }));
     expect(screen.getByText(/Approved by Dev Super Admin and Given\. Deletion can run\./)).toBeTruthy();
     expect((screen.getByLabelText(/Delete organisation data/) as HTMLInputElement).disabled).toBe(false);
   });

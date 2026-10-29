@@ -3,7 +3,6 @@
 import { Copy, ExternalLink, Plus } from "lucide-react";
 import { useState } from "react";
 import { Banner, Button, Checkbox, ConfirmDialog, Dialog, FormErrorSummary, Input, ReleaseTag, useMember, useToast } from "@/ui";
-import { DemoNotice } from "../../demo/DemoBadge";
 import { Panel } from "../settings/kit";
 import { deliveries as seedDeliveries, EVENTS, tokens as seedTokens, webhooks as seedHooks, type DemoDelivery, type DemoToken, type DemoWebhook } from "./demo/data";
 import { AuditTrail, recordAudit } from "./kit";
@@ -84,7 +83,7 @@ export function DevelopersEditor() {
 
   return (
     <>
-      <DemoNotice what="Developers" />
+      
       <Panel
         title={<span style={{ display: "inline-flex", gap: 10, alignItems: "center" }}>API tokens <ReleaseTag release="v2" /></span>}
         description="Tokens let a script or another system read or write CRM data. A token can do only what its scopes allow."

@@ -48,7 +48,6 @@ export function SignClient({ quote }: { quote: SigningQuote | null }) {
   return (
     <main className="sgn__wrap" data-screen-label="Client e-signature">
       {langBar}
-      <p className="sgn__muted" role="note">Demo data · sample quote</p>
       <section className="sgn__card" aria-labelledby="sgn-title">
         <h1 className="sgn__h1" id="sgn-title">{t.title(quote.no)}</h1>
         <p className="sgn__muted">

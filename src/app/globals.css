@@ -1182,7 +1182,9 @@ button {
   transition: background-color 0.15s, border-color 0.15s;
 }
 
-button:hover:not(:disabled) {
+/* Not inside the app shell (`.fb-app`): its components own their hover colours, and this rule's higher specificity would otherwise paint
+   every one of them solid green (the bell, Ask Figbloom's close button, ...). */
+button:hover:not(:disabled):not(.fb-app button) {
   background: var(--brand-green-dark);
   border-color: var(--brand-green-dark);
 }

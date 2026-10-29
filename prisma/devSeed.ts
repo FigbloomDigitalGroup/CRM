@@ -422,6 +422,14 @@ async function seedOrganization(
     create: { name: org.name, slug: org.slug },
   });
   await seedOrganizationDefaults(organization.id);
+  // The proposed Customer Support role is off until an organisation switches it on; the dev organisations have it on so the dev account works.
+  const toggles = await adminDb.organizationSetting.findUnique({ where: { organizationId_key: { organizationId: organization.id, key: "feature_toggles" } } });
+  const merged = { ...((toggles?.value as Record<string, boolean> | null) ?? {}), "customer_support.role": true };
+  await adminDb.organizationSetting.upsert({
+    where: { organizationId_key: { organizationId: organization.id, key: "feature_toggles" } },
+    update: { value: merged },
+    create: { organizationId: organization.id, key: "feature_toggles", value: merged },
+  });
 
   const members = new Map<DevUserId, string>();
   for (const id of memberUserIds) {

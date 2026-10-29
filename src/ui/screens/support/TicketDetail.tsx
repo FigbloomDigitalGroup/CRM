@@ -8,7 +8,6 @@ import { Textarea } from "../../components/forms";
 import { NoAccess, EmptyState } from "../../components/states";
 import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
-import { DemoNotice } from "../../demo/DemoBadge";
 import type { TicketStatus } from "./demo/data";
 import { supportDemo, useTickets } from "./demo/store";
 import { CustomerSummary } from "./CustomerView";
@@ -70,7 +69,7 @@ export function TicketDetail({ ticketId }: { ticketId: string }) {
           </select>
         </label>
       </div>
-      <DemoNotice what="This ticket" />
+      
       <div className="fb-sup__split">
         <section className="fb-sup__card" aria-label="Conversation">
           <h2 className="fb-sup__h2">Conversation</h2>

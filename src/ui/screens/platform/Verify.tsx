@@ -58,7 +58,7 @@ export function VerifyPage({ next }: { next: string }) {
         {verified ? (
           <div className="fb-pl-auth-note" role="status">
             <CheckCircle2 size={17} aria-hidden="true" />
-            <span>Verified. In the demo there is no real platform sign-in to continue to; open the console with the dev Super Admin chip.</span>
+            <span>Verified. Open the console with the dev Super Admin chip.</span>
           </div>
         ) : null}
         {!v.locked && !verified ? <VerifyFields v={v} /> : null}
