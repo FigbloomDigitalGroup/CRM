@@ -31,7 +31,7 @@ function load() {
 
 function fetchEvent(url: string, mode = "cors", method = "GET") {
   const out: { responded: Promise<unknown> | null } = { responded: null };
-  return { out, event: { request: { url, method, mode }, respondWith: (p: Promise<unknown>) => void (out.responded = Promise.resolve(p)) } };
+  return { out, event: { request: { url, method, mode }, respondWith: (p: Promise<unknown>) => { out.responded = Promise.resolve(p); out.responded.catch(() => undefined); } } };
 }
 
 describe("service worker (F4.12)", () => {

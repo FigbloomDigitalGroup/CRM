@@ -114,6 +114,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
+      - name: Create the isolated test database
+        run: PGPASSWORD=figbloom psql -h localhost -p 55432 -U figbloom -d figbloom_crm_dev -c "CREATE DATABASE figbloom_crm_test;"
       # The Vitest shards run this same sequence themselves (tests/globalSetup.ts); keeping it as its own job gives a clearly labelled,
       # individually failing signal for "migrations" as an acceptance criterion, not a side effect buried in a test run.
       - name: Apply migrations
@@ -135,6 +137,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
+      fail-fast: false
       matrix:
         shard: [1, 2, 3, 4, 5, 6]
     services:
@@ -203,6 +206,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
+      fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
     services:
@@ -226,6 +230,8 @@ jobs:
         with:
           name: next-build
           path: .next
+      - name: Create the isolated test database
+        run: PGPASSWORD=figbloom psql -h localhost -p 55432 -U figbloom -d figbloom_crm_dev -c "CREATE DATABASE figbloom_crm_test;"
       # Each shard has its own database, migrated and seeded here. The suite logs in as a real seeded user through the real app, not a fixture
       # it creates for itself the way the Vitest suite does.
       - name: Migrate, provision the app role and seed
