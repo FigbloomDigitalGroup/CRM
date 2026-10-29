@@ -47,11 +47,11 @@ describe("no direct fetch in screens (F1.06)", () => {
 });
 
 describe("the frozen sign-in pages (hard rule 1)", () => {
-  // sha256 of each file's text with line endings normalised, recorded when the design was approved (27 Oct 2026). A change to any of them fails here;
+  // sha256 of each file's text with line endings normalised, recorded when the design was approved (27 Oct 2026); login/page.tsx and login/LoginForm.tsx updated on 29 Oct 2026 with Given's approval, to list the dev Super Admin beside the other dev chips (dev-only). A change to any of them fails here;
   // it needs Given's and Michael's say-so, and a deliberate update of this table in the same change.
   const FROZEN: Record<string, string> = {
-    "src/app/login/page.tsx": "7964e15a5749f455f7e604c34c26eef58ca96c65b81bed56d3517b5404f336e7",
-    "src/app/login/LoginForm.tsx": "eb2eb49399ba386dea9a85e12f9583ea6c82a37abfe89871f27dd70638138a98",
+    "src/app/login/page.tsx": "670f7f58fc1a4bf448f22fd2affe16a235f1582c2efd2d2a893f5f9062a571b9",
+    "src/app/login/LoginForm.tsx": "f5ee85940286e1525d59a2e79ffb719000df1e24f80ecf643db50f25649c846e",
     "src/app/signup/page.tsx": "1a6edf08e8d7fb3471d448542c8d633e0cea03ec74bb7477557e33c14f5ecec8",
     "src/app/signup/SignupForm.tsx": "896ba29b08c148d45c924a87cc89bf56c90226d61eed0472865282661895c786",
     "src/app/forgot-password/page.tsx": "3532069a14ea82187c6375fa8189615b49ec533697e279bb593d3f006f879052",

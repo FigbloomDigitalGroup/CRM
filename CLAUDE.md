@@ -5,23 +5,27 @@ Stack: Next.js 15, React 19, TypeScript, Prisma 5, Postgres with row-level secur
 ## What we are doing
 
 A full makeover of the CRM to the approved "Figbloom CRM – Final Design" (92 screens: 54 V1, 29 V1.1, 9 V2).
-**Everything must be complete by 22 Nov 2026. The date does not change.** V1 goes live by 8 Nov; V1.1 and V2 follow, all scheduled to finish by 18 Nov with 19 to 22 Nov held as buffer.
+**Everything must be complete by 22 Nov 2026. The date does not change.** Since 29 Oct 2026 the order of work is demo-first (see below and `docs/RESTRUCTURE_LOG.md`): V1 now goes live about 10 Nov, V1.1 and V2 follow, all scheduled to finish by 20 Nov with 21 and 22 Nov held as buffer.
 
 The plan lives in Linear: project "CRM Project", team Figbloom, issues FIG-xxxx. Read the project's pathway document first when Linear is connected. Linear is the source of truth for scope; this file is the source of truth for how we work.
 
-### Order of work (backend first)
+### Order of work (demo-first since 29 Oct 2026)
 
 | Milestone | What | Due |
 |---|---|---|
 | M0 | Baseline and guardrails | 23 Oct |
 | M1 to M4 | Backend stages, each ends with an exit gate (B1.13, B2.17, B3.11, B4.10) | 25, 27, 29, 30 Oct |
 | M5 | Backend V1 quality gate (G1.08): tag `backend-v1` on `dev-given`, Michael approves (recorded by Given) | 31 Oct |
-| M6 to M9 | Frontend (design system, sales, customers and finance, settings and mobile) | 1 to 5 Nov |
-| M10 / M11 | V1 QA and UAT / production readiness and go-live | 7 / 8 Nov |
-| M12 to M15 | V1.1 backend, gate, frontend, QA | 12 to 16 Nov |
-| M16 / M17 | V2 backend / V2 frontend and release | 17 / 18 Nov |
+| M6 to M9 | V1 frontend (design system, sales, customers and finance, settings and mobile). Done; M9 is merged and In Review | 1 to 5 Nov |
+| **M10** | **All remaining V1.1 and V2 frontend, on demo data** (was M14). First for the presentation: Customer Support (FIG-1178) and the Super Admin console (FIG-1160 to FIG-1164); then the rest, including the V2 screens | 4 Nov |
+| M11 / M12 | V1 QA and UAT / V1 production readiness and go-live (were M10 / M11) | 7 / 10 Nov |
+| M13 / M14 | V1.1 backend / V1.1 backend quality gate (were M12 / M13). Wires the demo screens to the real API | 14 / 15 Nov |
+| M15 | V1.1 QA and release | 17 Nov |
+| M16 / M17 | V2 backend / V2 QA and release | 19 / 20 Nov |
 
-**Standing decision (Given, 27 Oct 2026): all work stays on `dev-given` until every milestone is complete. Nothing is moved to `dev-staging` or `main` before then, and the gate tags (`backend-v1`, `api-v1.0`) are placed on `dev-given`.** Do not start a stage until the previous stage's exit gate is closed. Frontend work against the real API starts only after G1.08.
+**Course change (Given, 29 Oct 2026).** For a presentation, all remaining frontend is built before the backend, on **demo data** that must be wired to the real API later. Linear milestones were renumbered; the old and new numbers, the waivers and the clean-up list are in `docs/RESTRUCTURE_LOG.md` (keep it updated when a demo screen is built or wired). Waived by Given, until the clean-up: the V1.1 gate (G2.04) before the V1.1 frontend, the backend-first rule, the 8 Nov V1 go-live date, and the decision gate on FIG-1178 (Customer Support) for the demo only. Demo data lives in `demo/` folders and says "Demo data" on screen. A screen on demo data is not Done until it is wired and tested against the real API. The final date (22 Nov 2026) did not change.
+
+**Standing decision (Given, 27 Oct 2026): all work stays on `dev-given` until every milestone is complete. Nothing is moved to `dev-staging` or `main` before then, and the gate tags (`backend-v1`, `api-v1.0`) are placed on `dev-given`.** Do not start a stage until the previous stage's exit gate is closed (waived for the V1.1 and V2 frontend, see the course change above). Frontend work against the real API starts only after G1.08.
 If the date is at risk, the agreed cut order is: E1, E2, F1, S5, S7, then the decision-gated V2 items, then V2 polish. V1 is never cut. Do not cut anything without Given's say-so.
 
 ## Hard rules
@@ -84,7 +88,9 @@ npm run seed
 
 **M8 (customers, delivery, finance, reports): built on branch `makeover/m7-sales-workspace` (committed to `dev-given`).** FIG-1095 to FIG-1102: companies and Customer 360, merge, contacts with the log prompt, record extras, conversations, renewals, payments, reports. Docs: `docs/M8_*.md`, the Stage 8 section of `IMPLEMENTATION_NOTES.md`.
 
-**Next: M9 (settings, preferences, mobile),** against the frozen API and `@/ui`.
+**M9 (settings, preferences, mobile): built and merged to `dev-given` (PR #25, CI green, 29 Oct 2026).** FIG-1103 to FIG-1114 and FIG-791 are In Review. Preferences (`src/ui/screens/preferences/`), Settings (`src/ui/screens/settings/`, Management only), mobile and PWA (`src/ui/screens/mobile/`, routes under `/o/{org}/m`, `public/sw.js`). Docs: `docs/M9_PREFERENCES.md`, `docs/M9_SETTINGS.md`, `docs/M9_MOBILE.md`. Settings is visible to Management only; every member has Preferences. The dev chips on the (frozen) login page now also list the Dev Super Admin (Given's approval, 29 Oct 2026; hashes updated), and the dev seed has eight accounts (seven tenant users including Dev Customer Support, plus the Super Admin); `ALLOW_DEV_ACCOUNTS=true` in local `.env` shows the floating dev sign-in panel.
+
+**Next: M10 (presentation sprint on demo data),** starting with the Super Admin console shell and home (FIG-1160), the organisations list (FIG-1161) and the Customer Support workspace (FIG-1178).
 
 Ops reminders: new migrations need `npm run migrate:deploy`; `ALLOW_DEV_ACCOUNTS=true` in local `.env` for dev sign-in; Docker Desktop must be running for the test database (`docker compose up -d --wait`).
 

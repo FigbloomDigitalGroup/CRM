@@ -24,8 +24,7 @@ import { seedRolesAndPermissions } from "./seedReference";
  *
  * Also creates the Dev Super Admin platform identity (FIG-1196, B0.09).
  *
- * Not seeded yet because the models do not exist: the Customer Support
- * account (its role arrives with B1.01 / B6.23), payments, tags and
+ * Not seeded yet because the models do not exist: payments, tags and
  * templates (B3.03 and later issues add them to this seed).
  */
 export interface DevUser {
@@ -42,6 +41,9 @@ export const DEV_USERS: readonly DevUser[] = [
   { id: "dl", email: "dev.delivery@figbloom.local", name: "Dev Delivery", roleKey: "DELIVERY" },
   { id: "fn", email: "dev.finance@figbloom.local", name: "Dev Finance", roleKey: "FINANCE" },
   { id: "tc", email: "dev.tech@figbloom.local", name: "Dev Restricted Technical", roleKey: "RESTRICTED_TECHNICAL" },
+  // The proposed sixth role, behind `customer_support.role` (docs/DECISIONS.md 2.4): the flag stays off here, so this account signs in with no
+  // permissions until the flag is turned on. With the Dev Super Admin below, that makes the eight dev accounts.
+  { id: "cs", email: "dev.support@figbloom.local", name: "Dev Customer Support", roleKey: "CUSTOMER_SUPPORT" },
 ];
 
 /**
