@@ -15,8 +15,28 @@ export const ORG_SLUG = "figbloom";
  */
 export const DEV_PASSWORD = "figbloom-dev-local";
 
+/**
+ * Safari (WebKit) refuses a `Secure` cookie from plain `http://localhost`; Chrome and Firefox make an exception for localhost. The production
+ * build marks the session cookie `Secure` (correct: production is HTTPS), so on the local test server WebKit never keeps its session. For WebKit
+ * only, the `Secure` attribute is dropped from the sign-in response in the test browser; the app's own cookie code is not touched (Q1.04).
+ */
+async function allowSecureCookieOverHttp(page: Page): Promise<void> {
+  if (page.context().browser()?.browserType().name() !== "webkit") return;
+  await page.route("**/api/auth/login", async (route) => {
+    const response = await route.fetch();
+    const headers = response.headers();
+    const cookies = (await response.headersArray()).filter((h) => h.name.toLowerCase() === "set-cookie").map((h) => h.value.replace(/;\s*Secure/i, ""));
+    delete headers["set-cookie"];
+    await route.fulfill({ response, headers: { ...headers, "set-cookie": cookies.join("\n") } });
+  });
+}
+
 export async function loginAs(page: Page, email: string): Promise<void> {
+  const webkit = page.context().browser()?.browserType().name() === "webkit";
+  await allowSecureCookieOverHttp(page);
   await page.goto("/login");
+  // WebKit is quicker to show the form than to hydrate it, and a click before hydration is lost.
+  if (webkit) await page.waitForLoadState("networkidle");
   await page.getByLabel("Email").fill(email);
   // Not getByLabel("Password"): PasswordInput nests a "Show password"
   // toggle button inside the same <label>, which the browser folds into

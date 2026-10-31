@@ -1,6 +1,6 @@
 # Supabase and this project: recommendation and plan
 
-27 Oct 2026. Written for Given (decision owner). Linear: FIG-1255 to FIG-1258 (P1.11 to P1.14, milestone M11); FIG-1259 is the separate Vitest upgrade.
+27 Oct 2026. Written for Given (decision owner). Linear: FIG-1255 to FIG-1258 (P1.11 to P1.14, milestone M12 since the 29 Oct 2026 renumbering, was M11); FIG-1259 is the separate Vitest upgrade.
 
 ## The short answer
 

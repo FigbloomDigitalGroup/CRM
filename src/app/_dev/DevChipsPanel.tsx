@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { signInAsDevAccount } from "@/ui/data/client";
+import { signInAsDevAccount, signInWithDevPassword } from "@/ui/data/client";
+import { DEV_FIXTURE_PASSWORD } from "@/auth/devAccounts";
 
 export interface DevChipAccount {
   email: string;
@@ -12,7 +13,7 @@ export interface DevChipAccount {
 }
 
 /** A small floating panel, collapsed by default. The `data-figbloom-dev-chips` marker is what the production build check looks for. */
-export function DevChipsPanel({ accounts }: { accounts: DevChipAccount[] }) {
+export function DevChipsPanel({ accounts, viaPassword = false }: { accounts: DevChipAccount[]; viaPassword?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -21,7 +22,7 @@ export function DevChipsPanel({ accounts }: { accounts: DevChipAccount[] }) {
   async function signIn(email: string) {
     setBusy(email);
     setError(null);
-    const result = await signInAsDevAccount(email);
+    const result = viaPassword ? await signInWithDevPassword(email, DEV_FIXTURE_PASSWORD) : await signInAsDevAccount(email);
     if (result.ok) {
       router.push(result.landing);
       router.refresh();

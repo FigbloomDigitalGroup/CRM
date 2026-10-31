@@ -227,7 +227,7 @@ export function RenewalsScreen() {
             <table className="fb-en-table" aria-label="Recurring services and renewals">
               <thead>
                 <tr>
-                  {["CUSTOMER", "SERVICE", "CYCLE", "VALUE", "RENEWS", "OWNER"].map((h) => (
+                  {["Customer", "Service", "Cycle", "Value", "Renews", "Owner"].map((h) => (
                     <th key={h} scope="col">
                       {h}
                     </th>

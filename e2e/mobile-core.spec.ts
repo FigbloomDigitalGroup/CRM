@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { loginAs, ORG_SLUG, uniqueSuffix } from "./helpers";
+import { gotoAndSettle, loginAs, ORG_SLUG, uniqueSuffix } from "./helpers";
 
 /**
  * M9 mobile (F4.10, F4.11, FIG-791) at a 375 px phone with touch: Today, Leads, quick capture with the duplicate warning, the record with Call
@@ -46,6 +46,7 @@ test.describe("phone layout", () => {
     await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
 
     // The same person again: nothing is created until the person chooses.
+    await gotoAndSettle(page, M); // the record page has no capture button: go back to Today, where it lives
     await page.getByRole("button", { name: "Quick capture" }).first().click();
     const again = page.getByRole("dialog", { name: "Quick capture" });
     await again.getByLabel("Company or person *").fill(name);

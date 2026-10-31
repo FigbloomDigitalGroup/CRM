@@ -40,7 +40,7 @@ describe("Deals board (F2.04, P1)", () => {
     expect(within(col).getByText("Stalled · 17d")).toBeInTheDocument();
     expect(screen.getByText("Close date passed")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Proposal Sent, 0 deals" })).toHaveTextContent("Drop a deal here");
-    expect(screen.getByText("Open pipeline").nextElementSibling).toHaveTextContent("KES 1,430,000");
+    expect(within(document.querySelector(".fb-dstats") as HTMLElement).getByText("Open pipeline").nextElementSibling).toHaveTextContent("KES 1,430,000");
     expect(screen.getByText("Handed off")).toBeInTheDocument(); // the won deal's handoff status
     expect(screen.getByText("Timing")).toBeInTheDocument(); // the lost reason
   });
@@ -163,7 +163,7 @@ describe("Deals board (F2.04, P1)", () => {
     setup();
     await user.click(await screen.findByRole("button", { name: "List" }));
     const table = await screen.findByRole("table");
-    expect(within(table).getByRole("columnheader", { name: "EXPECTED CLOSE" })).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: "Expected close" })).toBeInTheDocument();
     expect(within(table).getByText("KES 980,000")).toBeInTheDocument();
     expect(within(table).getByText("Stalled · 17d")).toBeInTheDocument();
   });

@@ -65,6 +65,9 @@ function Shell({ orgSlug, sections, quickCreate, identity, initialSidebarCollaps
 
   return (
     <div className="fb-shell">
+      <a className="fb-skip" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>
+        Skip to main content
+      </a>
       <Sidebar
         orgSlug={orgSlug}
         sections={sections}
@@ -87,7 +90,7 @@ function Shell({ orgSlug, sections, quickCreate, identity, initialSidebarCollaps
         />
         <ConnectionBanners />
         {banners}
-        <main className="fb-content" id="main">
+        <main className="fb-content" id="main" tabIndex={-1}>
           {/* The older pages are built on `.page`; the new containers (fb-page-*) go inside it as screens are rebuilt. */}
           <div className="page">{children}</div>
         </main>

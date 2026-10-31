@@ -1,5 +1,4 @@
-import { resolveRequestContext } from "@/auth/requestContext";
-import { recordPageView } from "@/services/pageViewService";
+import { schedulePageView } from "@/services/pageViewService";
 import { ReportsScreen } from "@/ui/screens/reports/ReportsScreen";
 
 /**
@@ -9,7 +8,6 @@ import { ReportsScreen } from "@/ui/screens/reports/ReportsScreen";
  */
 export default async function ReportsPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
-  const ctx = await resolveRequestContext(orgSlug);
-  await recordPageView(ctx, "reports");
+  await schedulePageView(orgSlug, "reports");
   return <ReportsScreen />;
 }

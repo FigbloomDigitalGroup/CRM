@@ -61,7 +61,7 @@ describe("Calendar (F2.08, T2)", () => {
   it("draws the month with today marked, three items a day and a +N more link", async () => {
     setup();
     const cell = (await days()).find((c) => c.getAttribute("aria-current") === "date")!;
-    expect(within(cell).getAllByRole("button", { name: /^(Task|Meeting):/ })).toHaveLength(3);
+    expect(within(cell).getAllByRole("button", { name: /, (task|meeting)$/ })).toHaveLength(3);
     expect(within(cell).getByRole("button", { name: "+2 more" })).toBeInTheDocument();
     expect(within(cell).getByText("Call Sarova", { exact: false })).toBeInTheDocument();
   });
@@ -162,7 +162,7 @@ describe("Calendar (F2.08, T2)", () => {
     const user = userEvent.setup();
     setup();
     const todayCell = (await days()).find((c) => c.getAttribute("aria-current") === "date")!;
-    await user.click(within(todayCell).getByRole("button", { name: /Task: Call Sarova/ }));
+    await user.click(within(todayCell).getByRole("button", { name: /Call Sarova.*, task/ }));
     expect(await screen.findByRole("dialog", { name: "Edit task" })).toBeInTheDocument();
   });
 

@@ -14,6 +14,7 @@ import { useMemberName, useRefData, useRefreshDeals } from "./data";
 import { ago, dateLong, dateShort, initials, kes, stageTone, when, type DealDetail, type HandoffView, type Stage } from "./model";
 import { useDealMover } from "./useDealMover";
 import { RecordExtras } from "../extras/RecordExtras";
+import { LoaderBlock } from "../../components/loader";
 
 /**
  * F2.05 / P2: one deal. The stage stepper (every move goes through the same checks as the board), the summary, the proposals, the timeline,
@@ -182,18 +183,18 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
   }
 
   const facts: { k: string; v: string; col?: string; href?: string }[] = [
-    { k: "COMPANY", v: company.name, href: can("companies.view") ? `/o/${orgSlug}/companies/${company.id}` : undefined },
-    { k: "SERVICE", v: d.service?.name ?? "—" },
-    { k: "OWNER", v: nameOf(d.ownerMembershipId) },
-    { k: "VALUE", v: valueText, col: value === null ? "var(--text-3)" : undefined },
-    { k: "EXPECTED CLOSE", v: dateLong(d.expectedCloseDate, member.timeZone), col: open && d.signals?.closeDatePassed ? "var(--red)" : undefined },
-    { k: "CREATED", v: dateLong(d.createdAt, member.timeZone) },
-    { k: "LAST ACTIVITY", v: ago(d.lastActivityAt) },
+    { k: "Company", v: company.name, href: can("companies.view") ? `/o/${orgSlug}/companies/${company.id}` : undefined },
+    { k: "Service", v: d.service?.name ?? "—" },
+    { k: "Owner", v: nameOf(d.ownerMembershipId) },
+    { k: "Value", v: valueText, col: value === null ? "var(--text-3)" : undefined },
+    { k: "Expected close", v: dateLong(d.expectedCloseDate, member.timeZone), col: open && d.signals?.closeDatePassed ? "var(--red)" : undefined },
+    { k: "Created", v: dateLong(d.createdAt, member.timeZone) },
+    { k: "Last activity", v: ago(d.lastActivityAt) },
   ];
-  if (d.lostReason) facts.push({ k: "LOST REASON", v: d.lostReason.name, col: "var(--red)" });
+  if (d.lostReason) facts.push({ k: "Lost reason", v: d.lostReason.name, col: "var(--red)" });
   if (stage?.key === "PROPOSAL_SENT" && lastProposal?.sentAt && sentDays !== null) {
     const replied = lastProposal.respondedAt;
-    facts.push({ k: "PROPOSAL RESPONSE", v: replied ? "Customer replied" : `No reply · ${sentDays} days`, col: replied ? "var(--primary-text)" : sentDays >= followDays ? "var(--orange-text)" : undefined });
+    facts.push({ k: "Proposal response", v: replied ? "Customer replied" : `No reply · ${sentDays} days`, col: replied ? "var(--primary-text)" : sentDays >= followDays ? "var(--orange-text)" : undefined });
   }
 
   const comms = activities.filter((a) => COMMS.includes(a.type));
@@ -397,7 +398,7 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
                     <caption className="fb-sr-only">Proposals on this deal</caption>
                     <thead>
                       <tr>
-                        {["NUMBER", "STATUS", "AMOUNT", "SENT", "RESPONDED", "DOCUMENT"].map((c) => (
+                        {["Number", "Status", "Amount", "Sent", "Responded", "Document"].map((c) => (
                           <th key={c} scope="col">{c}</th>
                         ))}
                       </tr>
@@ -494,7 +495,7 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
 
           {d.primaryContact ? (
             <section className="fb-dcardbox" aria-labelledby="fb-deal-contact">
-              <h2 id="fb-deal-contact" className="fb-dmonohead">PRIMARY CONTACT</h2>
+              <h2 id="fb-deal-contact" className="fb-dmonohead">Primary contact</h2>
               <div className="fb-dcontact">
                 <span className="fb-dcontact__avatar" aria-hidden="true">{initials(`${d.primaryContact.firstName} ${d.primaryContact.lastName ?? ""}`)}</span>
                 <div>
@@ -594,11 +595,8 @@ function TimelineRow({ Icon, text, by, at, comm }: { Icon: LucideIcon; text: str
 
 function DetailSkeleton() {
   return (
-    <div className="fb-deals" role="status" aria-busy="true">
-      <span className="fb-sr-only">Loading the deal</span>
-      <div className="fb-dskel" style={{ height: 36, width: 260 }} />
-      <div className="fb-dskel" style={{ height: 56 }} />
-      <div className="fb-dskel" style={{ height: 280 }} />
+    <div className="fb-deals">
+      <LoaderBlock label="Loading the deal" />
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { ContactDrawer } from "./ContactDrawer";
 import { contactName, ownerName, useContactCaps, useRefreshContacts, type ContactRow, type DirectoryCounts } from "./data";
 import { ContactsExportDialog, ContactsImportDialog } from "./ImportExport";
 import { ReachButtons, useCallLogPrompt } from "./QuickLogPrompt";
+import { LoaderBlock } from "../../components/loader";
 
 type TabId = "all" | "mine" | "standalone" | "missingEmail" | "archived";
 
@@ -210,24 +211,18 @@ export function ContactsScreen() {
             <caption className="fb-sr-only">Contacts</caption>
             <thead>
               <tr>
-                <th scope="col">CONTACT</th>
-                <th scope="col">COMPANY</th>
-                <th scope="col">EMAIL / PHONE</th>
-                <th scope="col">OWNER</th>
+                <th scope="col">Contact</th>
+                <th scope="col">Company</th>
+                <th scope="col">Email / phone</th>
+                <th scope="col">Owner</th>
                 <th scope="col" className="fb-ld-th--right">
-                  REACH
+                  Reach
                 </th>
               </tr>
             </thead>
             <tbody>
               {loading
-                ? ["60%", "80%", "45%", "70%", "55%"].map((w, i) => (
-                    <tr key={i}>
-                      <td colSpan={5} className="fb-ld-td--skel">
-                        <div className="fb-ld-skel" style={{ width: w }} />
-                      </td>
-                    </tr>
-                  ))
+                ? <tr><td colSpan={5}><LoaderBlock compact label="Loading contacts" /></td></tr>
                 : null}
               {!loading && !error
                 ? rows.map((c) => {

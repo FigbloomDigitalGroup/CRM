@@ -32,7 +32,7 @@ describe("Customer 360 (F3.01, C2)", () => {
     const pay = screen.getByRole("region", { name: "Payments" });
     expect(within(pay).getByText("INV-1042")).toBeInTheDocument();
     expect(within(pay).getByText(/Chase after the 30th/)).toBeInTheDocument();
-    expect(screen.getByText("OUTSTANDING").parentElement).toHaveTextContent("580,000");
+    expect(screen.getByText("Outstanding").parentElement).toHaveTextContent("580,000");
     expect(screen.getByRole("region", { name: "Services and projects" })).toHaveTextContent("Inventory");
     expect(screen.getByRole("region", { name: "Services and projects" })).toHaveTextContent("Renewal due");
     expect(screen.getByRole("region", { name: "Deals, quotes and proposals" })).toHaveTextContent("Proposal Sent");
@@ -53,7 +53,7 @@ describe("Customer 360 (F3.01, C2)", () => {
     setup({ role: "delivery" });
     await screen.findByRole("heading", { name: "Brookside Dairy", level: 1 });
     expect(screen.getByRole("region", { name: "Deals, quotes and proposals" })).toHaveTextContent("Value hidden");
-    expect(screen.getByText("WON TO DATE").parentElement).toHaveTextContent("Values hidden");
+    expect(screen.getByText("Won to date").parentElement).toHaveTextContent("Values hidden");
     expect(document.body.textContent).not.toMatch(/KES\s?\d/);
     // the recurring service's value is masked for Delivery, too
     expect(screen.getByRole("region", { name: "Services and projects" })).not.toHaveTextContent("60,000");
@@ -105,7 +105,7 @@ describe("Customer 360 (F3.01, C2)", () => {
   it("shows an archived company read-only with a banner, and Restore only to roles that may archive", async () => {
     const restore = vi.fn(() => ({}));
     const view = setup({ role: "sales", archived: true }, { postCompaniesByCompanyIdRestore: restore });
-    expect(await screen.findByRole("status")).toHaveTextContent("Everything on this customer is read-only until it’s restored.");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Everything on this customer is read-only until it’s restored."));
     expect(screen.queryByRole("combobox", { name: "Lifecycle" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^(Edit|Merge|Archive|Log activity)$/ })).not.toBeInTheDocument();
     expect(screen.getByTestId("record-extras")).toHaveAttribute("data-archived", "true");
@@ -113,7 +113,7 @@ describe("Customer 360 (F3.01, C2)", () => {
     await waitFor(() => expect(restore).toHaveBeenCalled());
     view.unmount();
     setup({ role: "finance", archived: true });
-    await screen.findByRole("status");
+    await screen.findByText("Everything on this customer is read-only until it’s restored.");
     expect(screen.queryByRole("button", { name: "Restore" })).not.toBeInTheDocument();
   });
 

@@ -17,6 +17,8 @@ const NAV: { email: string; label: string; links: string[] }[] = [
 
 async function sidebarLinks(page: Page): Promise<string[]> {
   const sidebar = page.getByRole("complementary", { name: "Sidebar" });
+  // The page streams in behind a "Getting things ready" screen; read the links only once the shell is there.
+  await expect(sidebar).toBeVisible({ timeout: 30_000 });
   // Conversations lives in the Communication dropdown (F6.20), which starts closed on the dashboard: open it to list its links.
   const group = sidebar.getByRole("button", { name: /Communication/ });
   if ((await group.count()) > 0 && (await group.getAttribute("aria-expanded")) === "false") await group.click();
@@ -43,7 +45,7 @@ test.describe("navigation per role", () => {
 test.describe("top bar identity", () => {
   test("shows the organisation and who you are, and signs out", async ({ page }) => {
     await loginAs(page, "dev.sales@figbloom.local");
-    const org = page.getByRole("button", { name: "Organisation and session" });
+    const org = page.getByRole("button", { name: /organisation and session/i });
     await expect(org).toContainText("Signed in");
     await org.click();
     const orgCard = page.getByRole("dialog", { name: "Organisation and session" });
@@ -52,7 +54,7 @@ test.describe("top bar identity", () => {
     await expect(orgCard.getByRole("link", { name: "Profile and preferences" })).toBeVisible();
     await page.keyboard.press("Escape");
 
-    const user = page.getByRole("button", { name: /Account: Dev Sales/ });
+    const user = page.getByRole("button", { name: /Dev Sales.*account menu/ });
     await expect(user).toContainText("Dev Sales");
     await expect(user).toContainText("Sales");
     await user.click();
@@ -146,7 +148,7 @@ test.describe("layout at desktop, tablet and 375px", () => {
     await page.getByRole("complementary", { name: "Sidebar" }).getByRole("link", { name: "Leads" }).click();
     await page.waitForURL(/\/leads/);
 
-    await page.getByRole("button", { name: /Account: / }).click();
+    await page.getByRole("button", { name: /account menu/ }).click();
     const sheet = await page.getByRole("dialog", { name: /Account: / }).boundingBox();
     expect(sheet!.x).toBe(0);
     expect(Math.round(sheet!.width)).toBe(375);

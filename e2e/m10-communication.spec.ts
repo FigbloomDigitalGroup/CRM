@@ -51,14 +51,23 @@ test.describe("Chat (F6.21)", () => {
     await page.getByRole("textbox", { name: "Message #general" }).fill("Morning everyone");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page.getByRole("log", { name: "Messages" }).getByText("Morning everyone")).toBeVisible();
-    await page.getByRole("button", { name: /Kisumu Greens website/ }).click();
+    const deal = page.getByRole("button", { name: /Kisumu Greens website/ });
+    await expect(async () => {
+      await deal.click();
+      await expect(deal).toHaveAttribute("aria-current", "true", { timeout: 1000 });
+    }).toPass();
     await expect(page.getByText("Payment due")).toBeVisible();
     await expect(page.getByText(/120,000/)).toHaveCount(0);
 
     await page.context().clearCookies();
     await signInAs(page, "dev.finance@figbloom.local");
     await page.goto(orgPath(page, "/chat"));
-    await page.getByRole("button", { name: /Kisumu Greens website/ }).click();
+    // A click before the page has hydrated is lost, so retry it until the channel is the open one.
+    const channel = page.getByRole("button", { name: /Kisumu Greens website/ });
+    await expect(async () => {
+      await channel.click();
+      await expect(channel).toHaveAttribute("aria-current", "true", { timeout: 1000 });
+    }).toPass();
     await expect(page.getByText(/120,000/)).toBeVisible();
   });
 
@@ -74,10 +83,14 @@ test.describe("Chat (F6.21)", () => {
     await signInAs(page, "dev.management@figbloom.local");
     await page.goto(orgPath(page, "/chat"));
     await expect(page.getByRole("textbox", { name: /Message/ })).toBeHidden();
-    await page.getByRole("button", { name: /general/ }).click();
-    await expect(page.getByRole("textbox", { name: "Message #general" })).toBeVisible();
-    await page.getByRole("button", { name: "Back to channels" }).click();
-    await expect(page.getByRole("textbox", { name: /Message/ })).toBeHidden();
+    await expect(async () => {
+      await page.getByRole("button", { name: /general/ }).click();
+      await expect(page.getByRole("textbox", { name: "Message #general" })).toBeVisible({ timeout: 1000 });
+    }).toPass();
+    await expect(async () => {
+      await page.getByRole("button", { name: "Back to channels" }).click();
+      await expect(page.getByRole("textbox", { name: /Message/ })).toBeHidden({ timeout: 1000 });
+    }).toPass();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 });

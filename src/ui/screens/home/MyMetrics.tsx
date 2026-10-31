@@ -7,6 +7,7 @@ import { useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { moneyShort } from "./format";
 import { ChartCard, HIcon, Seg } from "./kit";
+import { LoaderBlock } from "../../components/loader";
 
 interface Card {
   key: string;
@@ -102,14 +103,7 @@ export function MyMetricsScreen() {
       </div>
 
       {q.isPending ? (
-        <div className="fb-mom" aria-busy="true">
-          <span className="fb-sr-only" role="status">
-            Loading your metrics
-          </span>
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="fb-hskel" style={{ height: 104, borderRadius: 14 }} />
-          ))}
-        </div>
+        <LoaderBlock label="Loading your metrics" />
       ) : cards.every((c) => !c.value || c.value === "0.00") ? (
         <div className="fb-search__empty" role="status">
           <div style={{ display: "flex", justifyContent: "center", color: "var(--orange-text)" }}>

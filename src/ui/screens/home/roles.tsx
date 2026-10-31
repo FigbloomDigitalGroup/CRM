@@ -378,7 +378,7 @@ interface PaymentRow {
   received: string | null;
   outstanding: string | null;
   state: "NOT_INVOICED" | "AWAITING_PAYMENT" | "OVERDUE" | "PAID_IN_FULL";
-  nextNote: string | null;
+  nextNote: { note: string; ownerMembershipId?: string | null; nextOn?: string | null } | null;
 }
 
 const PAY_STATE: Record<PaymentRow["state"], { label: string; tone: string }> = {
@@ -442,7 +442,7 @@ export function WonDealsTable({ rows, loading }: { rows: PaymentRow[]; loading: 
                   <td style={{ textAlign: "left" }}>
                     <span className={`fb-pill fb-tone--${s.tone}`}>{s.label}</span>
                   </td>
-                  <td style={{ textAlign: "left", color: "var(--text-2)" }}>{r.nextNote ?? "—"}</td>
+                  <td style={{ textAlign: "left", color: "var(--text-2)" }}>{r.nextNote?.note ?? "—"}</td>
                 </tr>
               );
             })}

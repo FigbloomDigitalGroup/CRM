@@ -4,13 +4,12 @@ import {
   Briefcase,
   Building2,
   Calendar,
-  CheckSquare,
-  Contact,
-  LayoutDashboard,
+  SquareCheckBig,
+  ContactRound,
+  LayoutGrid,
   MessageSquare,
   Package,
   Search,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Mail,
@@ -19,25 +18,27 @@ import {
   Video,
   RefreshCw,
   Settings,
+  Settings2,
+  Target,
   Users,
-  User,
   Wallet,
   ChartColumn,
 } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { BrandMark } from "@/app/_shared/BrandMark";
+import { FigbloomLogo } from "./Logo";
 import { cx } from "../internal";
 import { filterNav, isActivePath, sectionBadge, sectionHasActive, type NavIcon, type NavItem, type NavSection } from "./navModel";
 
 const ICONS: Record<NavIcon, ReactNode> = {
-  dashboard: <LayoutDashboard size={18} />,
+  dashboard: <LayoutGrid size={18} />,
   leads: <Users size={18} />,
   deals: <Briefcase size={18} />,
-  tasks: <CheckSquare size={18} />,
+  tasks: <SquareCheckBig size={18} />,
   calendar: <Calendar size={18} />,
   companies: <Building2 size={18} />,
-  contacts: <Contact size={18} />,
+  contacts: <ContactRound size={18} />,
   conversations: <MessageSquare size={18} />,
   communication: <Phone size={18} />,
   mail: <Mail size={18} />,
@@ -47,7 +48,8 @@ const ICONS: Record<NavIcon, ReactNode> = {
   renewals: <RefreshCw size={18} />,
   payments: <Wallet size={18} />,
   reports: <ChartColumn size={18} />,
-  preferences: <User size={18} />,
+  forecast: <Target size={18} />,
+  preferences: <Settings2 size={18} />,
   settings: <Settings size={18} />,
 };
 
@@ -124,13 +126,13 @@ export function Sidebar({
   }, [onCollapsedChange]);
 
   const shown = filterNav(sections, query);
-  const top = shown.filter((s) => !s.bottom);
-  const bottom = shown.filter((s) => s.bottom);
+  // "Insights & settings" follows the other sections in the same list (no pinned block), as in the HR sidebar.
+  const top = [...shown.filter((s) => !s.bottom), ...shown.filter((s) => s.bottom)];
 
   const renderLink = (item: NavItem, nested = false) => {
     const active = isActivePath(item, base, pathname);
     return (
-      <a
+      <Link
         key={item.key}
         href={`${base}${item.path}`}
         className="fb-navlink"
@@ -147,7 +149,7 @@ export function Sidebar({
             {item.badge > 99 ? "99+" : item.badge}
           </span>
         ) : null}
-      </a>
+      </Link>
     );
   };
 
@@ -177,7 +179,7 @@ export function Sidebar({
                   {badge > 99 ? "99+" : badge}
                 </span>
               ) : null}
-              <ChevronDown size={16} aria-hidden="true" className="fb-navgroup__chev" data-open={open ? "true" : undefined} />
+              <ChevronRight size={15} aria-hidden="true" className="fb-navgroup__chev" data-open={open ? "true" : undefined} />
             </button>
           )}
           <div id={panelId} className="fb-navgroup__panel" hidden={!open}>
@@ -199,10 +201,7 @@ export function Sidebar({
       {mobileOpen ? <div className="fb-overlay" style={{ zIndex: 45 }} onClick={onMobileClose} aria-hidden="true" /> : null}
       <aside className={cx("fb-sidebar")} data-collapsed={collapsed ? "true" : "false"} data-open={mobileOpen ? "true" : undefined} aria-label="Sidebar">
         <div className="fb-sidebar__brand">
-          <BrandMark className="brand-mark" />
-          <span className="fb-sidebar__brandtext">
-            Figbloom<span className="fb-accent"> CRM</span>
-          </span>
+          <FigbloomLogo size={23} className="fb-sidebar__logo" />
           <button type="button" className="fb-iconbtn fb-sidebar__toggle" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} aria-expanded={!collapsed} onClick={toggle}>
             {collapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
           </button>
@@ -216,7 +215,6 @@ export function Sidebar({
           {query ? null : extra}
           {query && shown.length === 0 ? <p className="fb-sidebar__text" style={{ padding: "8px 10px", opacity: 0.8 }}>No matching pages.</p> : null}
         </nav>
-        {bottom.length > 0 ? <div className="fb-sidebar__bottom">{bottom.map(renderSection)}</div> : null}
         {footer ? <div className="fb-sidebar__foot">{footer}</div> : null}
       </aside>
     </>

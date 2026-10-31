@@ -9,7 +9,7 @@ import { useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { demoScreensEnabledClient } from "../../demo/enabled";
 import { SupportHome } from "./SupportHome";
-import { HCols, HIcon, KpiGrid, KpiSkeleton, Panel, SectionFailed, type KpiDef } from "./kit";
+import { HCols, HIcon, KpiGrid, Panel, SectionFailed, type KpiDef } from "./kit";
 import { NewLeadsPanel, MovingAndStalled, PipelineByStage, TodoPanel, useLastVisit, useNewLeads } from "./blocks";
 import {
   AdoptionCard,
@@ -28,6 +28,7 @@ import {
   useWonDealPayments,
 } from "./roles";
 import type { DeliveryData, FinanceData, ManagementData, SalesTodayData, SectionAnswer, TechnicalData } from "./dash";
+import { LoaderBlock } from "../../components/loader";
 
 type Kind = "management" | "sales" | "delivery" | "finance" | "technical" | "support";
 
@@ -39,13 +40,13 @@ interface Quick {
   primary?: boolean;
 }
 
-const COPY: Record<Kind, { title: string; scope: string; scopeTone: "organisation" | "read-only" | "mine"; subtitle: string }> = {
-  management: { title: "Today", scope: "Whole team", scopeTone: "organisation", subtitle: "team pipeline and follow-up health" },
-  sales: { title: "Today", scope: "My work", scopeTone: "mine", subtitle: "what needs you today" },
-  delivery: { title: "Today", scope: "Delivery view", scopeTone: "read-only", subtitle: "won work coming your way" },
-  finance: { title: "Today", scope: "Finance view", scopeTone: "read-only", subtitle: "won value and what’s still to collect" },
-  technical: { title: "My work", scope: "Assigned to me", scopeTone: "mine", subtitle: "tasks assigned to you" },
-  support: { title: "Support", scope: "My work", scopeTone: "mine", subtitle: "maintenance clients and open tickets" },
+const COPY: Record<Kind, { scope: string; scopeTone: "organisation" | "read-only" | "mine"; subtitle: string }> = {
+  management: { scope: "Whole team", scopeTone: "organisation", subtitle: "Here’s your team’s pipeline and follow-up health." },
+  sales: { scope: "My work", scopeTone: "mine", subtitle: "Here’s what needs you today." },
+  delivery: { scope: "Delivery view", scopeTone: "read-only", subtitle: "Here’s the won work coming your way." },
+  finance: { scope: "Finance view", scopeTone: "read-only", subtitle: "Here’s the won value and what’s still to collect." },
+  technical: { scope: "Assigned to me", scopeTone: "mine", subtitle: "Here are the tasks assigned to you." },
+  support: { scope: "My work", scopeTone: "mine", subtitle: "Here are your maintenance clients and open tickets." },
 };
 
 const EMPTY: Record<Kind, { icon: string; title: string; body: string }> = {
@@ -68,7 +69,13 @@ const EMPTY: Record<Kind, { icon: string; title: string; body: string }> = {
 function dateLine(timeZone: string | null): string {
   const now = new Date();
   const tz = timeZone ?? undefined;
-  return `${now.toLocaleDateString("en-GB", { weekday: "long", timeZone: tz })}, ${now.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: tz })}`;
+  return `${now.toLocaleDateString("en-GB", { weekday: "long", timeZone: tz })} ${now.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: tz })}`;
+}
+
+/** "Good morning" / "Good afternoon" / "Good evening" by the hour in the member's own time zone. */
+export function greetingFor(timeZone: string | null, now: Date = new Date()): string {
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: timeZone ?? undefined }).format(now)) % 24;
+  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 }
 
 function section<T>(sections: SectionAnswer[] | undefined, key: string): { state: "absent" } | { state: "failed"; title: string; error?: string } | { state: "ok"; data: T } {
@@ -136,11 +143,8 @@ export function HomeScreen() {
   if (dash.isPending || !sections) {
     return (
       <div className="fb-home" aria-busy="true">
-        <span className="fb-sr-only" role="status">
-          Loading your dashboard
-        </span>
         <Header kind={null} timeZone={m.timeZone} quick={[]} />
-        <KpiSkeleton />
+        <LoaderBlock label="Loading your dashboard" />
       </div>
     );
   }
@@ -155,14 +159,16 @@ export function HomeScreen() {
   }
 
   const quick = quickFor(kind, m.orgSlug, m.can);
+  const links = linksFor(kind, m.orgSlug, m.can, demoScreensEnabledClient());
   return (
     <div className="fb-home">
-      <Header kind={kind} timeZone={m.timeZone} quick={quick} />
+      <Header kind={kind} timeZone={m.timeZone} quick={quick.filter((q) => q.primary)} />
       {kind === "sales" ? <SalesHome sections={sections} retry={retry} /> : null}
       {kind === "management" ? <ManagementHome sections={sections} retry={retry} /> : null}
       {kind === "delivery" ? <DeliveryHome sections={sections} retry={retry} /> : null}
       {kind === "finance" ? <FinanceHome sections={sections} retry={retry} /> : null}
       {kind === "technical" ? <TechnicalHome sections={sections} retry={retry} /> : null}
+      <QuickLinks links={links} />
     </div>
   );
 }
@@ -186,21 +192,87 @@ function quickFor(kind: Kind, org: string, can: (k: string) => boolean): Quick[]
   return out;
 }
 
+/** The links along the foot of the page: the role's quick actions first, then the screens it works in (only what its permissions allow). */
+function linksFor(kind: Kind, org: string, can: (k: string) => boolean, demo: boolean): Quick[] {
+  const base = `/o/${org}`;
+  const any = (...keys: string[]) => keys.some((k) => can(k));
+  const out: Quick[] = [...quickFor(kind, org, can)];
+  const add = (q: Quick, ok: boolean) => ok && out.push(q);
+  const tasks = any("tasks.view.own", "tasks.view.all");
+  const leads = any("leads.view.own", "leads.view.all", "leads.view.shared");
+  const deals = any("deals.view.own", "deals.view.all", "deals.view.won");
+  const dealsLabel = any("deals.view.own", "deals.view.all") ? "Deals" : "Won deals";
+  if (kind === "sales" || kind === "management") {
+    add({ key: "n-leads", label: "Leads", icon: "users", href: `${base}/leads` }, leads);
+    add({ key: "n-deals", label: dealsLabel, icon: "briefcase", href: `${base}/deals` }, deals);
+    add({ key: "n-tasks", label: "Tasks", icon: "check-square", href: `${base}/tasks` }, tasks);
+    add({ key: "n-calendar", label: "Calendar", icon: "calendar", href: `${base}/calendar` }, tasks);
+    add({ key: "n-forecast", label: "Forecast & targets", icon: "target", href: `${base}/forecast` }, demo && any("forecast.view.all", "quotes.create", "reporting.view.own", "reporting.view.all"));
+  }
+  if (kind === "delivery") {
+    add({ key: "n-deals", label: dealsLabel, icon: "briefcase", href: `${base}/deals` }, deals);
+    add({ key: "n-tasks", label: "Tasks", icon: "check-square", href: `${base}/tasks` }, tasks);
+    add({ key: "n-handoffs", label: "Handoffs", icon: "package", href: `${base}/handoffs` }, any("handoff.manage", "deals.handoff"));
+    add({ key: "n-calendar", label: "Calendar", icon: "calendar", href: `${base}/calendar` }, tasks);
+  }
+  if (kind === "finance") {
+    add({ key: "n-deals", label: dealsLabel, icon: "briefcase", href: `${base}/deals` }, deals);
+    add({ key: "n-payments", label: "Payments", icon: "wallet", href: `${base}/payments` }, can("finance.view.payments"));
+    add({ key: "n-reports", label: can("reporting.view.all") ? "Reports" : "My metrics", icon: "chart", href: `${base}/reports` }, any("reporting.view.own", "reporting.view.all"));
+  }
+  if (kind === "technical") {
+    add({ key: "n-tasks", label: "Tasks", icon: "check-square", href: `${base}/tasks` }, tasks);
+    add({ key: "n-calendar", label: "Calendar", icon: "calendar", href: `${base}/calendar` }, tasks);
+  }
+  return out.slice(0, 8);
+}
+
+function QuickLinks({ links }: { links: Quick[] }) {
+  if (links.length === 0) return null;
+  return (
+    <nav className="fb-qlinks-wrap" aria-label="Quick links">
+      <div className="fb-qlinks__t">Quick links</div>
+      <div className="fb-qlinks">
+        {links.map((q) => (
+          <Link key={q.key} href={q.href} className="fb-qlink">
+            <span className="fb-qlink__c" aria-hidden="true">
+              <HIcon name={q.icon} size={16} stroke={1.6} />
+            </span>
+            {q.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 function Header({ kind, timeZone, quick }: { kind: Kind | null; timeZone: string | null; quick: Quick[] }) {
-  const c = kind ? COPY[kind] : { title: "Today", scope: "", scopeTone: "mine" as const, subtitle: "" };
+  const m = useMember();
+  const c = kind ? COPY[kind] : { scope: "", scopeTone: "mine" as const, subtitle: "" };
+  const first = m.userName.trim().split(/\s+/)[0] ?? "";
   return (
     <div className="fb-homehead">
       <div>
-        <h1 className="fb-homehead__title">{c.title}</h1>
-        <div className="fb-homehead__meta">
+        <div className="fb-homehead__date">
+          {dateLine(timeZone)}
           {c.scope ? <span className={`fb-scope fb-scope--${c.scopeTone}`}>{c.scope}</span> : null}
-          <span className="fb-homehead__sub">{kind ? `${dateLine(timeZone)} · ${c.subtitle}` : dateLine(timeZone)}</span>
         </div>
+        <h1 className="fb-homehead__title">
+          {greetingFor(timeZone)}
+          {first ? (
+            <>
+              , <b>{first}</b>.
+            </>
+          ) : (
+            "."
+          )}
+        </h1>
+        {c.subtitle ? <div className="fb-homehead__sub">{c.subtitle}</div> : null}
       </div>
       <div className="fb-homehead__actions">
         {quick.map((q) => (
           <Link key={q.key} href={q.href} className={`fb-qbtn ${q.primary ? "fb-qbtn--primary" : ""}`}>
-            <HIcon name={q.icon} size={16} />
+            <HIcon name={q.icon} size={14} />
             {q.label}
           </Link>
         ))}

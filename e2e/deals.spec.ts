@@ -83,7 +83,7 @@ test.describe("the deals board", () => {
     await gotoAndSettle(page, `/o/${ORG_SLUG}/deals`);
     await page.getByRole("button", { name: "List" }).click();
     const table = page.getByRole("table");
-    await expect(table.getByRole("columnheader", { name: "EXPECTED CLOSE" })).toBeVisible();
+    await expect(table.getByRole("columnheader", { name: "Expected close" })).toBeVisible();
     await expect(page.getByRole("checkbox", { name: "Show archived" })).not.toBeChecked();
   });
 

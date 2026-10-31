@@ -1,6 +1,5 @@
 import { Suspense } from "react";
-import { resolveRequestContext } from "@/auth/requestContext";
-import { recordPageView } from "@/services/pageViewService";
+import { schedulePageView } from "@/services/pageViewService";
 import { TasksScreen } from "@/ui/screens/tasks";
 
 /**
@@ -9,8 +8,7 @@ import { TasksScreen } from "@/ui/screens/tasks";
  */
 export default async function TasksPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
-  const ctx = await resolveRequestContext(orgSlug);
-  await recordPageView(ctx, "tasks");
+  await schedulePageView(orgSlug, "tasks");
   return (
     <Suspense>
       <TasksScreen />

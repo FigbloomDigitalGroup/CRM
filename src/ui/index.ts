@@ -6,6 +6,7 @@ export * from "./components/basics";
 export * from "./components/forms";
 export * from "./components/overlays";
 export * from "./components/states";
+export * from "./components/loader";
 export * from "./components/appearance";
 export * from "./components/toast";
 export * from "./components/DataTable";

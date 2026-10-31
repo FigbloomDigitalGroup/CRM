@@ -16,7 +16,7 @@ test.describe("the organisation reports", () => {
     await gotoAndSettle(page, `/o/${ORG_SLUG}/reports`);
     await expect(page.getByRole("heading", { level: 1, name: "Reports" })).toBeVisible();
     await expect(page.getByText("Organisation reports", { exact: true })).toBeVisible();
-    await expect(page.getByText("NEEDS ATTENTION")).toBeVisible();
+    await expect(page.getByText("Needs attention")).toBeVisible();
 
     const today = new Date();
     const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -70,7 +70,7 @@ test.describe("the organisation reports", () => {
     await loginAs(page, "dev.sales@figbloom.local");
     await gotoAndSettle(page, `/o/${ORG_SLUG}/reports`);
     await expect(page.getByRole("heading", { level: 1, name: "My metrics" })).toBeVisible();
-    await expect(page.getByText("NEEDS ATTENTION")).toHaveCount(0);
+    await expect(page.getByText("Needs attention")).toHaveCount(0);
     expect((await page.request.get(`/api/orgs/${ORG_SLUG}/reports/v2`)).status()).toBe(403);
   });
 

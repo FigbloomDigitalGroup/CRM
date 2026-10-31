@@ -18,6 +18,7 @@ import { ImportCsvDialog } from "./ImportCsvDialog";
 import { CompanyDrawer } from "./CompanyDrawer";
 import { MergeDialog } from "./merge/MergeDialog";
 import { lifecycleTone, initialsFrom, useCustomerReference, useDebounced, type CompanyRow } from "./data";
+import { LoaderBlock } from "../../components/loader";
 
 type TabId = "all" | "mine" | "dormant" | "archived";
 
@@ -259,23 +260,17 @@ export function CompaniesScreen() {
             <caption className="fb-sr-only">Companies</caption>
             <thead>
               <tr>
-                <th scope="col">COMPANY</th>
-                <th scope="col">INDUSTRY</th>
-                <th scope="col">LIFECYCLE</th>
-                <th scope="col" data-align="right">CONTACTS</th>
-                <th scope="col">OWNER</th>
-                <th scope="col" data-align="right">ACTIONS</th>
+                <th scope="col">Company</th>
+                <th scope="col">Industry</th>
+                <th scope="col">Lifecycle</th>
+                <th scope="col" data-align="right">Contacts</th>
+                <th scope="col">Owner</th>
+                <th scope="col" data-align="right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading
-                ? ["60%", "80%", "45%", "70%", "55%"].map((w, i) => (
-                    <tr key={i}>
-                      <td colSpan={6}>
-                        <div className="fb-cu-skel" style={{ width: w }} />
-                      </td>
-                    </tr>
-                  ))
+                ? <tr><td colSpan={6}><LoaderBlock compact label="Loading companies" /></td></tr>
                 : null}
               {!loading && !error
                 ? rows.map((c) => {

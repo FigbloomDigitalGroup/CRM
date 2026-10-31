@@ -43,6 +43,7 @@ export function Tooltip({ text, children }: { text: string; children: ReactEleme
 
 export function Popover({
   label,
+  triggerLabel,
   trigger,
   children,
   align = "start",
@@ -53,6 +54,8 @@ export function Popover({
 }: {
   /** The accessible name of the panel (and of the trigger when it has no text). */
   label: string;
+  /** The trigger's own name. By default `label`; `null` lets a trigger with visible text be named by that text (WCAG 2.5.3, Label in Name). */
+  triggerLabel?: string | null;
   trigger: ReactNode;
   children: ReactNode | ((close: () => void) => ReactNode);
   align?: "start" | "end";
@@ -75,7 +78,7 @@ export function Popover({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        aria-label={typeof trigger === "string" ? undefined : label}
+        aria-label={triggerLabel === null || typeof trigger === "string" ? undefined : (triggerLabel ?? label)}
         onClick={() => set(!open)}
       >
         {trigger}

@@ -31,7 +31,12 @@ export default defineConfig({
   projects: [
     { name: "chromium", testIgnore: /mobile-.*\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     // M9 (F4.10 to F4.12, FIG-791): the phone journeys run on a mid-range Android profile at 375 px wide with touch.
-    { name: "mobile-chrome", testMatch: /mobile-.*\.spec\.ts/, use: { ...devices["Pixel 5"], viewport: { width: 375, height: 812 } } },
+    { name: "mobile-chrome", testMatch: /(mobile-.*|qa[/\\]core-journeys)\.spec\.ts/, use: { ...devices["Pixel 5"], viewport: { width: 375, height: 812 } } },
+    // Q1.04 (FIG-1118): the cross-browser matrix. Chrome (the `chromium` project above), Firefox, Safari and iOS Safari run the core journeys only
+    // (`e2e/qa/core-journeys.spec.ts`); Android Chrome is `mobile-chrome`. Install the engines with `npm run e2e:install:matrix`.
+    { name: "firefox", testMatch: /qa[/\\]core-journeys\.spec\.ts/, use: { ...devices["Desktop Firefox"] } },
+    { name: "webkit", testMatch: /qa[/\\]core-journeys\.spec\.ts/, use: { ...devices["Desktop Safari"] } },
+    { name: "mobile-safari", testMatch: /qa[/\\]core-journeys\.spec\.ts/, use: { ...devices["iPhone 13"] } },
   ],
 
   // Reuses an already-running server locally (start one with `npm run

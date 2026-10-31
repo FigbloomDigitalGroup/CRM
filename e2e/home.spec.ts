@@ -15,7 +15,7 @@ async function heading(page: Page, name: string | RegExp) {
 test.describe("role homes", () => {
   test("Sales sees Today: the four tiles, what to do, new leads and the pipeline", async ({ page }) => {
     await loginAs(page, "dev.sales@figbloom.local");
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening), / })).toBeVisible();
     // The seeded Sales account has leads, deals and tasks, so this is the full page and not the first-run state.
     await expect(page.getByTestId("kpi-today")).toBeVisible();
     await expect(page.getByTestId("kpi-overdue")).toBeVisible();
@@ -61,7 +61,7 @@ test.describe("role homes", () => {
 
   test("Restricted Technical sees My work only, with never a value or a finance figure", async ({ page }) => {
     await loginAs(page, "dev.tech@figbloom.local");
-    await expect(page.getByRole("heading", { level: 1, name: "My work" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     await expect(page.getByText("Assigned to me").first()).toBeVisible();
     for (const text of [/KES\s?\d/, /Pipeline by stage/, /Deals moving/, /invoice/i, /payment/i, /margin/i]) {
       await expect(page.getByText(text)).toHaveCount(0);
@@ -102,6 +102,7 @@ test.describe("the home page's task list", () => {
       expect(made.ok()).toBe(true);
       await page.reload();
     }
+    await page.waitForLoadState("networkidle"); // a tap before the page has hydrated is lost
     const first = panel.getByRole("button", { name: /^Mark done:/ }).first();
     const name = (await first.getAttribute("aria-label"))!.replace("Mark done: ", "");
     await first.click();

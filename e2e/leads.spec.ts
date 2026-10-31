@@ -144,6 +144,12 @@ test.describe("the lead page", () => {
     const ref = await reference(page);
     // A required-on-qualify question for one service only, so no other lead in the shared database is affected.
     const service = ref.services[ref.services.length - 1]!;
+    // Earlier runs left their own required questions on this service. Retire them (a field is retired, never deleted) so the page asks only for this run's.
+    const origin = new URL(page.url()).origin;
+    const existing = await page.request.get(`/api/orgs/${ORG_SLUG}/custom-fields?entityType=LEAD&section=QUALIFICATION`);
+    for (const f of ((await existing.json()).items ?? []) as { id: string; label: string }[]) {
+      if (/^E2E question /.test(f.label)) await page.request.patch(`/api/orgs/${ORG_SLUG}/custom-fields/${f.id}`, { data: { isActive: false }, headers: { origin } });
+    }
     const key = `e2e_${suffix.replace(/\D/g, "")}`;
     const def = await apiPost(page, `/api/orgs/${ORG_SLUG}/custom-fields`, { entityType: "LEAD", key, label: `E2E question ${suffix}`, fieldType: "TEXT", section: "QUALIFICATION", requiredOnQualify: true, serviceId: service.id });
     expect(def.ok()).toBe(true);
@@ -158,9 +164,27 @@ test.describe("the lead page", () => {
     // Earlier runs against this shared database leave their own required questions on the service: answer every one the page still asks for.
     const stillAsked = page.getByRole("region", { name: /^Qualification/ }).locator("[aria-invalid=true]");
     // Whatever else the service asks (a seeded choice, or a question an earlier run left behind): answer each, by its kind.
-    for (const box of await stillAsked.all()) {
-      if ((await box.evaluate((e) => e.tagName)) === "SELECT") await box.selectOption({ index: 1 });
-      else await box.fill("Answered");
+    // Always take the first one still asked: an answered question leaves the list, so a fixed list of locators would shift under the loop.
+    // The page re-reads what is missing after each save, so the list can come back: keep answering until it has stayed empty for a moment.
+    for (let guard = 0, quiet = 0; guard < 300 && quiet < 4; guard += 1) {
+      if ((await stillAsked.count()) === 0) {
+        await page.waitForTimeout(1500);
+        quiet += (await stillAsked.count()) === 0 ? 1 : 0;
+        continue;
+      }
+      // The list re-renders after each save, so the control can change between reading its kind and acting on it: a failed action is simply tried again.
+      try {
+        const box = stillAsked.first();
+        const kind = await box.evaluate((e) => `${e.tagName}:${(e as HTMLInputElement).type ?? ""}`);
+        if (kind.startsWith("SELECT")) await box.selectOption({ index: 1 }, { timeout: 5_000 });
+        else if (/:(checkbox|radio)$/.test(kind)) await box.check({ timeout: 5_000 });
+        else if (kind.endsWith(":date")) await box.fill("2026-12-01", { timeout: 5_000 });
+        else if (kind.endsWith(":number")) await box.fill("1", { timeout: 5_000 });
+        else if (/^(INPUT|TEXTAREA)/.test(kind)) await box.fill("Answered", { timeout: 5_000 });
+        else await box.click({ timeout: 5_000 }); // a custom control (a choice group): pick the first option it offers
+      } catch {
+        await page.waitForTimeout(300);
+      }
     }
     await expect(page.getByText(/saved$/)).toBeVisible();
     await expect(page.getByRole("region", { name: /^Qualification/ }).locator("[aria-invalid=true]")).toHaveCount(0, { timeout: 45_000 }); // the page has re-read what is still missing

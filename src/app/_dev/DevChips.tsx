@@ -7,6 +7,8 @@
  * `process.env.NODE_ENV === "production"` removes at build time, and `tests/devChipsBuild.test.ts` greps the build output to prove it.
  */
 export async function DevChips() {
-  const render = process.env.NODE_ENV === "production" ? null : (await import("./renderDevChips")).renderDevChips;
+  // `NEXT_PUBLIC_PREVIEW_CHIPS` is set only by `npm run preview`, which builds into its own folder; in every other production build this
+  // condition is a constant and the import is removed.
+  const render = process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_PREVIEW_CHIPS !== "true" ? null : (await import("./renderDevChips")).renderDevChips;
   return render ? render() : null;
 }

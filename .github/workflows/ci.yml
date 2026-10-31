@@ -82,6 +82,9 @@ jobs:
       # F1.07: nothing that exists only for development (the dev sign-in chips) may be in the production build.
       - name: Check the production build has no dev-only code
         run: npm run check:build-output
+      # Q1.05: the script a screen loads for the first time stays inside its budget (docs/FRONTEND_PERFORMANCE.md).
+      - name: Check the script weight per route is inside the budget
+        run: npm run check:bundle-budget
       - uses: actions/upload-artifact@v4
         with:
           name: next-build
@@ -242,7 +245,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Install Playwright's Chromium
-        run: npm run e2e:install
+        run: npm run e2e:install:matrix
       - name: Run this shard (FIG-602)
         run: npx playwright test --shard=${{ matrix.shard }}/4
       - name: Upload Playwright report

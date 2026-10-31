@@ -187,7 +187,7 @@ describe("OrgIdentity and UserMenu", () => {
   it("the organisation block shows where you are and since when, and opens the session card", async () => {
     const user = userEvent.setup();
     render(providers(vi.fn(), <OrgIdentity identity={identity} />));
-    const trigger = screen.getByRole("button", { name: "Organisation and session" });
+    const trigger = screen.getByRole("button", { name: /organisation and session/i });
     expect(trigger).toHaveTextContent("Figbloom");
     expect(trigger).toHaveTextContent("Sales workspace · Signed in 10:04");
     await user.click(trigger);
@@ -203,14 +203,14 @@ describe("OrgIdentity and UserMenu", () => {
 
   it("falls back to the role name when the role has no workspace label", () => {
     render(providers(vi.fn(), <OrgIdentity identity={{ ...identity, workspaceLabel: null }} />));
-    expect(screen.getByRole("button", { name: "Organisation and session" })).toHaveTextContent("Sales · Signed in 10:04");
+    expect(screen.getByRole("button", { name: /organisation and session/i })).toHaveTextContent("Sales · Signed in 10:04");
   });
 
   it("signs out the other devices and says so", async () => {
     const user = userEvent.setup();
     const call = vi.fn().mockResolvedValue({});
     render(providers(call, <OrgIdentity identity={{ ...identity, supportNotice: null }} />));
-    await user.click(screen.getByRole("button", { name: "Organisation and session" }));
+    await user.click(screen.getByRole("button", { name: /organisation and session/i }));
     await user.click(screen.getByRole("button", { name: "Sign out other devices" }));
     expect(call).toHaveBeenCalledWith("signOutOtherSessions", { params: {} });
     expect(await screen.findByText("Signed out of your other devices.")).toBeInTheDocument();
@@ -220,7 +220,7 @@ describe("OrgIdentity and UserMenu", () => {
     const user = userEvent.setup();
     const call = vi.fn().mockResolvedValue({});
     render(providers(call, <UserMenu identity={identity} />));
-    const trigger = screen.getByRole("button", { name: "Account: Dev Sales" });
+    const trigger = screen.getByRole("button", { name: /Dev Sales.*account menu/ });
     expect(trigger).toHaveTextContent("Dev Sales");
     expect(trigger).toHaveTextContent("Sales");
     await user.click(trigger);

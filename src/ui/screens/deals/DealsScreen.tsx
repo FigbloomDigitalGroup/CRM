@@ -10,6 +10,7 @@ import { useAllDeals, useHandoffStatuses, useMemberName, useRefData } from "./da
 import { NewDealDrawer } from "./NewDealDrawer";
 import { dateLong, dealTitle, dealValue, flagsFor, initials, isMasked, kes, ago, num, stageTone, type DealItem, type Flag, type Stage } from "./model";
 import { useDealMover, type MoveTarget } from "./useDealMover";
+import { LoaderBlock } from "../../components/loader";
 
 /**
  * F2.04 / P1: the deals board and list. Columns, counts and totals come from the same read the list uses; values the API masks are never
@@ -74,15 +75,15 @@ export function DealsScreen() {
   const groups: { label: string; tip?: string; cols: { stage: Stage; list: DealItem[]; emptyText: string }[] }[] = readOnly
     ? [
         {
-          label: "WON DEALS",
+          label: "Won deals",
           tip: canSeeValues ? undefined : `Prices are hidden for ${member.roleName}`,
           cols: stages.filter((s) => s.isWon).map((s) => ({ stage: s, list: won, emptyText: "No won deals yet" })),
         },
       ]
     : [
-        { label: "OPEN PIPELINE", tip: "Drag cards between stages, or use ⇄ on a card", cols: stages.filter((s) => !s.isWon && !s.isLost).map((s) => ({ stage: s, list: open.filter((d) => d.pipelineStageId === s.id), emptyText: "Drop a deal here" })) },
+        { label: "Open pipeline", tip: "Drag cards between stages, or use ⇄ on a card", cols: stages.filter((s) => !s.isWon && !s.isLost).map((s) => ({ stage: s, list: open.filter((d) => d.pipelineStageId === s.id), emptyText: "Drop a deal here" })) },
         {
-          label: "CLOSED",
+          label: "Closed",
           cols: [
             ...stages.filter((s) => s.isWon).map((s) => ({ stage: s, list: won, emptyText: "No deals won yet" })),
             ...stages.filter((s) => s.isLost).map((s) => ({ stage: s, list: lost, emptyText: "No deals lost" })),
@@ -177,12 +178,7 @@ export function DealsScreen() {
       ) : null}
 
       {loading ? (
-        <div className="fb-dboard__skel" role="status" aria-busy="true">
-          <span className="fb-sr-only">Loading the board</span>
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="fb-dskel" />
-          ))}
-        </div>
+        <LoaderBlock compact label="Loading the board" />
       ) : null}
       {failed ? (
         <div className="fb-dstate">
@@ -263,7 +259,7 @@ export function DealsScreen() {
               <caption className="fb-sr-only">Deals</caption>
               <thead>
                 <tr>
-                  {["COMPANY / DEAL", "STAGE", "VALUE", "OWNER", "EXPECTED CLOSE", "LAST ACTIVITY", "FLAGS"].map((c, i) => (
+                  {["Company / deal", "Stage", "Value", "Owner", "Expected close", "Last activity", "Flags"].map((c, i) => (
                     <th key={c} scope="col" style={{ textAlign: i === 2 ? "right" : "left" }}>
                       {c}
                     </th>

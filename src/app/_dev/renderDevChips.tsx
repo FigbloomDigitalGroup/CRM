@@ -1,4 +1,4 @@
-import { devAccountsAllowed, isDevAccountEmail } from "@/auth/devAccounts";
+import { devAccountsAllowed, isDevAccountEmail, previewChipsAllowed } from "@/auth/devAccounts";
 import { adminDb } from "@/db/adminClient";
 import { DevChipsPanel, type DevChipAccount } from "./DevChipsPanel";
 
@@ -6,14 +6,16 @@ import { DevChipsPanel, type DevChipAccount } from "./DevChipsPanel";
 const ORDER = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"];
 
 export async function renderDevChips() {
-  if (!devAccountsAllowed()) return null;
+  const preview = !devAccountsAllowed() && previewChipsAllowed();
+  if (!devAccountsAllowed() && !preview) return null;
 
   const users = await adminDb.user.findMany({
     where: { email: { endsWith: "@figbloom.local" } },
     include: { memberships: { include: { role: true } } },
     orderBy: { email: "asc" },
   });
-  const platform = await adminDb.platformIdentity.findMany({ where: { isDev: true }, orderBy: { email: "asc" } });
+  // The dev Super Admin signs in only through the no-password dev route, which stays closed in a production build.
+  const platform = preview ? [] : await adminDb.platformIdentity.findMany({ where: { isDev: true }, orderBy: { email: "asc" } });
 
   const tenant = users
     .filter((u) => isDevAccountEmail(u.email))
@@ -36,5 +38,5 @@ export async function renderDevChips() {
 
   // No seeded organisation, nothing to sign in to.
   if (accounts.length === 0) return null;
-  return <DevChipsPanel accounts={accounts} />;
+  return <DevChipsPanel accounts={accounts} viaPassword={preview} />;
 }
