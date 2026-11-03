@@ -1,15 +1,15 @@
 # V1 quality gate: sign-off checklist (Q1.08, FIG-1122, G1.08 for the frontend)
 
-Formal go or no-go for production readiness (M12). This page is the checklist, with the **real state of each line on 31 Oct 2026**. **The gate is not passed.** Several lines need people (UAT, manual accessibility and device passes, Management's approval) and three defects are open. Nothing here is signed.
+Formal go or no-go for production readiness (M12). This page is the checklist, with the **real state of each line on 31 Oct 2026**. **The gate is not passed, because the lines that need people are not done** (UAT, manual accessibility and device passes, Management's approval, design's approval of the pictures, the FIG-444 metrics). The automated side is complete and green: no Blocker or Major defect is open (D-01, D-02, D-05 and E-01 were fixed on 2 Nov 2026). Nothing here is signed.
 
 ## Checklist
 
 | # | Criterion | State | Evidence |
 |---|---|---|---|
 | 1 | Q1.01 to Q1.07 done; every V1 checklist ID traced to a passing test | **Partly.** All 54 V1 IDs are traced to journey files that exist (`tests/e2eTraceability.test.ts`, passing). Role journeys pass for six roles on every V1 screen. The seven-role matrix in the issue is six desktop roles plus the phone persona (`mobile-*.spec.ts`). Flake rate over 20 consecutive runs: **not measured**. CI time under 15 minutes sharded: **not measured** (CI changes are in this pass but CI has not run them) | `e2e/qa/trace.ts`, `e2e/qa/role-journeys.spec.ts` |
-| 2 | No open Blocker or Major defects | **No.** Three Majors are open: D-01 (React #418 in the production build), D-02 (Customer Support has no home), D-05 (phone Tasks LCP) | `docs/QA_DEFECTS.md` |
+| 2 | No open Blocker or Major defects | **Yes.** D-01 (React #418), D-02 (Customer Support home), D-05 (phone Tasks LCP) and E-01 were fixed on 2 Nov 2026 with regression tests. Open: Minors only (D-04, D-06, D-07) | `docs/QA_DEFECTS.md` |
 | 3 | Accessibility budget met | **Automated: yes.** Zero serious or critical axe violations on every V1 desktop screen and on the core screens in all nine looks. **Manual keyboard and screen-reader pass: not run** | `docs/A11Y_CHECKLIST.md` |
-| 4 | Performance budget met | **Mostly.** Script weight inside budget on all 71 routes; tap and scroll inside budget; LCP inside budget on three of four phone screens (Tasks over). **The 50k-lead run and real-device timings were not done** | `docs/FRONTEND_PERFORMANCE.md` |
+| 4 | Performance budget met | **Yes, on the emulated phone.** Script weight inside budget on all 71 routes; tap, scroll and LCP inside budget on all four phone screens, also on the seeded 50k-lead organisation (Today 0.47 s, Leads 1.4 s, Customers 0.42 s, Tasks 1.1 s). **Real-device timings not done** | `docs/FRONTEND_PERFORMANCE.md` |
 | 5 | Visual baselines approved by design; frozen pages pixel-identical | **Partly.** Windows baselines are recorded but **design has not approved them**, and the Linux baselines CI needs are not recorded, so the visual suite skips on Linux until they are. The frozen pages are held by the existing zero-pixel suite and by the new source comparison with `pre-makeover` (passing); a rendered comparison against a build of the `pre-makeover` tag was not made | `e2e/qa/visual.spec.ts`, `tests/frozenAuthSource.test.ts`, `e2e/frozen-auth.spec.ts` |
 | 6 | Cross-browser matrix | **Automated: yes** (Chrome, Firefox, Safari, Android Chrome, iOS Safari profiles; one intermittent Safari failure, D-04). **Real-device pass: not run** | `docs/BROWSER_MATRIX.md` |
 | 7 | UAT sign-off from Management | **No.** Scripts written; no session held (needs staging, FIG-1123) | `docs/UAT_V1.md` |

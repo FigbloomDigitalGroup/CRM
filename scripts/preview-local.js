@@ -11,7 +11,9 @@
  *
  * It also builds the dev sign-in chips into THIS build only (Given's approval, 31 Oct 2026; CLAUDE.md rule 10). The build goes to its own
  * folder, `.next-preview`, so the standard `.next` build, the Docker image and CI's build check never contain them. The chips sign in through
- * the real password login, and the dev Super Admin is not offered (its sign-in route stays closed in a production build).
+ * the real password login, and the dev Super Admin IS offered (Given, 2 Nov 2026): its dev sign-in route is
+ * open in this build for that one identity and nobody else, and the demo screens (V1.1 and V2, on demo data) are switched on so the console and the
+ * Customer Support workspace can be shown. All of it needs the same local-database-only gates; the standard build, the Docker image and CI stay closed.
  */
 const { spawnSync } = require("node:child_process");
 require("dotenv").config?.();
@@ -22,7 +24,7 @@ if (!/@(localhost|127\.0\.0\.1|\[::1\])[:/]/.test(db)) {
   process.exit(1);
 }
 
-const env = { STORAGE_DRIVER: "local", STORAGE_SIGNING_SECRET: "local-preview-only-signing-secret-0123456789abcdef", ...process.env, E2E_ALLOW_DEV_ACCOUNTS: "true", ALLOW_DEV_ACCOUNTS: "true", PREVIEW_DEV_CHIPS: "true", NEXT_PUBLIC_PREVIEW_CHIPS: "true", NEXT_DIST_DIR: ".next-preview", NEXT_TELEMETRY_DISABLED: "1" };
+const env = { STORAGE_DRIVER: "local", STORAGE_SIGNING_SECRET: "local-preview-only-signing-secret-0123456789abcdef", ...process.env, E2E_ALLOW_DEV_ACCOUNTS: "true", ALLOW_DEV_ACCOUNTS: "true", PREVIEW_DEV_CHIPS: "true", NEXT_PUBLIC_PREVIEW_CHIPS: "true", DEMO_SCREENS: "true", NEXT_PUBLIC_DEMO_SCREENS: "true", NEXT_DIST_DIR: ".next-preview", NEXT_TELEMETRY_DISABLED: "1" };
 const run = (args) => spawnSync(process.execPath, [require.resolve("next/dist/bin/next"), ...args], { stdio: "inherit", env });
 
 if (!process.argv.includes("--skip-build")) {

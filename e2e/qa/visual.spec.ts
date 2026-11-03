@@ -54,9 +54,9 @@ for (const look of LOOKS) {
             animations: "disabled",
             caret: "hide",
             maxDiffPixelRatio: 0.04,
-            // The phone Today screen is a live list of the person's tasks and counts (and a greeting that follows the clock), so only its frame (header,
+            // The phone data screens (Today, Leads, Deals, Companies, Reports) are live lists of the person's tasks and counts (and a greeting that follows the clock), so only its frame (header,
             // tab bar, spacing) is held by the baseline there; the desktop home keeps its content and masks only the figures.
-            mask: [page.locator("time"), page.locator("[data-volatile]"), page.getByTestId(/^kpi-/), page.locator(".fb-avatar"), page.locator('[aria-label^="Notifications"]'), ...(screen.name === "home" && (look.viewport?.width ?? 1280) < 500 ? [page.locator("main")] : [])],
+            mask: [page.locator("time"), page.locator("[data-volatile]"), page.getByTestId(/^kpi-/), page.locator(".fb-avatar"), page.locator('[aria-label^="Notifications"]'), ...(screen.name !== "preferences" && (look.viewport?.width ?? 1280) < 500 ? [page.locator("main")] : [])],
           });
         }
       } finally {

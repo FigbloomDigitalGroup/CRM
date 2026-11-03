@@ -20,11 +20,10 @@ const BLOCKED: Record<string, string[]> = {
   delivery: ["leads", "renewals", "payments", "settings"],
   finance: ["leads", "handoffs", "tasks", "conversations", "renewals", "settings"],
   technical: ["leads", "deals", "handoffs", "companies", "contacts", "renewals", "payments", "reports", "settings"],
-  // D-02 (docs/QA_DEFECTS.md): Customer Support has no dashboard of its own, so its home is the explained no-access; that is recorded as a defect, not expected here.
   support: ["leads", "deals", "handoffs", "renewals", "payments", "settings"],
 };
 /** Screens skipped in the refusal comparison, with the defect that explains each. */
-const KNOWN_DEFECT: Record<string, string[]> = { support: ["home"] };
+const KNOWN_DEFECT: Record<string, string[]> = {};
 
 function watchServerErrors(page: Page): string[] {
   const problems: string[] = [];
@@ -73,10 +72,8 @@ for (const role of ROLES) {
 }
 
 test.describe("hydration", () => {
-  // D-01 (docs/QA_DEFECTS.md): the production build raises React error #418 (server and client HTML differ) on every organisation page, and
-  // `next dev` stays silent, so the cause is not found yet. test.fail keeps the defect in the suite: it turns red the day the mismatch is fixed,
-  // which is the signal to remove this marker.
-  test.fail(true, "D-01: React #418 on every organisation page in the production build");
+  // D-01 (fixed): the production build raised React error #418 because the top-bar tools were decided from a whole `process.env` object, which is
+  // empty in the browser (src/ui/screens/assistant/ToolsHost.tsx). This keeps it from coming back, on the pages every role opens first.
   test("no organisation page raises a hydration error", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message.slice(0, 60)));

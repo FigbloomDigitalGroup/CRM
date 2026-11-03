@@ -58,7 +58,10 @@ export default defineConfig({
         lines: 42,
         statements: 42,
         functions: 69,
-        branches: 80,
+        // Was 80 under Vitest 2. Vitest 4 and later count branches from the source (AST-aware remapping) and no longer from V8's raw ranges, which
+        // counted many branches that are not in the code; the same suite now reads 71.4 percent (statements 79.8, lines 81.7). The line, statement and
+        // function floors were not touched. Re-baselined 2 Nov 2026 (FIG-1259); raise it as tests are added.
+        branches: 70,
       },
     },
   },

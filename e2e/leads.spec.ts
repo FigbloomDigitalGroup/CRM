@@ -163,28 +163,17 @@ test.describe("the lead page", () => {
     // Answer it (saved as you type) and the move now succeeds.
     // Earlier runs against this shared database leave their own required questions on the service: answer every one the page still asks for.
     const stillAsked = page.getByRole("region", { name: /^Qualification/ }).locator("[aria-invalid=true]");
-    // Whatever else the service asks (a seeded choice, or a question an earlier run left behind): answer each, by its kind.
-    // Always take the first one still asked: an answered question leaves the list, so a fixed list of locators would shift under the loop.
-    // The page re-reads what is missing after each save, so the list can come back: keep answering until it has stayed empty for a moment.
-    for (let guard = 0, quiet = 0; guard < 300 && quiet < 4; guard += 1) {
-      if ((await stillAsked.count()) === 0) {
-        await page.waitForTimeout(1500);
-        quiet += (await stillAsked.count()) === 0 ? 1 : 0;
-        continue;
-      }
-      // The list re-renders after each save, so the control can change between reading its kind and acting on it: a failed action is simply tried again.
-      try {
-        const box = stillAsked.first();
-        const kind = await box.evaluate((e) => `${e.tagName}:${(e as HTMLInputElement).type ?? ""}`);
-        if (kind.startsWith("SELECT")) await box.selectOption({ index: 1 }, { timeout: 5_000 });
-        else if (/:(checkbox|radio)$/.test(kind)) await box.check({ timeout: 5_000 });
-        else if (kind.endsWith(":date")) await box.fill("2026-12-01", { timeout: 5_000 });
-        else if (kind.endsWith(":number")) await box.fill("1", { timeout: 5_000 });
-        else if (/^(INPUT|TEXTAREA)/.test(kind)) await box.fill("Answered", { timeout: 5_000 });
-        else await box.click({ timeout: 5_000 }); // a custom control (a choice group): pick the first option it offers
-      } catch {
-        await page.waitForTimeout(300);
-      }
+    // Whatever else the service asks (a seeded choice, or a question an earlier run left behind): answer each, by its kind. The page drops its "still
+    // needed" marks after the first answer is saved, so the controls are listed once, by id, before the first answer.
+    const ids = await stillAsked.evaluateAll((els) => els.map((e) => e.id));
+    for (const id of ids) {
+      const box = page.locator(`[id="${id}"]`);
+      const kind = await box.evaluate((e) => `${e.tagName}:${(e as HTMLInputElement).type ?? ""}`);
+      if (kind.startsWith("SELECT")) await box.selectOption({ index: 1 });
+      else if (/:(checkbox|radio)$/.test(kind)) await box.check();
+      else if (kind.endsWith(":date")) await box.fill("2026-12-01");
+      else if (kind.endsWith(":number")) await box.fill("1");
+      else await box.fill("Answered");
     }
     await expect(page.getByText(/saved$/)).toBeVisible();
     await expect(page.getByRole("region", { name: /^Qualification/ }).locator("[aria-invalid=true]")).toHaveCount(0, { timeout: 45_000 }); // the page has re-read what is still missing

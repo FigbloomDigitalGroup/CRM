@@ -110,7 +110,7 @@ test.describe("values are masked by role", () => {
       await loginAs(page, email);
       await gotoAndSettle(page, `/o/${ORG_SLUG}/deals`);
       await expect(page.getByRole("heading", { name: "Won deals", level: 1 })).toBeVisible();
-      await expect(page.getByText("Provisional access.")).toBeVisible();
+      await expect(page.getByText("Provisional access.")).toHaveCount(0);
       await expect(page.getByRole("group", { name: /^Solution Presented/ })).toHaveCount(0);
       await expect(page.getByRole("button", { name: /Move .* to another stage/ })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "New deal" })).toHaveCount(0);

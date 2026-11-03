@@ -54,12 +54,8 @@ test.describe("mid-range Android on mobile data", () => {
   for (const screen of SCREENS) {
     test(`${screen.name}: Largest Contentful Paint within ${LCP_BUDGET_MS} ms`, async ({ page }) => {
       test.setTimeout(180_000);
-      // D-05 (docs/QA_DEFECTS.md, docs/FRONTEND_PERFORMANCE.md): the phone Tasks screen measures 2.6 to 3.1 s cold on this emulation, because its
-      // list is requested only after the page has hydrated. test.fail keeps the miss in the suite: it turns red the day the screen meets the budget,
-      // which is the signal to remove this line.
-      // D-05 sits on the budget line (2.4 to 3.3 s across runs), so a strict test.fail flips red on a lucky run: on this screen the measurement is
-      // recorded and reported, and the budget is enforced only when PERF_STRICT=1 (the gate run, and the day D-05 is fixed).
-      const knownOver = screen.name === "tasks" && process.env.PERF_STRICT !== "1";
+      // D-05 (fixed): the phone Tasks list used to be requested only after hydration, and the hydration
+      // mismatch that forced a full client redraw is gone (D-01). All four screens are held to the budget.
       await loginAs(page, "dev.sales@figbloom.local");
       await throttle(page);
       // One load is too noisy on an emulated phone (the same screen varies by about 15 percent between runs), so the budget applies to the
@@ -73,10 +69,6 @@ test.describe("mid-range Android on mobile data", () => {
       test.info().annotations.push({ type: "lcp-ms", description: `${screen.name}: ${Math.round(value)} (samples ${samples.map(Math.round).join(", ")})` });
       console.log(`LCP ${screen.name} median ${Math.round(value)} ms from ${samples.map(Math.round).join(", ")}`);
       expect(value, `${screen.name} LCP`).toBeGreaterThan(0);
-      if (knownOver) {
-        test.info().annotations.push({ type: "D-05", description: `${screen.name} LCP ${Math.round(value)} ms against ${LCP_BUDGET_MS} ms: ${value < LCP_BUDGET_MS ? "inside" : "over"} the budget this run` });
-        return;
-      }
       expect(value, `${screen.name} LCP`).toBeLessThan(LCP_BUDGET_MS);
     });
   }

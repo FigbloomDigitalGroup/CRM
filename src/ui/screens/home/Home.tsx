@@ -2,7 +2,8 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo } from "react";
 import { describeError } from "../../errors";
 import { NoAccess } from "../../components/states";
 import { useApiQuery } from "../../data/hooks";
@@ -107,6 +108,16 @@ export function HomeScreen() {
   }, [sections]);
 
   const retry = () => void qc.invalidateQueries({ queryKey: ["getDashboard"] });
+
+  // D-02: the proposed Customer Support role has no dashboard of its own yet; its Support workspace is on demo data and shows only where demo
+  // screens are on. Everywhere else it lands on Tasks (which the role can use) and not on "no access" at its front door.
+  const router = useRouter();
+  const supportOnly = m.can("tickets.manage") && !m.can("leads.view.own") && !m.can("leads.view.all");
+  const supportToTasks = supportOnly && !demoScreensEnabledClient() && m.can("tasks.view.own");
+  useEffect(() => {
+    if (supportToTasks) router.replace(`/o/${m.orgSlug}/tasks`);
+  }, [supportToTasks, router, m.orgSlug]);
+  if (supportToTasks) return <LoaderBlock label="Opening your tasks" />;
 
   // The proposed Customer Support role: tickets, no leads. It has its own home (the design's "Support"), which does not wait for the dashboard call.
   if (demoScreensEnabledClient() && m.can("tickets.manage") && !m.can("leads.view.own") && !m.can("leads.view.all")) {

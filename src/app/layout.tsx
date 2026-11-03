@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Instrument_Sans, Outfit } from "next/font/google";
+import { Instrument_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { DevChips } from "./_dev/DevChips";
 import "./globals.css";
 
@@ -9,10 +10,11 @@ const brandFont = Instrument_Sans({
   display: "swap",
 });
 
-// The logo's own typeface, the same one Figbloom HR uses: semibold "Figbloom" and a light product name.
-const logoFont = Outfit({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+// The logo's own typeface, the same one Figbloom HR uses: semibold "Figbloom" and a light product name. Outfit's Latin variable font (weights 100 to 900)
+// is served from this repository, so building the image never depends on reaching Google Fonts (the Docker build failed on that).
+const logoFont = localFont({
+  src: "./fonts/outfit-latin.woff2",
+  weight: "100 900",
   variable: "--font-logo",
   display: "swap",
 });

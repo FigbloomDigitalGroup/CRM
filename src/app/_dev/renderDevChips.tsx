@@ -14,8 +14,9 @@ export async function renderDevChips() {
     include: { memberships: { include: { role: true } } },
     orderBy: { email: "asc" },
   });
-  // The dev Super Admin signs in only through the no-password dev route, which stays closed in a production build.
-  const platform = preview ? [] : await adminDb.platformIdentity.findMany({ where: { isDev: true }, orderBy: { email: "asc" } });
+  // The dev Super Admin signs in through the no-password dev route. Outside development that route is open only for this identity and only in the
+  // preview build (Given, 2 Nov 2026; CLAUDE.md rule 10); tenant users in the preview sign in through the real password login.
+  const platform = await adminDb.platformIdentity.findMany({ where: { isDev: true }, orderBy: { email: "asc" } });
 
   const tenant = users
     .filter((u) => isDevAccountEmail(u.email))
@@ -33,7 +34,7 @@ export async function renderDevChips() {
 
   const accounts: DevChipAccount[] = [
     ...tenant.map(({ email, name, roleName, note }) => ({ email, name, roleName, note })),
-    ...platform.map((p) => ({ email: p.email, name: p.name, roleName: "Platform Super Admin", note: "V1.1, dev only" })),
+    ...platform.map((p) => ({ email: p.email, name: p.name, roleName: "Platform Super Admin", note: "V1.1, dev only", platform: true as const })),
   ];
 
   // No seeded organisation, nothing to sign in to.

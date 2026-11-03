@@ -10,6 +10,8 @@ export interface DevChipAccount {
   name: string;
   roleName: string;
   note: string | null;
+  /** The dev Super Admin: a platform identity with no password, signed in through the dev route (also in the preview build). */
+  platform?: boolean;
 }
 
 /** A small floating panel, collapsed by default. The `data-figbloom-dev-chips` marker is what the production build check looks for. */
@@ -19,10 +21,10 @@ export function DevChipsPanel({ accounts, viaPassword = false }: { accounts: Dev
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function signIn(email: string) {
+  async function signIn(email: string, platform = false) {
     setBusy(email);
     setError(null);
-    const result = viaPassword ? await signInWithDevPassword(email, DEV_FIXTURE_PASSWORD) : await signInAsDevAccount(email);
+    const result = viaPassword && !platform ? await signInWithDevPassword(email, DEV_FIXTURE_PASSWORD) : await signInAsDevAccount(email);
     if (result.ok) {
       router.push(result.landing);
       router.refresh();
@@ -43,7 +45,7 @@ export function DevChipsPanel({ accounts, viaPassword = false }: { accounts: Dev
                 key={a.email}
                 type="button"
                 disabled={busy !== null}
-                onClick={() => signIn(a.email)}
+                onClick={() => signIn(a.email, a.platform)}
                 title={a.email}
                 style={{ textAlign: "left", background: "#fff", color: "#17241b", border: 0, borderRadius: 10, padding: "8px 10px", cursor: "pointer" }}
               >

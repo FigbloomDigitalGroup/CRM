@@ -48,7 +48,6 @@ describe("Deals board (F2.04, P1)", () => {
   it("never shows or adds up a value the API masks", async () => {
     const masked = DEALS.map((d) => ({ ...d, value: null, valueMasked: true }));
     setup({}, masked, ["deals.view.won"]);
-    await screen.findByText("Provisional access.");
     await screen.findByRole("group", { name: "Closed Won, 1 deal" });
     expect(document.body.textContent).not.toMatch(/KES\s?\d/);
     expect(document.body.textContent).toContain("Values hidden");

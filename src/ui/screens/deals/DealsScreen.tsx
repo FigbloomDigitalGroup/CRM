@@ -151,15 +151,6 @@ export function DealsScreen() {
         </div>
       </div>
 
-      {readOnly ? (
-        <div className="fb-dprov" role="note">
-          <Info size={17} aria-hidden="true" />
-          <span>
-            <strong>Provisional access.</strong> The seeded matrix gives {member.roleName} “view all deals”, including the open pipeline. Following the stakeholder brief, this view shows won deals only. Needs Michael’s sign-off (FIG-444).
-          </span>
-        </div>
-      ) : null}
-
       {!failed ? (
         <div className="fb-dstats">
           {stats.map((s) => (
