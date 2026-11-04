@@ -1,0 +1,56 @@
+# FIG-1123 (P1.01): deploy to staging from `dev-given`, with an approval, then run the smoke suite.
+# Host-agnostic skeleton. It stays OFF until Given sets the repository variable STAGING_DEPLOY_ENABLED=true,
+# which happens only after the hosting choice is made (docs/STAGING.md, "Decisions"). Approvals: add required
+# reviewers to the GitHub environment named "staging". Secrets live in that environment, never in this file.
+name: Deploy staging
+
+on:
+  push:
+    branches: [dev-given]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build, migrate once, deploy, smoke
+    if: vars.STAGING_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: staging # required reviewers = the approval step
+    env:
+      FIGBLOOM_ENVIRONMENT: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image (same artifact later promoted to production)
+        run: docker build -t figbloom-crm:${{ github.sha }} .
+
+      # Step 2 of docs/DEPLOYMENT.md: migrations and role steps run ONCE per deploy, against the direct URL.
+      # The entrypoint runs migrate, bootstrap-role and grant-role, then the production-safe seed (catalogue only).
+      - name: Migrate and provision the app role (once)
+        run: >
+          docker run --rm
+          -e DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}"
+          -e APP_DATABASE_URL="${{ secrets.STAGING_APP_DATABASE_URL }}"
+          -e APP_DB_PASSWORD="${{ secrets.STAGING_APP_DB_PASSWORD }}"
+          -e APP_DB_NAMES="figbloom_crm_staging"
+          -e RUN_MIGRATIONS_ON_START=true
+          figbloom-crm:${{ github.sha }} npx tsx prisma/seed.ts
+
+      # HOST-SPECIFIC STEP, filled in once the host is chosen: push the image and roll the replicas with the
+      # variables listed in .env.staging.example (RUN_MIGRATIONS_ON_START left unset on the replicas).
+      - name: Roll the replicas
+        run: echo "Replace with the chosen host's deploy command" && exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Smoke suite against staging
+        env:
+          STAGING_URL: ${{ vars.STAGING_URL }}
+          STAGING_UAT_PASSWORD: ${{ secrets.STAGING_UAT_PASSWORD }}
+        run: npx tsx scripts/staging-smoke.ts
