@@ -31,6 +31,10 @@ export async function register() {
     );
     await enforceNoDevAccountsInProduction();
 
+    // FIG-1257: a production deployment must have the real antivirus (CLAMD_HOST); same exit-on-failure reasoning.
+    const { enforceAntivirusInProduction } = await import("./storage/antivirusGuard");
+    enforceAntivirusInProduction();
+
     const { scrubSentryEvent } = await import("./lib/sentryScrub");
     Sentry.init({
       ...sharedOptions,

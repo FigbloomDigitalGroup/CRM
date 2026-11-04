@@ -1,5 +1,8 @@
 # V1 quality gate: sign-off checklist (Q1.08, FIG-1122, G1.08 for the frontend)
 
+
+> **4 Nov 2026 decision (`docs/DECISIONS.md` 6.4):** this gate counts as not passed, whatever Linear shows for FIG-1122, FIG-1120 and FIG-1116. The 10 Nov go/no-go needs the open lines below done, or waived in writing by Michael and Given.
+
 Formal go or no-go for production readiness (M12). This page is the checklist, with the **real state of each line on 31 Oct 2026**. **The gate is not passed, because the lines that need people are not done** (UAT, manual accessibility and device passes, Management's approval, design's approval of the pictures, the FIG-444 metrics). The automated side is complete and green: no Blocker or Major defect is open (D-01, D-02, D-05 and E-01 were fixed on 2 Nov 2026). Nothing here is signed.
 
 ## Checklist

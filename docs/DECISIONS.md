@@ -81,6 +81,18 @@ duplicates of decisions above). Numbering follows the checklist.
 | 5.2 | **No vendor-specific database or storage services.** Standard SQL, Prisma migrations, `pg_trgm`, row-level security keyed on the organisation, and the S3 driver for files, so the move to AWS is a dump and restore plus new connection strings. A hosted Postgres-plus-platform product was evaluated on 4 Nov 2026 and dropped; its plan and spike notes were removed from the repository. | Decided |
 | 5.3 | **Still open:** the AWS services and region, and the Kenya Data Protection Act assessment for where production data is stored (FIG-1258, FIG-1128). Decide them when the AWS move is planned. | Open |
 
+## 6. M12 go-live decisions (4 Nov 2026, taken by Claude on Given's instruction)
+
+Given asked Claude to decide these five items on 4 Nov 2026. Each is the recommended choice, taken so M12 can proceed. **Given may change any row (change it and date it); Michael should be told of 6.1, 6.4 and 6.5, which touch the schedule and the sign-offs.**
+
+| # | Decision | Status |
+|---|---|---|
+| 6.1 | **Hypercare ends no later than 21 Nov 2026**, so the fixed 22 Nov project date holds. V1 goes live about 10 Nov and gets about 11 days of daily triage; the end-of-hypercare criteria in `docs/GO_LIVE.md` (no Sev-1 open) are the gate, not the calendar. After 21 Nov the work is ordinary support. The post-launch review (FIG-1132) is held on 22 Nov. FIG-1131 still says "two weeks"; read it as "to 21 Nov". | Decided (delegated) |
+| 6.2 | **Plan for a fresh organisation with no data to migrate (cutover Path A)** unless Given says real data exists. Nothing in the repository or Linear mentions production data to move. If it does exist, Path B in `docs/CUTOVER_PLAN.md` applies and the rehearsal on a copy must pass before go-live. | Decided, assumption to confirm |
+| 6.3 | **Recovery targets confirmed as proposed in `docs/BACKUP_RESTORE.md`:** database RPO 24 hours, RTO 1 hour; files RPO 24 hours, RTO 4 hours; retention 14 daily, 8 weekly, 12 monthly, plus a dump before every change. **WAL archiving is not needed at launch.** Revisit it, and add it, if the user count or business impact grows, an external customer joins, or Given wants an RPO under 24 hours. Nightly dumps stay even then. | Decided (delegated) |
+| 6.4 | **The V1 quality gate (Q1.08, FIG-1122) counts as NOT passed.** The repository (`docs/V1_QUALITY_GATE.md`) is the record: UAT not held, manual accessibility and device passes not run, visual baselines not approved by design, FIG-444 metrics not baselined, no sign-off. Linear shows FIG-1122 (and FIG-1120 UAT, FIG-1116 accessibility) as Done; that does not change the facts. The go/no-go on 10 Nov requires those lines done or waived **in writing by Michael and Given**. Claude does not waive them. Linear statuses are for Given to correct. | Decided (delegated) |
+| 6.5 | **Production refuses to boot without `CLAMD_HOST`** (`src/storage/antivirusGuard.ts`), when `NODE_ENV=production` and `FIGBLOOM_ENVIRONMENT=production`. Staging, development and local production-mode runs are not affected. The first-run checklist now opens Members, Data migration and Website integration (`src/ui/screens/home/roles.tsx`). | Done |
+
 ## Follow-ups
 
 - Comment the matrix changes (section 1) on the Linear issues for B1.01 and

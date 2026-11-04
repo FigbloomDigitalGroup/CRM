@@ -2,7 +2,7 @@
 
 Database: plain PostgreSQL, local for now, AWS later (Michael, 4 Nov 2026). Nothing here depends on a vendor service: only `pg_dump`, `pg_restore`, standard WAL archiving and an object store reached through our storage adapter.
 
-Status: **proposal.** The RPO and RTO targets and the backup storage choice below are for Given to confirm. The staging drill (acceptance criterion of FIG-1125 and FIG-1258) has not been run yet; only the developer-machine drill has.
+Status: **targets confirmed 4 Nov 2026 (`docs/DECISIONS.md` 6.3); WAL archiving not needed at launch.** The backup storage choice below is still for Given to make. The staging drill (acceptance criterion of FIG-1125 and FIG-1258) has not been run yet; only the developer-machine drill has.
 
 ## 1. What is backed up
 
@@ -98,7 +98,7 @@ npx tsx scripts/backup-drill.ts [source-database]
 BACKUP_DRILL_DOCKER_CONTAINER=figbloom_crm_postgres npx tsx scripts/backup-drill.ts
 ```
 
-Needs `pg_dump`/`pg_restore` on PATH (version equal to or newer than the server) or the container variable. `BACKUP_DRILL_KEEP=1` keeps the scratch database. Suggested npm script (lead to add): `"backup:drill": "tsx scripts/backup-drill.ts"`.
+Needs `pg_dump`/`pg_restore` on PATH (version equal to or newer than the server) or the container variable. `BACKUP_DRILL_KEEP=1` keeps the scratch database. Run it with `npm run backup:drill`.
 
 Limits: it proves the logical dump restores with data, RLS and policies intact. It does not test decryption, storage download, files, WAL replay, or the human steps; those belong to the staging drill.
 

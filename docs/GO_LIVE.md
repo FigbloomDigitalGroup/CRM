@@ -12,7 +12,7 @@ The plan has V1 live about **10 Nov 2026**. Two weeks of hypercare from 10 Nov e
 2. Hypercare is shortened to end on 22 Nov at the latest (about 12 days).
 3. Go-live moves earlier (not realistic against M11).
 
-Until Given decides, this plan assumes option 2 and counts the end-of-hypercare criteria below as the gate, not the calendar.
+**Decided 4 Nov 2026 (`docs/DECISIONS.md` 6.1): option 2.** Hypercare ends no later than 21 Nov, the post-launch review is held on 22 Nov, and the end-of-hypercare criteria below are the gate, not the calendar.
 
 ## 1. Preconditions (go / no-go, the day before)
 
@@ -57,7 +57,7 @@ SMOKE_TECHNICAL_EMAIL / SMOKE_TECHNICAL_PASSWORD
 SMOKE_SUPPORT_EMAIL / SMOKE_SUPPORT_PASSWORD
 ```
 
-Command (script name to be confirmed by the lead): `npx playwright test -c e2e/smoke/playwright.smoke.config.ts --grep @smoke`. The HTTP-level `scripts/staging-smoke.ts` covers staging only. Pass criterion: all 7 tests pass, none skipped. Attach the HTML report to the go-live record.
+Command: `npm run smoke:prod` (runs `playwright test -c e2e/smoke/playwright.smoke.config.ts --grep @smoke`). The HTTP-level `scripts/staging-smoke.ts` covers staging only. Pass criterion: all 7 tests pass, none skipped. Attach the HTML report to the go-live record.
 
 Role rules in the suite were written from `docs/PERMISSION_MATRIX_REPORT.md` and `e2e/qa/role-journeys.spec.ts`; if a role's access changes, change both.
 

@@ -23,6 +23,7 @@
     "smoke:prod": "playwright test -c e2e/smoke/playwright.smoke.config.ts --grep @smoke",
     "backup:drill": "tsx scripts/backup-drill.ts",
     "reconcile:counts": "tsx scripts/reconcile-counts.ts",
+    "pilot:report": "tsx scripts/adoption-report.ts",
     "storage:up": "docker compose -f docker-compose.storage.yml up -d --wait",
     "storage:down": "docker compose -f docker-compose.storage.yml down",
     "test:storage": "vitest run tests/storage.test.ts tests/storageS3Local.test.ts tests/storageS3Antivirus.test.ts",

@@ -8,6 +8,8 @@ Backup, restore drill and retention: `docs/BACKUP_RESTORE.md` (written separatel
 
 Nothing in the repository says whether any real data exists. The plan covers both cases; the answers pick the path.
 
+**Working assumption since 4 Nov 2026 (`docs/DECISIONS.md` 6.2): Path A, a fresh organisation with no data to migrate.** If real data does exist, say so and Path B applies, with the rehearsal on a copy passing before go-live.
+
 1. **Is there real data to carry over?** Path A (fresh organisation) or Path B (existing system or V0 database).
 2. **If yes, where does it come from?** (a) The V0 database (the `pre-makeover` application), upgraded in place or from a restored dump; (b) spreadsheets or another system, imported through Settings > Data migration (`docs/DATA_MIGRATION.md`). Which record kinds, and roughly how many rows of each?
 3. **Who approves the freeze and the go decision?** Named person and a deputy (proposal: Michael approves, Given runs it).
