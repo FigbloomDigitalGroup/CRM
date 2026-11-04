@@ -143,6 +143,22 @@ services:
     ports:
       - "127.0.0.1:33000:3000"
 
+  # The scheduler production has to provide (docs/DEPLOYMENT.md): calls the job endpoint once a minute so scheduled jobs
+  # (file purge, notifications sweep, ...) run and the job-lag gauge means something. Only the status code is logged.
+  scheduler:
+    image: curlimages/curl:8.10.1
+    container_name: figbloom_crm_staging_scheduler
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      CRON_SECRET: ${CRON_SECRET:?}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - while true; do curl -s -o /dev/null -m 120 -w 'cron/jobs %{http_code}\n' -X POST -H "Authorization:Bearer $$CRON_SECRET" http://app:3000/api/cron/jobs; sleep 60; done
+
 volumes:
   figbloom_crm_staging_pg:
   figbloom_crm_staging_objects:

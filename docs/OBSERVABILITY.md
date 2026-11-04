@@ -40,23 +40,39 @@ database, so any instance reports the same values.
 
 Set `METRICS_TOKEN` to a long random value in the host's secret store. Never put it in the repository.
 
+## The stack that runs these (decision 6.7, 5 Nov 2026)
+
+Plain open-source parts, no vendor service: Prometheus (scrapes `/api/metrics` and evaluates the rules), Alertmanager (delivers), the blackbox exporter (probes `/api/health`, which must answer 200 with `"status":"ok"`, and `/login`), and Grafana (dashboards). Files: `docker-compose.observability.yml` and `ops/observability/` (`prometheus.yml`, `alerts.yml`, `alertmanager.yml`, `blackbox.yml`, `grafana/`). The staging stack also has a `scheduler` container that calls `POST /api/cron/jobs` once a minute, which is what production must provide too (`docs/DEPLOYMENT.md`); without it nothing runs the scheduled jobs and the job-lag gauge would grow by itself.
+
+```
+docker compose -p figbloom_crm_observability -f docker-compose.observability.yml --env-file C:/Users/Admin/.figbloom/staging.env up -d
+```
+
+| What | Where (this computer only) |
+|---|---|
+| Grafana, dashboard "Figbloom CRM: operations" | http://localhost:33030 (user `admin`, password `GRAFANA_ADMIN_PASSWORD` in `staging.env`) |
+| Prometheus: targets, rules, alerts | http://localhost:39090 |
+| Alertmanager | http://localhost:39093 |
+| Alert emails (staging) | the Mailpit inbox, http://localhost:38025 |
+
+The metrics token reaches Prometheus as an environment variable that the container writes to a file at start; it is not in any file in the repository. Staging delivers alerts as email to the Mailpit sandbox, to placeholder addresses (`oncall@` for pages, `team@` for warnings, `@staging.example.com`). For production only the receiver in `alertmanager.yml` changes (real mail relay or a paging service) and the addresses become the real on-call list.
+
 ## Alert rules
 
-Prometheus-style expressions; any alert manager that accepts them works. Route
-every page to the team channel and the on-call phone.
+Prometheus-style expressions, loaded from `ops/observability/alerts.yml`. Scrape and evaluation interval on staging is 15 s. Route pages to `oncall@` and warnings to `team@`; in production, pages also go to the on-call phone.
 
 | Alert | Expression | For | Severity |
 |---|---|---|---|
-| Health down | uptime probe on `/api/health` fails (or `probe_success == 0`) | 2 probes (about 2 min) | Page |
-| High error rate | `sum(rate(figbloom_http_requests_total{status="5xx"}[5m])) / sum(rate(figbloom_http_requests_total[5m])) > 0.02` | 3 min | Page |
+| Health down | `probe_success{job="health-probe"} == 0` | 1 min | Page |
+| Login page down | `probe_success{job="login-probe"} == 0` | 2 min | Page |
+| High error rate | `sum(rate(figbloom_http_requests_total{status="5xx"}[2m])) / sum(rate(figbloom_http_requests_total[2m])) > 0.02` | 3 min | Page |
 | Slow requests (p95) | `histogram_quantile(0.95, sum by (le) (rate(figbloom_http_request_duration_seconds_bucket[5m]))) > 1` | 5 min | Warn; page above 3 |
 | Job lag | `max(figbloom_job_lag_seconds) > 600` | 2 min | Warn; page above 1800 |
 | Dead jobs | `sum(figbloom_jobs_dead) > 0` and increasing over 15 min | 0 | Warn |
 | Metrics gone | `up{job="figbloom"} == 0` | 3 min | Warn |
 | New error group in the error tracker | first seen in production | immediate | Notify channel |
 
-The scrape interval is 30 s, so the slowest alert (3 to 5 min `for`) plus one
-scrape fires inside the 5 minute target. Health down fires at about 2 minutes.
+The scrape interval is 15 s on staging. The slowest alert measured in the 5 Nov 2026 drill (high error rate, 3 min `for`) reached the inbox 222 s after the failure, inside the 5 minute target; health down took 84 to 87 s.
 
 ## Uptime checks
 
@@ -75,7 +91,7 @@ uptime service; it needs only a public URL. Alert after two consecutive failures
 
 ## Dashboards
 
-Build these in any Grafana-compatible tool (one dashboard, four rows):
+Provisioned in Grafana from `ops/observability/grafana/dashboards/figbloom-ops.json` (dashboard "Figbloom CRM: operations", folder "Figbloom CRM"): three status tiles (health probe, login probe, metrics scrape) and the panels below. Checked on 5 Nov 2026: Grafana's data source test passes and every query below returns data.
 
 | Panel | Query |
 |---|---|
@@ -102,7 +118,13 @@ production) after the alert rules are loaded, and record the result below.
 
 | Date | Run by | T0 | First alert at | Channel | Result |
 |---|---|---|---|---|---|
-| (not run yet) | | | | | |
+| 5 Nov 2026 | Claude Code for Given | 22:41:56Z | 22:43:20Z (HealthDown, 84 s); 22:44:20Z (LoginPageDown, 144 s) | email to `oncall@` (Mailpit) | **Pass** (app container stopped) |
+| 5 Nov 2026 | Claude Code for Given | 22:46:53Z | 22:48:20Z (HealthDown, 87 s); 22:50:35Z (HighErrorRate, 222 s) | email to `oncall@` (Mailpit) | **Pass** (Postgres container stopped: health 503, data routes 500) |
+| 5 Nov 2026 | Claude Code for Given | 22:54:06Z | 22:56:35Z (JobLagWarn, 149 s) | email to `team@` (Mailpit) | **Pass** (scheduler stopped, one job 11 minutes overdue) |
+
+Resolution: every alert sent a RESOLVED email after the service came back (45 to 120 s). Staging was restored after each drill and the drill's test job row was removed. The drill script is not kept in the repository; the steps above reproduce it.
+
+Step 8, request id: a failing request's `requestId` found its log line by searching the app log (logs are JSON with a `requestId` field). **Not done: the error tracker part.** Sentry has no DSN on staging, so no error group could appear; that needs the Sentry project (below). Honest limits: the failures are container stops, not real faults; delivery was to the Mailpit sandbox, not to a phone or the real mail relay; the page-level job-lag alert (30 minutes) and the dead-jobs and slow-request alerts were not triggered (their expressions load and evaluate; the slow-request panel showed p95 about 0.02 s).
 
 ### Staging drill, 4 Nov 2026 (FIG-1124, Claude Code for Given): metrics and alert rules, no alert route
 
@@ -151,7 +173,8 @@ Not proven, only a human can do it: the uptime service, an alert manager that lo
 
 ## What a human still has to do
 
-- Create the error-tracking project and set its DSN in the host secrets (`docs/DEPLOYMENT.md`).
-- Choose and configure the uptime service and the metrics/alert stack, load the rules above, and set `METRICS_TOKEN`.
-- Route alerts to the team channel and the on-call phone.
-- Run the drill and fill in the table.
+Done on staging (5 Nov 2026): the metrics and alert stack, the rules, the dashboard and the alert drill. What remains is for a person and does not block closing FIG-1124:
+
+- Create the error-tracking (Sentry) project and set its DSN in the host secrets (`docs/DEPLOYMENT.md`); then check one error group appears with its `requestId`.
+- Production: run the observability stack next to the production app (or the equivalent on AWS), set `METRICS_TOKEN` there, and replace the placeholder addresses with the real on-call list and, for pages, the on-call phone.
+- Optionally add an outside uptime service (free tier) probing the public URL from two locations, so an outage of the whole host is also seen from outside.

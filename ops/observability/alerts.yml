@@ -1,0 +1,75 @@
+# Alert rules (docs/OBSERVABILITY.md, "Alert rules"). Severity "page" goes to the on-call list, "warn" to the team list.
+groups:
+  - name: figbloom
+    rules:
+      - alert: HealthDown
+        expr: probe_success{job="health-probe"} == 0
+        for: 1m
+        labels: { severity: page }
+        annotations:
+          summary: "Health check failing"
+          description: "GET /api/health has not answered 200 with status ok for 1 minute. Runbook: docs/RUNBOOKS.md, incident."
+
+      - alert: LoginPageDown
+        expr: probe_success{job="login-probe"} == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "Login page failing"
+          description: "GET /login has not answered 200 for 2 minutes."
+
+      - alert: HighErrorRate
+        expr: sum(rate(figbloom_http_requests_total{status="5xx"}[2m])) / sum(rate(figbloom_http_requests_total[2m])) > 0.02
+        for: 3m
+        labels: { severity: page }
+        annotations:
+          summary: "More than 2% of requests are failing (5xx)"
+          description: "5xx ratio over the last 2 minutes is above 2% for 3 minutes."
+
+      - alert: SlowRequestsWarn
+        expr: histogram_quantile(0.95, sum by (le) (rate(figbloom_http_request_duration_seconds_bucket[5m]))) > 1
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "p95 latency above 1 second"
+          description: "p95 request latency has been above 1 second for 5 minutes."
+
+      - alert: SlowRequestsPage
+        expr: histogram_quantile(0.95, sum by (le) (rate(figbloom_http_request_duration_seconds_bucket[5m]))) > 3
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "p95 latency above 3 seconds"
+          description: "p95 request latency has been above 3 seconds for 5 minutes."
+
+      - alert: JobLagWarn
+        expr: max(figbloom_job_lag_seconds) > 600
+        for: 2m
+        labels: { severity: warn }
+        annotations:
+          summary: "A background job is more than 10 minutes late"
+          description: "The oldest due job has waited more than 600 seconds. Check the scheduler that calls /api/cron/jobs (docs/RUNBOOKS.md, job failures)."
+
+      - alert: JobLagPage
+        expr: max(figbloom_job_lag_seconds) > 1800
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "A background job is more than 30 minutes late"
+          description: "The oldest due job has waited more than 1800 seconds."
+
+      - alert: DeadJobs
+        expr: sum(figbloom_jobs_dead) > 0 and (sum(figbloom_jobs_dead) - sum(figbloom_jobs_dead offset 15m)) > 0
+        for: 0m
+        labels: { severity: warn }
+        annotations:
+          summary: "Dead background jobs are increasing"
+          description: "The number of dead jobs grew in the last 15 minutes."
+
+      - alert: MetricsGone
+        expr: up{job="figbloom"} == 0
+        for: 3m
+        labels: { severity: warn }
+        annotations:
+          summary: "Metrics endpoint not scraped"
+          description: "Prometheus cannot scrape /api/metrics (app down, or METRICS_TOKEN wrong)."

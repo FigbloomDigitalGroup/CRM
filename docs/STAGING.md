@@ -95,6 +95,8 @@ Until the AWS environment exists, staging runs on this computer as its own compo
 | Mail sandbox (Mailpit UI, SMTP) | http://localhost:38025, 31025 |
 | Object store (S3, bucket `figbloom-crm-staging`) | 59100 |
 | ClamAV (clamd) | 53311 |
+| Scheduler (no port) | `figbloom_crm_staging_scheduler`: calls `POST /api/cron/jobs` every minute, so scheduled jobs run (added 5 Nov 2026) |
+| Grafana, Prometheus, Alertmanager | http://localhost:33030, 39090, 39093: a second compose project, `docker-compose.observability.yml` (`docs/OBSERVABILITY.md`) |
 
 Secrets: `C:\Users\Admin\.figbloom\staging.env` (outside the repo; names: `STAGING_PG_OWNER_PASSWORD`, `APP_DB_PASSWORD`, `CRON_SECRET`, `METRICS_TOKEN`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `STAGING_UAT_PASSWORD`). Generate each with `openssl rand -hex 24`. Never print or commit it. `C:\Users\Admin\.figbloom\staging-host.sh` (also outside the repo) loads it for host-side commands and builds the `localhost:35432` URLs.
 
