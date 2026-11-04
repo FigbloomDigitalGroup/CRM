@@ -101,6 +101,7 @@ by whether an environment needs it:
 | `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` | Optional | Optional | Defaults to `15`. See "Scheduled jobs," below. |
 | `SMS_PROVIDER_API_KEY` | Not needed | Optional | No real SMS provider is wired up yet (FIG-597) -- see `src/notifications/sms.ts`. Setting this alone does nothing. |
 | `LOG_LEVEL` | Optional (defaults to `info`) | Optional | `pino` level -- see "Logging," below. |
+| `METRICS_TOKEN` | Not needed | Required to use `GET /api/metrics` | Long random value from the secret store, sent as a bearer token or `x-metrics-token`. Unset means the route answers 404. See `docs/OBSERVABILITY.md`. |
 | `NODE_ENV` | Set by tooling (`next dev`/`test`) | `production` | Set automatically by `next build`/`next start`; the Dockerfile also sets it explicitly in the runner stage. |
 
 ## Secrets handling
@@ -237,6 +238,8 @@ per-email limit still applies regardless, so this degrades rather than
 fails open entirely.
 
 ## Logging / error monitoring
+
+Request ids, metrics, alert rules and the alert drill are in `docs/OBSERVABILITY.md` (FIG-1124).
 
 Structured JSON logs to stdout via `pino` (`src/lib/logger.ts`) --
 pretty-printed in development, plain JSON lines in production, which is
