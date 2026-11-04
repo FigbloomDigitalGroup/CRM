@@ -35,6 +35,7 @@ build ad hoc schedulers.
 | `reminders.sweep` | Proposal follow-ups, renewals coming up, overdue invoices (`docs/LIFECYCLE_AND_RENEWALS.md`, `docs/PAYMENTS.md`) | daily |
 | `automations.sweep` | Stalled deal alerts, keyed once per stall (`docs/AUTOMATIONS.md`) | daily |
 | `privacy.retention` | Purges data past each retention period; does nothing under a legal hold (`docs/PRIVACY.md`) | daily |
+| `files.purge` | Removes the bytes of deleted and quarantined files from the object store after 30 days (`DEFAULT_RETENTION_DAYS` in `src/services/fileService.ts`); the row stays with `purged_at` set | daily |
 | `data.migration` | One phase of a data migration: validate, dry run, import or rollback (`docs/DATA_MIGRATION.md`) | on demand |
 | `data.import` | One CSV import run (progress, cancel, error report) | on demand |
 | `data.export` | One CSV export run (stored through the file service) | on demand |

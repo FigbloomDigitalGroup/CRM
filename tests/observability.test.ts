@@ -67,4 +67,10 @@ describe("metrics (P1.02)", () => {
     expect(text).toContain('figbloom_job_lag_seconds{type="notifications.sweep"} 420');
     expect(text).toContain('figbloom_jobs_queued{type="notifications.sweep"} 3');
   });
+
+  it("reports zero job gauges when no job exists, so alert expressions never see an empty series", () => {
+    const text = renderMetrics([]);
+    expect(text).toContain('figbloom_job_lag_seconds{type="none"} 0');
+    expect(text).toContain('figbloom_jobs_dead{type="none"} 0');
+  });
 });

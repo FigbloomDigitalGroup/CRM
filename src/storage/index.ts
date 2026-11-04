@@ -15,6 +15,9 @@ import type { StorageDriver } from "./types";
  *   S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY,
  *   S3_FORCE_PATH_STYLE       S3-compatible driver. Keys come from a secret
  *                             manager, never from a committed file.
+ *   S3_PUBLIC_ENDPOINT        Optional. Origin browsers use to reach the store;
+ *                             only the signed upload/download links are built
+ *                             against it. Server-side calls use S3_ENDPOINT.
  */
 let cached: StorageDriver | null = null;
 
@@ -28,8 +31,20 @@ export function resolveStorageDriver(env: NodeJS.ProcessEnv = process.env): Stor
       if (!value) throw new Error(`${name} is required when STORAGE_DRIVER=s3.`);
       return value;
     };
+    let publicEndpoint: string | undefined;
+    if (env.S3_PUBLIC_ENDPOINT) {
+      try {
+        const parsed = new URL(env.S3_PUBLIC_ENDPOINT);
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("protocol");
+        publicEndpoint = parsed.origin;
+      } catch {
+        // Never echo the value: it could carry credentials.
+        throw new Error("S3_PUBLIC_ENDPOINT must be an http(s) URL.");
+      }
+    }
     return new S3Driver({
       endpoint: need("S3_ENDPOINT"),
+      publicEndpoint,
       region: need("S3_REGION"),
       bucket: need("S3_BUCKET"),
       accessKeyId: need("S3_ACCESS_KEY_ID"),

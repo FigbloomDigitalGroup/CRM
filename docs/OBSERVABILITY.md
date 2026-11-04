@@ -11,15 +11,19 @@ hosting vendor, so it moves to AWS unchanged.
 | Structured logs | `src/lib/logger.ts` (pino, JSON to stdout) | Secrets and masked values are redacted (`REDACTED_PATHS`): tokens, passwords, cookies, authorization, and deal value, margin, cost, payment amount (rule 7). |
 | Request id | `src/middleware.ts`, `src/observability/instrument.ts` | Every request on the middleware's prefixes gets an `x-request-id` (the caller's if it is a safe 8 to 128 character token, otherwise a UUID). It is on the response, in the error envelope, on every log line written during the request (`requestId`), and stored on jobs the request queues. |
 | Metrics | `GET /api/metrics`, `src/observability/metrics.ts` | Prometheus text. Off unless `METRICS_TOKEN` is set; send `Authorization: Bearer <token>` or `x-metrics-token`. |
-| Health | `GET /api/health` (503 when the database is unreachable), Docker `HEALTHCHECK` | Also reports the last notifications sweep. |
+| Health | `GET /api/health` (503 when the database is unreachable or the application role `figbloom_app` cannot connect), Docker `HEALTHCHECK` | Also reports the last notifications sweep. It is counted in the metrics and carries a request id (fixed 4 Nov 2026 after the staging drill). |
 | Error tracking | `@sentry/nextjs`, `src/lib/sentryScrub.ts`, `docs/DEPLOYMENT.md` | Every `logger.error` and `logger.fatal` also reports; PII is scrubbed. |
 | Job queue | `figbloom_jobs_*` and `figbloom_job_lag_seconds` gauges; Management status API (`docs/JOBS.md`) | Counts per job type across organisations; no payloads. |
 
 Wiring note: `handleRoute` (`src/app/api/_lib/handleRoute.ts`) wraps its work in
 `instrumentRequest(...)` so the request id reaches the logger and the metrics are
 recorded. The middleware does not cover `/api/cron`, `/api/health` and similar
-non-tenant routes; those get a fresh id from `handleRoute` and are grouped as
-`/api/other` in the metrics.
+non-tenant routes; those get a fresh id from `handleRoute` (or, for `/api/health`,
+from `instrumentRequest` directly) and are grouped as `/api/other` in the metrics.
+Known limit: a request to an unknown URL (a 404 raised by Next.js itself) gets an
+id but is not counted, so a 404 flood is not visible in the metrics. With no jobs
+at all the job gauges report one zero sample (`type="none"`) so alert expressions
+see 0, not an empty series.
 
 ### Metrics reference
 

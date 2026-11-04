@@ -135,3 +135,98 @@ describe.skipIf(!up)("S3 driver against the local object store", () => {
     for (const k of keys) expect(await driver.headObject(k)).toBeNull();
   });
 });
+
+/** S3_PUBLIC_ENDPOINT: links for browsers use the public host; nothing here needs the store. */
+describe("S3 driver public endpoint (URL inspection)", () => {
+  const base = {
+    endpoint: "http://objectstore:8333",
+    region: "us-east-1",
+    bucket: "figbloom-crm-test",
+    accessKeyId: "devminioadmin",
+    secretAccessKey: "dev-only-minio-secret",
+    forcePathStyle: true,
+    now: () => new Date("2026-11-04T10:00:00Z"),
+  };
+  const key = buildStorageKey(ORG_A, "attachment", "11111111-1111-1111-1111-111111111111");
+  const down = { expiresInSeconds: 60, fileName: "a.png", contentType: "image/png", disposition: "attachment" as const };
+  const up = { contentType: "image/png", expiresInSeconds: 60, maxBytes: 1000 };
+
+  it("signs upload and download links for the public host", async () => {
+    const d = new S3Driver({ ...base, publicEndpoint: "http://localhost:59100" });
+    const u = new URL((await d.signUpload(key, up)).url);
+    const g = new URL((await d.signDownload(key, down)).url);
+    for (const url of [u, g]) {
+      expect(url.origin).toBe("http://localhost:59100");
+      expect(url.pathname).toBe(`/figbloom-crm-test/${key}`);
+      expect(url.searchParams.get("X-Amz-Signature")).toBeTruthy();
+    }
+  });
+
+  it("the signature depends on the host (signed for the public one, not the internal one)", async () => {
+    const pub = new S3Driver({ ...base, publicEndpoint: "http://localhost:59100" });
+    const plain = new S3Driver({ ...base, endpoint: "http://localhost:59100" });
+    const a = new URL((await pub.signDownload(key, down)).url);
+    const b = new URL((await plain.signDownload(key, down)).url);
+    expect(a.searchParams.get("X-Amz-Signature")).toBe(b.searchParams.get("X-Amz-Signature"));
+    const internal = new URL((await new S3Driver(base).signDownload(key, down)).url);
+    expect(internal.searchParams.get("X-Amz-Signature")).not.toBe(a.searchParams.get("X-Amz-Signature"));
+  });
+
+  it("unset means links use the internal endpoint, as before", async () => {
+    const d = new S3Driver(base);
+    expect(new URL((await d.signUpload(key, up)).url).origin).toBe("http://objectstore:8333");
+    expect(new URL((await d.signDownload(key, down)).url).origin).toBe("http://objectstore:8333");
+  });
+
+  it("server-side calls keep using the internal endpoint", async () => {
+    const seen: string[] = [];
+    const fetchImpl = (async (url: string | URL | Request) => {
+      seen.push(String(url));
+      return new Response(Buffer.alloc(3), { status: 200, headers: { "content-length": "3" } });
+    }) as typeof fetch;
+    const d = new S3Driver({ ...base, publicEndpoint: "http://localhost:59100", fetchImpl });
+    await d.putObject(key, Buffer.alloc(3), png);
+    await d.getObject(key, 10);
+    await d.headObject(key);
+    await d.deleteObject(key);
+    expect(seen).toHaveLength(4);
+    for (const u of seen) expect(new URL(u).origin).toBe("http://objectstore:8333");
+  });
+
+  it("resolveStorageDriver validates S3_PUBLIC_ENDPOINT without echoing it", async () => {
+    const env = {
+      NODE_ENV: "development",
+      STORAGE_DRIVER: "s3",
+      S3_ENDPOINT: base.endpoint,
+      S3_REGION: base.region,
+      S3_BUCKET: base.bucket,
+      S3_ACCESS_KEY_ID: base.accessKeyId,
+      S3_SECRET_ACCESS_KEY: base.secretAccessKey,
+    };
+    const ok = resolveStorageDriver({ ...env, S3_PUBLIC_ENDPOINT: "http://localhost:59100" } as NodeJS.ProcessEnv);
+    expect(new URL((await ok.signDownload(key, down)).url).origin).toBe("http://localhost:59100");
+    const bad = "user:secretpass@not a url";
+    expect(() => resolveStorageDriver({ ...env, S3_PUBLIC_ENDPOINT: bad } as NodeJS.ProcessEnv)).toThrow(
+      /S3_PUBLIC_ENDPOINT must be an http\(s\) URL\.$/,
+    );
+    expect(() => resolveStorageDriver({ ...env, S3_PUBLIC_ENDPOINT: "ftp://x" } as NodeJS.ProcessEnv)).toThrow(/http\(s\)/);
+  });
+});
+
+describe.skipIf(!up)("S3 driver public endpoint against the local object store", () => {
+  it("signs for the public address, works through it, while server calls use the internal one", async () => {
+    // Same store reached by two names: 127.0.0.1 (internal) and localhost (public).
+    const internal = env.endpoint;
+    const publicEp = env.endpoint.replace("127.0.0.1", "localhost");
+    if (publicEp === internal) return; // custom S3_TEST_ENDPOINT without 127.0.0.1: nothing to compare
+    const d = new S3Driver({ ...env, endpoint: internal, publicEndpoint: publicEp, forcePathStyle: true });
+    const key = buildStorageKey(ORG_A, "avatar", randomUUID());
+    const link = await d.signUpload(key, { contentType: "image/png", expiresInSeconds: 60, maxBytes: 1000 });
+    expect(new URL(link.url).hostname).toBe("localhost");
+    expect((await fetch(link.url, { method: "PUT", headers: link.headers, body: new Uint8Array(PNG) })).ok).toBe(true);
+    expect(await d.headObject(key)).toEqual({ size: PNG.length });
+    const dl = await d.signDownload(key, { expiresInSeconds: 60, fileName: "a.png", contentType: "image/png", disposition: "inline" });
+    expect((await fetch(dl.url)).status).toBe(200);
+    await d.deleteObject(key);
+  });
+});

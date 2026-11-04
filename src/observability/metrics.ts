@@ -64,7 +64,9 @@ export function renderMetrics(jobs?: JobQueueSample[]): string {
   if (jobs) {
     const gauge = (name: string, help: string, pick: (j: JobQueueSample) => number) => {
       out.push(`# HELP ${name} ${help}`, `# TYPE ${name} gauge`);
-      for (const j of jobs) out.push(`${name}{type="${escapeLabel(j.type)}"} ${pick(j)}`);
+      // With nothing queued there are no rows; report one zero sample so alert expressions see 0 and not an empty series.
+      const rows = jobs.length > 0 ? jobs : [{ type: "none", queued: 0, running: 0, dead: 0, oldestDueSeconds: 0 }];
+      for (const j of rows) out.push(`${name}{type="${escapeLabel(j.type)}"} ${pick(j)}`);
     };
     gauge("figbloom_jobs_queued", "Jobs waiting to run, by type.", (j) => j.queued);
     gauge("figbloom_jobs_running", "Jobs currently running, by type.", (j) => j.running);

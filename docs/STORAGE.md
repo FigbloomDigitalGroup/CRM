@@ -7,7 +7,8 @@ Uploaded files live in a private S3-compatible object store. The app reaches it 
 | Variable | Meaning |
 |---|---|
 | `STORAGE_DRIVER` | `s3` (the `local` driver is for development without a store). |
-| `S3_ENDPOINT` | Origin of the S3 API. |
+| `S3_ENDPOINT` | Origin of the S3 API, as the server reaches it. |
+| `S3_PUBLIC_ENDPOINT` | Optional. Origin a browser reaches the store at. When set, the signed upload and download links are built and signed for this host; every server-side call (put, get, head, delete) still uses `S3_ENDPOINT`. Needed when the two differ, for example the Docker staging stack (`http://localhost:59100` for the host, `http://objectstore:8333` inside Docker). Must be an http(s) URL; unset means links use `S3_ENDPOINT`. |
 | `S3_REGION` | Signing region. |
 | `S3_BUCKET` | Bucket name (private). |
 | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Credentials of the app's storage identity. From a secret manager, never committed. |
@@ -127,10 +128,10 @@ Now: deleting an attachment only marks the file `DELETED`. The object stays in t
 * The retention purge was not run on staging (nothing schedules it, and running it by hand would have changed other data).
 * Browser upload was not tried (see the defect below); the PUT was sent with curl.
 
-### Defects found (not fixed here)
+### Defects found
 
-1. **Signed upload and download links carry the internal address.** The links are signed for `S3_ENDPOINT`, which the staging compose file sets to `http://objectstore:8333` (`docker-compose.staging.yml` line 29), a name that exists only inside the Docker network. A browser on the host cannot use them (the PUT to the link from the host failed to connect); the checks above sent the request to the published port 59100 with `Host: objectstore:8333`. The storage layer has one endpoint setting only (`src/storage/index.ts` line 32). Fix options: a separate public endpoint used only when signing (for example `S3_PUBLIC_ENDPOINT=http://localhost:59100` locally, the real store URL on AWS), or serve the staging store under a name both sides resolve.
-2. **The file purge is not scheduled** (see above): `purgeDeletedFiles` at `src/services/fileService.ts` line 442 needs a job in `src/jobs/definitions.ts`, and quarantined files need a purge rule too.
+1. **Fixed in code (4 Nov 2026), to be re-verified after the image is rebuilt:** new optional `S3_PUBLIC_ENDPOINT` (set to `http://localhost:59100` in `docker-compose.staging.yml`); signed links are now signed for that host while server calls keep `S3_ENDPOINT`. Original finding: **Signed upload and download links carry the internal address.** The links are signed for `S3_ENDPOINT`, which the staging compose file sets to `http://objectstore:8333` (`docker-compose.staging.yml` line 29), a name that exists only inside the Docker network. A browser on the host cannot use them (the PUT to the link from the host failed to connect); the checks above sent the request to the published port 59100 with `Host: objectstore:8333`. The storage layer has one endpoint setting only (`src/storage/index.ts` line 32). Fix options: a separate public endpoint used only when signing (for example `S3_PUBLIC_ENDPOINT=http://localhost:59100` locally, the real store URL on AWS), or serve the staging store under a name both sides resolve.
+2. **Fixed in code (4 Nov 2026), to be re-verified on staging after the image is rebuilt: the file purge was not scheduled.** Bytes of deleted files and of quarantined (infected) files are now removed from the object store 30 days after deletion or quarantine by the daily `files.purge` background job (per organisation, `DEFAULT_RETENTION_DAYS` in `src/services/fileService.ts`, job in `src/jobs/handlers/filePurge.ts`); the database row stays with `purged_at` set, together with its audit trail, and the job is safe to repeat and ignores objects that are already gone. The retention is a code constant, not yet a per-organisation setting; the quarantine age is measured from the row's `updatedAt`, and one run removes at most 500 files per organisation. Original finding (kept for the record): `purgeDeletedFiles` was not registered in `src/jobs/definitions.ts` and no cron route ran it.
 3. **A `complete` retry without the scanner takes about 21 seconds to answer 503.** Acceptable, but the user waits that long before seeing the message.
 
 ### Only a person can do
