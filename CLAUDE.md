@@ -2,6 +2,8 @@
 
 Stack: Next.js 15, React 19, TypeScript, Prisma 5, Postgres with row-level security (RLS), Vitest, Playwright.
 
+**Database (Michael, 4 Nov 2026):** plain PostgreSQL, running locally for now; we migrate to AWS later. Use no vendor-specific database or storage services (see `docs/DECISIONS.md` section 5).
+
 ## What we are doing
 
 A full makeover of the CRM to the approved "Figbloom CRM – Final Design" (92 screens: 54 V1, 29 V1.1, 9 V2).

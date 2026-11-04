@@ -383,3 +383,7 @@ container, `figbloom_app` role provisioning, the full Vitest suite, a
 production build, and a separate job that builds the Docker image itself
 -- so a broken Dockerfile fails CI the same way a broken test would,
 rather than being discovered at deploy time.
+
+## Database hosting
+
+Plain PostgreSQL, running locally for now, with a planned migration to AWS (Michael's decision, 4 Nov 2026; `docs/DECISIONS.md` section 5). Keep to standard PostgreSQL features so that move is a dump and restore plus new connection strings. The AWS services and region are not chosen yet.

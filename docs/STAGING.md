@@ -1,6 +1,6 @@
 # Staging runbook (FIG-1123, P1.01)
 
-Staging is production's shape with its own database, files, secrets and mail sandbox. It exists for rehearsals (`docs/MIGRATION_REHEARSAL.md`), UAT and the smoke suite. It deploys from `dev-given` (standing decision of 27 Oct 2026). Background reading: `docs/DEPLOYMENT.md` (image and deploy sequence), `docs/SUPABASE_PLAN.md` (database host decision, FIG-1255 to FIG-1258).
+Staging is production's shape with its own database, files, secrets and mail sandbox. It exists for rehearsals (`docs/MIGRATION_REHEARSAL.md`), UAT and the smoke suite. It deploys from `dev-given` (standing decision of 27 Oct 2026). Background reading: `docs/DEPLOYMENT.md` (image and deploy sequence), and "Decisions and actions only a human can take" below. The database is plain PostgreSQL: Michael decided on 4 Nov 2026 to stay on PostgreSQL running locally for now and to migrate to AWS later (`docs/DECISIONS.md` section 5).
 
 Status: the repo side is ready; the environment itself needs the human decisions at the end of this page.
 
@@ -76,11 +76,11 @@ Limits to know: free text inside kept columns (email template bodies, organisati
 As `docs/DEPLOYMENT.md`, with these staging specifics:
 
 1. Build the image once per commit. Staging and production run the same image.
-2. One-off migration job against the **direct** database URL: migrate, `db:bootstrap-role`, `db:grant-role` (the entrypoint with `RUN_MIGRATIONS_ON_START=true`), then `npm run seed`. Run it once per deploy, never per replica. For a database with more than a few thousand deals, create the two temporary indexes first and drop them afterwards (`docs/MIGRATION_REHEARSAL.md`, finding 1), and run `scripts/backfill-organization-defaults.ts` after the first upgrade.
-3. Replicas start with `RUN_MIGRATIONS_ON_START` unset, using the **pooled** application URL.
+2. One-off migration job against the database owner URL: migrate, `db:bootstrap-role`, `db:grant-role` (the entrypoint with `RUN_MIGRATIONS_ON_START=true`), then `npm run seed`. Run it once per deploy, never per replica. For a database with more than a few thousand deals, create the two temporary indexes first and drop them afterwards (`docs/MIGRATION_REHEARSAL.md`, finding 1), and run `scripts/backfill-organization-defaults.ts` after the first upgrade.
+3. Replicas start with `RUN_MIGRATIONS_ON_START` unset, using the application URL (`APP_DATABASE_URL`).
 4. Smoke suite.
 
-If the database is on Supabase (FIG-1255/1256): app on the transaction pooler (port 6543, `pgbouncer=true`), migrations and role steps on the direct URL (port 5432); the Data API off and `anon`/`authenticated` grants revoked on the `public` schema. Those steps belong to FIG-1256 and are not done here.
+The database is plain PostgreSQL with the same version, role steps and migrations as development (`docker-compose.yml`, `npm run db:setup`). Because the later move to AWS is planned, use no vendor-specific database features: standard SQL, Prisma migrations, `pg_trgm` and row-level security only.
 
 Nothing is real until the environment exists. Until then, `npm run db:setup` plus the dev server is the rehearsal on this computer.
 
@@ -88,9 +88,9 @@ Nothing is real until the environment exists. Until then, `npm run db:setup` plu
 
 | # | Who | What | Recommendation |
 |---|---|---|---|
-| 1 | Given | **Supabase go/no-go (FIG-1255).** Needs a Supabase project, then the spike: migrations, role bootstrap and grants, full suite, tenant attack suite, performance suite, `pg_trgm`, pooler with our per-transaction organisation setting, Data API off with an `anon` test, Nairobi latency, cost. The written decision in `docs/SUPABASE_PLAN.md` is signed by Given. | Run the spike on staging now and decide on its numbers. It is plain Postgres, so leaving later costs little. If any of role bootstrap, pooler behaviour or latency is red, fall back to a managed Postgres elsewhere (the repo side above does not change). |
+| 1 | Given | **Where the staging database runs.** PostgreSQL, the same version and setup as development (decision of 4 Nov 2026: local PostgreSQL now, AWS later). | A Docker PostgreSQL on the staging machine. Keep it portable, so the later move to AWS is a dump and restore plus new connection strings. |
 | 2 | Given | **Hosting for the app** (staging and production use the same one). `docs/DEPLOYMENT.md` is platform-agnostic: any host that runs a Docker image. | Pick one managed container host with a region close to the database, secrets UI, a scheduled-HTTP feature for `/api/cron/notifications-sweep` and a one-off job runner for the migration step. Region matters more than brand. |
-| 3 | Given | **Region and Kenya DPA.** No Africa region was found on Supabase (to confirm). Production data location needs the P1.06 assessment (FIG-1258). Staging holds only anonymised data, so it is not blocked by this. | Put staging in the same region as the intended production so latency numbers are honest. |
+| 3 | Given | **Data location and Kenya DPA.** Staging holds only anonymised data, so it is not blocked. For production, the AWS region and the P1.06 data-protection assessment (FIG-1258) decide it. | Settle it when the AWS move is planned. |
 | 4 | Given | **Accounts**: hosting, database, object storage, a mail sandbox (Mailpit or a sandbox inbox, never a real provider), Sentry project (optional), ClamAV host for `CLAMD_HOST` (FIG-1257). | Create them under a company-owned login, not a personal one. |
 | 5 | Given | **DNS and TLS** for the staging host name, and the value for `APP_BASE_URL` (it is also the allowed origin for the CSRF check). | A name such as `staging.<company domain>`; HSTS is sent in production mode, so TLS must be right first. |
 | 6 | Given | **Secrets**, each generated fresh and different from production: `APP_DB_PASSWORD`, database owner URL, `CRON_SECRET`, storage keys, mail sandbox login, `STAGING_UAT_PASSWORD`. Put them in the host's secret store and the GitHub `staging` environment. | Never in git, chat or this repo. Rotation steps are in `docs/DEPLOYMENT.md`. |

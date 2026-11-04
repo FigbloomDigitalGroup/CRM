@@ -73,6 +73,14 @@ duplicates of decisions above). Numbering follows the checklist.
 | 22 | Organisation switcher (duplicate of 3) | See 2.3. | Decided |
 | 23 | Re-export the logo at #203E2A / #FF9400? | **Yes.** Action for Given or the designer: re-export so the logo matches the screen palette. | Decided |
 
+## 5. Database hosting (4 Nov 2026)
+
+| # | Decision | Status |
+|---|---|---|
+| 5.1 | **PostgreSQL, running locally for now; migrate to AWS later** (Michael's decision, recorded by Given on 4 Nov 2026). Staging and the first production run use plain PostgreSQL set up the way development is (`docker-compose.yml`, `npm run db:setup`). | Decided |
+| 5.2 | **No vendor-specific database or storage services.** Standard SQL, Prisma migrations, `pg_trgm`, row-level security keyed on the organisation, and the S3 driver for files, so the move to AWS is a dump and restore plus new connection strings. A hosted Postgres-plus-platform product was evaluated on 4 Nov 2026 and dropped; its plan and spike notes were removed from the repository. | Decided |
+| 5.3 | **Still open:** the AWS services and region, and the Kenya Data Protection Act assessment for where production data is stored (FIG-1258, FIG-1128). Decide them when the AWS move is planned. | Open |
+
 ## Follow-ups
 
 - Comment the matrix changes (section 1) on the Linear issues for B1.01 and
