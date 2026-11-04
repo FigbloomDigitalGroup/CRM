@@ -74,9 +74,9 @@ interface Snapshot {
   policies: Set<string>; // "table:policyname:cmd"
 }
 
-async function snapshot(url: string): Promise<Snapshot> {
-  const client = new Client({ connectionString: url });
-  await client.connect();
+async function snapshot(url: string, existing?: Client): Promise<Snapshot> {
+  const client = existing ?? new Client({ connectionString: url });
+  if (!existing) await client.connect();
   try {
     const tables = await client.query<{ relname: string; rls: boolean; forced: boolean }>(
       `SELECT c.relname, c.relrowsecurity AS rls, c.relforcerowsecurity AS forced
@@ -98,7 +98,7 @@ async function snapshot(url: string): Promise<Snapshot> {
     const policies = new Set(pol.rows.map((p) => `${p.tablename}:${p.policyname}:${p.cmd}`));
     return { counts, rls, policies };
   } finally {
-    await client.end();
+    if (!existing) await client.end();
   }
 }
 
@@ -144,9 +144,24 @@ async function main(): Promise<void> {
   let created = false;
   let ok = false;
   try {
-    const before = await time("snapshot source", () => snapshot(urlFor(base, source)));
-
-    await time("dump", () => pgTool("pg_dump", ["-Fc", "-f", dumpPath, source]));
+    // A live source keeps changing (rate-limit rows, sessions). Count inside a
+    // REPEATABLE READ transaction and dump with the same exported snapshot, so
+    // the counts and the dump describe the same instant.
+    const srcClient = new Client({ connectionString: urlFor(base, source) });
+    await srcClient.connect();
+    let before: Snapshot;
+    try {
+      await srcClient.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const snap = await srcClient.query<{ s: string }>("SELECT pg_export_snapshot() AS s");
+      const snapId = snap.rows[0].s;
+      before = await time("snapshot source", () => snapshot("", srcClient));
+      await time("dump", () =>
+        pgTool("pg_dump", ["-Fc", `--snapshot=${snapId}`, "-f", dumpPath, source]),
+      );
+      await srcClient.query("COMMIT");
+    } finally {
+      await srcClient.end();
+    }
     const bytes = CONTAINER
       ? Number(run("docker", ["exec", CONTAINER, "stat", "-c", "%s", dumpPath]).trim())
       : statSync(dumpPath).size;

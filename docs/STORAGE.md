@@ -97,3 +97,44 @@ Note: ClamAV matches the EICAR test file as a whole file, so it is found when th
 * Create the staging object store, bucket and its identity, and put the keys in the secret manager.
 * Provide the staging and production ClamAV hosts and set `CLAMD_HOST`.
 * Later: create the Amazon S3 bucket (Block Public Access on, encryption on) and its single-bucket identity.
+
+## Staging verification, 4 Nov 2026
+
+Run through the live local staging app (`http://localhost:33000`, production image, `FIGBLOOM_ENVIRONMENT=staging`, S3 driver against the staging object store, `CLAMD_HOST` set to the staging ClamAV), signed in as the UAT accounts of organisation `figbloom`. Routes used: `POST /api/orgs/{org}/leads/{id}/attachments` (returns a signed upload link), a `PUT` of the bytes to that link, `POST /attachments/{id}/complete`, `GET /attachments/{id}/download` (signed link, 60 seconds), `DELETE /attachments/{id}`, plus `GET /files/{id}`, `/files/{id}/download` and `/files/{id}/content`. The staging database held no leads, so one test lead was created as `uat-sales` and archived afterwards; all test objects were removed from the bucket at the end.
+
+| # | Check | Result |
+|---|---|---|
+| a1 | Upload a 45-byte text file to a lead as Sales: link, PUT, complete | Pass. Status `UPLOADING`, then `READY`; scan result `clean`; audit event `file.uploaded`. |
+| a2 | Download through the signed link; bytes match | Pass. SHA-256 of the download equals the upload; `Content-Disposition: attachment`. |
+| a3 | Object exists in the private bucket | Pass. Signed `HEAD` with the staging credentials: 200, 45 bytes, key `orgs/<org id>/attachment/<file id>`. |
+| a4 | Unsigned `GET` of the object, unsigned listing, unsigned `PUT` | Pass. All three return 403. |
+| b | EICAR test string (68 bytes, `.txt`, `text/plain`) | Pass. `complete` answers 409 `FILE_UNAVAILABLE` ("This file was quarantined by the malware scan and cannot be used."). Row `QUARANTINED`, scan result `infected:Eicar-Test-Signature` (the real ClamAV signature name, so the daemon did the scan), audit event `file.quarantined`. The download route answers 409 as well and the list shows status `QUARANTINED`. The test string was sent from a pipe, never kept as a file: Windows Defender blocks it on disk. |
+| c1 | Role without access cannot fetch the file | Pass. With the lead owned by Sales, Delivery gets 403 on the lead, its attachments, the attachment download and the three `/files/{id}` routes; Restricted Technical gets 403 on the lead, attachments and attachment download and 404 on the `/files/{id}` routes; no session gets 401. The owner gets 200 on all. |
+| c2 | Expired signed link | Pass. A 60-second link re-used after expiry returns 403. |
+| c3 | Forged signed link | Pass. Each of these returns 403: a changed signature, the same signature on another object key, the same signature under another organisation prefix, a stretched `X-Amz-Expires`, and the valid URL sent with a different `Host`. |
+| c4 | Cross-organisation | Not tested end to end. Staging has one organisation, so no second tenant's token exists. Covered only by the key rule (the prefix cannot be swapped, see c3) and by `tests/storageS3Local.test.ts` and the Stage 1 cross-organisation tests. |
+| d | Delete | Pass for the record, see the note below for the bytes. `DELETE /attachments/{id}` answers 200; the file row becomes `DELETED` with `deleted_at` set and `purged_at` empty; the download route then answers 404. A link issued before the delete keeps working until its 60 seconds end. |
+| e | ClamAV unreachable fails closed | Pass. A second app container (compose `app` service, name `figbloom_drill_noclam`, port 33003) with `CLAMD_HOST=192.0.2.1` answered `complete` with 503 `SERVICE_UNAVAILABLE` ("The file could not be scanned right now. Try again in a moment.") after about 21 seconds; the file stayed `UPLOADING`, the download route answered 404, a retry answered 503 again. The container was removed afterwards; the shared staging containers were not touched. |
+
+### What happens to the bytes after a delete (retention)
+
+Now: deleting an attachment only marks the file `DELETED`. The object stays in the bucket (a signed `HEAD` still returned 200 after the delete, for both the clean and the quarantined file). `purgeDeletedFiles()` in `src/services/fileService.ts` (line 442) is what removes the bytes after `DEFAULT_RETENTION_DAYS` (30) and sets `purged_at`, and it also marks uploads that never completed as deleted after a day. **Nothing calls it**: it is not registered in `src/jobs/definitions.ts` and no cron route runs it; only `tests/files.test.ts` calls it. The scheduled `privacy.retention` job (`runRetentionSweep` in `src/services/privacyService.ts`, from line 495) purges IMPORT and EXPORT files only. So, as built, attachment, avatar and logo bytes are never removed from the object store, and quarantined (infected) objects stay there too, because the purge looks only at `DELETED` rows. This contradicts "the bytes are purged after the retention period" in the attachment route. The test objects of this run were removed from the bucket by hand with the storage credentials.
+
+### Honest limits
+
+* One organisation only, so no real cross-organisation request was possible (c4).
+* ClamAV here is the staging container with signatures downloaded at start, on the Docker network. There is no production ClamAV host yet; the go-live condition above still stands. The "unreachable" check used an address that does not answer, which is the same failure path as a stopped daemon, not a stopped daemon.
+* The retention purge was not run on staging (nothing schedules it, and running it by hand would have changed other data).
+* Browser upload was not tried (see the defect below); the PUT was sent with curl.
+
+### Defects found (not fixed here)
+
+1. **Signed upload and download links carry the internal address.** The links are signed for `S3_ENDPOINT`, which the staging compose file sets to `http://objectstore:8333` (`docker-compose.staging.yml` line 29), a name that exists only inside the Docker network. A browser on the host cannot use them (the PUT to the link from the host failed to connect); the checks above sent the request to the published port 59100 with `Host: objectstore:8333`. The storage layer has one endpoint setting only (`src/storage/index.ts` line 32). Fix options: a separate public endpoint used only when signing (for example `S3_PUBLIC_ENDPOINT=http://localhost:59100` locally, the real store URL on AWS), or serve the staging store under a name both sides resolve.
+2. **The file purge is not scheduled** (see above): `purgeDeletedFiles` at `src/services/fileService.ts` line 442 needs a job in `src/jobs/definitions.ts`, and quarantined files need a purge rule too.
+3. **A `complete` retry without the scanner takes about 21 seconds to answer 503.** Acceptable, but the user waits that long before seeing the message.
+
+### Only a person can do
+
+* Decide the fix for defect 1 before any browser upload test or UAT of attachments on staging, and for defect 2 before go-live.
+* Provide the production ClamAV host, and repeat checks b and e there.
+* Create a second organisation on staging (or run the Stage 1 cross-organisation tests against it) for check c4.

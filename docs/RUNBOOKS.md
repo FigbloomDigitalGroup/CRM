@@ -4,7 +4,7 @@ Goal: anyone on the team can deploy, roll back and handle an incident, at 2 a.m.
 
 Database: plain PostgreSQL, local for now, AWS later (Michael, 4 Nov 2026). Nothing here depends on a hosting vendor. This file links to the detailed documents instead of copying them: if a linked document and this one disagree, the linked document is right and this one needs fixing.
 
-Status: **written, not yet exercised.** The rollback dry run (section 11) and the table-top exercise (section 10) are still to do, and the on-call table (section 9) is empty. The issue is not done until they are.
+Status: **written; part 1 of the rollback dry run (image rollback) was done on local staging on 4 Nov 2026, see section 11a.** Still to do: part 2 (database rollback, section 11) and the table-top exercise (section 10); the on-call table (section 9) is empty. The issue is not done until they are.
 
 ## 0. If you only read one thing
 
@@ -29,6 +29,7 @@ Status: **written, not yet exercised.** The rollback dry run (section 11) and th
 | 9 | On-call and escalation | Who to call |
 | 10 | Table-top exercise | Practising, three scenarios |
 | 11 | Rollback dry-run checklist | Proving rollback works before it is needed |
+| 11a | Dry-run results, 4 Nov 2026 | What the first dry run found and changed |
 
 Related documents: [DEPLOYMENT.md](DEPLOYMENT.md) (image, environment variables, deploy sequence), [MIGRATION_REHEARSAL.md](MIGRATION_REHEARSAL.md) (upgrade runbook and the two temporary indexes), [BACKUP_RESTORE.md](BACKUP_RESTORE.md) (backups, restore, drill), [CUTOVER_PLAN.md](CUTOVER_PLAN.md) (the one-off go-live, rollback section 7), [GO_LIVE.md](GO_LIVE.md) (rollback triggers, severity definitions, hypercare), [JOBS.md](JOBS.md), [OBSERVABILITY.md](OBSERVABILITY.md) (alerts, metrics), [STAGING.md](STAGING.md), [STORAGE.md](STORAGE.md), [SECURITY_REVIEW_V1.md](SECURITY_REVIEW_V1.md), [SECURITY_SIGNOFF_V1.md](SECURITY_SIGNOFF_V1.md).
 
@@ -48,7 +49,7 @@ Steps (details and the exact `docker run` commands are in [DEPLOYMENT.md](DEPLOY
 1. **Note the current version.** Write down the image tag that is running now. This is your way back. Do not continue until you have it.
 2. **If the release has migrations: take a backup first.** `pg_dump -Fc -f before-<version>.dump "$DATABASE_URL"` (store it off the database host; keep it until the release is signed off plus 30 days, per [BACKUP_RESTORE.md](BACKUP_RESTORE.md)).
 3. **Build and push the image once:** `docker build -t figbloom-crm:<version> .`
-4. **Run the migration step once** (not per replica): the image with `RUN_MIGRATIONS_ON_START=true` and a no-op command, which runs `prisma migrate deploy`, `db:bootstrap-role` and `db:grant-role` (command in [DEPLOYMENT.md](DEPLOYMENT.md) step 2). Then `npm run seed` (production-safe: it only reconciles the role and permission catalogue).
+4. **Run the migration step once** (not per replica): the image with `RUN_MIGRATIONS_ON_START=true` and a no-op command, which runs `prisma migrate deploy`, `db:bootstrap-role` and `db:grant-role` (command in [DEPLOYMENT.md](DEPLOYMENT.md) step 2). Then `npm run seed` (production-safe: it only reconciles the role and permission catalogue). **The image cannot run it** (it has no `src/` folder and the seed imports it): run it from a checkout of the same commit with `DATABASE_URL` pointing at the target, as in [STAGING.md](STAGING.md) "Local staging stack".
 5. **Roll the replicas** onto the new image with `RUN_MIGRATIONS_ON_START` unset. One at a time if you have more than one; wait for `GET /api/health` to answer 200 `{"status":"ok"}` on each before the next.
 6. **Smoke test.** Staging: `STAGING_URL=https://<staging host> npx tsx scripts/staging-smoke.ts` (add `STAGING_UAT_PASSWORD` for the signed-in part). Production: `npm run smoke:prod` with the `SMOKE_*` variables set (see [GO_LIVE.md](GO_LIVE.md) section 4); all 7 tests must pass, none skipped.
 7. **Watch** the dashboards for 30 minutes ([OBSERVABILITY.md](OBSERVABILITY.md)): 5xx ratio, p95 latency, job lag, dead jobs, health. Do not walk away before that.
@@ -64,9 +65,16 @@ Two different rollbacks exist. Choose with the decision rule below.
 
 Put the previous image tag back on the replicas.
 
-1. Take the tag you wrote down in deploy step 1.
-2. Roll the replicas back to it, one at a time, the same way you rolled them forward (`RUN_MIGRATIONS_ON_START` unset). Do **not** run the migration step again.
-3. Check `GET /api/health` on each, then the smoke test (section 1, step 6).
+1. Take the tag you wrote down in deploy step 1. The tag must still exist on the host: if the new build re-used the same tag (for example `staging`), the old image is already gone. So give every release its own tag (`figbloom-crm:<version>`) and, before deploying, run `docker tag figbloom-crm:<current> figbloom-crm:<current>-prev`. `docker image ls figbloom-crm` shows what is there.
+2. Roll the replicas back to it, one at a time, the same way you rolled them forward (`RUN_MIGRATIONS_ON_START` unset). Do **not** run the migration step again. With plain Docker that means removing the bad container and starting the old tag with the same environment (no values on the command line; use an env file kept outside the repo):
+
+   ```bash
+   docker rm -f <bad container>
+   docker run -d --name <name> --restart unless-stopped --network <network> -p <port>:3000 --env-file <env file> figbloom-crm:<previous tag>
+   ```
+
+   On a managed host use its "redeploy previous image" action. Measured on 4 Nov 2026: about 28 s from removing the bad container to the first `/api/health` 200 (next start takes 5 to 13 s, plus the check interval).
+3. Check `GET /api/health` on each, then the smoke test (section 1, step 6). **`/api/health` proves only that the app can reach the database as the owner login.** It does not prove the app role (`APP_DATABASE_URL`) works. After a rollback or a secret change also sign in as a real user (the signed-in part of the smoke test does this); a failing sign-in while health is 200 means the app role is broken.
 4. Announce (section 8 templates) and keep the incident open until the cause is known.
 
 When it is safe: the release had **no migrations**, or its migrations were only additive (new tables or columns, new indexes) and the old code ignores them. Migrations only go forward; `prisma migrate deploy` never undoes one. The old code simply runs against the newer schema. If the release dropped, renamed or tightened anything (a column removed, a column made required, a constraint added), the old image may break against the new schema. Check the migration folders of the release before relying on this, and say so in the incident timeline. There is no automatic check for this.
@@ -258,7 +266,7 @@ Severity: a job failure alone is Sev-3 (a workaround exists: nothing is lost, wo
 
 Do these in order; each takes a minute.
 
-1. `GET /api/health`. 503 or no answer: the database or the app is down. 200: continue.
+1. `GET /api/health`. 503 or no answer: the database or the app is down. (A wrong owner password makes the production guard stop the app about 25 s after the container starts, so you see a restart loop and "connection refused" rather than a 503; `docker logs <container>` says "Refusing to start in production: could not check whether dev accounts exist".) 200: continue, but 200 does **not** clear the app role: a wrong `APP_DATABASE_URL` password still gives 200 (section 11a). Sign in as a test user too.
 2. Is it everyone or one organisation, one role, one screen? Ask in the incident channel.
 3. Did a deploy or a secret change happen in the last 24 hours? Rollback candidates are there (section 2).
 4. Dashboards ([OBSERVABILITY.md](OBSERVABILITY.md)): 5xx ratio, p95, job lag, dead jobs.
@@ -273,18 +281,20 @@ Every command used above exists in the repo; this table is the check.
 | Command | Where |
 |---|---|
 | `npm run migrate:deploy`, `db:bootstrap-role`, `db:grant-role`, `seed` | `package.json` |
-| `npm run jobs:worker`, `notifications:sweep` | `package.json`, `scripts/jobs-worker.ts`, `scripts/notifications-sweep.ts` |
+| `npm run jobs:worker`, `notifications:sweep` | `package.json`, `scripts/jobs-worker.ts`, `scripts/notifications-sweep.ts`. **Run them from a checkout, not from the production image:** the image has `scripts/` but no `src/`, and the worker fails there with "Cannot find module '../src/db/adminClient'" (checked 4 Nov 2026). Until a worker image exists, use the cron route `GET /api/cron/jobs` with `CRON_SECRET` as the scheduler. |
+| `npm run seed` | `package.json`, `prisma/seed.ts` (imports `src/`: checkout only, not the image) |
 | `npm run smoke:prod` | `package.json`, `e2e/smoke/` |
-| `npx tsx scripts/staging-smoke.ts` | `scripts/staging-smoke.ts` (no npm script yet) |
+| `npm run staging:smoke` (or `npx tsx scripts/staging-smoke.ts`) | `package.json`, `scripts/staging-smoke.ts` (run from a checkout; it needs only HTTP access) |
 | `npm run backup:drill` (or `npx tsx scripts/backup-drill.ts [database]`) | `package.json`, `scripts/backup-drill.ts` |
 | `npm run reconcile:counts` (or `npx tsx scripts/reconcile-counts.ts --source <url> --target <url>`) | `package.json`, `scripts/reconcile-counts.ts` |
-| `npx tsx scripts/backfill-organization-defaults.ts [slug]` | `scripts/backfill-organization-defaults.ts` |
+| `npx tsx scripts/backfill-organization-defaults.ts [slug]` | `scripts/backfill-organization-defaults.ts` (imports `src/`: checkout only, not the image) |
 | `npx tsx scripts/migration-rehearsal.ts` | `scripts/migration-rehearsal.ts` |
-| `pg_dump`, `pg_restore`, `psql` | PostgreSQL tools (not in the repo) |
+| `pg_dump`, `pg_restore`, `psql` | PostgreSQL tools (not in the repo, not in the app image, not installed on this Windows computer). On local staging they exist **inside the Postgres container**, for example `docker exec figbloom_crm_staging_postgres pg_dump -Fc -U <owner> -d <database> > file.dump` (redirect, so the file lands on the host) |
 
 What does **not** exist, and what to do instead:
 
-- A one-command rollback. Image rollback is done in the host's own deploy tool; database rollback is section 2b by hand.
+- A one-command rollback. Image rollback is done in the host's own deploy tool (or the `docker rm` and `docker run` pair in section 2a); database rollback is section 2b by hand.
+- A health check that covers the app role, or a start-up check that fails when `APP_DATABASE_URL` is missing or wrong (section 11a, findings 1 and 2).
 - A script or screen to sign out all users or to list dead jobs across organisations. Use the SQL in section 4e and the per-organisation jobs API.
 - A resolver for a half-applied migration. Use Prisma's `migrate resolve` with Given's decision.
 - A "maintenance mode" switch. Stop the replicas or put the notice at the host or load balancer. If you need one, raise it as an issue.
@@ -556,7 +566,64 @@ Afterwards:
 
 | Date | Run by | Environment | Part 1 time | Part 2 time | Result | Problems found | Fixes |
 |---|---|---|---|---|---|---|---|
-| (not run yet) | | | | | | | |
+| 4 Nov 2026 | Claude Code for Given (one person, no second reader) | Local staging stack, own containers on ports 33010 and 33011 | About 30 s (mechanism only) | Not run | Part 1: image rollback works; part 2 not done | 8 findings, see 11a | Text fixed the same day; code questions open |
+
+## 11a. Dry-run results, 4 Nov 2026
+
+Part 1 (image rollback) only, on the local staging stack, by one actor (an AI assistant working for Given). Own containers on ports 33010 and 33011 on the staging network, started with `docker run` from an env file copied from the running staging app container and deleted afterwards. The shared staging app, its database content and the other staging containers were not touched. **Not done:** part 2 (database rollback); a release with a migration (the shared staging database must not change); anything with a second person.
+
+Setup: image `figbloom-crm:staging` tagged `figbloom-crm:staging-prev`. Both tags pointed at the **same image id**, so the run proved the mechanism (replace a container, wait for health), not that an older build works against a newer schema.
+
+### Timings
+
+| Step | What was done | Result | Time |
+|---|---|---|---|
+| Bad release A | Wrong `APP_DATABASE_URL` password (the app role) | `/api/health` 200 "ok", container "healthy", `/login` 200. The app role could not log in at all (direct query: "valid database credentials" error). **Health did not detect it.** | never visible |
+| Bad release B | Wrong `DATABASE_URL` password (the owner) | The server starts, then the production dev-account guard cannot query the database ("Refusing to start in production: could not check whether dev accounts exist") and the process exits with code 1. Then connection refused. | exit 26.5 s after start; Docker "unhealthy" at about 27 s |
+| Bad release C | `APP_DATABASE_URL` missing | Starts and is healthy (`/api/health` 200). The app passes the missing value to Prisma, which then falls back to the datasource in the schema (the owner `DATABASE_URL`). Not verified whether row-level security still protects reads in that case (finding 2). | first 200 at 48 s, Docker "healthy" at 53 s |
+| Rollback (2a) | `docker rm -f` of the bad container, `docker run` of `figbloom-crm:staging-prev` with the good env on the same port | `/api/health` 200 | 28 s to first 200 |
+| Smoke test on the rolled-back container | `scripts/staging-smoke.ts` against it, without `STAGING_UAT_PASSWORD` | 9 pass, 1 skipped (signed-in checks), exit 0 | a few seconds |
+
+Time from the decision to roll back until the old image answered health: about 30 s with a local image. On a real host add the registry pull. A failure that does not stop the process (bad release A) never turns the Docker check unhealthy.
+
+### Decision rule (section 2c) against what was seen
+
+- No migrations, or additive migrations: image rollback worked as written. The additive case was **not** exercised (no migration was run), so "the old code ignores the new columns" is still untested.
+- "Cannot tell: roll back if the release was in the last 24 hours": consistent with the run, because bad release A looks healthy and only a sign-in test shows it.
+- The 30-minute limit: the mechanics took under a minute; the limit is a decision limit. Nothing contradicted it.
+- The restore rows were not run.
+
+### Findings
+
+| # | Where | Finding | Fixed? |
+|---|---|---|---|
+| 1 | 2a step 3, section 6 | `/api/health` uses the owner connection only. A wrong or rotated `APP_DB_PASSWORD` (the section 4a failure) leaves health at 200 while nobody can sign in. | Text corrected (sign in as a test user too). **Code not changed:** consider checking the app role in the health route. For Given and a developer. |
+| 2 | Environment | A missing `APP_DATABASE_URL` is not a start-up error: Prisma falls back to the owner login and the container is healthy. The app might then run as the table owner. | Noted. **Needs a developer check** (does the owner bypass row-level security? should production boot refuse when it is unset?). |
+| 3 | 2a steps 1 and 2 | No command and no way to keep the previous tag: the staging stack tags only `figbloom-crm:staging`, so a rebuild replaces the old image. "Put the previous tag back" had no command. | Fixed: tag convention, `docker tag` before deploying, the `docker rm` and `docker run` pair. |
+| 4 | Section 1 step 4, section 5, section 7 | `npm run seed`, `jobs:worker`, `notifications:sweep` and `backfill-organization-defaults` cannot run inside the production image (no `src/`). The worker has nowhere to run except through the cron route. | Text and command table fixed. **Needs a decision:** a worker image, or include `src/`. |
+| 5 | Section 7 | The `staging:smoke` npm script exists (the table said it did not). `pg_dump`, `pg_restore` and `psql` are not on this computer nor in the app image, so part 2 cannot be done here except through the Postgres container. | Fixed. |
+| 6 | Section 6 step 1 | A wrong owner password shows as an exited container, not as a 503, because the production guard stops the process. | Fixed. |
+| 7 | 2a "one at a time" | The compose staging stack has one app container, so rolling replicas one at a time was not exercised. With restart policy `unless-stopped`, bad release B becomes a crash loop: check `docker ps` for "Restarting", not only health. | Noted here. |
+
+### Command-existence table (section 7), each row checked
+
+| Row | Result |
+|---|---|
+| `migrate:deploy`, `db:bootstrap-role`, `db:grant-role`, `seed` | In `package.json`. `seed` not runnable in the image (finding 4). |
+| `jobs:worker`, `notifications:sweep` | In `package.json`, scripts exist. Not runnable in the image (finding 4). |
+| `smoke:prod` | In `package.json`; `e2e/smoke/` exists. Not run (needs six `SMOKE_*` accounts; sign-in is limited to 5 per email per 15 minutes and staging is shared). |
+| `scripts/staging-smoke.ts` | Exists and ran; also `npm run staging:smoke`. Corrected. |
+| `backup:drill`, `reconcile:counts` | In `package.json`, scripts exist. Not run (part 2). |
+| `backfill-organization-defaults.ts`, `migration-rehearsal.ts` | Exist. Backfill needs `src/`. |
+| `pg_dump`, `pg_restore`, `psql` | Not on the host or in the app image; present in the Postgres container. Corrected. |
+| `RUN_MIGRATIONS_ON_START` and the entrypoint | Exist (`docker/entrypoint.sh`); not run, to keep the shared database unchanged. |
+
+### What only people can do (from this run)
+
+- The table-top exercise with named on-call people (section 9 is still empty): nobody answered a phone, took the incident lead role or decided on a rollback here.
+- Decide findings 1, 2 and 4 (code and image changes).
+- Run part 2 with two people where `pg_dump` and `pg_restore` are available, and repeat part 1 with a real migration and a genuinely older image.
+- Sign-off (section 13) stays empty.
 
 ## 12. What only people can do
 

@@ -2,7 +2,7 @@
 
 Database: plain PostgreSQL, local for now, AWS later (Michael, 4 Nov 2026). Nothing here depends on a vendor service: only `pg_dump`, `pg_restore`, standard WAL archiving and an object store reached through our storage adapter.
 
-Status: **targets confirmed 4 Nov 2026 (`docs/DECISIONS.md` 6.3); WAL archiving not needed at launch.** The backup storage choice below is still for Given to make. The staging drill (acceptance criterion of FIG-1125 and FIG-1258) has not been run yet; only the developer-machine drill has.
+Status: **targets confirmed 4 Nov 2026 (`docs/DECISIONS.md` 6.3); WAL archiving not needed at launch.** The backup storage choice below is still for Given to make. The drill has been run on the local staging stack (4 Nov 2026, end of section 7), at small volume only; a timed drill at production volume, with decryption and the real backup storage, has not.
 
 ## 1. What is backed up
 
@@ -114,6 +114,40 @@ On a developer machine, small data (Docker PostgreSQL 16, throwaway database of 
 | Result | pass, all counts matched | pass, all counts matched |
 
 For comparison, `docs/MIGRATION_REHEARSAL.md` restored the rehearsal database in 4 s, every table identical. These numbers are not an RTO. The timed drill on staging, with the real schema and a realistic volume and including download and decryption, is still to do (section 9).
+
+### Staging-stack drill, 4 Nov 2026 (FIG-1125, FIG-1258 backup half)
+
+**This is NOT a timed drill at production volume.** It rehearses the procedure on the real schema, on a developer machine (Windows 11, Docker Desktop, PostgreSQL in the `figbloom_crm_staging_postgres` container of the local staging stack, `docs/STAGING.md`). Data volume: the small seeded staging database, 73 tables, 693 to 739 rows in total (other work was using it during the drill), database size 15 MB, dump 439 to 443 KiB (custom format). Four other drills shared the Docker engine, so timings are noisy: restore of the same 440 KiB dump took between 14 s and 76 s. Read them as "seconds to about a minute at this size", not as an RTO.
+
+Real schema: all migrations applied; 65 of 73 tables have row-level security enabled and forced (all 63 tables with an `organization_id` column, plus 2) and there are 64 policies. The 8 tables without RLS are global by design: `users`, `roles`, `permissions`, `role_permissions`, `password_reset_tokens`, `scheduled_job_runs`, `auth_rate_limit_attempts` (grants revoked from the app role instead) and `_prisma_migrations`.
+
+`npm run backup:drill` with `BACKUP_DRILL_DOCKER_CONTAINER=figbloom_crm_staging_postgres`:
+
+| Step | Run 1 | Run 2 | Run 3 | Run 4 |
+|---|---|---|---|---|
+| Dump | 2.2 s | 1.4 s | 2.2 s | 3.8 s |
+| Restore | 14.3 s | 75.9 s | 21.8 s | 15.1 s |
+| Verify (73 table counts, RLS flags, 64 policies) | 1.3 s | 4.1 s | 2.4 s | 2.2 s |
+| Result | FAIL (see below) | pass | pass | pass |
+
+Run 1 failed on `auth_rate_limit_attempts` (source 42 rows, restored 44): the source was live and rows were added between the count and the dump. That was a defect in the drill script, not in the restore. Fixed: the script now counts inside one `REPEATABLE READ` transaction and dumps with the exported snapshot (`pg_dump --snapshot`), so counts and dump describe the same instant. Runs 3 and 4 used the fixed script; run 2 (old script) passed by timing luck. In the passing runs every table count, every RLS flag (enabled and forced) and all 64 policies matched.
+
+**The restored copy works** (scratch database, dropped afterwards). Dump and restore into a new database (1.1 s and 8 to 20 s), then the role steps above: `db:bootstrap-role` (2 to 4 s) and `db:grant-role` (2 to 4 s). Then connected as `figbloom_app` (not superuser, no BYPASSRLS):
+
+| Check | Result |
+|---|---|
+| 63 tenant tables have RLS enabled and forced after restore | pass |
+| No organisation set: every tenant table returns 0 rows (18 of them hold data) | pass |
+| Two organisations (staging has one, so a second organisation and one company per organisation were added in the scratch copy only): A sees its row and not B's, B sees only its own, B cannot read A's organisation row | pass |
+| Insert as B of a row belonging to A is refused by the policy | pass |
+
+Corrections to this document: (1) `db:grant-role` works on the database named in `DATABASE_URL`, not on `APP_DB_NAMES`; `APP_DB_NAMES` only sets the `GRANT CONNECT` in `db:bootstrap-role` (default `figbloom_crm_dev,figbloom_crm_test`, which fails on a server without those databases). So step 4 means: bootstrap-role with `APP_DB_NAMES=<restored db>`, then grant-role with `DATABASE_URL` pointing at the restored database. (2) The drill script was not safe on a live source (fixed above). Nothing in the restore itself was wrong.
+
+**Files.** The staging bucket (`figbloom-crm-staging`, private: anonymous access returns 403) was empty, so a 3 MB test object was written under `drill-1125/`, read back through the S3 API with signed requests, written again under a second key and read again: SHA-256 identical at every step, about 3 s for the four transfers; both objects were then deleted. This proves the signed S3 path and the checksum method only. Not tested: versioning and delete-marker recovery (section 4), the second-location copy, the orphan report against a restored database, volume.
+
+**Erasure versus backups.** The point in section 2 holds in principle but is incomplete. `docs/PRIVACY.md` says nothing about backups and no replay tool exists. Erasure (`src/services/erasureService.ts`) removes the person but leaves an audit event `data_subject.erased` with a hash of the email and of the phone tail, salted with the organisation id (deterministic, not secret), for the first email and phone only. A replay after a restore is therefore possible (hash every restored contact the same way, erase the matches) but must be written, and it can only replay erasures that are in the restored database or in a copy of the log kept outside it: an erasure made after the dump exists only in the live audit log, which is lost in the very failure that causes a restore. Needed: an erasure log kept outside the database (hashes only), a replay script, a line in PRIVACY.md and in the P1.06 assessment. The 12-month monthly copies are the long pole for a maximum backup age under the Kenya DPA.
+
+Not tested and still for a person: decryption of an encrypted dump (no keys exist yet), download from the real backup storage, a realistic volume, the human steps and the clock time of a real switch-over.
 
 ## 8. Moving to AWS later
 

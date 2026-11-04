@@ -100,6 +100,51 @@ production) after the alert rules are loaded, and record the result below.
 |---|---|---|---|---|---|
 | (not run yet) | | | | | |
 
+### Staging drill, 4 Nov 2026 (FIG-1124, Claude Code for Given): metrics and alert rules, no alert route
+
+**Status: the metrics and the rule expressions are proven on the local staging stack. The "alert within 5 minutes" criterion is NOT proven end to end, because no alert route exists yet (no error-tracker project, no uptime service, no Prometheus or alert manager, no paging).** The rows above stay empty until a human runs the full drill with a real channel.
+
+Setup (nothing shared was touched): a second app container from `figbloom-crm:staging` on port 33001 with a fresh `METRICS_TOKEN` (kept only in the shell), and a third on port 33002 pointed at a scratch copy of the schema (`figbloom_scratch_1124_x` on the staging Postgres, dropped at the end). All three drill artefacts were removed afterwards. The staging app and the `figbloom_crm_staging` database were not changed.
+
+| Check | Result |
+|---|---|
+| `GET /api/metrics` with no token header, with a wrong token | 401 and 401 |
+| With the right token (`Authorization: Bearer` and `x-metrics-token`) | 200 and 200, `text/plain; version=0.0.4` |
+| Series present | `figbloom_http_requests_total` (method, route with `:org`, status class), `figbloom_http_request_duration_seconds` (`_bucket` 0.025 to 10 and `+Inf`, `_sum`, `_count`), and the four job gauges as HELP/TYPE lines |
+| Counters and histogram move | after 1 wrong-password login, 1 good login, 2 unauthenticated and 4 signed-in org calls: `requests_total` 4xx and 2xx series for login, leads, deals, companies, tasks; leads `_count` 1 to 2; the 0.1 s bucket filled; sum and count grew |
+| Request id | `x-request-id` is on every middleware-covered response (login, org routes, 404 under an org); a caller-supplied `drill1124-trace-0001` was echoed back |
+| Log correlation | 10 failing requests on the third container wrote 10 error lines with `requestId`; request `27c6ea58-...` (from the 500 envelope) is found by grep in `docker logs`, with its Prisma error |
+| Secrets in logs | 0 hits in the container logs for the UAT password, the metrics token, `figbloom_session=`, `bearer `, or a `postgresql://` URL. Success paths log nothing at all (the app logs errors only), so masked values (deal value and so on) were not exercised by a log line; redaction is covered by tests, not by this drill |
+| Job gauges | HELP/TYPE only, no samples: the queue was empty, so `sampleJobQueue` returns no rows and no series exist. `max(figbloom_job_lag_seconds)` is then empty, not 0. Lag and dead-job values were not measured |
+
+Synthetic failure (T0 15:43:00 local): the container started against a copy of the database, then the database was dropped under it (a wrong `DATABASE_URL` host is not testable: the production boot guard refuses to start and the container exits with code 1, which is a different failure, a dead process). Ten one-second probes, then the metrics:
+
+| Measure | Value |
+|---|---|
+| `/api/health` | 503 `{"status":"error"}` on 10 of 10 probes, 0.24 to 0.41 s each; the Docker health check fails the same way |
+| Org data route | 500 `INTERNAL_ERROR` on 10 of 10, each with its `requestId` |
+| `figbloom_http_requests_total` | `5xx` = 10 for leads, `4xx` = 3 (earlier, normal), login `2xx` = 1; total 14 |
+| leads latency histogram | 13 samples: le 0.025 = 1, 0.05 = 7, 0.1 = 13 |
+
+Rules evaluated by hand against those samples:
+
+| Alert | Expression and threshold | Value | Would fire? |
+|---|---|---|---|
+| Health down | uptime probe on `/api/health`, `probe_success == 0`, 2 probes | 503 on every probe | Yes, after the 2nd failed probe (about 2 min at 60 s) |
+| High error rate | `sum(rate(...{status="5xx"}[5m])) / sum(rate(...[5m])) > 0.02` for 3 min | 10 / 14 = 0.71 (about 36 times the threshold) | Yes once held for 3 min |
+| Slow requests (p95) | `histogram_quantile(0.95, ...) > 1` for 5 min | about 0.095 s by bucket interpolation | No (correct: the failures are fast) |
+| Job lag, dead jobs | `max(figbloom_job_lag_seconds) > 600`, `sum(figbloom_jobs_dead) > 0` | no series (empty queue; with the database gone the gauges are absent too, by design) | No, not measured |
+| Metrics gone | `up{job="figbloom"} == 0` | the container answered the scrape | Not exercised (needs a scraper) |
+
+Findings:
+
+1. `GET /api/health` is outside the instrumentation, contrary to the "Wiring note" above. Its responses have no `x-request-id`, its error log lines (`src/app/api/health/route.ts` lines 39 and 44) carry no `requestId`, and it appears in no metric (there is no `/api/other` series after health and 404 calls). Consequence: a database outage is visible to the error-rate rule only through the data routes (it was, 71 percent), and the health-down alert depends entirely on the external uptime probe. Either wrap the health route in `handleRoute` or correct the wiring note.
+2. Unknown URLs (404 under an org) return an `x-request-id` but are not counted in `figbloom_http_requests_total`. A 404 flood is therefore invisible to the metrics.
+3. With a wrong database host the process refuses to boot in production mode and exits (code 1), so the uptime probe sees "connection refused", not 503. Both are covered by the health-down rule (a failed probe), but `up` and the Docker restart policy must be part of the alert design.
+4. Sign-in from a different origin than `APP_BASE_URL` is rejected with 403 `CSRF_REJECTED` (expected); the drill sent `Origin: http://localhost:33000`.
+
+Not proven, only a human can do it: the uptime service, an alert manager that loads these rules, routing to the team channel and the on-call phone, the Sentry project and DSN (so no error group with its `requestId` was seen in a tracker), the 5 minute timing, the job-lag drill with a stopped worker for 15 minutes, and recovery of the alerts.
+
 ## What a human still has to do
 
 - Create the error-tracking project and set its DSN in the host secrets (`docs/DEPLOYMENT.md`).
