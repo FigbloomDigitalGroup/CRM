@@ -57,7 +57,7 @@ SMOKE_TECHNICAL_EMAIL / SMOKE_TECHNICAL_PASSWORD
 SMOKE_SUPPORT_EMAIL / SMOKE_SUPPORT_PASSWORD
 ```
 
-Command: `npm run smoke:prod` (runs `playwright test -c e2e/smoke/playwright.smoke.config.ts --grep @smoke`). The HTTP-level `scripts/staging-smoke.ts` covers staging only. Pass criterion: all 7 tests pass, none skipped. Attach the HTML report to the go-live record.
+Command: `npm run smoke:prod` (runs `playwright test -c e2e/smoke/playwright.smoke.config.ts --grep @smoke`). The HTTP-level `scripts/staging-smoke.ts` covers staging only. Pass criterion: while the deployment runs release v1, the dev-routes-closed test and the five V1 role tests (Management, Sales, Delivery, Finance, Restricted Technical) pass, and the Customer Support test is skipped because that role is a V1.1 feature; with release v1.1 or later all 7 pass, none skipped. Attach the HTML report to the go-live record. Each smoke account signs in once per run, and sign-in is limited to 5 attempts per email per 15 minutes, so do not repeat a full run within 15 minutes; a first attempt that fails and passes on retry has usually hit that limit.
 
 Role rules in the suite were written from `docs/PERMISSION_MATRIX_REPORT.md` and `e2e/qa/role-journeys.spec.ts`; if a role's access changes, change both.
 

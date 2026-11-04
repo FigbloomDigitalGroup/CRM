@@ -1,0 +1,147 @@
+# Local staging stack (FIG-1123 P1.01, FIG-1256 P1.12): production shape on this computer.
+# Same Docker image as production, NODE_ENV=production, FIGBLOOM_ENVIRONMENT=staging, no dev accounts,
+# its own plain PostgreSQL (figbloom_crm_staging), an S3-compatible store, ClamAV and a mail sandbox (Mailpit).
+# Own compose project, own volumes and own ports: it never touches the dev/test database or the storage stack.
+#
+# Secrets live OUTSIDE the repo in C:\Users\Admin\.figbloom\staging.env (see docs/STAGING.md, "Local staging stack").
+#
+#   docker build -t figbloom-crm:staging .
+#   docker compose -p figbloom_crm_staging -f docker-compose.staging.yml --env-file C:\Users\Admin\.figbloom\staging.env up -d --wait
+#   docker compose -p figbloom_crm_staging -f docker-compose.staging.yml --env-file ... run --rm migrate    (once per deploy)
+#
+# Ports (localhost only): app 33000, PostgreSQL 35432, mail sandbox UI 38025 (SMTP 31025), S3 59100, clamd 53311.
+name: figbloom_crm_staging
+
+x-app-env: &app-env
+  NODE_ENV: production
+  FIGBLOOM_ENVIRONMENT: staging
+  ACTIVE_RELEASE: v1
+  APP_BASE_URL: http://localhost:33000
+  DATABASE_URL: postgresql://figbloom:${STAGING_PG_OWNER_PASSWORD:?set in the secrets file}@postgres:5432/figbloom_crm_staging?schema=public
+  APP_DATABASE_URL: postgresql://figbloom_app:${APP_DB_PASSWORD:?}@postgres:5432/figbloom_crm_staging?schema=public
+  APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
+  APP_DB_NAMES: figbloom_crm_staging
+  SMTP_HOST: mailpit
+  SMTP_PORT: "1025"
+  SMTP_SECURE: "false"
+  SMTP_FROM: FigBloom CRM Staging <no-reply@staging.example.com>
+  STORAGE_DRIVER: s3
+  S3_ENDPOINT: http://objectstore:8333
+  S3_REGION: us-east-1
+  S3_BUCKET: figbloom-crm-staging
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?}
+  S3_FORCE_PATH_STYLE: "true"
+  CLAMD_HOST: clamav
+  CLAMD_PORT: "3310"
+  CRON_SECRET: ${CRON_SECRET:?}
+  METRICS_TOKEN: ${METRICS_TOKEN:?}
+  # ALLOW_DEV_ACCOUNTS and DEV_SESSION_SECRET are deliberately absent (CLAUDE.md rule 10).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: figbloom_crm_staging_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: figbloom
+      POSTGRES_PASSWORD: ${STAGING_PG_OWNER_PASSWORD:?}
+      POSTGRES_DB: figbloom_crm_staging
+    ports:
+      - "127.0.0.1:35432:5432"
+    volumes:
+      - figbloom_crm_staging_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U figbloom -d figbloom_crm_staging"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  objectstore:
+    image: chrislusf/seaweedfs:latest
+    container_name: figbloom_crm_staging_objectstore
+    restart: unless-stopped
+    command: server -dir=/data -s3 -s3.port=8333 -master.volumeSizeLimitMB=256
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?}
+    ports:
+      - "127.0.0.1:59100:8333"
+    volumes:
+      - figbloom_crm_staging_objects:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9333/cluster/status && curl -s -o /dev/null http://127.0.0.1:8333/"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  createbucket:
+    image: chrislusf/seaweedfs:latest
+    container_name: figbloom_crm_staging_createbucket
+    depends_on:
+      objectstore:
+        condition: service_healthy
+    restart: "no"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        # Idempotent: "already exists" on a re-run is fine, so `up` can be repeated.
+        out=$$(echo "s3.bucket.create -name figbloom-crm-staging" | weed shell -master=objectstore:9333 2>&1); echo "$$out"
+        echo "$$out" | grep -qE "created bucket|already exists"
+
+  clamav:
+    image: clamav/clamav:stable
+    container_name: figbloom_crm_staging_clamav
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:53311:3310"
+    volumes:
+      - figbloom_crm_staging_clamav_db:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/clamdcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+
+  # Mail sandbox: accepts every message, delivers nothing. Read them at http://localhost:38025.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: figbloom_crm_staging_mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:38025:8025"
+      - "127.0.0.1:31025:1025"
+
+  # One-off deploy job: migrate, bootstrap-role, grant-role. Not started by `up` (profile "job").
+  migrate:
+    image: figbloom-crm:staging
+    profiles: ["job"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+      RUN_MIGRATIONS_ON_START: "true"
+    command: ["true"]
+
+  app:
+    image: figbloom-crm:staging
+    container_name: figbloom_crm_staging_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      createbucket:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+    environment: *app-env
+    ports:
+      - "127.0.0.1:33000:3000"
+
+volumes:
+  figbloom_crm_staging_pg:
+  figbloom_crm_staging_objects:
+  figbloom_crm_staging_clamav_db:

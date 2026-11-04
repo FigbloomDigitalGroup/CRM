@@ -10,6 +10,7 @@ import { expect, test, type Page } from "@playwright/test";
  *   SMOKE_BASE_URL          the production address, for example https://crm.example.com
  *   SMOKE_ORG_SLUG          the organisation slug (default "figbloom")
  *   SMOKE_<ROLE>_EMAIL and SMOKE_<ROLE>_PASSWORD   ROLE is MANAGEMENT, SALES, DELIVERY, FINANCE, TECHNICAL or SUPPORT
+ *     Customer Support is a V1.1 role (off while ACTIVE_RELEASE is v1, so it has no home or screens): set SMOKE_SUPPORT_* only when the deployment runs release v1.1 or later, otherwise leave them unset and its test skips.
  * Use dedicated smoke accounts; never put a password in a file or a commit.
  *
  * Run: npx playwright test -c e2e/smoke/playwright.smoke.config.ts --grep @smoke
@@ -131,7 +132,7 @@ test.describe("@smoke production smoke", () => {
 
         // Sign out returns to the login page and closes the session.
         await page.goto(`/o/${ORG}`);
-        await page.getByRole("button", { name: "Log out" }).first().click();
+        await page.getByRole("button", { name: "Sign out" }).first().click();
         await page.waitForURL(/\/login/, { timeout: 20_000 });
         const after = await page.request.get(`/api/orgs/${ORG}/dashboard`);
         expect([401, 403]).toContain(after.status());

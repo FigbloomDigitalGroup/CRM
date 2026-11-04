@@ -84,6 +84,40 @@ The database is plain PostgreSQL with the same version, role steps and migration
 
 Nothing is real until the environment exists. Until then, `npm run db:setup` plus the dev server is the rehearsal on this computer.
 
+## Local staging stack (Docker, FIG-1123 and FIG-1256)
+
+Until the AWS environment exists, staging runs on this computer as its own compose project (`docker-compose.staging.yml`, project `figbloom_crm_staging`): the production image, `NODE_ENV=production`, `FIGBLOOM_ENVIRONMENT=staging`, no dev accounts, its own PostgreSQL database `figbloom_crm_staging` in its own container, an S3-compatible store, ClamAV and Mailpit as the mail sandbox. It shares nothing with the dev and test databases or `docker-compose.storage.yml`.
+
+| Service | Address (localhost only) |
+|---|---|
+| App | http://localhost:33000 |
+| PostgreSQL (owner `figbloom`) | 35432 |
+| Mail sandbox (Mailpit UI, SMTP) | http://localhost:38025, 31025 |
+| Object store (S3, bucket `figbloom-crm-staging`) | 59100 |
+| ClamAV (clamd) | 53311 |
+
+Secrets: `C:\Users\Admin\.figbloom\staging.env` (outside the repo; names: `STAGING_PG_OWNER_PASSWORD`, `APP_DB_PASSWORD`, `CRON_SECRET`, `METRICS_TOKEN`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `STAGING_UAT_PASSWORD`). Generate each with `openssl rand -hex 24`. Never print or commit it. `C:\Users\Admin\.figbloom\staging-host.sh` (also outside the repo) loads it for host-side commands and builds the `localhost:35432` URLs.
+
+```
+C="docker compose -p figbloom_crm_staging -f docker-compose.staging.yml --env-file C:/Users/Admin/.figbloom/staging.env"
+docker build -t figbloom-crm:staging .            # once per commit (.dockerignore keeps the .next* build folders out of the context)
+$C up -d postgres objectstore createbucket clamav mailpit
+$C run --rm migrate                                # one-off: migrate, bootstrap-role, grant-role (once per deploy)
+# host side, after sourcing staging-host.sh (the seeds import src/, which the image does not contain):
+npm run seed && npx tsx scripts/staging-seed.ts    # role catalogue, then one UAT sign-in per role
+$C up -d --wait app
+STAGING_URL=http://localhost:33000 npx tsx scripts/staging-smoke.ts
+$C down                                            # stop (add -v to wipe the data)
+```
+
+UAT sign-ins (password is `STAGING_UAT_PASSWORD`): `uat-management@`, `uat-sales@`, `uat-delivery@`, `uat-finance@`, `uat-restricted-technical@`, `uat-customer-support@` `staging.example.com`, organisation slug `figbloom`.
+
+Notes from the first live run (4 Nov 2026):
+
+- A local `.env` with `ALLOW_DEV_ACCOUNTS=true` is picked up by `dotenv/config` when a staging script runs on the host, and the guard (correctly) refuses. Export `ALLOW_DEV_ACCOUNTS=false` first (`staging-host.sh` does).
+- `anonymise` wipes every password hash, so run `staging-seed.ts` again afterwards before signing in.
+- The production Playwright smoke suite: `SMOKE_BASE_URL=http://localhost:33000` plus `SMOKE_<ROLE>_EMAIL` and `SMOKE_<ROLE>_PASSWORD` for each role (MANAGEMENT, SALES, DELIVERY, FINANCE, TECHNICAL, SUPPORT), taken from the UAT accounts.
+
 ## Decisions and actions only a human can take
 
 | # | Who | What | Recommendation |
@@ -100,4 +134,4 @@ Nothing is real until the environment exists. Until then, `npm run db:setup` plu
 | 10 | Given | **Deal-rules migration lock** (open item from the rehearsal): edit the merged migration or follow the two-index runbook. | Follow the runbook; do not edit history. |
 | 11 | Given | Approve adding the three `staging:*` npm scripts and merging this work to `dev-given`. | Yes. |
 
-Not done here and still open: the infrastructure-as-code for the host (needs decision 2), the mail sandbox wiring (decision 4), the restore drill and backups (FIG-1258), observability (FIG-1124, depends on this issue), and a run of these scripts against a real staging database, which needs an environment to exist. The scripts have been type-checked and linted only; they have not been run against a database.
+Not done here and still open: the infrastructure-as-code for the host (needs decision 2), the mail sandbox wiring (decision 4), the restore drill and backups (FIG-1258), observability (FIG-1124, depends on this issue), and a run of these scripts against a real staging database, which needs an environment to exist. The staging scripts were first run against the local staging stack on 4 Nov 2026 (see "Local staging stack"); the anonymiser has run only on the seeded, nearly empty database, so its paths for rows holding real data are still untested.

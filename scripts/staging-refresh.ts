@@ -143,9 +143,12 @@ function expression(table: string, column: string, kind: Kind, nullable: boolean
     case "null": return `NULL`;
     case "json":
     case "json_array": {
-      if (nullable) return `NULL`;
+      // The NULL must be typed: inside CASE WHEN ... THEN NULL ELSE NULL END an untyped NULL becomes text and
+      // Postgres refuses to assign it to a json column (found on the first live run, SQLSTATE 42804).
+      const type = dataType === "jsonb" ? "jsonb" : "json";
+      if (nullable) return `NULL::${type}`;
       const empty = kind === "json" ? "{}" : "[]";
-      return dataType === "jsonb" ? `'${empty}'::jsonb` : `'${empty}'::json`;
+      return `'${empty}'::${type}`;
     }
   }
 }
