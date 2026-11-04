@@ -337,7 +337,7 @@ export function apply(s: PlatformState, a: Action, now: Date = new Date()): { st
       let next = mapOrg(s, a.id, (o) => ({ ...o, status: d.to }));
       if (a.kind === "offboard") {
         const req: DemoRequest = {
-          id: `dr${now.getTime()}`, org: a.id, type: "Tenant offboarding", subject: "Whole organisation", requester: "Dev Super Admin (platform)", status: "Received", received: now,
+          id: `dr${now.getTime()}`, org: a.id, type: "Tenant offboarding", subject: "Whole organisation", requester: "Michael Kiruti (platform)", status: "Received", received: now,
           due: new Date(now.getTime() + 30 * DAY), notes: a.reason,
           steps: [["Confirm with the organisation admin", false], ["Export all data and share download link", false], ["Suspend sign-in", true], ["30-day retention period", false], ["Delete organisation data (needs a second platform admin)", false], ["Issue completion certificate", false]],
           approvals: [], kind: "offboard",
@@ -407,7 +407,7 @@ export function apply(s: PlatformState, a: Action, now: Date = new Date()): { st
     case "support-end": {
       const x = s.support.find((p) => p.id === a.id);
       if (!x) return refuse("That session no longer exists.");
-      const next = { ...s, activeSupport: s.activeSupport === a.id ? null : s.activeSupport, support: s.support.map((p) => (p.id === a.id ? { ...p, status: "Ended" as const, endedBy: "Dev Super Admin" } : p)) };
+      const next = { ...s, activeSupport: s.activeSupport === a.id ? null : s.activeSupport, support: s.support.map((p) => (p.id === a.id ? { ...p, status: "Ended" as const, endedBy: "Michael Kiruti" } : p)) };
       return done(log(next, now, "Support view ended", orgNameOf(s, x.org), `${(x.pages ?? []).length} pages viewed`, "Ended by admin"));
     }
 
@@ -427,7 +427,7 @@ export function apply(s: PlatformState, a: Action, now: Date = new Date()): { st
     case "admin-invite": {
       if (!adminEmailOk(a.email)) return refuse("Platform admins need a platform.figbloom.co.ke address");
       if (s.admins.some((x) => x.email.toLowerCase() === a.email.toLowerCase())) return refuse("That person is already a platform admin.");
-      const admin = { id: `pz${now.getTime()}`, name: a.email.split("@")[0]!, email: a.email, tfa: "Pending setup", last: "Never", by: "Dev Super Admin" };
+      const admin = { id: `pz${now.getTime()}`, name: a.email.split("@")[0]!, email: a.email, tfa: "Pending setup", last: "Never", by: "Michael Kiruti" };
       return done(log({ ...s, admins: [...s.admins, admin] }, now, "Platform admin invited", "—", a.email), "Invite sent. They must set up verification before first sign-in.");
     }
 
@@ -451,7 +451,7 @@ export function apply(s: PlatformState, a: Action, now: Date = new Date()): { st
       const label = a.flag === "assistant" ? "Assistant" : "Integrations";
       const on = !org.flags[a.flag];
       const next = mapOrg(s, a.org, (o) => ({ ...o, flags: { ...o.flags, [a.flag]: on } }));
-      return done(log({ ...next, flagHistory: [["Just now", "Dev Super Admin", org.name, label, on ? "Off → On" : "On → Off"], ...next.flagHistory] }, now, "Flag changed", org.name, label, on ? "On" : "Off"));
+      return done(log({ ...next, flagHistory: [["Just now", "Michael Kiruti", org.name, label, on ? "Off → On" : "On → Off"], ...next.flagHistory] }, now, "Flag changed", org.name, label, on ? "On" : "Off"));
     }
 
     case "limit": {
@@ -462,7 +462,7 @@ export function apply(s: PlatformState, a: Action, now: Date = new Date()): { st
       const before = org.flags[a.limit];
       if (before === value) return done(s);
       const next = mapOrg(s, a.org, (o) => ({ ...o, flags: { ...o.flags, [a.limit]: value } }));
-      return done(log({ ...next, flagHistory: [["Just now", "Dev Super Admin", org.name, label, `${before.toLocaleString("en-US")} → ${value.toLocaleString("en-US")}`], ...next.flagHistory] }, now, "Flag changed", org.name, label, `${before} → ${value}`));
+      return done(log({ ...next, flagHistory: [["Just now", "Michael Kiruti", org.name, label, `${before.toLocaleString("en-US")} → ${value.toLocaleString("en-US")}`], ...next.flagHistory] }, now, "Flag changed", org.name, label, `${before} → ${value}`));
     }
 
     case "announcement":

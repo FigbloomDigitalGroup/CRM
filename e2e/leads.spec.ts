@@ -131,7 +131,7 @@ test.describe("creating, archiving and restoring", () => {
     await expect(bar.getByText("2 selected")).toBeVisible();
     const sales = a.ref.members.find((m) => m.userEmail === SALES)!;
     await bar.getByRole("combobox", { name: "Reassign selected to" }).selectOption(sales.membershipId);
-    await expect(page.getByText(/2 leads reassigned to Dev Sales/)).toBeVisible();
+    await expect(page.getByText(/2 leads reassigned to Ruth Kibet/)).toBeVisible();
     await expect(bar).toHaveCount(0);
   });
 });
@@ -144,6 +144,12 @@ test.describe("the lead page", () => {
     const ref = await reference(page);
     // A required-on-qualify question for one service only, so no other lead in the shared database is affected.
     const service = ref.services[ref.services.length - 1]!;
+    // Earlier runs left their own required questions on this service. Retire them (a field is retired, never deleted) so the page asks only for this run's.
+    const origin = new URL(page.url()).origin;
+    const existing = await page.request.get(`/api/orgs/${ORG_SLUG}/custom-fields?entityType=LEAD&section=QUALIFICATION`);
+    for (const f of ((await existing.json()).items ?? []) as { id: string; label: string }[]) {
+      if (/^E2E question /.test(f.label)) await page.request.patch(`/api/orgs/${ORG_SLUG}/custom-fields/${f.id}`, { data: { isActive: false }, headers: { origin } });
+    }
     const key = `e2e_${suffix.replace(/\D/g, "")}`;
     const def = await apiPost(page, `/api/orgs/${ORG_SLUG}/custom-fields`, { entityType: "LEAD", key, label: `E2E question ${suffix}`, fieldType: "TEXT", section: "QUALIFICATION", requiredOnQualify: true, serviceId: service.id });
     expect(def.ok()).toBe(true);
@@ -157,9 +163,16 @@ test.describe("the lead page", () => {
     // Answer it (saved as you type) and the move now succeeds.
     // Earlier runs against this shared database leave their own required questions on the service: answer every one the page still asks for.
     const stillAsked = page.getByRole("region", { name: /^Qualification/ }).locator("[aria-invalid=true]");
-    // Whatever else the service asks (a seeded choice, or a question an earlier run left behind): answer each, by its kind.
-    for (const box of await stillAsked.all()) {
-      if ((await box.evaluate((e) => e.tagName)) === "SELECT") await box.selectOption({ index: 1 });
+    // Whatever else the service asks (a seeded choice, or a question an earlier run left behind): answer each, by its kind. The page drops its "still
+    // needed" marks after the first answer is saved, so the controls are listed once, by id, before the first answer.
+    const ids = await stillAsked.evaluateAll((els) => els.map((e) => e.id));
+    for (const id of ids) {
+      const box = page.locator(`[id="${id}"]`);
+      const kind = await box.evaluate((e) => `${e.tagName}:${(e as HTMLInputElement).type ?? ""}`);
+      if (kind.startsWith("SELECT")) await box.selectOption({ index: 1 });
+      else if (/:(checkbox|radio)$/.test(kind)) await box.check();
+      else if (kind.endsWith(":date")) await box.fill("2026-12-01");
+      else if (kind.endsWith(":number")) await box.fill("1");
       else await box.fill("Answered");
     }
     await expect(page.getByText(/saved$/)).toBeVisible();

@@ -12,7 +12,7 @@
 
 /* Header ------------------------------------------------------------------------------------------------------------------------ */
 .fb-m-head { position: sticky; top: 0; z-index: 20; flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 16px 12px; background: var(--side); color: var(--side-text, #fff); }
-.fb-m-head__title { flex: 1; min-width: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; }
+.fb-m-head__title { flex: 1; min-width: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0; color: inherit; }
 .fb-m-iconbtn { position: relative; flex: none; width: 44px; height: 44px; border-radius: 999px; border: 0; background: rgba(255, 255, 255, 0.12); color: inherit; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
 .fb-m-iconbtn--square { border-radius: 12px; }
 .fb-m-iconbtn--back { background: transparent; margin-left: -8px; }

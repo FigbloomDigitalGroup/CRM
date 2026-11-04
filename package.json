@@ -6,8 +6,11 @@
   "type": "commonjs",
   "scripts": {
     "dev": "next dev",
+    "dev:turbo": "next dev --turbopack",
+    "preview": "node scripts/preview-local.js",
     "build": "next build",
     "check:build-output": "tsx scripts/check-build-output.ts",
+    "check:bundle-budget": "tsx scripts/check-bundle-budget.ts",
     "start": "next start",
     "prisma:generate": "prisma generate",
     "migrate:dev": "prisma migrate dev",
@@ -29,6 +32,7 @@
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps chromium",
+    "e2e:install:matrix": "playwright install --with-deps chromium firefox webkit",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write ."
@@ -59,7 +63,7 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20.14.0",
+    "@types/node": "^24.0.0",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
@@ -68,7 +72,7 @@
     "@typescript-eslint/eslint-plugin": "^8.70.1",
     "@typescript-eslint/parser": "^8.70.1",
     "@vitejs/plugin-react": "^4.7.0",
-    "@vitest/coverage-v8": "^2.1.9",
+    "@vitest/coverage-v8": "5.0.5",
     "axe-core": "^4.14.0",
     "dotenv": "^16.4.5",
     "eslint": "^8.57.0",
@@ -79,7 +83,8 @@
     "prisma": "^5.20.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.2",
-    "vitest": "^2.1.1"
+    "vite": "^7.3.7",
+    "vitest": "5.0.5"
   },
   "allowScripts": {
     "@prisma/client@5.22.0": true,

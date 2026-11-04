@@ -33,9 +33,13 @@ function buildSecurityHeaders(production) {
     { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
     { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
     { key: "Content-Security-Policy", value: ENFORCED_CSP },
-    { key: "Content-Security-Policy-Report-Only", value: REPORT_ONLY_CSP },
   ];
-  if (production) headers.push({ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" });
+  if (production) {
+    // Production only: the dev server evaluates strings on every module (webpack's source maps), so the report-only script policy logged
+    // thousands of "unsafe-eval" violations into the browser console while developing, which measurably slows every page there.
+    headers.push({ key: "Content-Security-Policy-Report-Only", value: REPORT_ONLY_CSP });
+    headers.push({ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" });
+  }
   return headers;
 }
 

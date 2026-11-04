@@ -83,7 +83,7 @@ const DEFS: Def[] = [
   { section: "after-sale", key: "handoffs", label: () => "Handoffs", path: "/handoffs", icon: "handoffs", tint: "o", allowed: (c) => any(c, "handoff.manage", "deals.handoff"), built: true },
   { section: "after-sale", key: "renewals", label: () => "Renewals", path: "/renewals", icon: "renewals", tint: "o", allowed: (c) => has(c, "company_services.manage"), built: true },
   { section: "after-sale", key: "payments", label: () => "Payments", path: "/payments", icon: "payments", tint: "o", allowed: (c) => has(c, "finance.view.payments"), built: true },
-  { section: "insights", key: "forecast", label: () => "Forecast & targets", path: "/forecast", icon: "reports", tint: "o", allowed: (c) => any(c, "forecast.view.all", "quotes.create", "reporting.view.own", "reporting.view.all"), built: true, demo: true },
+  { section: "insights", key: "forecast", label: () => "Forecast & targets", path: "/forecast", icon: "forecast", tint: "o", allowed: (c) => any(c, "forecast.view.all", "quotes.create", "reporting.view.own", "reporting.view.all"), built: true, demo: true },
   // The design lists Approvals for people who approve quotes only; quotes themselves are reached from a deal, so they have no sidebar link.
   { section: "insights", key: "approvals", label: () => "Approvals", path: "/approvals", icon: "handoffs", tint: "o", allowed: (c) => has(c, "quotes.approve"), built: true, demo: true },
   {

@@ -151,7 +151,7 @@ describe("support access (V2)", () => {
     expect(state.support[0]!.endsAt!.getTime()).toBe(NOW.getTime() + 30 * 60000);
     const ended = run(state, { type: "support-end", id: pending.id }).state;
     expect(ended.activeSupport).toBeNull();
-    expect(ended.support[0]).toMatchObject({ status: "Ended", endedBy: "Dev Super Admin" });
+    expect(ended.support[0]).toMatchObject({ status: "Ended", endedBy: "Michael Kiruti" });
     const expired = run(state, { type: "support-expire", id: pending.id }).state;
     expect(expired.support[0]!.status).toBe("Expired");
   });
@@ -165,7 +165,7 @@ describe("flags, limits and announcements (V2)", () => {
   it("records each flag and limit change in the history and the audit log", () => {
     const f = run(fresh(), { type: "flag", org: "o2", flag: "assistant" });
     expect(f.state.orgs.find((o) => o.id === "o2")!.flags.assistant).toBe(true);
-    expect(f.state.flagHistory[0]).toEqual(["Just now", "Dev Super Admin", "Figbloom Sandbox", "Assistant", "Off → On"]);
+    expect(f.state.flagHistory[0]).toEqual(["Just now", "Michael Kiruti", "Figbloom Sandbox", "Assistant", "Off → On"]);
     const l = run(f.state, { type: "limit", org: "o2", limit: "seats", value: 9 });
     expect(l.state.flagHistory[0]![4]).toBe("5 → 9");
     expect(l.state.audit[0]!.action).toBe("Flag changed");

@@ -18,9 +18,9 @@ describe("the Leads list, as Sales", () => {
   it("shows my leads with the design's columns, a lock where I cannot reassign, and the shared pool as provisional", async () => {
     renderScreen(<LeadsScreen />, { keys: SALES_KEYS, handlers: { listLeads: page(rows), getLeadsPool: page([leadRow({ id: "p1", ownerMembershipId: null })]) } });
     expect(await screen.findByRole("link", { name: "Wafula Ltd" })).toHaveAttribute("href", "/o/figbloom/leads/l1");
-    expect(screen.getByText(/My leads · 2/)).toBeInTheDocument();
+    expect(await screen.findByText(/My leads · 2/)).toBeInTheDocument(); // the counts load after the rows
     expect(screen.getByText("You can edit, convert and archive leads you own. Reassigning is Management only.")).toBeInTheDocument();
-    for (const h of ["COMPANY / CONTACT", "STATUS", "TEMPERATURE", "SOURCE", "SERVICE", "NEXT FOLLOW-UP", "OWNER", "ACTIONS"]) expect(screen.getByRole("columnheader", { name: new RegExp(h) })).toBeInTheDocument();
+    for (const h of ["Company / contact", "Status", "Temperature", "Source", "Service", "Next follow-up", "Owner", "Actions"]) expect(screen.getByRole("columnheader", { name: new RegExp(h) })).toBeInTheDocument();
     // Sales cannot reassign: the owner is text with the lock and the reason, not a select.
     expect(screen.queryByRole("combobox", { name: /Owner of/ })).toBeNull();
     expect(screen.getAllByText("Only Management can reassign leads").length).toBeGreaterThan(0);
@@ -90,7 +90,7 @@ describe("the Leads list, as Management", () => {
     const user = userEvent.setup();
     const { calls } = renderScreen(<LeadsScreen />, { ...mgmt, handlers: { listLeads: page(rows), getLeadsPool: page([]), postLeadsByLeadIdAssign: {} } });
     await screen.findByRole("link", { name: "Wafula Ltd" });
-    expect(screen.getByText(/All organisation leads · 2/)).toBeInTheDocument();
+    expect(await screen.findByText(/All organisation leads · 2/)).toBeInTheDocument(); // the counts load after the rows
     expect(screen.getByRole("tab", { name: /Unassigned/ })).toBeInTheDocument();
     await user.selectOptions(screen.getByRole("combobox", { name: "Owner of Wafula Ltd" }), "m-mgmt");
     await waitFor(() => expect(calls.find((c) => c.id === "postLeadsByLeadIdAssign")?.args).toMatchObject({ params: { leadId: "l1" }, body: { ownerMembershipId: "m-mgmt" } }));

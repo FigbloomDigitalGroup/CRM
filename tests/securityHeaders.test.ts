@@ -31,6 +31,10 @@ describe("security headers (G1.05)", () => {
     expect(valueOf(headers, "Content-Security-Policy-Report-Only")).toContain("script-src");
   });
 
+  it("leaves the report-only script policy out of the dev server, where it would log thousands of eval violations", () => {
+    expect(valueOf(buildSecurityHeaders(false), "Content-Security-Policy-Report-Only")).toBeUndefined();
+  });
+
   it("pins HTTPS only in production, so a local http site is never pinned", () => {
     expect(valueOf(buildSecurityHeaders(true), "Strict-Transport-Security")).toContain("max-age=31536000");
     expect(valueOf(buildSecurityHeaders(false), "Strict-Transport-Security")).toBeUndefined();

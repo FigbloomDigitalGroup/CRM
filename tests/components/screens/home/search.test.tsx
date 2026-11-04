@@ -51,6 +51,18 @@ beforeEach(() => {
 });
 
 describe("the top-bar search", () => {
+  it("shows a query that was saved twice once in the recent searches, with no duplicate-key warning", async () => {
+    const user = userEvent.setup();
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const twice = { query: "wanjiku", lastUsedAt: "2026-10-26T10:00:00Z" };
+    renderScreen(<GlobalSearch />, searchHandlers({ getSearchRecents: () => ({ recents: [twice, { ...twice, lastUsedAt: "2026-10-25T10:00:00Z" }] }) }), { roleName: "Sales" });
+    await user.click(screen.getByRole("combobox", { name: "Search records" }));
+    await screen.findByRole("option", { name: /wanjiku/ });
+    expect(screen.getAllByRole("option", { name: /wanjiku/ })).toHaveLength(1);
+    expect(error.mock.calls.filter((c) => String(c[0]).includes("same key"))).toEqual([]);
+    error.mockRestore();
+  });
+
   it("is a combobox that lists grouped results in the design's order, with the kind on each row", async () => {
     const user = userEvent.setup();
     renderScreen(<GlobalSearch />, searchHandlers(), { roleName: "Sales" });
@@ -106,7 +118,7 @@ describe("the top-bar search", () => {
     const user = userEvent.setup();
     const r = renderScreen(<GlobalSearch />, searchHandlers());
     await user.click(screen.getByRole("combobox", { name: "Search records" }));
-    expect(await screen.findByText("RECENT SEARCHES")).toBeInTheDocument();
+    expect(await screen.findByText("Recent searches")).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /wanjiku/ })).toBeInTheDocument();
     await user.click(screen.getByRole("option", { name: /java/ }));
     expect(screen.getByRole("combobox", { name: "Search records" })).toHaveValue("java");

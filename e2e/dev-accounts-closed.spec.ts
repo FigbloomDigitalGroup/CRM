@@ -31,7 +31,7 @@ test.describe("dev accounts are closed in a production build", () => {
     await page.goto("/login");
     await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
     await expect(page.getByText(/dev accounts/i)).toHaveCount(0);
-    await expect(page.getByText(/Dev Super Admin/i)).toHaveCount(0);
+    await expect(page.getByText(/Michael Kiruti/i)).toHaveCount(0);
     await expect(page.getByText(/figbloom\.local/i)).toHaveCount(0);
   });
 });

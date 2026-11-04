@@ -7,7 +7,7 @@ import { Badge, Button } from "../../components/basics";
 import { Input, Select, Textarea } from "../../components/forms";
 import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
-import { demoScreensEnabled } from "../../demo/enabled";
+import { demoScreensEnabledClient } from "../../demo/enabled";
 import { Panel } from "../settings/kit";
 import { DEMO_ANOMALIES, type DemoDataRequest } from "./demo/data";
 import { orgSideDemo, useOrgSideDemo } from "./demo/store";
@@ -28,7 +28,7 @@ const STATUS_TONE = { Received: "info", "In review": "warning", Approved: "info"
  * Filing it only sends a request; nothing is deleted here (deletion and offboarding need two platform admins, see PL6). Demo data.
  */
 export function DataRequests() {
-  return demoScreensEnabled() ? <DataRequestsDemo /> : <NotYet name="Data requests" />;
+  return demoScreensEnabledClient() ? <DataRequestsDemo /> : <NotYet name="Data requests" />;
 }
 
 function DataRequestsDemo() {
@@ -104,7 +104,7 @@ function DataRequestsDemo() {
 
 /** Settings › Support access history (FIG-1192): every time Figbloom Support asked to look, who, why, what they opened and how it ended. */
 export function SupportHistory() {
-  return demoScreensEnabled() ? <SupportHistoryDemo /> : <NotYet name="Support access history" />;
+  return demoScreensEnabledClient() ? <SupportHistoryDemo /> : <NotYet name="Support access history" />;
 }
 
 function SupportHistoryDemo() {
@@ -153,7 +153,7 @@ function SupportHistoryDemo() {
 
 /** S7#2, Settings › Two-step sign-in (FIG-1167): the policy toggle, the trusted devices, unusual-activity alerts, and the preview of the code screen. */
 export function TwoStepSettings() {
-  return demoScreensEnabled() ? <TwoStepSettingsDemo /> : <NotYet name="Two-step sign-in" />;
+  return demoScreensEnabledClient() ? <TwoStepSettingsDemo /> : <NotYet name="Two-step sign-in" />;
 }
 
 function TwoStepSettingsDemo() {

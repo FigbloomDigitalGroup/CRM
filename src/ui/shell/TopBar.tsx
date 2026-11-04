@@ -1,9 +1,10 @@
 "use client";
 
 import { ChevronDown, LogOut, Menu as MenuIcon, Moon, Plus, Sun, User, Users } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
-import { BrandMark } from "@/app/_shared/BrandMark";
+import { FigbloomMark } from "./Logo";
 import { Avatar, Banner } from "../components/basics";
 import { Menu, Popover, type MenuItem } from "../components/overlays";
 import { useToast } from "../components/toast";
@@ -84,7 +85,7 @@ export interface IdentityInfo {
 function OrgTile({ identity, size }: { identity: IdentityInfo; size: number }) {
   return (
     <span className="fb-orgtile" style={{ width: size, height: size, borderRadius: size >= 44 ? 12 : 10 }} aria-hidden="true">
-      {identity.logoUrl ? <img src={identity.logoUrl} alt="" /> : <BrandMark className="fb-orgtile__mark" idSuffix={`-org${size}`} />}
+      {identity.logoUrl ? <img src={identity.logoUrl} alt="" /> : <FigbloomMark height={Math.round(size * 0.62)} />}
     </span>
   );
 }
@@ -116,6 +117,7 @@ export function OrgIdentity({ identity, switcher }: { identity: IdentityInfo; sw
     <div className="fb-orgblock">
       <Popover
         label="Organisation and session"
+        triggerLabel={null}
         align="start"
         className="fb-orgpop"
         triggerClassName="fb-orgblock__trigger"
@@ -130,6 +132,7 @@ export function OrgIdentity({ identity, switcher }: { identity: IdentityInfo; sw
               </span>
             </span>
             {switcher ? <ChevronDown size={15} className="fb-orgblock__chev" aria-hidden="true" /> : null}
+            <span className="fb-sr-only">, organisation and session</span>
           </>
         }
       >
@@ -182,9 +185,9 @@ export function OrgIdentity({ identity, switcher }: { identity: IdentityInfo; sw
             </dl>
             {switcher}
             <div className="fb-orgpop__links">
-              <a className="fb-menuitem" href={identity.preferencesHref} onClick={close}>
+              <Link className="fb-menuitem" href={identity.preferencesHref} onClick={close}>
                 <User size={15} aria-hidden="true" /> Profile and preferences
-              </a>
+              </Link>
               <button type="button" className="fb-menuitem" aria-disabled={busy || undefined} onClick={signOutOthers}>
                 <LogOut size={15} aria-hidden="true" /> Sign out other devices
               </button>
@@ -221,6 +224,7 @@ export function UserMenu({ identity }: { identity: IdentityInfo }) {
   return (
     <Popover
       label={`Account: ${identity.name}`}
+      triggerLabel={null}
       align="end"
       className="fb-usermenu"
       triggerClassName="fb-userchip"
@@ -234,6 +238,7 @@ export function UserMenu({ identity }: { identity: IdentityInfo }) {
             <span className="fb-userchip__role">{identity.roleName}</span>
           </span>
           <ChevronDown size={15} aria-hidden="true" />
+          <span className="fb-sr-only">, account menu</span>
         </>
       }
     >
@@ -246,9 +251,9 @@ export function UserMenu({ identity }: { identity: IdentityInfo }) {
             {identity.email ? <div className="fb-usermenu__email">{identity.email}</div> : null}
             <span className="fb-usermenu__role">{identity.roleName}</span>
           </div>
-          <a className="fb-menuitem" href={identity.preferencesHref} onClick={close}>
+          <Link className="fb-menuitem" href={identity.preferencesHref} onClick={close}>
             <User size={16} aria-hidden="true" /> Profile and preferences
-          </a>
+          </Link>
           {appearance ? (
             <button
               type="button"

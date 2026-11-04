@@ -1,0 +1,44 @@
+/* ---- The Figbloom "Orbit" loader (components/loader.tsx): the app's one loading indicator; its own sheet so the sign-in-free `o/` loading screen has it before the org layout's stylesheet arrives ---- */
+.fb-loader { --fb-ring: var(--primary-text, #1f5c3a); --fb-sweep: var(--brand-orange, #ff9400); display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.fb-loader svg circle, .fb-loader svg path { stroke: var(--fb-ring); }
+.fb-loader .fb-leaf { stroke: none; fill: var(--fb-ring); }
+.fb-loader__text { font-size: 14px; font-weight: 300; color: var(--text-2, #62655d); letter-spacing: .02em; }
+.fb-loader--compact { gap: 8px; }
+.fb-loader--compact .fb-loader__text { font-size: 12px; color: var(--text-2, #62655d); }
+.fb-loader__dot { animation: fb-dots 1.4s ease-in-out infinite; }
+.fb-loader__dot:nth-child(2) { animation-delay: .2s; }
+.fb-loader__dot:nth-child(3) { animation-delay: .4s; }
+.fb-arc { transform-box: view-box; transform-origin: 32px 29px; stroke-dasharray: 80 280; stroke-dashoffset: -50; animation: fb-orbit 2.2s var(--fb-phase, 0s) infinite; }
+.fb-leaf { transform-box: fill-box; transform-origin: 0% 100%; animation: fb-leaf 2.2s var(--fb-phase, 0s) infinite; }
+.fb-bowl { transform-box: fill-box; transform-origin: center; animation: fb-bowl 2.2s var(--fb-phase, 0s) infinite; }
+/* a loader that isn't following another waits a moment, so a quick load shows none */
+.fb-loader--fade-in { animation: fb-appear .25s ease-out .2s both; }
+@keyframes fb-appear { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fb-orbit {
+  0% { transform: rotate(0deg); stroke-dasharray: 80 280; stroke-dashoffset: -50; stroke: var(--fb-ring); animation-timing-function: cubic-bezier(.55,0,.25,1); }
+  12% { transform: rotate(0deg); stroke-dasharray: 80 280; stroke-dashoffset: -50; stroke: var(--fb-ring); animation-timing-function: cubic-bezier(.6,0,.4,1); }
+  45% { transform: rotate(200deg); stroke-dasharray: 190 170; stroke-dashoffset: 5; stroke: var(--fb-sweep); animation-timing-function: cubic-bezier(.3,0,.2,1); }
+  78% { transform: rotate(360deg); stroke-dasharray: 80 280; stroke-dashoffset: -50; stroke: var(--fb-ring); }
+  100% { transform: rotate(360deg); stroke-dasharray: 80 280; stroke-dashoffset: -50; stroke: var(--fb-ring); }
+}
+@keyframes fb-leaf {
+  0%, 16% { transform: scale(1) rotate(0deg); opacity: 1; animation-timing-function: cubic-bezier(.5,0,.75,0); }
+  26% { transform: scale(0) rotate(-35deg); opacity: 0; }
+  62% { transform: scale(0) rotate(-35deg); opacity: 0; animation-timing-function: cubic-bezier(.2,.8,.3,1.2); }
+  72% { transform: scale(1.22) rotate(10deg); opacity: 1; animation-timing-function: ease-in-out; }
+  80% { transform: scale(.92) rotate(-5deg); opacity: 1; animation-timing-function: ease-in-out; }
+  88%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes fb-bowl {
+  0%, 74% { transform: scale(1); }
+  80% { transform: scale(.94); }
+  88% { transform: scale(1.03); }
+  95%, 100% { transform: scale(1); }
+}
+@keyframes fb-dots { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+.fb-loader-screen { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--bg, #f6f8f6) 92%, transparent); }
+.fb-loader-block { display: flex; align-items: center; justify-content: center; min-height: 60vh; width: 100%; }
+.fb-loader-block--compact { min-height: 0; padding: 36px 16px; }
+@media (prefers-reduced-motion: reduce) {
+  .fb-arc, .fb-leaf, .fb-bowl, .fb-loader__dot, .fb-loader--fade-in { animation: none; }
+}

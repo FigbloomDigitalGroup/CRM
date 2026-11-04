@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Bookmark } from "lucide-react";
 import { useMember } from "../../data/member";
 import { toolsEnabled } from "../assistant/ToolsHost";
@@ -20,13 +21,13 @@ export function SavedViewsNav({ collapsed = false, onNavigate }: { collapsed?: b
     <div className="fb-sidebar__section" data-testid="sidebar-saved-views">
       <div className="fb-sidebar__label">Saved views</div>
       {pinned.map((v) => (
-        <a key={v.id} href={`/o/${member.orgSlug}/${v.page}?savedView=${encodeURIComponent(v.id)}`} className="fb-navlink" title={collapsed ? v.name : undefined} onClick={onNavigate}>
+        <Link key={v.id} href={`/o/${member.orgSlug}/${v.page}?savedView=${encodeURIComponent(v.id)}`} className="fb-navlink" title={collapsed ? v.name : undefined} onClick={onNavigate}>
           <span aria-hidden="true" style={{ display: "flex" }}>
             <Bookmark size={18} />
           </span>
           <span className="fb-sidebar__text">{v.name}</span>
           {v.shared ? <span className="fb-sr-only"> (shared)</span> : null}
-        </a>
+        </Link>
       ))}
     </div>
   );

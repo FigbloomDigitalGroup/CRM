@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { describeError } from "../../errors";
-import { ErrorState, LoadingState, NoAccess } from "../../components/states";
+import { ErrorState, NoAccess } from "../../components/states";
 import { useToast } from "../../components/toast";
 import { useApi, useApiQuery, useUndoable } from "../../data/hooks";
 import { useMember } from "../../data/member";
@@ -18,6 +18,7 @@ import { RecordExtras } from "../extras/RecordExtras";
 import { ContactDrawer } from "./ContactDrawer";
 import { contactName, initials, ownerName, useContactCaps, useRefreshContacts, type ContactDetail } from "./data";
 import { ReachButtons, useCallLogPrompt } from "./QuickLogPrompt";
+import { LoaderBlock } from "../../components/loader";
 
 interface ActivityItem {
   id: string;
@@ -176,7 +177,7 @@ export function ContactDetailScreen({ contactId }: { contactId: string }) {
 
   const tasks = ((tasksQ.data?.items ?? []) as unknown as TaskItem[]).filter((t) => t.status !== "COMPLETED" && t.status !== "CANCELLED");
 
-  if (contactQ.isLoading) return <LoadingState label="Loading the contact" lines={6} />;
+  if (contactQ.isLoading) return <LoaderBlock label="Loading the contact" />;
   if (contactQ.isError) {
     const d = describeError(contactQ.error);
     if (d.kind === "noAccess") return <NoAccess area="This contact" denial={d.denial} />;
@@ -224,12 +225,12 @@ export function ContactDetailScreen({ contactId }: { contactId: string }) {
   }
 
   const facts: { k: string; v: React.ReactNode }[] = [
-    { k: "PHONE", v: contact.phone || "—" },
-    { k: "EMAIL", v: contact.email || "—" },
-    { k: "DEPARTMENT", v: (contact.department as string | null) || "—" },
-    { k: "SOCIAL PROFILE", v: social || "—" },
+    { k: "Phone", v: contact.phone || "—" },
+    { k: "Email", v: contact.email || "—" },
+    { k: "Department", v: (contact.department as string | null) || "—" },
+    { k: "Social profile", v: social || "—" },
     {
-      k: "OWNER",
+      k: "Owner",
       v: c.canReassign ? (
         <select className="fb-ld-owner-select" aria-label="Owner" value={contact.ownerMembershipId} onChange={(e) => e.target.value && reassign(e.target.value)}>
           {!ref.owners.some((o) => o.membershipId === contact.ownerMembershipId) ? <option value={contact.ownerMembershipId}>{owner}</option> : null}
@@ -243,7 +244,7 @@ export function ContactDetailScreen({ contactId }: { contactId: string }) {
         owner
       ),
     },
-    { k: "COMPANY", v: company ? company.name : "Standalone contact" },
+    { k: "Company", v: company ? company.name : "Standalone contact" },
   ];
 
   return (

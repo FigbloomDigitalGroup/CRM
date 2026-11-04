@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Check, Sparkles, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { demoRespond } from "./demo/respond";
@@ -153,10 +154,10 @@ export function AssistantPanel({ open, onClose, enabled, ctx, respond = demoResp
                 {m.items?.length ? (
                   <div className="fb-ask__items">
                     {m.items.map((i) => (
-                      <a key={i.title} href={i.href} className="fb-ask__item">
+                      <Link key={i.title} href={i.href} className="fb-ask__item">
                         <span>{i.title}</span>
                         <small>{i.sub}</small>
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 ) : null}

@@ -8,6 +8,7 @@ import { ErrorState, NoAccess } from "../../components/states";
 import { useApiMutation, useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { HIcon, Seg } from "./kit";
+import { LoaderBlock } from "../../components/loader";
 
 type GroupType = "leads" | "companies" | "contacts" | "deals" | "tasks";
 
@@ -57,7 +58,8 @@ function useRecents() {
   const q = useApiQuery("getSearchRecents", { params: { orgSlug } }, { staleTime: 10_000 });
   const save = useApiMutation("postSearchRecents", { invalidate: [["getSearchRecents"]] });
   const clear = useApiMutation("deleteSearchRecents", { invalidate: [["getSearchRecents"]] });
-  const recents = ((q.data?.recents ?? []) as { query: string }[]).map((r) => r.query).slice(0, 5);
+  // The same query can be saved more than once (a person searches "a" twice); show it once, which also keeps the list keys unique.
+  const recents = Array.from(new Set(((q.data?.recents ?? []) as { query: string }[]).map((r) => r.query))).slice(0, 5);
   return {
     recents,
     remember: (query: string) => {
@@ -209,7 +211,7 @@ export function GlobalSearch() {
           {!searching && recents.length > 0 ? (
             <>
               <div className="fb-gsearch__head">
-                <span>RECENT SEARCHES</span>
+                <span>Recent searches</span>
                 <button type="button" className="fb-gsearch__clear" onClick={forget}>
                   Clear
                 </button>
@@ -393,13 +395,7 @@ export function SearchResults() {
           <div>{term ? `Type at least ${MIN} characters.` : "Try a company name, a phone number or part of an email."}</div>
         </div>
       ) : q.isPending ? (
-        <div className="fb-hstack" aria-busy="true">
-          <span className="fb-sr-only" role="status">
-            Searching
-          </span>
-          <div className="fb-hskel" style={{ height: 120 }} />
-          <div className="fb-hskel" style={{ height: 120 }} />
-        </div>
+        <LoaderBlock compact label="Searching" />
       ) : q.isError ? (
         describeError(q.error).kind === "noAccess" ? (
           <NoAccess area="Search" denial={describeError(q.error).denial} />

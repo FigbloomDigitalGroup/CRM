@@ -1,6 +1,6 @@
 import { hasPermission } from "@/auth/context";
 import { resolveRequestContext } from "@/auth/requestContext";
-import { recordPageView } from "@/services/pageViewService";
+import { schedulePageView } from "@/services/pageViewService";
 import { buildRoleMatrix } from "@/ui/screens/settings/matrix";
 import { SettingsScreen } from "@/ui/screens/settings/SettingsScreen";
 
@@ -13,6 +13,6 @@ import { SettingsScreen } from "@/ui/screens/settings/SettingsScreen";
 export default async function SettingsPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
   const ctx = await resolveRequestContext(orgSlug);
-  await recordPageView(ctx, "settings");
+  await schedulePageView(orgSlug, "settings");
   return <SettingsScreen matrix={hasPermission(ctx, "configuration.manage") ? buildRoleMatrix() : null} />;
 }

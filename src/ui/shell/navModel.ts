@@ -20,6 +20,7 @@ export type NavIcon =
   | "renewals"
   | "payments"
   | "reports"
+  | "forecast"
   | "preferences"
   | "settings";
 
@@ -29,7 +30,7 @@ export interface NavItem {
   /** Path under `/o/{orgSlug}`; empty for the dashboard. */
   path: string;
   icon: NavIcon;
-  /** The sidebar's icon tint in the design: green (sales), orange (customers and after the sale), white (overview). */
+  /** The icon tint of the earlier design. The sidebar now draws every icon in one quiet tone, so this is kept only for the data shape. */
   tint: "w" | "g" | "o";
   /** The count shown as a badge, when the owning screen supplies one (unread notifications, overdue tasks). */
   badge?: number;

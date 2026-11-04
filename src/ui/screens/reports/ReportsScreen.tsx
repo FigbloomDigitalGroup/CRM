@@ -14,12 +14,13 @@ import { useReference } from "../leads/data";
 import { CustomersDetail, RenewalsDetail, SalespersonDetail } from "./CustomerReports";
 import { ReportCard } from "./ReportCard";
 import { barRows, isChartable, PERIODS, percentOf, rangeFor, tableCells, type PeriodId, type ReportData } from "./model";
+import { LoaderBlock } from "../../components/loader";
 
 const SECTIONS: { label: string; keys: string[] }[] = [
-  { label: "LEADS", keys: ["LEAD_SOURCES", "CONVERSION_BY_STAGE", "CONVERSION_BY_SOURCE"] },
-  { label: "PIPELINE", keys: ["PIPELINE_BY_STAGE", "LOST_REASONS"] },
-  { label: "SALES", keys: ["PER_PERSON", "MONTH_VS_LAST"] },
-  { label: "CUSTOMERS", keys: ["CUSTOMERS", "RENEWALS"] },
+  { label: "Leads", keys: ["LEAD_SOURCES", "CONVERSION_BY_STAGE", "CONVERSION_BY_SOURCE"] },
+  { label: "Pipeline", keys: ["PIPELINE_BY_STAGE", "LOST_REASONS"] },
+  { label: "Sales", keys: ["PER_PERSON", "MONTH_VS_LAST"] },
+  { label: "Customers", keys: ["CUSTOMERS", "RENEWALS"] },
 ];
 
 const SUBTITLE: Record<string, string> = {
@@ -180,7 +181,7 @@ function OrganisationReports() {
 
       {!work.isError && !work.isPending ? (
         <>
-          <div className="fb-rep__eyebrow">NEEDS ATTENTION<span className="fb-rep__rule" /></div>
+          <div className="fb-rep__eyebrow">Needs attention<span className="fb-rep__rule" /></div>
           <div className="fb-rep__tiles">
             {tiles.map((t) => (
               <Link key={t.key} href={t.href} className="fb-rep__tile" data-testid={`attention-${t.key}`}>
@@ -196,7 +197,7 @@ function OrganisationReports() {
         </>
       ) : null}
 
-      <div className="fb-rep__eyebrow">PERFORMANCE<span className="fb-rep__rule" /></div>
+      <div className="fb-rep__eyebrow">Performance<span className="fb-rep__rule" /></div>
       <div className="fb-rep__filters">
         <Seg label="Period" value={period} onChange={setPeriod} options={PERIODS.map((p) => ({ id: p.id, label: p.label }))} />
         {select("ownerMembershipId", "Any owner", ref.owners.map((o) => ({ value: o.membershipId, label: o.name })))}
@@ -210,12 +211,7 @@ function OrganisationReports() {
       </div>
 
       {loading ? (
-        <div aria-busy="true">
-          <span className="fb-sr-only" role="status">Loading reports</span>
-          <div className="fb-rep__kpis">
-            {[1, 2, 3, 4, 5, 6].map((i) => <div key={i} className="fb-rep__skel" style={{ height: 104 }} />)}
-          </div>
-        </div>
+        <LoaderBlock label="Loading reports" />
       ) : empty ? (
         <div className="fb-rep__state" role="status">
           <div className="fb-rep__stateicon"><HIcon name="chart" size={26} /></div>
@@ -266,7 +262,7 @@ function OrganisationReports() {
 
           {fuActive + fuCount("CANCELLED") > 0 ? (
             <div className="fb-rep__section">
-              <div className="fb-rep__eyebrow">FOLLOW-UP PERFORMANCE<span className="fb-rep__rule" /></div>
+              <div className="fb-rep__eyebrow">Follow-up performance<span className="fb-rep__rule" /></div>
               <div className="fb-rep__grid">
                 <FollowUps breakdown={fu} />
               </div>
@@ -274,7 +270,7 @@ function OrganisationReports() {
           ) : null}
 
           <div className="fb-rep__section">
-            <div className="fb-rep__eyebrow">CUSTOMER REPORTS<span className="fb-rep__rule" /></div>
+            <div className="fb-rep__eyebrow">Customer reports<span className="fb-rep__rule" /></div>
             <div className="fb-rep__grid">
               <CustomersDetail />
               <RenewalsDetail />

@@ -10,6 +10,7 @@ import { newIdempotencyKey } from "../../../data/client";
 import { Icon } from "../../leads/icons";
 import { ModalShell } from "../../leads/overlay";
 import { useCustomerReference, useDebounced } from "../data";
+import { LoaderBlock } from "../../../components/loader";
 
 export type MergeKind = "company" | "contact" | "lead";
 
@@ -307,7 +308,7 @@ function RecordMerge({ kind, id, onClose, onMerged, onUndone }: MergeDialogProps
           <div>{loadError.body}</div>
         </div>
       ) : !A ? (
-        <div className="fb-cu-skel" style={{ height: 80 }} aria-busy="true" />
+        <LoaderBlock compact label="Loading the record" />
       ) : !otherId ? (
         <>
           <div className="fb-ld-field">
@@ -337,7 +338,7 @@ function RecordMerge({ kind, id, onClose, onMerged, onUndone }: MergeDialogProps
             <div>{describeError(bQ.error).body}</div>
           </div>
         ) : (
-          <div className="fb-cu-skel" style={{ height: 80 }} aria-busy="true" />
+          <LoaderBlock compact label="Loading the record" />
         )
       ) : (
         <>
@@ -362,7 +363,7 @@ function RecordMerge({ kind, id, onClose, onMerged, onUndone }: MergeDialogProps
           {differing.length ? (
             <div className="fb-cu-fields" role="table" aria-label="Field by field">
               <div className="fb-cu-fields__row fb-cu-fields__head" role="row">
-                <div role="columnheader">FIELD</div>
+                <div role="columnheader">Field</div>
                 <div role="columnheader">KEEP ({kept?.name})</div>
                 <div role="columnheader">TAKE FROM ({other?.name})</div>
               </div>

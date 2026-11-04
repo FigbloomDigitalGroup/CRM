@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { resolveRequestContext, resolveUserContext } from "@/auth/requestContext";
+import { resolveUserContext } from "@/auth/requestContext";
 import { getMemberContext } from "@/services/meContextService";
-import { recordPageView } from "@/services/pageViewService";
+import { schedulePageView } from "@/services/pageViewService";
 import { HomeScreen } from "@/ui/screens/home/Home";
 
 /** Arriving from a sign-in page (or with no referrer at all) is "just signed in": that is when the member's start page applies. */
@@ -25,7 +25,6 @@ async function justSignedIn(): Promise<boolean> {
  */
 export default async function OrgDashboardPage({ params }: { params: Promise<{ orgSlug: string }> }) {
   const { orgSlug } = await params;
-  const ctx = await resolveRequestContext(orgSlug);
 
   if (await justSignedIn()) {
     const identity = await resolveUserContext();
@@ -34,6 +33,6 @@ export default async function OrgDashboardPage({ params }: { params: Promise<{ o
     if (path) redirect(`/o/${orgSlug}${path}`);
   }
 
-  await recordPageView(ctx, "dashboard");
+  await schedulePageView(orgSlug, "dashboard");
   return <HomeScreen />;
 }
