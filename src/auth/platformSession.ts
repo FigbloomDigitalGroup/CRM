@@ -3,6 +3,7 @@ import { getPlatformDb } from "../db/platformClient";
 import { ForbiddenError, UnauthorizedError } from "./errors";
 import { devAccountsAllowed } from "./devAccounts";
 import { resolveDevPlatformIdentity } from "./platformIdentity";
+import { loadPlatformSettings } from "./platformSettings";
 import { platformPermissionKeysFor, type PlatformPermissionKey } from "./platformPermissions";
 import type { CookieReader } from "./requestContext";
 
@@ -46,8 +47,10 @@ export async function createPlatformSession(
 
   const token = randomBytes(32).toString("base64url");
   const now = Date.now();
-  const absoluteExpiresAt = new Date(now + PLATFORM_ABSOLUTE_HOURS * HOUR_MS);
-  const expiresAt = new Date(Math.min(now + PLATFORM_IDLE_HOURS * HOUR_MS, absoluteExpiresAt.getTime()));
+  // B6.08: the limits are platform security settings (defaults: 4 h idle, 12 h absolute).
+  const settings = await loadPlatformSettings(db);
+  const absoluteExpiresAt = new Date(now + settings.absoluteHours * HOUR_MS);
+  const expiresAt = new Date(Math.min(now + settings.idleHours * HOUR_MS, absoluteExpiresAt.getTime()));
 
   const row = await db.platformSession.create({
     data: {
@@ -57,6 +60,8 @@ export async function createPlatformSession(
       absoluteExpiresAt,
       userAgent: client.userAgent ?? undefined,
       ipAddress: client.ipAddress ?? undefined,
+      // A session only exists after the password and the second step, so it starts verified.
+      verifiedAt: new Date(now),
     },
   });
   await db.platformIdentity.update({ where: { id: platformIdentityId }, data: { lastSignInAt: new Date(now) } });
@@ -64,7 +69,7 @@ export async function createPlatformSession(
 }
 
 export type PlatformSessionLookup =
-  | { state: "active"; sessionId: string; identity: { id: string; email: string; name: string; status: string } }
+  | { state: "active"; sessionId: string; verifiedAt: Date | null; identity: { id: string; email: string; name: string; status: string } }
   | { state: "expired" | "revoked" | "unknown" };
 
 /** Resolves a platform session token. Anything not active gives no identity. Touches `lastSeenAt` and slides the idle expiry, never past the absolute limit. */
@@ -81,14 +86,15 @@ export async function lookupPlatformSession(token: string | undefined | null): P
   if (session.revokedAt || session.identity.status !== "ACTIVE") return { state: "revoked" };
   if (session.expiresAt.getTime() <= now || session.absoluteExpiresAt.getTime() <= now) return { state: "expired" };
 
+  const idleHours = (await loadPlatformSettings(db)).idleHours;
   await db.platformSession.update({
     where: { id: session.id },
     data: {
       lastSeenAt: new Date(now),
-      expiresAt: new Date(Math.min(now + PLATFORM_IDLE_HOURS * HOUR_MS, session.absoluteExpiresAt.getTime())),
+      expiresAt: new Date(Math.min(now + idleHours * HOUR_MS, session.absoluteExpiresAt.getTime())),
     },
   });
-  return { state: "active", sessionId: session.id, identity: session.identity };
+  return { state: "active", sessionId: session.id, verifiedAt: session.verifiedAt, identity: session.identity };
 }
 
 export async function revokePlatformSession(token: string, reason: PlatformRevokedReason = "SIGNED_OUT"): Promise<void> {
@@ -114,6 +120,10 @@ export interface PlatformContext {
   name: string;
   permissions: ReadonlySet<PlatformPermissionKey>;
   source: "session" | "dev";
+  /** The platform session behind the request; null for the dev Super Admin. */
+  sessionId: string | null;
+  /** When the session last proved the admin with a code (B6.08); null for the dev Super Admin, who has no second step. */
+  verifiedAt: Date | null;
 }
 
 /**
@@ -136,6 +146,8 @@ export async function resolvePlatformContext(
         name: found.identity.name,
         permissions: new Set(platformPermissionKeysFor(found.identity.status)),
         source: "session",
+        sessionId: found.sessionId,
+        verifiedAt: found.verifiedAt,
       };
     }
     return null;
@@ -150,6 +162,8 @@ export async function resolvePlatformContext(
         name: dev.name,
         permissions: new Set(platformPermissionKeysFor(dev.status)),
         source: "dev",
+        sessionId: null,
+        verifiedAt: null,
       };
     }
   }

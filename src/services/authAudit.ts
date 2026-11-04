@@ -9,7 +9,17 @@ export type AuthAuditAction =
   | "auth.unlocked"
   | "auth.session_revoked"
   | "auth.other_sessions_revoked"
-  | "auth.session_extended";
+  | "auth.session_extended"
+  | "auth.two_step.enabled"
+  | "auth.two_step.disabled"
+  | "auth.two_step.admin_reset"
+  | "auth.two_step.backup_code_used"
+  | "auth.two_step.backup_codes_regenerated"
+  | "auth.two_step.failed"
+  | "auth.two_step.trusted_device_added"
+  | "auth.two_step.trusted_device_revoked"
+  | "auth.two_step.enrolment_forced"
+  | "auth.org_switched";
 
 /**
  * Account-level events belong to every organisation the person is a member of

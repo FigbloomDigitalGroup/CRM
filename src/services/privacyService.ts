@@ -11,12 +11,13 @@ import { getStorageDriver } from "../storage";
 import { updateContact } from "./contactService";
 import { countForExport, EXPORT_FILTER_KEYS, type DataEntity } from "./dataRunService";
 import { eraseContactData } from "./erasureService";
+import { listOrganisationRequests, submitOrganisationRequest } from "./platformDataRequestService";
 import { issueDownloadLinkAuthorised, storeGeneratedFile } from "./fileService";
+import { purgeChatMessages, retentionCutoff } from "./chatPrivacyService";
 import {
   DEFAULT_EXPORT_RIGHTS,
   EXPIRY_RANGE,
   LEGAL_HOLD_KEY,
-  ORG_REQUESTS_KEY,
   RETENTION_KEY,
   RETENTION_TYPES,
   THRESHOLD_RANGE,
@@ -445,33 +446,17 @@ export async function confirmErasure(ctx: AuthContext, id: string, now = new Dat
 // Organisation-level requests (handed to the platform queue, B6.09)
 // ---------------------------------------------------------------------------
 
-interface OrgRequest {
-  id: string;
-  kind: "EXPORT" | "DELETE";
-  status: "SUBMITTED_TO_PLATFORM";
-  note: string | null;
-  requestedByMembershipId: string;
-  submittedAt: string;
-}
-
-async function loadOrganisationRequests(organizationId: string): Promise<OrgRequest[]> {
-  const row = await adminDb.organizationSetting.findUnique({ where: { organizationId_key: { organizationId, key: ORG_REQUESTS_KEY } } });
-  return Array.isArray(row?.value) ? (row!.value as unknown as OrgRequest[]) : [];
+async function loadOrganisationRequests(organizationId: string) {
+  return listOrganisationRequests(organizationId);
 }
 
 /**
- * The organisation asking for all of its data, or to be deleted. The platform team carries these out with two-person approval
- * (B6.09); here the request is recorded, audited and listed so it is not lost, and nothing is exported or deleted by this call.
+ * The organisation asking for all of its data, or to be deleted. Since B6.09 the request lands in the platform's queue
+ * (`platform_data_requests`), where two platform admins approve it; here it is recorded, audited and listed so it is not lost,
+ * and nothing is exported or deleted by this call.
  */
 export async function submitOrganisationDataRequest(ctx: AuthContext, input: { kind: string; note?: string }, now = new Date()) {
-  requirePermission(ctx, PERMISSION);
-  if (input.kind !== "EXPORT" && input.kind !== "DELETE") throw new ValidationError("Choose EXPORT or DELETE.", [{ path: "kind", message: "EXPORT or DELETE." }]);
-  const existing = await loadOrganisationRequests(ctx.organizationId);
-  if (existing.some((r) => r.kind === input.kind)) throw new ValidationError(`A request to ${input.kind === "EXPORT" ? "export" : "delete"} the organisation is already with the platform team.`, [{ path: "kind", message: "Already submitted.", code: "ALREADY_SUBMITTED" }]);
-  const request: OrgRequest = { id: `${now.getTime().toString(36)}${Math.random().toString(36).slice(2, 8)}`, kind: input.kind, status: "SUBMITTED_TO_PLATFORM", note: input.note?.trim().slice(0, 500) || null, requestedByMembershipId: ctx.membershipId, submittedAt: now.toISOString() };
-  await writeSetting(ctx.organizationId, ORG_REQUESTS_KEY, [...existing, request] as unknown as Prisma.InputJsonValue);
-  await recordAuditEvent({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: "organization.data_request_submitted", entityType: "Organization", entityId: ctx.organizationId, metadata: { kind: input.kind, requestId: request.id } });
-  return request;
+  return submitOrganisationRequest(ctx, input, now);
 }
 
 export async function listOrganisationDataRequests(ctx: AuthContext) {
@@ -518,6 +503,9 @@ export async function runRetentionSweep(organizationId: string, now = new Date()
   }
   if (retention.automationRuns) {
     purged.automationRuns = (await adminDb.automationRun.deleteMany({ where: { organizationId, createdAt: { lt: daysAgo(now, retention.automationRuns) } } })).count;
+  }
+  if (retention.chatMessages) {
+    purged.chatMessages = await purgeChatMessages(organizationId, retentionCutoff(now, retention.chatMessages));
   }
   if (retention.archivedLeads) {
     purged.archivedLeads = (await adminDb.lead.deleteMany({ where: { organizationId, archivedAt: { lt: monthsAgo(now, retention.archivedLeads) } } })).count;

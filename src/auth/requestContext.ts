@@ -118,6 +118,7 @@ export async function resolveMemberUserContext(
 export async function resolveRequestContext(
   orgSlug: string,
   cookieStoreOverride?: CookieReader,
+  options: { allowOffboarding?: boolean } = {},
 ): Promise<AuthContext> {
   const cookieStore = cookieStoreOverride ?? (await cookies());
   const userId = await resolveUserId(cookieStore);
@@ -132,7 +133,7 @@ export async function resolveRequestContext(
     throw new NotFoundError("Organization", orgSlug);
   }
 
-  const membership = await resolveActiveMembership(userId, organization.id);
+  const membership = await resolveActiveMembership(userId, organization.id, options);
   if (!membership) {
     throw new NoActiveMembershipError(orgSlug);
   }

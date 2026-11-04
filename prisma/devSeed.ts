@@ -10,6 +10,7 @@ import {
   type SampleData,
 } from "./sampleData";
 import { seedRolesAndPermissions } from "./seedReference";
+import { seedDemoChat } from "./devSeedChat";
 
 /**
  * The development and demo seed (FIG-1016, B0.08): two organizations, the
@@ -452,6 +453,7 @@ async function seedOrganization(
     });
     members.set(id, membership.id);
   }
+  await seedDemoChat(organization.id, members, options.now);
 
   const marker = await adminDb.organizationSetting.findUnique({
     where: { organizationId_key: { organizationId: organization.id, key: SEED_MARKER_KEY } },

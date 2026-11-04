@@ -8,6 +8,8 @@ const BoardQuerySchema = z.object({
   ownerMembershipId: z.string().optional(),
   companyId: z.string().optional(),
   includeArchived: z.enum(["true", "false"]).optional(),
+  /** One pipeline (B6.15); the default pipeline when left out. */
+  pipelineId: z.string().optional(),
 });
 
 // Column counts and values for the deals board (FIG-1035, B2.06). Values are left out
@@ -24,6 +26,6 @@ export async function GET(
       ownerMembershipId: query.ownerMembershipId,
       companyId: query.companyId,
       includeArchived: query.includeArchived === "true",
-    });
+    }, query.pipelineId);
   });
 }

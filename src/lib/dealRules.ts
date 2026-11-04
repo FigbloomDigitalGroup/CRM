@@ -62,13 +62,21 @@ export type MoveBlockerCode =
   | "SAME_STAGE"
   | "LOST_REASON_REQUIRED"
   | "LOST_REASON_UNKNOWN"
-  | "REOPEN_NOT_ALLOWED";
+  | "REOPEN_NOT_ALLOWED"
+  | "QUOTE_REQUIRED"
+  | "QUOTE_NOT_APPROVED"
+  | "QUOTE_EXPIRED"
+  | "APPROVAL_REQUIRED"
+  | "REQUIRED_FIELDS_MISSING"
+  | "WRONG_PIPELINE";
 
 export interface MoveBlocker {
   code: MoveBlockerCode;
   message: string;
   /** The request field to fix, when there is one. */
   field?: string;
+  /** For a stage rule that needs deal fields: which ones are missing. */
+  fields?: string[];
 }
 
 export interface StageLike {

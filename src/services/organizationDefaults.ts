@@ -263,3 +263,21 @@ async function seedQualificationQuestions(organizationId: string): Promise<void>
     ),
   );
 }
+
+/**
+ * What `seedOrganizationDefaults` will create, for the platform provisioning
+ * wizard's "defaults preview" (FIG-1136, PL3). Read from the same constants the
+ * seed uses, so the preview can never drift from what a new organisation gets.
+ */
+export function describeOrganizationDefaults() {
+  const names = (rows: { name: string }[]) => rows.map((r) => r.name);
+  return {
+    leadSources: names(LEAD_SOURCES),
+    leadStatuses: names(LEAD_STATUSES),
+    pipelineStages: names(PIPELINE_STAGES),
+    customerLifecycleStates: names(CUSTOMER_LIFECYCLE_STATES),
+    lostReasons: names(LOST_REASONS),
+    services: names(SERVICES),
+    qualificationQuestions: GENERAL_QUESTIONS.length + Object.values(SERVICE_QUESTIONS).reduce((n, q) => n + q.length, 0),
+  };
+}

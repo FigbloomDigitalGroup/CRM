@@ -1,8 +1,9 @@
 import "@/ui/ui.css";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { UnauthorizedError } from "@/auth/errors";
+import { OrganizationUnavailableError, UnauthorizedError } from "@/auth/errors";
 import { resolveRequestContext, resolveUserContext } from "@/auth/requestContext";
+import { unauthenticatedLanding } from "@/auth/twoStep/pending";
 import { getMemberContext } from "@/services/meContextService";
 import { MemberProvider } from "@/ui/data/member";
 import { AppShell } from "@/ui/shell/AppShell";
@@ -43,7 +44,19 @@ export default async function OrgLayout({
     me = await getMemberContext({ userId: identity.userId, session: identity.session, orgSlug });
   } catch (err) {
     if (err instanceof UnauthorizedError) {
-      redirect("/login");
+      // A password-verified sign-in waiting for its second step goes to /two-step (FIG-1134); everyone else to sign-in.
+      redirect(unauthenticatedLanding(await cookies()));
+    }
+    // B6.05: the platform has suspended or is offboarding this organisation. Nothing of the app is served, whatever page was asked for.
+    if (err instanceof OrganizationUnavailableError) {
+      return (
+        <ThemeProvider initialLook={defaultLook()} initialDensity={null}>
+          <NoFlashScript />
+          <ApiProvider>
+            <SuspendedScreen organisation={err.organizationName} />
+          </ApiProvider>
+        </ThemeProvider>
+      );
     }
     return (
       <div className="auth-shell">

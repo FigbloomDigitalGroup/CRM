@@ -14,6 +14,20 @@ import { Client } from "pg";
 
 const APP_ROLE = process.env.APP_DB_ROLE ?? "figbloom_app";
 const PLATFORM_ROLE = process.env.PLATFORM_DB_ROLE ?? "figbloom_platform";
+// FIG-1136 to FIG-1141 (B6.04 to B6.09): platform console objects (migration 20261105100000).
+const PLATFORM_CONSOLE_APPEND_ONLY = [
+  "platform_audit_events",
+  "platform_audit_verifications",
+  "organization_lifecycle_events",
+  "platform_data_request_approvals",
+  "platform_deletion_certificates",
+];
+const PLATFORM_CONSOLE_MUTABLE = ["platform_idempotency_keys", "platform_incidents", "platform_data_requests"];
+const PLATFORM_CONSOLE_VIEWS = ["platform_jobs_health", "platform_email_health", "platform_organization_profile"];
+/** FIG-1134 (B6.02): two-step tables, revoked from the tenant role (`TWO_STEP_TENANT_TABLES` and `TWO_STEP_PLATFORM_TABLES`); the platform ones are granted to the platform role. */
+const TWO_STEP_TENANT_TABLES = ["user_two_step", "user_backup_codes", "user_trusted_devices", "two_step_challenges"];
+/** FIG-1140 (B6.08) adds the invitation and settings tables to the same list. */
+const TWO_STEP_PLATFORM_TABLES = ["platform_two_step", "platform_backup_codes", "platform_two_step_challenges", "platform_admin_invites", "platform_settings"];
 const APP_DBS = (
   process.env.APP_DB_NAMES ?? "figbloom_crm_dev,figbloom_crm_test"
 )
@@ -164,6 +178,16 @@ async function grantRole(): Promise<void> {
     await client.query(
       `REVOKE SELECT, INSERT, UPDATE, DELETE ON "platform_organization_counts" FROM ${ident(APP_ROLE)}`,
     );
+    // FIG-1134 (B6.02): two-step secrets, backup codes and challenges are read
+    // only through the schema-owner connection; the tenant role never sees them.
+    for (const table of TWO_STEP_TENANT_TABLES.concat(TWO_STEP_PLATFORM_TABLES)) {
+      await client.query(`REVOKE ALL ON "${table}" FROM ${ident(APP_ROLE)}`);
+    }
+    // FIG-1136 to FIG-1141 (B6.04 to B6.09): the platform console's own tables
+    // and counts views are the platform role's alone.
+    for (const name of PLATFORM_CONSOLE_APPEND_ONLY.concat(PLATFORM_CONSOLE_MUTABLE, PLATFORM_CONSOLE_VIEWS)) {
+      await client.query(`REVOKE ALL ON "${name}" FROM ${ident(APP_ROLE)}`);
+    }
     await client.query(
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${ident(APP_ROLE)}`,
     );
@@ -189,6 +213,23 @@ async function grantRole(): Promise<void> {
       await client.query(
         `GRANT SELECT ON "platform_organization_counts" TO ${ident(PLATFORM_ROLE)}`,
       );
+      // FIG-1134 (B6.02): the platform admin's own two-step tables.
+      for (const table of TWO_STEP_PLATFORM_TABLES) {
+        await client.query(
+          `GRANT SELECT, INSERT, UPDATE, DELETE ON "${table}" TO ${ident(PLATFORM_ROLE)}`,
+        );
+      }
+      // FIG-1136 to FIG-1141: console tables. Append-only ones (the audit log, the lifecycle trail,
+      // approvals, certificates) get SELECT and INSERT only; triggers also refuse UPDATE and DELETE.
+      for (const table of PLATFORM_CONSOLE_APPEND_ONLY) {
+        await client.query(`GRANT SELECT, INSERT ON "${table}" TO ${ident(PLATFORM_ROLE)}`);
+      }
+      for (const table of PLATFORM_CONSOLE_MUTABLE) {
+        await client.query(`GRANT SELECT, INSERT, UPDATE, DELETE ON "${table}" TO ${ident(PLATFORM_ROLE)}`);
+      }
+      for (const view of PLATFORM_CONSOLE_VIEWS) {
+        await client.query(`GRANT SELECT ON "${view}" TO ${ident(PLATFORM_ROLE)}`);
+      }
       console.log(`Granted "${PLATFORM_ROLE}" its platform tables and the counts view only.`);
     }
     console.log(

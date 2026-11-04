@@ -17,6 +17,7 @@
     "seed:dev": "tsx prisma/seedDev.ts",
     "db:bootstrap-role": "tsx scripts/db-admin.ts bootstrap-role",
     "db:grant-role": "tsx scripts/db-admin.ts grant-role",
+    "platform:bootstrap-admin": "tsx scripts/platform-bootstrap-admin.ts",
     "db:setup": "npm run migrate:deploy && npm run db:bootstrap-role && npm run db:grant-role && npm run seed:dev",
     "notifications:sweep": "tsx scripts/notifications-sweep.ts",
     "jobs:worker": "tsx scripts/jobs-worker.ts",

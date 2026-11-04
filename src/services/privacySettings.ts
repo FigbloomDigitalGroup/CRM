@@ -43,6 +43,7 @@ export const RETENTION_TYPES: readonly RetentionType[] = [
   { key: "exportFiles", label: "Generated export files", unit: "days", default: 30, min: 1, max: 3650, description: "The files made by exports and reports." },
   { key: "syncQueue", label: "Offline sync history", unit: "days", default: 90, min: 7, max: 3650, description: "What each phone sent from its offline queue." },
   { key: "automationRuns", label: "Automation run log", unit: "days", default: 365, min: 30, max: 3650, description: "What each automation rule did." },
+  { key: "chatMessages", label: "Chat messages", unit: "days", default: null, min: 30, max: 3650, description: "Messages in Chat channels and direct messages. Kept until you set a period." },
   { key: "archivedLeads", label: "Archived leads", unit: "months", default: null, min: 12, max: 240, description: "Leads someone archived. Kept until you set a period." },
   { key: "archivedTasks", label: "Archived tasks", unit: "months", default: null, min: 6, max: 240, description: "Tasks someone archived. Kept until you set a period." },
 ];

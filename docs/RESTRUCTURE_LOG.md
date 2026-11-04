@@ -111,3 +111,15 @@ Given added a sidebar dropdown "Communication" (Mail, Chat, Video Conference) an
 ## How to undo this restructure
 
 Linear milestone descriptions keep the original text after "Original text:" and the previous due dates are in the table above. To go back: set the old dates, rename the milestones back using the table above, move FIG-1192 to FIG-1194 back to the V2 milestone, and set the nine V1 QA issues to In Progress again if wanted.
+
+## Platform console backend (M13, 5 Nov 2026): screens still to wire
+
+The backend for the platform console exists (`docs/PLATFORM_CONSOLE_API.md`); these screens still read `src/ui/screens/platform/demo/` and are not wired yet (M14).
+
+| Screen | Issue | Backend now | Screen state |
+|---|---|---|---|
+| Home and health (PL1, PL9) | FIG-1139 | `GET /api/platform/home`, `/health`, `/health/incidents` | demo data; swap the demo module for these |
+| Organisations list, provisioning, detail (PL2 to PL4) | FIG-1136 | `/api/platform/organizations` (+ `slug-check`, `defaults-preview`, `{id}`) | demo data |
+| Suspend, reactivate, offboard (PL5, OS1) | FIG-1137 | `POST /api/platform/organizations/{id}/status`; the suspended screen (OS1) now shows from the real organisation status | platform half demo; OS1 is real |
+| Audit log (PL8) | FIG-1138 | `/api/platform/audit`, `/export`, `/verify` | demo data |
+| Data requests and offboarding (PL6, OS6) | FIG-1141 | `/api/platform/data-requests/*`; org side `/privacy/organisation-requests` (+ `/{id}/download`) | demo data |

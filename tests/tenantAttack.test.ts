@@ -35,7 +35,14 @@ import { bodyHints, walkRoute } from "./helpers/routeWalker";
 import { buildWorld, idFor, type World } from "./helpers/world";
 
 /** Tables where an organisation id column exists but rows are deliberately not tenant-owned, with the reason. */
-const NOT_TENANT_OWNED: Record<string, string> = {};
+const PLATFORM_OWNED =
+  "platform-owned (FIG-1136 to FIG-1141): the organisation id names the subject, not the owner. The tenant role has no privilege on it and its only policy is USING (false); tests/platformIdentityFoundation.test.ts verifies both.";
+const NOT_TENANT_OWNED: Record<string, string> = {
+  platform_audit_events: PLATFORM_OWNED,
+  organization_lifecycle_events: PLATFORM_OWNED,
+  platform_deletion_certificates: PLATFORM_OWNED,
+  platform_data_requests: PLATFORM_OWNED,
+};
 
 async function tenantTables(): Promise<string[]> {
   const rows = await adminDb.$queryRaw<{ table_name: string }[]>`

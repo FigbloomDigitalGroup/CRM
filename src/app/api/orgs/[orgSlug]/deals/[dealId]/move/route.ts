@@ -8,6 +8,8 @@ const MoveSchema = z.strictObject({
   pipelineStageId: z.string({ error: "pipelineStageId is required." }),
   /** Required when moving to Closed Lost. */
   lostReasonId: z.string().nullable().optional(),
+  /** Moving into a stage of another pipeline on purpose (B6.15). */
+  changePipeline: z.boolean().optional(),
   /** Moving to Closed Won: who in Delivery receives the handoff (B2.08). */
   handoff: z
     .strictObject({

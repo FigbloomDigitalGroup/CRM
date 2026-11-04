@@ -1,4 +1,5 @@
 import { MembershipStatus } from "@prisma/client";
+import { OrganizationUnavailableError } from "../auth/errors";
 import { effectivePermissionKeys } from "../auth/permissions";
 import { adminDb } from "../db/adminClient";
 import { loadFeatureConfig } from "../lib/featureConfig";
@@ -75,16 +76,28 @@ export async function removeMembership(
 export async function resolveActiveMembership(
   userId: string,
   organizationId: string,
+  options: { allowOffboarding?: boolean } = {},
 ) {
   const membership = await adminDb.membership.findFirst({
     where: { userId, organizationId, status: MembershipStatus.ACTIVE },
     include: {
       role: { include: { rolePermissions: { include: { permission: true } } } },
+      organization: { select: { status: true, name: true } },
     },
   });
 
   if (!membership) {
     return null;
+  }
+
+  // B6.05: the one choke point for "may this person use this organisation".
+  // Every request context, job-side membership lookup and /me call goes through
+  // here, so a suspended, offboarding or offboarded organisation serves nothing.
+  // Only the data-request routes pass `allowOffboarding`, so Management can still
+  // follow their export while the organisation is leaving.
+  const lock = membership.organization.status;
+  if (lock === "SUSPENDED" || lock === "OFFBOARDED" || (lock === "OFFBOARDING" && !options.allowOffboarding)) {
+    throw new OrganizationUnavailableError(lock, membership.organization.name);
   }
 
   // B1.01/B1.03: the keys a request carries are the role's catalogue keys

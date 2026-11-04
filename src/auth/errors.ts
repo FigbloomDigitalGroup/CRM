@@ -164,3 +164,28 @@ export class ArchivedReadOnlyError extends ValidationError {
     this.name = "ArchivedReadOnlyError";
   }
 }
+
+/** The states in which the platform has taken an organisation out of normal use (B6.05). */
+export type OrganizationLockState = "SUSPENDED" | "OFFBOARDING" | "OFFBOARDED";
+
+/**
+ * Someone with a valid membership asked for an organisation that the platform
+ * has suspended, is offboarding, or has offboarded (B6.05). Maps to 403 with
+ * the `organization` block the suspended screen (OS1) reads. Nothing is served
+ * and nothing runs for the organisation until it is reactivated.
+ */
+export class OrganizationUnavailableError extends Error {
+  constructor(
+    readonly state: OrganizationLockState,
+    readonly organizationName: string,
+  ) {
+    super(
+      state === "SUSPENDED"
+        ? `${organizationName} has been suspended. Contact your organisation's Management or Figbloom Support.`
+        : state === "OFFBOARDING"
+          ? `${organizationName} is being offboarded and can no longer be used.`
+          : `${organizationName} has been offboarded and its data deleted.`,
+    );
+    this.name = "OrganizationUnavailableError";
+  }
+}

@@ -41,6 +41,19 @@ vi.mock("next/headers", () => ({ cookies: async () => holder.jar }));
 
 const PLATFORM_TABLES = ["platform_identities", "platform_sessions"];
 const COUNTS_VIEW = "platform_organization_counts";
+// Objects later issues put in the platform role's hands. B6.04 to B6.09 (console backend): append-only tables get SELECT and INSERT only.
+const CONSOLE_APPEND_ONLY = [
+  "platform_audit_events",
+  "platform_audit_verifications",
+  "organization_lifecycle_events",
+  "platform_data_request_approvals",
+  "platform_deletion_certificates",
+];
+const CONSOLE_MUTABLE = ["platform_idempotency_keys", "platform_incidents", "platform_data_requests"];
+const CONSOLE_VIEWS = ["platform_jobs_health", "platform_email_health", "platform_organization_profile"];
+// B6.02 (two-step sign-in) and B6.08 (platform admins: invitations and settings) tables the platform role owns.
+const TWO_STEP_PLATFORM = ["platform_two_step", "platform_backup_codes", "platform_two_step_challenges", "platform_admin_invites", "platform_settings"];
+const PLATFORM_OWNED = [...PLATFORM_TABLES, ...CONSOLE_APPEND_ONLY, ...CONSOLE_MUTABLE, ...TWO_STEP_PLATFORM];
 
 const created: string[] = [];
 async function makePlatformIdentity(overrides: { status?: string } = {}) {
@@ -104,7 +117,7 @@ describe("the platform database role", () => {
     expect(me).toBe("figbloom_platform");
   });
 
-  it("holds no privilege at all on any table except its own two and the counts view", async () => {
+  it("holds no privilege at all on any table except its own platform tables and the counts views", async () => {
     const rows = await adminDb.$queryRaw<{ name: string; privilege: string }[]>`
       SELECT c.relname AS name, p.privilege
       FROM pg_class c
@@ -115,15 +128,18 @@ describe("the platform database role", () => {
     const granted = new Map<string, string[]>();
     for (const r of rows) granted.set(r.name, [...(granted.get(r.name) ?? []), r.privilege]);
 
-    expect([...granted.keys()].sort()).toEqual([COUNTS_VIEW, ...PLATFORM_TABLES].sort());
+    expect([...granted.keys()].sort()).toEqual([COUNTS_VIEW, ...CONSOLE_VIEWS, ...PLATFORM_OWNED].sort());
     expect(granted.get(COUNTS_VIEW)).toEqual(["SELECT"]);
-    for (const t of PLATFORM_TABLES) expect(granted.get(t)!.sort()).toEqual(["DELETE", "INSERT", "SELECT", "UPDATE"]);
+    for (const v of CONSOLE_VIEWS) expect(granted.get(v)).toEqual(["SELECT"]);
+    for (const t of [...PLATFORM_TABLES, ...CONSOLE_MUTABLE, ...TWO_STEP_PLATFORM]) expect(granted.get(t)!.sort()).toEqual(["DELETE", "INSERT", "SELECT", "UPDATE"]);
+    // The audit log and the other append-only records can be read and added to, never changed or removed.
+    for (const t of CONSOLE_APPEND_ONLY) expect(granted.get(t)!.sort()).toEqual(["INSERT", "SELECT"]);
   });
 
   it("is refused by the database on every tenant table, read and write", async () => {
     const tables = await adminDb.$queryRaw<{ tablename: string }[]>`
       SELECT tablename FROM pg_tables
-      WHERE schemaname = 'public' AND tablename NOT LIKE '\_prisma%' AND tablename <> ALL(${PLATFORM_TABLES})`;
+      WHERE schemaname = 'public' AND tablename NOT LIKE '\_prisma%' AND tablename <> ALL(${PLATFORM_OWNED})`;
     expect(tables.length).toBeGreaterThan(40);
 
     const db = getPlatformDb();
@@ -187,9 +203,13 @@ describe("operational counts (the only window onto tenant data)", () => {
 });
 
 describe("the tenant application role cannot reach the platform", () => {
-  it.each([...PLATFORM_TABLES, COUNTS_VIEW])("is refused outright on %s", async (table) => {
+  it.each([...PLATFORM_OWNED, COUNTS_VIEW])("is refused outright on %s", async (table) => {
     await expect(appDb.$queryRawUnsafe(`SELECT 1 FROM "${table}" LIMIT 1`)).rejects.toThrow(/permission denied/i);
     await expect(appDb.$executeRawUnsafe(`DELETE FROM "${table}"`)).rejects.toThrow(/permission denied/i);
+  });
+
+  it.each(CONSOLE_VIEWS)("is refused outright on the view %s", async (view) => {
+    await expect(appDb.$queryRawUnsafe(`SELECT 1 FROM "${view}" LIMIT 1`)).rejects.toThrow(/permission denied/i);
   });
 
   it("platform tables have RLS on and forced, with a policy for the platform role only", async () => {
@@ -207,7 +227,7 @@ describe("the tenant application role cannot reach the platform", () => {
   it("no tenant table has a policy that names the platform role", async () => {
     const rows = await adminDb.$queryRaw<{ tablename: string }[]>`
       SELECT tablename FROM pg_policies
-      WHERE tablename <> ALL(${PLATFORM_TABLES}) AND 'figbloom_platform' = ANY(roles::text[])`;
+      WHERE tablename <> ALL(${PLATFORM_OWNED}) AND 'figbloom_platform' = ANY(roles::text[])`;
     expect(rows).toEqual([]);
   });
 });
@@ -344,7 +364,9 @@ describe("platform routes", () => {
       path === "me"
         ? await import("../src/app/api/platform/me/route")
         : await import("../src/app/api/platform/organizations/route");
-    return mod.GET() as Promise<Response>;
+    // B6.04 made the list filtered and paged; the newest 100 organisations always include the one this test just made.
+    const url = "http://localhost/api/platform/organizations?pageSize=100&sort=createdAt&direction=desc";
+    return (path === "me" ? (mod as { GET: () => Promise<Response> }).GET() : (mod as { GET: (r: Request) => Promise<Response> }).GET(new Request(url))) as Promise<Response>;
   };
 
   it("answer 404 to a signed-out caller and to a tenant user (Management included)", async () => {
@@ -372,8 +394,8 @@ describe("platform routes", () => {
     const res = await getRoute("organizations");
     expect(res.status).toBe(200);
     const body = await res.json();
-    const mine = body.organizations.find((o: { organizationId: string }) => o.organizationId === org.id);
-    expect(mine).toMatchObject({ slug: org.slug, companyCount: 1 });
+    const mine = body.items.find((o: { id: string }) => o.id === org.id);
+    expect(mine).toMatchObject({ slug: org.slug, counts: { companies: 1 } });
     expect(JSON.stringify(body)).not.toMatch(/Hidden Customer/);
 
     const me = await (await getRoute("me")).json();

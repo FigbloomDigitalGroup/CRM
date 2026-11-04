@@ -30,6 +30,9 @@ import { recordAuditEvent } from "../repositories/auditEvents";
 import { getAccessState, type AccessState } from "./accessStateService";
 import { recordAuthAuditEvent } from "./authAudit";
 import { recordSignInEvent } from "./signInEventService";
+import { signInRequirement } from "./twoStepService";
+import { tenantTwoStep } from "../auth/twoStep/stores";
+import { sendSecurityAlert } from "./securityAlertService";
 import {
   activateMembershipByInviteToken,
   inspectInviteToken,
@@ -214,27 +217,65 @@ export async function signup(
   return { token, expiresAt, userId: user.id, access: await getAccessState(user.id) };
 }
 
-export async function login(
-  email: string,
-  password: string,
-  userAgent?: string | null,
-  ipAddress?: string | null,
-  place?: string | null,
-): Promise<{
+export interface SignedInSession {
   token: string;
   expiresAt: Date;
   userId: string;
   /**
    * The organization to land on, or null if this user has no active
    * membership anywhere. Login itself is organization-agnostic (a user
-   * can hold active memberships in more than one organization), but this
-   * app has no organization-switcher UI yet (FIG-604) -- the oldest
-   * resolvable membership wins rather than presenting a choice.
+   * can hold active memberships in more than one organization): the oldest
+   * resolvable membership wins; the organisation switcher (B6.01) changes it afterwards.
    */
   organizationSlug: string | null;
   /** Whether the account is waiting for access to an organisation (B1.12). */
   access: AccessState;
-}> {
+}
+
+/** FIG-1134 (B6.02): the password was right but a second step is still needed; no session exists yet. */
+export interface TwoStepPending {
+  twoStepRequired: true;
+  /** VERIFY: enter a code. ENROL: the organisation requires two-step and the person has none yet. */
+  purpose: "VERIFY" | "ENROL";
+  challengeToken: string;
+  challengeExpiresAt: Date;
+  userId: string;
+  organizationSlug: string | null;
+  access: AccessState;
+}
+
+/**
+ * The legacy single-step sign-in. Fails closed for an account that needs a
+ * second step: it never returns a session for it. The login route uses
+ * `startSignIn` instead.
+ */
+export async function login(
+  email: string,
+  password: string,
+  userAgent?: string | null,
+  ipAddress?: string | null,
+  place?: string | null,
+): Promise<SignedInSession> {
+  const result = await startSignIn(email, password, userAgent, ipAddress, place);
+  if ("twoStepRequired" in result) {
+    throw new UnauthorizedError("Two-step verification is required to sign in to this account.");
+  }
+  return result;
+}
+
+/**
+ * Password step of sign-in. Returns a session, or (FIG-1134) a pending
+ * two-step challenge when the account has two-step on, or its organisation
+ * requires it. A trusted device skips the code, never the enrolment.
+ */
+export async function startSignIn(
+  email: string,
+  password: string,
+  userAgent?: string | null,
+  ipAddress?: string | null,
+  place?: string | null,
+  trustedDeviceToken?: string | null,
+): Promise<SignedInSession | TwoStepPending> {
   await enforceRateLimit("LOGIN", loginRateLimitRules(ipAddress ?? null, email));
 
   const client = clientOf(userAgent, ipAddress, place);
@@ -334,6 +375,34 @@ export async function login(
     });
   }
 
+  const requirement = await signInRequirement(user.id, trustedDeviceToken);
+  if (requirement !== "NONE") {
+    const { token, expiresAt } = await tenantTwoStep.issueChallenge(user.id, requirement, client);
+    if (requirement === "ENROL") await recordAuthAuditEvent(user.id, "auth.two_step.enrolment_forced");
+    return {
+      twoStepRequired: true,
+      purpose: requirement,
+      challengeToken: token,
+      challengeExpiresAt: expiresAt,
+      userId: user.id,
+      organizationSlug: access.organizations[0]?.slug ?? null,
+      access,
+    };
+  }
+
+  return completeSignIn(user, access, client);
+}
+
+/**
+ * Issues the session and records the sign-in. Called once every required step
+ * is done: straight after the password, or after the second step (FIG-1134).
+ */
+export async function completeSignIn(
+  user: { id: string; email: string },
+  access: AccessState,
+  client: ClientInfo,
+  opts: { secondStep?: "totp" | "backup" | "enrolment" | "trusted_device" } = {},
+): Promise<SignedInSession> {
   const session = await createSession(user.id, { client });
   await recordSignInEvent({
     userId: user.id,
@@ -352,8 +421,12 @@ export async function login(
       deviceLabel: session.deviceLabel,
       client,
     });
+    // An account with two-step on is told about a device it has not signed in from before.
+    if (await tenantTwoStep.isEnabled(user.id)) {
+      await sendSecurityAlert(user.id, "new_device", { device: session.deviceLabel, place: client.place ?? null });
+    }
   }
-  await recordAuthAuditEvent(user.id, "auth.login");
+  await recordAuthAuditEvent(user.id, "auth.login", opts.secondStep ? { secondStep: opts.secondStep } : undefined);
 
   const organizationSlug = access.organizations[0]?.slug ?? null;
   return {

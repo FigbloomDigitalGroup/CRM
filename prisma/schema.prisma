@@ -27,6 +27,12 @@ datasource db {
 enum OrganizationStatus {
   ACTIVE
   INACTIVE
+  /// B6.05: paused by the platform; reversible.
+  SUSPENDED
+  /// B6.05: leaving; only the data-request routes work.
+  OFFBOARDING
+  /// B6.09: data deleted; the row stays as a tombstone.
+  OFFBOARDED
 }
 
 model Organization {
@@ -628,6 +634,10 @@ model PlatformIdentity {
   /// B6.03: ACTIVE or SUSPENDED (a suspended admin cannot sign in).
   status       String   @default("ACTIVE")
   lastSignInAt DateTime? @map("last_sign_in_at")
+  /// B6.08: wrong passwords or codes in a row; `lockedUntil` in the future refuses sign-in.
+  failedSignInCount   Int       @default(0) @map("failed_sign_in_count")
+  lastFailedSignInAt  DateTime? @map("last_failed_sign_in_at")
+  lockedUntil         DateTime? @map("locked_until")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -651,6 +661,8 @@ model PlatformSession {
   revokedReason      String?   @map("revoked_reason")
   userAgent          String?   @map("user_agent")
   ipAddress          String?   @map("ip_address")
+  /// B6.08: when the admin last proved themselves with a code ("verify it's you").
+  verifiedAt         DateTime? @map("verified_at")
 
   identity PlatformIdentity @relation(fields: [platformIdentityId], references: [id], onDelete: Cascade)
 
@@ -984,6 +996,8 @@ model PipelineStage {
   probability      Int?
   /// Days without activity after which an open deal in this stage counts as stalled; null uses the organisation default (FIG-1035).
   stalledAfterDays Int?     @map("stalled_after_days")
+  /// The pipeline this stage belongs to (FIG-1147, B6.15). A database trigger fills it with the default pipeline when a stage is created without one.
+  pipelineId       String?  @map("pipeline_id")
   isWon            Boolean  @default(false) @map("is_won")
   isLost           Boolean  @default(false) @map("is_lost")
   isActive         Boolean  @default(true) @map("is_active")
@@ -1718,6 +1732,12 @@ enum AuthRateLimitAction {
   INVITE_ACCEPT
   PASSWORD_RESET_CONFIRM
   INBOUND_EMAIL
+  TWO_STEP_VERIFY
+  TWO_STEP_ENROL
+  PLATFORM_LOGIN
+  SURVEY_RESPONSE
+  QUOTE_VIEW
+  WEB_FORM
 }
 
 /// Durable, cross-instance rate-limit counter (FIG-784) shared by every
@@ -2553,4 +2573,1030 @@ model PushSubscription {
 
   @@unique([organizationId, membershipId, endpoint], map: "push_subscriptions_org_member_endpoint_key")
   @@map("push_subscriptions")
+}
+
+/// A sales target for one month (FIG-1146, B6.14). `membershipId` null is the team target. Foreign keys and the two
+/// partial unique indexes are hand-written in the migration (no relation fields on purpose, like other composite-FK tables).
+model SalesTarget {
+  id                 String   @id @default(uuid())
+  organizationId     String   @map("organization_id")
+  membershipId       String?  @map("membership_id")
+  /// First day of the month the target is for.
+  periodStart        DateTime @map("period_start") @db.Date
+  amount             Decimal  @db.Decimal(14, 2)
+  currency           String   @default("KES")
+  setByMembershipId  String?  @map("set_by_membership_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@index([organizationId, periodStart])
+  @@map("sales_targets")
+}
+
+/// A connection to a Google or Microsoft account for mail or calendar sync (FIG-1153, B6.21). Tokens are AES-256-GCM
+/// ciphertext only. `membershipId` null is the shared organisation mailbox. FKs and partial unique indexes are
+/// hand-written in the migration.
+model OAuthConnection {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  membershipId    String?   @map("membership_id")
+  kind            String
+  provider        String
+  status          String    @default("CONNECTED")
+  accountEmail    String?   @map("account_email")
+  scopes          String[]  @default([])
+  accessTokenEnc  String?   @map("access_token_enc")
+  refreshTokenEnc String?   @map("refresh_token_enc")
+  tokenExpiresAt  DateTime? @map("token_expires_at")
+  lastRefreshedAt DateTime? @map("last_refreshed_at")
+  connectedAt     DateTime  @default(now()) @map("connected_at")
+  revokedAt       DateTime? @map("revoked_at")
+  lastError       String?   @map("last_error")
+  lastErrorAt     DateTime? @map("last_error_at")
+  lastSyncedAt    DateTime? @map("last_synced_at")
+  syncCursor      String?   @map("sync_cursor")
+  settings        Json      @default("{}")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@index([organizationId, status])
+  @@map("oauth_connections")
+}
+
+/// An authorisation in progress (FIG-1153): the hashed one-time `state` and the encrypted PKCE verifier.
+model OAuthState {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  membershipId    String    @map("membership_id")
+  kind            String
+  provider        String
+  shared          Boolean   @default(false)
+  stateHash       String    @unique @map("state_hash")
+  codeVerifierEnc String    @map("code_verifier_enc")
+  scopes          String[]  @default([])
+  expiresAt       DateTime  @map("expires_at")
+  consumedAt      DateTime? @map("consumed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([organizationId, expiresAt])
+  @@map("oauth_states")
+}
+
+/// A product or service quotes draw from (FIG-1142, B6.10). `cost` is permissioned (`deals.margin`): it is never returned to a
+/// caller without it. Foreign keys, checks and RLS are hand-written in the migration (no relation fields on purpose).
+model CatalogueItem {
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  sku                   String?
+  name                  String
+  description           String?
+  /// PRODUCT or SERVICE.
+  kind                  String   @default("PRODUCT")
+  unit                  String   @default("unit")
+  price                 Decimal  @db.Decimal(14, 2)
+  cost                  Decimal? @db.Decimal(14, 2)
+  currency              String   @default("KES")
+  /// Whether VAT applies to this item (prices are held VAT-inclusive; the flag tells the quote document which lines carry it).
+  taxable               Boolean  @default(true)
+  /// ACTIVE items are offered on new quotes; HIDDEN ones are kept for quotes that already use them.
+  status                String   @default("ACTIVE")
+  createdByMembershipId String?  @map("created_by_membership_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([organizationId, status])
+  @@map("catalogue_items")
+}
+
+// ---------------------------------------------------------------------------
+// FIG-1134 (B6.02): two-step sign-in. Foreign keys to users / platform_identities
+// are declared in SQL only (migration 20261109090000), so the User and
+// PlatformIdentity models stay untouched. No table here has an organisation id.
+// ---------------------------------------------------------------------------
+
+model UserTwoStep {
+  userId          String    @id @map("user_id")
+  /// AES-256-GCM ciphertext of the TOTP seed (src/auth/twoStep/secretBox.ts).
+  secretEncrypted String    @map("secret_encrypted")
+  /// null while enrolment is not yet confirmed with a first code.
+  enabledAt       DateTime? @map("enabled_at")
+  lastUsedStep    Int?      @map("last_used_step")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@map("user_two_step")
+}
+
+model UserBackupCode {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@unique([userId, codeHash])
+  @@map("user_backup_codes")
+}
+
+model UserTrustedDevice {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  tokenHash  String    @unique @map("token_hash")
+  label      String?
+  ipAddress  String?   @map("ip_address")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt DateTime  @default(now()) @map("last_used_at")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  @@index([userId])
+  @@map("user_trusted_devices")
+}
+
+model TwoStepChallenge {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  tokenHash  String    @unique @map("token_hash")
+  /// VERIFY or ENROL.
+  purpose    String
+  expiresAt  DateTime  @map("expires_at")
+  attempts   Int       @default(0)
+  consumedAt DateTime? @map("consumed_at")
+  userAgent  String?   @map("user_agent")
+  ipAddress  String?   @map("ip_address")
+  place      String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("two_step_challenges")
+}
+
+model PlatformTwoStep {
+  platformIdentityId String    @id @map("platform_identity_id")
+  secretEncrypted    String    @map("secret_encrypted")
+  enabledAt          DateTime? @map("enabled_at")
+  lastUsedStep       Int?      @map("last_used_step")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@map("platform_two_step")
+}
+
+model PlatformBackupCode {
+  id                 String    @id @default(uuid())
+  platformIdentityId String    @map("platform_identity_id")
+  codeHash           String    @map("code_hash")
+  usedAt             DateTime? @map("used_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  @@unique([platformIdentityId, codeHash])
+  @@map("platform_backup_codes")
+}
+
+model PlatformTwoStepChallenge {
+  id                 String    @id @default(uuid())
+  platformIdentityId String    @map("platform_identity_id")
+  tokenHash          String    @unique @map("token_hash")
+  purpose            String
+  expiresAt          DateTime  @map("expires_at")
+  attempts           Int       @default(0)
+  consumedAt         DateTime? @map("consumed_at")
+  userAgent          String?   @map("user_agent")
+  ipAddress          String?   @map("ip_address")
+  place              String?
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  @@index([platformIdentityId])
+  @@map("platform_two_step_challenges")
+}
+
+/// Chat (FIG-1382, B6.24). Channels, members, messages, mentions, attachments, reactions, read markers and presence.
+/// No relation fields on purpose: the composite (organization_id, id) foreign keys, the check constraints and the
+/// partial unique indexes are hand-written in the migration. Every table has row-level security.
+model ChatChannel {
+  id                     String    @id @default(uuid())
+  organizationId         String    @map("organization_id")
+  /// PUBLIC, PRIVATE, DIRECT or RECORD.
+  kind                   String
+  name                   String?
+  description            String?
+  /// RECORD channels: DEAL, COMPANY or LEAD, and the record's id.
+  recordType             String?   @map("record_type")
+  recordId               String?   @map("record_id")
+  /// DIRECT channels: the two membership ids, sorted and joined, so a pair has exactly one conversation.
+  directKey              String?   @map("direct_key")
+  /// The last message number in the channel; messages are numbered 1, 2, 3 without gaps (assigned under a row lock).
+  lastSeq                Int       @default(0) @map("last_seq")
+  lastMessageAt          DateTime? @map("last_message_at")
+  archivedAt             DateTime? @map("archived_at")
+  archivedByMembershipId String?   @map("archived_by_membership_id")
+  createdByMembershipId  String?   @map("created_by_membership_id")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  @@map("chat_channels")
+}
+
+model ChatChannelMember {
+  id                  String   @id @default(uuid())
+  organizationId      String   @map("organization_id")
+  channelId           String   @map("channel_id")
+  membershipId        String   @map("membership_id")
+  /// OWNER or MEMBER.
+  role                String   @default("MEMBER")
+  addedByMembershipId String?  @map("added_by_membership_id")
+  joinedAt            DateTime @default(now()) @map("joined_at")
+
+  @@unique([channelId, membershipId], map: "chat_channel_members_channel_membership_key")
+  @@map("chat_channel_members")
+}
+
+model ChatMessage {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  channelId             String    @map("channel_id")
+  seq                   Int
+  authorMembershipId    String?   @map("author_membership_id")
+  body                  String
+  /// A record card: DEAL, COMPANY, LEAD or INVOICE. Only the reference is stored; what it shows is decided per viewer on read.
+  cardType              String?   @map("card_type")
+  cardId                String?   @map("card_id")
+  deletedAt             DateTime? @map("deleted_at")
+  deletedByMembershipId String?   @map("deleted_by_membership_id")
+  /// Set when the body and author were removed by an erasure request.
+  erasedAt              DateTime? @map("erased_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  /// Bumped when the message is deleted, reacted to or erased, so a reconnecting client can fetch what changed.
+  updatedAt             DateTime  @default(now()) @map("updated_at")
+
+  @@unique([channelId, seq], map: "chat_messages_channel_seq_key")
+  @@map("chat_messages")
+}
+
+model ChatMessageMention {
+  id             String @id @default(uuid())
+  organizationId String @map("organization_id")
+  messageId      String @map("message_id")
+  membershipId   String @map("membership_id")
+
+  @@unique([messageId, membershipId], map: "chat_message_mentions_message_membership_key")
+  @@map("chat_message_mentions")
+}
+
+model ChatMessageAttachment {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  messageId      String   @map("message_id")
+  fileId         String   @map("file_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([messageId, fileId], map: "chat_message_attachments_message_file_key")
+  @@map("chat_message_attachments")
+}
+
+model ChatReaction {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  messageId      String   @map("message_id")
+  membershipId   String   @map("membership_id")
+  emoji          String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([messageId, membershipId, emoji], map: "chat_reactions_message_member_emoji_key")
+  @@map("chat_reactions")
+}
+
+model ChatReadMarker {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  channelId      String   @map("channel_id")
+  membershipId   String   @map("membership_id")
+  lastReadSeq    Int      @default(0) @map("last_read_seq")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([channelId, membershipId], map: "chat_read_markers_channel_membership_key")
+  @@map("chat_read_markers")
+}
+
+/// Who is online, with a short expiry (a person is online when `lastSeenAt` is under a minute old), and who is typing where.
+model ChatPresence {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  membershipId    String    @map("membership_id")
+  /// ONLINE or AWAY.
+  status          String    @default("ONLINE")
+  lastSeenAt      DateTime  @map("last_seen_at")
+  typingChannelId String?   @map("typing_channel_id")
+  typingUntil     DateTime? @map("typing_until")
+
+  @@unique([organizationId, membershipId], map: "chat_presence_org_membership_key")
+  @@map("chat_presence")
+}
+
+// ---------------------------------------------------------------------------
+// Platform console backend (B6.04 to B6.09, migration 20261105100000).
+// Platform-owned tables: only the figbloom_platform role (and the schema owner)
+// can reach them. Organisation ids are plain text on purpose: no foreign key,
+// so these records outlive the organisation. The audit log and verification
+// tables are written with raw SQL (`platform_audit_events` is hash-chained by
+// a trigger) and have no model here.
+// ---------------------------------------------------------------------------
+
+/// B6.05: one row per organisation status change, with the reason. Append-only.
+model OrganizationLifecycleEvent {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  fromStatus      String   @map("from_status")
+  toStatus        String   @map("to_status")
+  action          String
+  reason          String
+  actorIdentityId String?  @map("actor_identity_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt], map: "organization_lifecycle_events_org_idx")
+  @@map("organization_lifecycle_events")
+}
+
+/// B6.04: an Idempotency-Key already seen for a platform create.
+model PlatformIdempotencyKey {
+  id              String   @id @default(uuid())
+  actorIdentityId String   @map("actor_identity_id")
+  key             String
+  scope           String
+  requestHash     String   @map("request_hash")
+  response        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([actorIdentityId, scope, key], map: "platform_idempotency_keys_key")
+  @@map("platform_idempotency_keys")
+}
+
+/// B6.07: an incident marker on the health page.
+model PlatformIncident {
+  id                   String    @id @default(uuid())
+  component            String
+  severity             String
+  title                String
+  note                 String?
+  startedAt            DateTime  @default(now()) @map("started_at")
+  resolvedAt           DateTime? @map("resolved_at")
+  createdByIdentityId  String?   @map("created_by_identity_id")
+  resolvedByIdentityId String?   @map("resolved_by_identity_id")
+
+  @@index([startedAt])
+  @@map("platform_incidents")
+}
+
+/// B6.09: an organisation's request to export or delete all of its data.
+model PlatformDataRequest {
+  id                      String    @id @default(uuid())
+  organizationId          String    @map("organization_id")
+  organizationSlug        String    @map("organization_slug")
+  organizationName        String    @map("organization_name")
+  kind                    String
+  status                  String    @default("SUBMITTED")
+  note                    String?
+  requestedByMembershipId String?   @map("requested_by_membership_id")
+  requestedByLabel        String?   @map("requested_by_label")
+  submittedAt             DateTime  @default(now()) @map("submitted_at")
+  approvalsRequired       Int       @map("approvals_required")
+  approvedAt              DateTime? @map("approved_at")
+  retentionDays           Int       @default(30) @map("retention_days")
+  deleteAfter             DateTime? @map("delete_after")
+  exportStatus            String    @default("NONE") @map("export_status")
+  exportStorageKey        String?   @map("export_storage_key")
+  exportFileName          String?   @map("export_file_name")
+  exportSizeBytes         Int?      @map("export_size_bytes")
+  exportChecksumSha256    String?   @map("export_checksum_sha256")
+  exportTableCounts       Json?     @map("export_table_counts")
+  exportReadyAt           DateTime? @map("export_ready_at")
+  exportExpiresAt         DateTime? @map("export_expires_at")
+  exportPurgedAt          DateTime? @map("export_purged_at")
+  exportError             String?   @map("export_error")
+  closedAt                DateTime? @map("closed_at")
+  closedReason            String?   @map("closed_reason")
+  previousOrgStatus       String?   @map("previous_org_status")
+  updatedAt               DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  approvals    PlatformDataRequestApproval[]
+  certificate  PlatformDeletionCertificate?
+
+  @@index([organizationId, submittedAt], map: "platform_data_requests_org_idx")
+  @@index([status, submittedAt], map: "platform_data_requests_status_idx")
+  @@map("platform_data_requests")
+}
+
+/// B6.09: one decision on a data request. Append-only; one per person.
+model PlatformDataRequestApproval {
+  id                 String   @id @default(uuid())
+  requestId          String   @map("request_id")
+  approverIdentityId String   @map("approver_identity_id")
+  approverLabel      String   @map("approver_label")
+  decision           String
+  comment            String?
+  decidedAt          DateTime @default(now()) @map("decided_at")
+
+  request PlatformDataRequest @relation(fields: [requestId], references: [id])
+
+  @@unique([requestId, approverIdentityId], map: "platform_data_request_approvals_once")
+  @@map("platform_data_request_approvals")
+}
+
+/// B6.09: the proof that an organisation's data was deleted. Append-only.
+model PlatformDeletionCertificate {
+  id                 String   @id @default(uuid())
+  requestId          String   @unique @map("request_id")
+  organizationId     String   @map("organization_id")
+  organizationSlug   String   @map("organization_slug")
+  organizationName   String   @map("organization_name")
+  issuedAt           DateTime @default(now()) @map("issued_at")
+  issuedByIdentityId String?  @map("issued_by_identity_id")
+  content            Json
+  contentSha256      String   @map("content_sha256")
+
+  request PlatformDataRequest @relation(fields: [requestId], references: [id])
+
+  @@map("platform_deletion_certificates")
+}
+
+/// A saved filter set on a list page (FIG-1148, B6.16). Personal or shared; sharing never widens what the viewer can see
+/// (the list services still apply the viewer's own role when the view is opened). Foreign keys are hand-written in the migration.
+model SavedView {
+  id                String   @id @default(uuid())
+  organizationId    String   @map("organization_id")
+  ownerMembershipId String   @map("owner_membership_id")
+  entity            String
+  name              String
+  scope             String   @default("PERSONAL")
+  filters           Json     @default("{}")
+  sort              Json?
+  columns           Json?
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([organizationId, entity])
+  @@map("saved_views")
+}
+
+/// One person's pin of a view in their own sidebar, with its position (FIG-1148).
+model SavedViewPin {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  membershipId   String   @map("membership_id")
+  savedViewId    String   @map("saved_view_id")
+  position       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@unique([membershipId, savedViewId])
+  @@index([organizationId, membershipId])
+  @@map("saved_view_pins")
+}
+
+/// The quote on a deal (FIG-1143, B6.11): a number and a run of immutable versions. One quote per deal. Foreign keys,
+/// checks, the immutability triggers and RLS are hand-written in the migration.
+model Quote {
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  dealId                String   @map("deal_id")
+  number                String
+  currency              String   @default("KES")
+  createdByMembershipId String?  @map("created_by_membership_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  versions QuoteVersion[]
+
+  @@map("quotes")
+}
+
+/// One version of a quote. A version is editable while DRAFT; from the moment it is submitted for approval or sent it is
+/// locked, and a database trigger refuses any change to its content (its lines, discount, validity, terms, totals).
+/// Status: DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, SENT, ACCEPTED, DECLINED.
+model QuoteVersion {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  quoteId               String    @map("quote_id")
+  version               Int
+  status                String    @default("DRAFT")
+  discountPercent       Decimal   @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  validUntil            DateTime  @map("valid_until") @db.Date
+  terms                 String?
+  subtotal              Decimal   @default(0) @db.Decimal(14, 2)
+  discountAmount        Decimal   @default(0) @map("discount_amount") @db.Decimal(14, 2)
+  total                 Decimal   @default(0) @db.Decimal(14, 2)
+  /// Null when a line has no cost, so no margin can be worked out.
+  costTotal             Decimal?  @map("cost_total") @db.Decimal(14, 2)
+  currency              String    @default("KES")
+  lockedAt              DateTime? @map("locked_at")
+  submittedAt           DateTime? @map("submitted_at")
+  approvedAt            DateTime? @map("approved_at")
+  decidedByMembershipId String?   @map("decided_by_membership_id")
+  decisionReason        String?   @map("decision_reason")
+  sentAt                DateTime? @map("sent_at")
+  respondedAt           DateTime? @map("responded_at")
+  createdByMembershipId String?   @map("created_by_membership_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  quote Quote       @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  lines QuoteLine[]
+
+  @@map("quote_versions")
+}
+
+/// A line on a quote version. Price and cost are frozen on the line when it is added, so a later catalogue change never alters it.
+model QuoteLine {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  quoteVersionId  String   @map("quote_version_id")
+  position        Int
+  catalogueItemId String?  @map("catalogue_item_id")
+  description     String
+  unit            String   @default("unit")
+  quantity        Decimal  @db.Decimal(12, 2)
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(14, 2)
+  unitCost        Decimal? @map("unit_cost") @db.Decimal(14, 2)
+  taxable         Boolean  @default(true)
+  lineTotal       Decimal  @map("line_total") @db.Decimal(14, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  version QuoteVersion @relation(fields: [quoteVersionId], references: [id], onDelete: Cascade)
+
+  @@map("quote_lines")
+}
+
+/// A draft, an outbox entry or a scheduled send of an email from a connected mailbox (FIG-807). A send claims the row
+/// (status SENDING) before anything leaves, so a repeated request cannot send twice. FKs are hand-written in the migration.
+model MailDraft {
+  id                     String    @id @default(uuid())
+  organizationId         String    @map("organization_id")
+  membershipId           String    @map("membership_id")
+  toAddresses            String[]  @default([]) @map("to_addresses")
+  ccAddresses            String[]  @default([]) @map("cc_addresses")
+  subject                String    @default("")
+  body                   String    @default("")
+  replyToCommunicationId String?   @map("reply_to_communication_id")
+  companyId              String?   @map("company_id")
+  contactId              String?   @map("contact_id")
+  leadId                 String?   @map("lead_id")
+  dealId                 String?   @map("deal_id")
+  attachmentIds          String[]  @default([]) @map("attachment_ids")
+  status                 String    @default("DRAFT")
+  scheduledAt            DateTime? @map("scheduled_at")
+  sentAt                 DateTime? @map("sent_at")
+  communicationId        String?   @map("communication_id")
+  connectionId           String?   @map("connection_id")
+  externalMessageId      String?   @map("external_message_id")
+  lastError              String?   @map("last_error")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@index([organizationId, membershipId, status])
+  @@map("mail_drafts")
+}
+
+/// The pairing of a provider calendar event with a CRM activity or task (FIG-808), so updates and cancellations sync both
+/// ways without duplicates. FKs and partial unique indexes are hand-written in the migration.
+model CalendarEventLink {
+  id              String    @id @default(uuid())
+  organizationId  String    @map("organization_id")
+  connectionId    String    @map("connection_id")
+  membershipId    String?   @map("membership_id")
+  calendarId      String    @map("calendar_id")
+  externalEventId String    @map("external_event_id")
+  externalEtag    String?   @map("external_etag")
+  source          String
+  activityId      String?   @map("activity_id")
+  taskId          String?   @map("task_id")
+  communicationId String?   @map("communication_id")
+  title           String    @default("")
+  startsAt        DateTime? @map("starts_at")
+  endsAt          DateTime? @map("ends_at")
+  joinUrl         String?   @map("join_url")
+  attendees       String[]  @default([])
+  status          String    @default("CONFIRMED")
+  lastSyncedAt    DateTime? @map("last_synced_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([connectionId, externalEventId], map: "calendar_event_links_event_key")
+  @@index([organizationId, activityId])
+  @@map("calendar_event_links")
+}
+
+// FIG-1140 (B6.08): platform admin invitations / recovery links and platform security settings.
+model PlatformAdminInvite {
+  id                 String    @id @default(uuid())
+  /// INVITE (a new admin) or RECOVERY (an existing admin: new password, enrol again).
+  kind               String
+  email              String
+  name               String?
+  platformIdentityId String?   @map("platform_identity_id")
+  tokenHash          String    @unique @map("token_hash")
+  invitedById        String?   @map("invited_by_id")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  expiresAt          DateTime  @map("expires_at")
+  acceptedAt         DateTime? @map("accepted_at")
+  revokedAt          DateTime? @map("revoked_at")
+
+  @@index([email])
+  @@map("platform_admin_invites")
+}
+
+model PlatformSetting {
+  key         String   @id
+  value       Json
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  updatedById String?  @map("updated_by_id")
+
+  @@map("platform_settings")
+}
+
+/// A secure share link for one sent quote version (FIG-1144, B6.12). Only the hash of the token is stored. `documentHtml` is the
+/// exact document that was sent (the client always sees that snapshot, whatever changes afterwards). FKs, checks and RLS are hand-written.
+model QuoteShare {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  quoteVersionId        String    @map("quote_version_id")
+  tokenHash             String    @unique @map("token_hash")
+  recipientEmail        String    @map("recipient_email")
+  expiresAt             DateTime  @map("expires_at")
+  revokedAt             DateTime? @map("revoked_at")
+  documentHtml          String    @map("document_html")
+  documentSha256        String    @map("document_sha256")
+  viewCount             Int       @default(0) @map("view_count")
+  firstViewedAt         DateTime? @map("first_viewed_at")
+  lastViewedAt          DateTime? @map("last_viewed_at")
+  /// When a view last reached the deal timeline (views are batched to one timeline entry per hour).
+  lastTimelineAt        DateTime? @map("last_timeline_at")
+  createdByMembershipId String?   @map("created_by_membership_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  @@index([organizationId, quoteVersionId])
+  @@map("quote_shares")
+}
+
+/// What happened to a sent quote: SENT, VIEWED, LINK_REVOKED, LINK_EXPIRED_VISIT. Append-only in practice.
+model QuoteEvent {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  quoteId        String   @map("quote_id")
+  quoteVersionId String   @map("quote_version_id")
+  shareId        String?  @map("share_id")
+  type           String
+  occurredAt     DateTime @default(now()) @map("occurred_at")
+  userAgent      String?  @map("user_agent")
+
+  @@index([organizationId, quoteVersionId, occurredAt])
+  @@map("quote_events")
+}
+
+/// A web form that creates leads through the public form endpoint (FIG-1151, B6.19). `publicKey` is embedded in the web page, so it
+/// is an address, not a secret; abuse protection is the origin list, honeypot, optional captcha and rate limits. Foreign keys
+/// are hand-written in the migration.
+model WebForm {
+  id                String   @id @default(uuid())
+  organizationId    String   @map("organization_id")
+  name              String
+  publicKey         String   @unique @map("public_key")
+  status            String   @default("DRAFT")
+  fields            Json     @default("[]")
+  leadSourceKey     String?  @map("lead_source_key")
+  successMessage    String   @default("Thank you. We will be in touch.") @map("success_message")
+  allowedOrigins    String[] @default([]) @map("allowed_origins")
+  honeypotFieldName String   @default("website_url") @map("honeypot_field_name")
+  /// Cloudflare Turnstile secret, server side only, never returned.
+  captchaSecret     String?  @map("captcha_secret")
+  createdByMembershipId String? @map("created_by_membership_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([organizationId, status])
+  @@map("web_forms")
+}
+
+/// Every attempt on a form, accepted or rejected (FIG-1151): the rejected-submission log and the duplicate warning for staff.
+model WebFormSubmission {
+  id               String   @id @default(uuid())
+  organizationId   String   @map("organization_id")
+  webFormId        String?  @map("web_form_id")
+  formName         String   @map("form_name")
+  outcome          String
+  reason           String?
+  ipAddress        String?  @map("ip_address")
+  origin           String?
+  leadId           String?  @map("lead_id")
+  duplicateContact Boolean  @default(false) @map("duplicate_contact")
+  duplicateCompany Boolean  @default(false) @map("duplicate_company")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@index([webFormId, createdAt])
+  @@map("web_form_submissions")
+}
+
+/// A request that waits for a person to approve it (FIG-1145, B6.13): a quote discount above the limit, a deal worth more than
+/// the limit being marked won, or a stage rule that needs approval. Export approvals (B4.05) and erasure confirmations (B4.05) keep
+/// their own tables and appear in the same inbox through the approvals service. An APPROVED request for a deal move is a one-use
+/// grant (`consumedAt`, `expiresAt`). Foreign keys, checks and RLS are hand-written in the migration.
+model ApprovalRequest {
+  id                      String    @id @default(uuid())
+  organizationId          String    @map("organization_id")
+  /// DISCOUNT or LARGE_DEAL.
+  kind                    String
+  status                  String    @default("PENDING")
+  subjectType             String    @map("subject_type")
+  subjectId               String    @map("subject_id")
+  dealId                  String?   @map("deal_id")
+  /// What the inbox shows. Never a money amount: those follow the deal value rule and are looked up when needed.
+  title                   String
+  detail                  Json      @default("{}")
+  requestedByMembershipId String?   @map("requested_by_membership_id")
+  requesterNote           String?   @map("requester_note")
+  decidedByMembershipId   String?   @map("decided_by_membership_id")
+  decidedAt               DateTime? @map("decided_at")
+  /// Shown to the requester. Required when the request is rejected.
+  decisionReason          String?   @map("decision_reason")
+  expiresAt               DateTime? @map("expires_at")
+  consumedAt              DateTime? @map("consumed_at")
+  resumedAt               DateTime? @map("resumed_at")
+  resumeError             String?   @map("resume_error")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  @@index([organizationId, status])
+  @@map("approval_requests")
+}
+
+/// One question put to the assistant (FIG-1152, B6.20): the audit trail and the usage count for the daily limits.
+/// FKs are hand-written in the migration.
+model AssistantRequest {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  membershipId   String   @map("membership_id")
+  question       String
+  answer         String?
+  basis          String?
+  status         String
+  error          String?
+  provider       String?
+  model          String?
+  inputTokens    Int?     @map("input_tokens")
+  outputTokens   Int?     @map("output_tokens")
+  contextCounts  Json     @default("{}") @map("context_counts")
+  injectionFlags String[] @default([]) @map("injection_flags")
+  redactions     Int      @default(0)
+  recordKind     String?  @map("record_kind")
+  recordId       String?  @map("record_id")
+  feedback       String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, membershipId, createdAt(sort: Desc)])
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@map("assistant_requests")
+}
+
+/// Something the assistant suggested doing (FIG-1152). Nothing runs until the person confirms.
+model AssistantProposal {
+  id               String    @id @default(uuid())
+  organizationId   String    @map("organization_id")
+  membershipId     String    @map("membership_id")
+  requestId        String    @map("request_id")
+  kind             String
+  payload          Json
+  status           String    @default("PENDING")
+  expiresAt        DateTime  @map("expires_at")
+  decidedAt        DateTime? @map("decided_at")
+  failure          String?
+  resultEntityType String?   @map("result_entity_type")
+  resultEntityId   String?   @map("result_entity_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  @@index([organizationId, membershipId, status])
+  @@index([organizationId, requestId])
+  @@map("assistant_proposals")
+}
+
+/// A timed follow-up sequence (FIG-1150, B6.18): steps that remind a person with a task, or draft or send an approved email template.
+/// A sequence never moves a deal stage, sets a discount or approves anything (CLAUDE.md rule 9). Foreign keys are hand-written in the migration.
+model FollowUpSequence {
+  id                String   @id @default(uuid())
+  organizationId    String   @map("organization_id")
+  name              String
+  description       String?
+  /// LEAD or DEAL: what a person is enrolled on.
+  subjectType       String   @map("subject_type")
+  /// MANUAL, or WEBSITE_LEAD to enrol every new website or web form lead.
+  trigger           String   @default("MANUAL")
+  isActive          Boolean  @default(false) @map("is_active")
+  /// CLOSED (lead converted or lost, deal won or lost) and ARCHIVED end an enrolment.
+  exitRules         String[] @default(["CLOSED", "ARCHIVED"]) @map("exit_rules")
+  createdByMembershipId String? @map("created_by_membership_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([organizationId, isActive])
+  @@map("follow_up_sequences")
+}
+
+model FollowUpStep {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  sequenceId      String   @map("sequence_id")
+  position        Int
+  /// Days after enrolment (Day 0, Day 2, Day 5).
+  dayOffset       Int      @map("day_offset")
+  /// TASK or EMAIL.
+  kind            String
+  title           String
+  description     String?
+  priority        String   @default("MEDIUM")
+  emailTemplateId String?  @map("email_template_id")
+  /// DRAFT puts the rendered email in a task for the owner; SEND sends it and logs it on the timeline.
+  emailMode       String   @default("DRAFT") @map("email_mode")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([sequenceId, position])
+  @@index([organizationId, sequenceId])
+  @@map("follow_up_steps")
+}
+
+model FollowUpEnrollment {
+  id                     String    @id @default(uuid())
+  organizationId         String    @map("organization_id")
+  sequenceId             String    @map("sequence_id")
+  subjectType            String    @map("subject_type")
+  leadId                 String?   @map("lead_id")
+  dealId                 String?   @map("deal_id")
+  /// ACTIVE, PAUSED (a reply, or a person), COMPLETED, EXITED.
+  status                 String    @default("ACTIVE")
+  nextPosition           Int       @default(0) @map("next_position")
+  nextRunAt              DateTime? @map("next_run_at")
+  enrolledByMembershipId String?   @map("enrolled_by_membership_id")
+  enrolledAt             DateTime  @default(now()) @map("enrolled_at")
+  /// The day the step offsets count from: the enrolment, or the resume (which keeps the gaps between the remaining steps).
+  scheduleFrom           DateTime  @default(now()) @map("schedule_from")
+  lastStepAt             DateTime? @map("last_step_at")
+  pausedAt               DateTime? @map("paused_at")
+  pauseReason            String?   @map("pause_reason")
+  endedAt                DateTime? @map("ended_at")
+  endReason              String?   @map("end_reason")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  @@index([organizationId, status, nextRunAt])
+  @@index([organizationId, leadId])
+  @@index([organizationId, dealId])
+  @@map("follow_up_enrollments")
+}
+
+/// The run log: every enrolment, step, pause, resume and exit, one row each. A STEP row is unique per enrolment and position,
+/// which is also how two workers never run the same step twice.
+model FollowUpRun {
+  id                  String   @id @default(uuid())
+  organizationId      String   @map("organization_id")
+  enrollmentId        String   @map("enrollment_id")
+  /// ENROL, STEP, PAUSE, RESUME or EXIT.
+  kind                String
+  position            Int?
+  /// For a STEP: PENDING, DONE, SKIPPED or FAILED.
+  outcome             String?
+  result              String
+  taskId              String?  @map("task_id")
+  communicationId     String?  @map("communication_id")
+  actorMembershipId   String?  @map("actor_membership_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, enrollmentId, createdAt])
+  @@map("follow_up_runs")
+}
+
+/// A sales pipeline (FIG-1147, B6.15): a named, ordered set of stages. One per organisation is the default. FKs, checks and RLS are hand-written.
+model Pipeline {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  key            String
+  name           String
+  isDefault      Boolean  @default(false) @map("is_default")
+  isActive       Boolean  @default(true) @map("is_active")
+  sequence       Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("pipelines")
+}
+
+/// The services a pipeline is used for (a service belongs to at most one pipeline in an organisation).
+model PipelineService {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  pipelineId     String   @map("pipeline_id")
+  serviceId      String   @map("service_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("pipeline_services")
+}
+
+/// A rule on a stage that can block a move into it and say why (FIG-1147): QUOTE_REQUIRED, REQUIRED_FIELDS or APPROVAL_REQUIRED.
+/// Rules block and explain; they never move a deal or approve anything (hard rule 9).
+model StageRule {
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  stageId               String   @map("stage_id")
+  type                  String
+  enabled               Boolean  @default(true)
+  config                Json     @default("{}")
+  createdByMembershipId String?  @map("created_by_membership_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@unique([stageId, type])
+  @@map("stage_rules")
+}
+
+// ---------------------------------------------------------------------------
+// FIG-1155 (B6.23): Customer Support tickets and satisfaction surveys (migration 20261109110000).
+// ---------------------------------------------------------------------------
+
+model Ticket {
+  id                   String    @id @default(uuid())
+  organizationId       String    @map("organization_id")
+  /// Per-organisation running number shown to people ("Ticket #214").
+  number               Int
+  companyId            String    @map("company_id")
+  contactId            String?   @map("contact_id")
+  title                String
+  description          String?
+  /// OPEN, WAITING_ON_CLIENT or RESOLVED.
+  status               String    @default("OPEN")
+  /// HIGH, MEDIUM or LOW.
+  priority             String    @default("MEDIUM")
+  ownerMembershipId    String?   @map("owner_membership_id")
+  openedByMembershipId String?   @map("opened_by_membership_id")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at")
+  resolvedAt           DateTime? @map("resolved_at")
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+  @@index([organizationId, companyId])
+  @@map("tickets")
+}
+
+model TicketMessage {
+  id                 String   @id @default(uuid())
+  organizationId     String   @map("organization_id")
+  ticketId           String   @map("ticket_id")
+  /// CUSTOMER (logged on the customer's behalf), STAFF (a reply the customer sees) or INTERNAL (a note).
+  kind               String
+  authorMembershipId String?  @map("author_membership_id")
+  authorLabel        String?  @map("author_label")
+  body               String
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, ticketId, createdAt])
+  @@map("ticket_messages")
+}
+
+model SatisfactionSurvey {
+  id                 String    @id @default(uuid())
+  organizationId     String    @map("organization_id")
+  companyId          String    @map("company_id")
+  contactId          String?   @map("contact_id")
+  ticketId           String?   @map("ticket_id")
+  tokenHash          String    @unique @map("token_hash")
+  sentToEmail        String    @map("sent_to_email")
+  sentByMembershipId String?   @map("sent_by_membership_id")
+  sentAt             DateTime  @default(now()) @map("sent_at")
+  expiresAt          DateTime  @map("expires_at")
+  respondedAt        DateTime? @map("responded_at")
+  score              Int?
+  comment            String?
+
+  @@index([organizationId, companyId])
+  @@index([organizationId, sentAt])
+  @@map("satisfaction_surveys")
+}
+
+/// A business-card photo and what was read from it (FIG-1154, B6.22). The reading is only a suggestion: a lead exists only
+/// after the person confirmed every field. FKs are hand-written in the migration.
+model CardCapture {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  membershipId   String    @map("membership_id")
+  fileId         String    @unique @map("file_id")
+  status         String    @default("UPLOADING")
+  extractor      String?
+  extracted      Json?
+  unsure         String[]  @default([])
+  extractionNote String?   @map("extraction_note")
+  leadId         String?   @map("lead_id")
+  contactId      String?   @map("contact_id")
+  outcome        String?
+  confirmedAt    DateTime? @map("confirmed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@index([organizationId, membershipId, status])
+  @@map("card_captures")
 }

@@ -1,5 +1,6 @@
 import { Prisma, type BackgroundJob, type BackgroundJobStatus } from "@prisma/client";
 import { adminDb } from "../db/adminClient";
+import { OFFBOARDING_JOB_TYPES } from "../jobs/offboardingJobs";
 import { withOrgContext } from "../db/orgScopedClient";
 
 /**
@@ -119,6 +120,11 @@ export async function claimJob(options: ClaimOptions): Promise<BackgroundJob | n
       WHERE id = (
         SELECT id FROM background_jobs
         WHERE status = 'QUEUED' AND run_at <= now() AND type = ${type} ${byId} ${byOrg}
+          AND organization_id IN (
+            SELECT o.id FROM organizations o
+            WHERE o.status::text NOT IN ('SUSPENDED', 'OFFBOARDED')
+              AND (o.status::text <> 'OFFBOARDING' OR ${type} = ANY(${OFFBOARDING_JOB_TYPES}::text[]))
+          )
         ORDER BY run_at, created_at
         LIMIT 1
         FOR UPDATE SKIP LOCKED

@@ -6,6 +6,7 @@ import {
   ForbiddenError,
   NoActiveMembershipError,
   NotFoundError,
+  OrganizationUnavailableError,
   RateLimitedError,
   ReassignmentRequiredError,
   SessionExpiredError,
@@ -91,6 +92,11 @@ export interface ApiErrorBody {
   reassignment?: ReassignmentChecklistDetail;
   /** On `ARCHIVED_READ_ONLY`: the record and whether the caller may restore it (B2.16). */
   restore?: RestoreHint;
+  /**
+   * On a 403 for a suspended, offboarding or offboarded organisation (B6.05): which state, so the UI shows OS1. The `code` stays
+   * `FORBIDDEN` because the V1 contract's code list is frozen; a dedicated code waits for the next contract version.
+   */
+  organization?: { state: "SUSPENDED" | "OFFBOARDING" | "OFFBOARDED"; name: string };
 }
 
 /** An API error that is neither a typed auth error nor a validation failure (for example a replayed idempotency key). */
@@ -192,6 +198,9 @@ export async function buildErrorResponse(
   if (err instanceof AwaitingAccessError) return make(403, "AWAITING_ACCESS", err.message);
   if (err instanceof ReassignmentRequiredError) {
     return make(409, "REASSIGNMENT_REQUIRED", err.message, { reassignment: err.checklist });
+  }
+  if (err instanceof OrganizationUnavailableError) {
+    return make(403, "FORBIDDEN", err.message, { organization: { state: err.state, name: err.organizationName } });
   }
   if (err instanceof ForbiddenError) {
     let denial: Denial | undefined;
