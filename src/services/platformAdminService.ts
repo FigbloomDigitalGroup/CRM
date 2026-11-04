@@ -221,6 +221,13 @@ export async function removePlatformAdmin(ctx: PlatformContext, targetId: string
 // Invitations and recovery
 // ---------------------------------------------------------------------------
 
+/** The live link is never returned from an API: it goes to the person's email only. Only the operator script gets the URL (see issueOperatorLink). */
+function withoutUrl<T extends { inviteUrl: string }>(link: T): Omit<T, "inviteUrl"> {
+  const rest: Record<string, unknown> = { ...link };
+  delete rest.inviteUrl;
+  return rest as Omit<T, "inviteUrl">;
+}
+
 async function issueLink(ctx: PlatformContext | null, input: { kind: "INVITE" | "RECOVERY"; email: string; name?: string | null; identityId?: string | null }) {
   const db = getPlatformDb();
   const token = newToken();
@@ -254,7 +261,7 @@ export async function invitePlatformAdmin(ctx: PlatformContext, input: { email: 
   }
   const link = await issueLink(ctx, { kind: "INVITE", email, name: input.name.trim() });
   await audit(ctx, "platform.admin_invited", "PlatformAdminInvite", link.id, { email });
-  return link;
+  return withoutUrl(link);
 }
 
 export async function revokePlatformInvite(ctx: PlatformContext, inviteId: string): Promise<{ revoked: true }> {
@@ -274,6 +281,7 @@ export async function resetPlatformAdminTwoStep(ctx: PlatformContext, targetId: 
   const db = getPlatformDb();
   const target = await loadManaged(targetId, db);
   await platformTwoStep().disable(target.id);
+  await db.platformIdentity.update({ where: { id: target.id }, data: { credentialsResetAt: new Date() } });
   await revokePlatformSessionsFor(target.id, "REVOKED");
   await audit(ctx, "platform.admin_two_step_reset", "PlatformIdentity", target.id, { email: target.email });
   await emailSecurityAlert(target.email, "two_step_reset_by_admin");
@@ -286,10 +294,14 @@ export async function issuePlatformRecoveryLink(ctx: PlatformContext, targetId: 
   await requireRecentVerification(ctx);
   refuseSelf(ctx, targetId, "recover");
   const db = getPlatformDb();
+  // Only a different, active, managed admin may issue it. The link itself goes to the target's own mailbox and is never
+  // returned here, so the issuer cannot open it and become the target.
+  const issuer = await db.platformIdentity.findUnique({ where: { id: ctx.identityId } });
+  if (!issuer || issuer.isDev || issuer.status !== "ACTIVE" || issuer.id === targetId) throw new ValidationError("Only another active platform admin can issue a recovery link.");
   const target = await loadManaged(targetId, db);
   const link = await issueLink(ctx, { kind: "RECOVERY", email: target.email, identityId: target.id });
   await audit(ctx, "platform.admin_recovery_issued", "PlatformIdentity", target.id, { email: target.email });
-  return link;
+  return withoutUrl(link);
 }
 
 /** Public: the person opens the emailed link and chooses a password. Creates the identity (INVITE) or resets it (RECOVERY). No session is issued: they sign in next, and enrol. */
@@ -312,7 +324,7 @@ export async function acceptPlatformInvite(token: string, password: string, name
   let identityId: string;
   if (kind === "INVITE") {
     try {
-      const created = await db.platformIdentity.create({ data: { email: invite.email, name: (name ?? invite.name ?? invite.email).trim(), passwordHash, isDev: false } });
+      const created = await db.platformIdentity.create({ data: { email: invite.email, name: (name ?? invite.name ?? invite.email).trim(), passwordHash, isDev: false, credentialsResetAt: new Date() } });
       identityId = created.id;
     } catch {
       throw new ValidationError("That person is already a platform admin.");
@@ -320,7 +332,7 @@ export async function acceptPlatformInvite(token: string, password: string, name
   } else {
     if (!invite.platformIdentityId) throw new ValidationError("This link is invalid.");
     identityId = invite.platformIdentityId;
-    await db.platformIdentity.update({ where: { id: identityId }, data: { passwordHash, failedSignInCount: 0, lockedUntil: null } });
+    await db.platformIdentity.update({ where: { id: identityId }, data: { passwordHash, failedSignInCount: 0, lockedUntil: null, credentialsResetAt: new Date() } });
     await platformTwoStep().disable(identityId);
     await revokePlatformSessionsFor(identityId, "REVOKED");
   }

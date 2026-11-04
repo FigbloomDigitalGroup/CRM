@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
-import { resolveRequestContext } from "@/auth/requestContext";
+import { resolveGatedContext } from "@/app/api/_lib/gatedContext";
 import { deleteDraft, getDraft, updateDraft } from "@/services/mailService";
 
 const UpdateSchema = z.strictObject({
@@ -22,14 +22,14 @@ type P = { params: Promise<{ orgSlug: string; draftId: string }> };
 export async function GET(_request: Request, { params }: P) {
   return handleRoute(async () => {
     const { orgSlug, draftId } = await params;
-    return getDraft(await resolveRequestContext(orgSlug), draftId);
+    return getDraft(await resolveGatedContext(orgSlug, "communication.group"), draftId);
   });
 }
 
 export async function PATCH(request: Request, { params }: P) {
   return handleRoute(async () => {
     const { orgSlug, draftId } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "communication.group");
     return updateDraft(ctx, draftId, await parseJsonBody(request, UpdateSchema));
   });
 }
@@ -37,6 +37,6 @@ export async function PATCH(request: Request, { params }: P) {
 export async function DELETE(_request: Request, { params }: P) {
   return handleRoute(async () => {
     const { orgSlug, draftId } = await params;
-    return deleteDraft(await resolveRequestContext(orgSlug), draftId);
+    return deleteDraft(await resolveGatedContext(orgSlug, "communication.group"), draftId);
   });
 }

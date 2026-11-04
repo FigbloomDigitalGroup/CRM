@@ -2,7 +2,7 @@ import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody, parseQueryParams } from "@/app/api/_lib/validation";
 import { withIdempotency } from "@/lib/idempotency";
-import { resolveRequestContext } from "@/auth/requestContext";
+import { resolveGatedContext } from "@/app/api/_lib/gatedContext";
 import { createDraft, listDrafts } from "@/services/mailService";
 
 const DraftSchema = z.strictObject({
@@ -22,7 +22,7 @@ const DraftSchema = z.strictObject({
 export async function GET(request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "communication.group");
     const query = parseQueryParams(new URL(request.url).searchParams, z.object({ status: z.string().optional() }));
     return listDrafts(ctx, query.status);
   });
@@ -31,7 +31,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgS
 export async function POST(request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "communication.group");
     const body = await parseJsonBody(request, DraftSchema);
     return withIdempotency(ctx, request, body, () => createDraft(ctx, body));
   });

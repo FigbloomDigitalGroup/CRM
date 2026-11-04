@@ -4,6 +4,7 @@ import { deny, hasPermission } from "../auth/context";
 import { NotFoundError, ValidationError } from "../auth/errors";
 import {
   firstForbiddenPart,
+  firstUnknownField,
   isViewEntity,
   MAX_NAME,
   MAX_VIEWS_PER_PERSON,
@@ -96,7 +97,7 @@ function cleanName(name: unknown): string {
   return n;
 }
 
-function checkParts(ctx: AuthContext, input: { filters?: unknown; sort?: unknown; columns?: unknown }) {
+function checkParts(ctx: AuthContext, entity: ViewEntity, input: { filters?: unknown; sort?: unknown; columns?: unknown }) {
   let parts: Partial<ViewParts>;
   try {
     parts = parseViewParts(input);
@@ -107,6 +108,10 @@ function checkParts(ctx: AuthContext, input: { filters?: unknown; sort?: unknown
   const forbidden = firstForbiddenPart(parts, ctx.permissionKeys);
   if (forbidden) {
     throw new ValidationError("This view uses a field your role cannot see.", [{ path: forbidden.path, message: "Remove the field your role cannot see.", code: "FIELD_NOT_VISIBLE" }]);
+  }
+  const unknown = firstUnknownField(entity, parts);
+  if (unknown) {
+    throw new ValidationError(`"${unknown.field.slice(0, 40)}" is not something a ${entity} view can use.`, [{ path: unknown.path, message: "Not available for this list.", code: "FIELD_NOT_ALLOWED" }]);
   }
   return parts;
 }
@@ -144,7 +149,7 @@ export async function createView(
   if (!mayOpenEntity(entity, ctx.permissionKeys)) throw deny(ctx, `${entity} list`, ENTITY_KEYS_HINT[entity]);
   const name = cleanName(input.name);
   const scope = checkScope(ctx, input.scope ?? "PERSONAL");
-  const parts = checkParts(ctx, input);
+  const parts = checkParts(ctx, entity, input);
   if ((await countOwnedViews(ctx.organizationId, ctx.membershipId)) >= MAX_VIEWS_PER_PERSON) {
     throw new ValidationError(`You can keep at most ${MAX_VIEWS_PER_PERSON} saved views.`, [{ path: "name", message: "Delete a view first.", code: "TOO_MANY_VIEWS" }]);
   }
@@ -191,7 +196,7 @@ export async function updateView(
   const newScope = patch.scope !== undefined ? checkScope(ctx, patch.scope) : undefined;
   if (newScope) data.scope = newScope;
   if (patch.filters !== undefined || patch.sort !== undefined || patch.columns !== undefined) {
-    const parts = checkParts(ctx, patch);
+    const parts = checkParts(ctx, row.entity as ViewEntity, patch);
     if (parts.filters !== undefined) data.filters = parts.filters;
     if (parts.sort !== undefined) data.sort = parts.sort ? { ...parts.sort } : Prisma.DbNull;
     if (parts.columns !== undefined) data.columns = parts.columns ?? Prisma.DbNull;

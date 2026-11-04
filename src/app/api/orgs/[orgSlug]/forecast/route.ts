@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseQueryParams } from "@/app/api/_lib/validation";
-import { resolveRequestContext } from "@/auth/requestContext";
+import { resolveGatedContext } from "@/app/api/_lib/gatedContext";
 import { getForecast } from "@/services/forecastService";
 
 const QuerySchema = z.object({
@@ -18,7 +18,7 @@ export async function GET(
 ) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "release.v11");
     const query = parseQueryParams(new URL(request.url).searchParams, QuerySchema);
     return getForecast(ctx, { scope: query.scope, month: query.month, months: query.months });
   });

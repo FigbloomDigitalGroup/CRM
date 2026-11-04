@@ -704,3 +704,46 @@ describe("B6.26 search, audit and the demo seed", () => {
     expect(() => assertDevSeedAllowed({ NODE_ENV: "production", ALLOW_DEV_ACCOUNTS: "true" })).toThrow(/production/);
   });
 });
+
+describe("review fixes: closed record channels, retried notifications and files", () => {
+  it("leaves out of the unread total a record channel whose record the person can no longer open", async () => {
+    const w = await world("ChatUnreadClosed");
+    const deal = await dealFor(w, w.sales, 100000);
+    const ch = await createChannel(w.sales, { kind: "RECORD", record: { type: "DEAL", id: deal.id } });
+    await createChannel(w.management, { kind: "RECORD", record: { type: "DEAL", id: deal.id } });
+    await postMessage(w.management, ch.id, { body: "Please look at this deal" });
+    expect((await getUnreadTotals(w.sales)).unread).toBe(1);
+    await adminDb.deal.update({ where: { id: deal.id }, data: { ownerMembershipId: w.salesB.membershipId } });
+    const after = await getUnreadTotals(w.sales);
+    expect(after.unread).toBe(0);
+    expect(after.channels[ch.id]).toBeUndefined();
+  });
+
+  it("notifies once per person per message even when the job is retried", async () => {
+    const w = await world("ChatNotifyRetry");
+    const general = await createChannel(w.management, { kind: "PUBLIC", name: "retry", memberIds: [w.sales.membershipId] });
+    const message = await postMessage(w.sales, general.id, { body: "Look at this", mentions: [w.management.membershipId] });
+    expect((await deliverChatNotifications(w.org.id, message.id)).notified).toBe(1);
+    expect((await deliverChatNotifications(w.org.id, message.id)).notified).toBe(0);
+    expect(await adminDb.notification.count({ where: { organizationId: w.org.id, membershipId: w.management.membershipId, entityType: "ChatMessage", entityId: message.id } })).toBe(1);
+  });
+
+  it("deletes the stored files of a deleted message and of a deleted channel", async () => {
+    const w = await world("ChatDeleteFiles");
+    const attach = async (messageId: string) => {
+      const file = await adminDb.file.create({ data: { organizationId: w.org.id, ownerMembershipId: w.sales.membershipId, purpose: "ATTACHMENT", name: "a.png", sizeBytes: 10, mimeType: "image/png", storageKey: `orgs/${w.org.id}/chat-test/${messageId}-${Math.random()}`, status: "READY" } });
+      await adminDb.chatMessageAttachment.create({ data: { organizationId: w.org.id, messageId, fileId: file.id } });
+      return file.id;
+    };
+    const ch = await createChannel(w.sales, { kind: "PRIVATE", name: "files", memberIds: [w.salesB.membershipId] });
+    const m1 = await postMessage(w.sales, ch.id, { body: "first" });
+    const f1 = await attach(m1.id);
+    await deleteMessage(w.sales, ch.id, m1.id);
+    expect((await adminDb.file.findUniqueOrThrow({ where: { id: f1 } })).status).toBe("DELETED");
+    const m2 = await postMessage(w.sales, ch.id, { body: "second" });
+    const f2 = await attach(m2.id);
+    await updateChannel(w.sales, ch.id, { archived: true } as never);
+    await deleteChannel(w.sales, ch.id);
+    expect((await adminDb.file.findUniqueOrThrow({ where: { id: f2 } })).status).toBe("DELETED");
+  });
+});

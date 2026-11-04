@@ -53,9 +53,19 @@ export function listQuotes(
       ...(filter.dealId ? { dealId: filter.dealId } : {}),
       ...(filter.dealIds ? { dealId: { in: filter.dealIds } } : {}),
     };
-    const rows = await tx.quote.findMany({ where, include: { versions: { orderBy: { version: "desc" }, take: 1 } }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }] });
-    const filtered = filter.status ? rows.filter((q) => q.versions[0]?.status === filter.status) : rows;
-    return { rows: filtered.slice(paging.skip, paging.skip + paging.take), total: filtered.length };
+    // The status filter is on the latest version of each quote; the database picks those quotes, then pages them.
+    if (filter.status) {
+      const ids = await tx.$queryRaw<{ id: string }[]>`
+        SELECT q.id FROM quotes q JOIN quote_versions v ON v.quote_id = q.id
+        WHERE q.organization_id = ${organizationId} AND v.status::text = ${filter.status}
+          AND v.version = (SELECT max(v2.version) FROM quote_versions v2 WHERE v2.quote_id = q.id)`;
+      where.id = { in: ids.map((r) => r.id) };
+    }
+    const [rows, total] = await Promise.all([
+      tx.quote.findMany({ where, include: { versions: { orderBy: { version: "desc" }, take: 1 } }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }], skip: paging.skip, take: paging.take }),
+      tx.quote.count({ where }),
+    ]);
+    return { rows, total };
   });
 }
 

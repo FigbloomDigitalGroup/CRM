@@ -135,7 +135,8 @@ export class SubmissionRejected extends Error {
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PHONE = /^[0-9+()\-.\s]{5,32}$/;
-const LINK = /(https?:\/\/|www\.)/gi;
+/** A link, however it is written: with a scheme, with www, a bare domain with a known ending, or an email-like address. Each counts once. */
+const LINK = /https?:\/\/\S*|[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+|www\.\S+|(?<![A-Za-z0-9@.-])[A-Za-z0-9-]{2,}(?:\.[A-Za-z0-9-]+)*\.(?:com|net|org|info|biz|io|co|ke|xyz|top|site|online|shop|club|link|click|live|app|dev|me|us|uk|de|ru|cn|in|ly|gl|cc|tk)(?![A-Za-z0-9-])(?:\/\S*)?/gi;
 
 export interface CheckedSubmission {
   values: Record<string, string>;
@@ -173,7 +174,8 @@ export function checkSubmission(fields: readonly FormField[], honeypotFieldName:
   }
   if (issues.length > 0) throw new SubmissionRejected("VALIDATION_FAILED", issues.map((i) => `${i.path}: ${i.message}`).join(" "), issues);
 
-  const links = Object.values(values).reduce((n, v) => n + (v.match(LINK)?.length ?? 0), 0);
+  const emailKeys = new Set(fields.filter((f) => f.type === "email").map((f) => f.key));
+  const links = Object.entries(values).reduce((n, [k, v]) => n + (emailKeys.has(k) ? 0 : (v.match(LINK)?.length ?? 0)), 0);
   if (links > MAX_LINKS) throw new SubmissionRejected("SPAM_CONTENT", `${links} links in one submission (limit ${MAX_LINKS}).`);
 
   const lead: CheckedSubmission["lead"] = { name: "" };

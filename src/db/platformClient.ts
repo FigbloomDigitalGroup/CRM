@@ -8,9 +8,15 @@ import { PrismaClient } from "@prisma/client";
  * What that role can touch is decided by the database, not by this file:
  *   - `platform_identities` and `platform_sessions` (its own tables), and
  *   - the `platform_organization_counts` view (numbers only).
- * It has no privilege on any tenant table, so a bug or injection in platform
- * code cannot read a customer record, a deal value or a payment: Postgres
- * answers "permission denied".
+ * It has no privilege on any tenant table, so a bug or injection in code that
+ * uses THIS client cannot read a customer record, a deal value or a payment:
+ * Postgres answers "permission denied".
+ *
+ * Not everything on a platform route uses this client. The data-request
+ * (export, deletion, decision, cancel), organisation-lifecycle and
+ * organisation-profile services use `adminDb` (the schema owner, which bypasses
+ * RLS) because they must read or change tenant rows. They are listed under
+ * "Owner-connection operations" in docs/PLATFORM_IDENTITY.md.
  *
  * Fail closed: with no PLATFORM_DATABASE_URL the client is not created, and the
  * first use throws. It is never quietly replaced by `adminDb`.

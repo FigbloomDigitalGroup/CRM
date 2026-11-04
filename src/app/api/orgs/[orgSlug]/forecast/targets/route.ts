@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody, parseQueryParams } from "@/app/api/_lib/validation";
-import { resolveRequestContext } from "@/auth/requestContext";
+import { resolveGatedContext } from "@/app/api/_lib/gatedContext";
 import { listMonthTargets, setTarget } from "@/services/forecastService";
 
 const ListQuerySchema = z.object({ month: z.string().optional() });
@@ -20,7 +20,7 @@ export async function GET(
 ) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "release.v11");
     const query = parseQueryParams(new URL(request.url).searchParams, ListQuerySchema);
     return listMonthTargets(ctx, query.month);
   });
@@ -33,7 +33,7 @@ export async function PUT(
 ) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "release.v11");
     const body = await parseJsonBody(request, SetTargetSchema);
     return setTarget(ctx, body);
   });

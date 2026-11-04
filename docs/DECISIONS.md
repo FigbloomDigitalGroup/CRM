@@ -79,3 +79,48 @@ duplicates of decisions above). Numbering follows the checklist.
   B1.03 before they start.
 - Question 23 (logo re-export at #203E2A / #FF9400) is an action for Given
   or the designer.
+
+## 5. M13 decisions taken by Claude on Given's behalf (4 Nov 2026), each reversible
+
+These were taken while building the V1.1 backend so work could continue. Each can be reversed by Given; the code points are named in `docs/M13_CLOSEOUT.md` and the Stage 13 sections of `IMPLEMENTATION_NOTES.md`.
+
+| # | Decision | Status |
+|---|---|---|
+| 1 | Mail and meetings routes sit behind the Communication group toggle (`communication.group`) and the `mail.use` / `meetings.schedule` keys. (Today the routes are behind the toggle; the keys are seeded but not yet read by the services, see the close-out check d.) | Decided, reversible |
+| 2 | A person's own mail and calendar connection routes are an exception to "integrations is Management-only"; only the shared organisation mailbox and revoking other people's connections need `configuration.manage`. | Decided, reversible |
+| 3 | The generated authorization walk stays on a V1 organisation; V1.1 routes are walked per role on a V1.1 organisation by G2.01 (FIG-1156). | Decided, reversible |
+| 4 | The additive contract change is released as 1.1.0; `oldestDaysOverdue` stays nullable. | Decided, reversible |
+| 5 | The AI assistant default model is Sonnet, configurable by `ASSISTANT_MODEL`. (Code and `.env.example` still say `claude-opus-5-5`; to change.) | Decided, reversible |
+| 6 | The shared organisation mailbox is kept, Management only. | Decided, reversible |
+| 7 | Approvals notify by email and the inbox count only; notification types are added in contract 1.1.0 if needed. | Decided, reversible |
+| 8 | A sole Management user's own approval request needs a logged override, never silent self-approval. | Decided, reversible |
+| 9 | A dedicated `ORGANIZATION_SUSPENDED` error code is added in contract 1.1.0 (today the suspended error keeps `FORBIDDEN` with an `organization` block). | Decided, reversible |
+| 10 | The privacy organisation-request download route stays ungated because that workflow is platform-level. | Decided, reversible |
+
+### 5.1 Decisions the build lanes recorded in `IMPLEMENTATION_NOTES.md` ("taken without being asked")
+
+All have the status "Taken by Claude, reversible". Full wording is in the Stage 13 section of the source issue.
+
+| Source issue | Decision (short) |
+|---|---|
+| FIG-1135 (B6.03) | Every platform identity holds every `platform.*` key; platform sessions 4 h idle and 12 h absolute; platform role created NOLOGIN, login set by `db:bootstrap-role` from `PLATFORM_DB_PASSWORD`; platform routes answer 404 to non-platform identities and 403 naming the key to those lacking it. |
+| FIG-1146 (B6.14) | Forecast gated by release V1.1; "mine" needs `deals.view.own`/`deals.edit.own`; default stage probabilities 25/50/75; no per-deal override; monthly targets. |
+| FIG-1148 (B6.16) | Saved view pins are per person; value-like filters stripped for viewers without the key; 50 views per person; gated by V1.1. |
+| FIG-1149 (B6.17) | Ask Figbloom listed only with `ai.use` and `assistant.enabled`; help and release notes are code, not rows; all four routes gated by V1.1. |
+| FIG-1151 (B6.19) | Each web form has its own public key in the address; permission `configuration.manage`; duplicate warning goes to staff only; link-spam rule (more than 2 links); CORS open on public routes. |
+| FIG-1136 (B6.04) | Provisioning through the schema-owner client after the permission check; invite link emailed, never returned; slugs 3 to 40 characters, reserved list, never reused. |
+| FIG-1137 (B6.05) | Error keeps code `FORBIDDEN` plus an `organization` block (see 5.9); offboarding blocks the app except data-request routes; an approved deletion blocks reactivation until cancelled. |
+| FIG-1139 (B6.07) | Health thresholds 15 min (degraded) and 60 min (down); any dead-letter job degrades; "requests" on the home are open data requests. |
+| FIG-1138 (B6.06) | Scheduled audit check is a cron route, not a job; metadata keys that look like values, payments or secrets are refused. |
+| FIG-1141 (B6.09) | EXPORT needs 1 approver, DELETE 2; anyone may reject with a reason; approving DELETE starts offboarding; platform staff never download the export; waiting period only through `PLATFORM_DELETION_WAIT_DAYS` (7 or more). |
+| FIG-1142 to FIG-1145, FIG-1147 (B6.10 to B6.13, B6.15) | Catalogue cost/margin masked without `deals.margin`; one quote per deal; discount 0 to 30 percent on catalogue lines; HTML document instead of PDF; email first, then lock and link; link max 90 days; nobody approves their own request; deletion rule cannot be switched off; no new notification type; cross-pipeline moves need an explicit flag. |
+| FIG-1382 to FIG-1385 (B6.24 to B6.27) | Polling with cursor plus long poll; mentions reuse `MENTION`; record channels re-checked per call; Restricted Technical gets chat but no mail or meetings key; member erasure anonymises by default; retention default is "kept"; conflicts use `VALIDATION_FAILED` (409). |
+| FIG-1150 (B6.18) | A step sends automatically only when Management chose SEND for an active template; default is DRAFT; sequences are off when created; any member with `tasks.create` may enrol. |
+| FIG-1134 (B6.02) | No trusted devices for platform admins; two-step mandatory for platform admins; administrator reset refused across organisations; the login API route changed (not the frozen page). |
+| FIG-1140 (B6.08) | Self-actions refused; hard delete on removal; invite link also returned to the inviting admin; 12-character minimum password. |
+| FIG-1133 (B6.01) | A non-member slug answers 404; two-step policy applies across all organisations; not release-gated. |
+| FIG-1155 (B6.23) | `tickets.manage` minimum lowered from V2 to V1.1; shared support queue; survey only for resolved tickets. The role stays off unless Michael approves it. |
+| FIG-1153 (B6.21) | EMAIL and CALENDAR connections are separate rows; reuse of `communications.create`, `activities.create` and `configuration.manage`; gated by `integrations.enabled`; one fixed callback address. |
+| FIG-807, FIG-808 | Unmatched personal mail is ignored, shared-mailbox mail goes to Needs linking; sending needs a connected mailbox (no SMTP fallback on the mail routes); tasks reach the calendar only with `syncTasks`. |
+| FIG-1152 (B6.20) | One action kind (create a task); limits 15 per person and 500 per organisation per UTC day; default model via `ASSISTANT_MODEL`; the SDK is not in `package.json`; margins, costs and payments never enter the context. |
+| FIG-1154 (B6.22) | Card reading is a suggestion; a lead exists only after `confirmed: true`; HEIC refused; no reader means typing. |

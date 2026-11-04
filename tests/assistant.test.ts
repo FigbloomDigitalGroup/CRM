@@ -64,6 +64,7 @@ describe("the switch, the role and the provider", () => {
     provider.requests = [];
     await expect(ask(sales, org)).rejects.toBeInstanceOf(FeatureUnavailableError);
     await expect(confirmProposal(sales, out.message.action!.proposalId)).rejects.toBeInstanceOf(FeatureUnavailableError);
+    await expect(dismissProposal(sales, out.message.action!.proposalId)).rejects.toBeInstanceOf(FeatureUnavailableError);
     expect(provider.requests).toHaveLength(0);
     expect(await adminDb.task.count({ where: { organizationId: org.id } })).toBe(0);
   });
@@ -386,5 +387,32 @@ describe("row-level security", () => {
       expect(await tx.assistantRequest.count({ where: { organizationId: org.id } })).toBe(1);
       expect(await tx.assistantProposal.count({ where: { organizationId: org.id } })).toBe(1);
     });
+  });
+});
+
+describe("review fixes: concurrency and money forms", () => {
+  it("cannot be pushed past the daily limit by concurrent questions: the question is reserved before the provider is called", async () => {
+    const { org, management, sales } = await setup();
+    await updateAssistantSettings(management, { dailyLimitPerUser: 2 });
+    provider.respond = async () => {
+      await new Promise((r) => setTimeout(r, 150));
+      return reply("Fine.");
+    };
+    const results = await Promise.allSettled(Array.from({ length: 6 }, () => ask(sales, org)));
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(2);
+    expect(results.filter((r) => r.status === "rejected" && r.reason instanceof RateLimitedError)).toHaveLength(4);
+    expect(provider.requests).toHaveLength(2);
+    expect(await adminDb.assistantRequest.count({ where: { organizationId: org.id, status: "RESERVED" } })).toBe(0);
+  });
+
+  it("hides money written in other forms for a role without deal values", () => {
+    const hide = (t: string) => cleanRecordText(t, { redactMoney: true }).text;
+    for (const text of ["budget 5k KES", "KES five million", "Sh 5,000 deposit", "around 5m for it", "ten thousand shillings", "They will pay 2,500,000 in March.", "5000 USD"]) {
+      expect(hide(text), text).toContain("[value hidden]");
+      expect(hide(text), text).not.toMatch(/5k|five million|5,000|5m|ten thousand|2,500,000|5000/i);
+    }
+    expect(hide("Call back on 12 March about the meeting")).toBe("Call back on 12 March about the meeting");
+    const filtered = filterAnswerMoney({ permissionKeys: [] }, "It is about 5m KES or Sh 5,000.", []);
+    expect(filtered.text).not.toMatch(/5m|5,000/);
   });
 });

@@ -50,8 +50,8 @@ export interface AnthropicLikeClient {
   messages: { create(params: Record<string, unknown>): Promise<unknown> };
 }
 
-/** `claude-opus-5-5` unless the deployment chooses another model with `ASSISTANT_MODEL`. */
-export const DEFAULT_ASSISTANT_MODEL = "claude-opus-5-5";
+/** `claude-sonnet-5-5` unless the deployment chooses another model with `ASSISTANT_MODEL`. */
+export const DEFAULT_ASSISTANT_MODEL = "claude-sonnet-5-5";
 
 export function createAnthropicProvider(client: AnthropicLikeClient, model: string = process.env.ASSISTANT_MODEL || DEFAULT_ASSISTANT_MODEL): AssistantProvider {
   return {

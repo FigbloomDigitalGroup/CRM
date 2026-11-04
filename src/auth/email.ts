@@ -45,6 +45,13 @@ export async function deliverOrLog(
   transportOverride?: MailTransport,
 ): Promise<void> {
   if (!transportOverride && !isSmtpConfigured()) {
+    if (process.env.NODE_ENV === "production") {
+      // Never write links or bodies (reset, invite, recovery tokens) to production logs.
+      console.error(
+        `[${logLabel}] No email provider configured -- NOT delivered to ${message.to} (subject: ${message.subject})`,
+      );
+      return;
+    }
     console.log(
       `[${logLabel}] No email provider configured -- would send to ${message.to}:\n${message.text}`,
     );

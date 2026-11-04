@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
-import { resolveRequestContext } from "@/auth/requestContext";
+import { resolveGatedContext } from "@/app/api/_lib/gatedContext";
 import { getAssistantSettings, updateAssistantSettings } from "@/services/assistantService";
 
 const UpdateSchema = z.strictObject({
@@ -18,7 +18,7 @@ const UpdateSchema = z.strictObject({
 export async function GET(_request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    return getAssistantSettings(await resolveRequestContext(orgSlug));
+    return getAssistantSettings(await resolveGatedContext(orgSlug, "release.v11"));
   });
 }
 
@@ -26,7 +26,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ org
 export async function PUT(request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "release.v11");
     return updateAssistantSettings(ctx, await parseJsonBody(request, UpdateSchema));
   });
 }

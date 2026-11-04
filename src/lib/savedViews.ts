@@ -34,6 +34,45 @@ export function mayOpenEntity(entity: ViewEntity, permissionKeys: readonly strin
   return ENTITY_OPEN_KEYS[entity].some((k) => permissionKeys.includes(k));
 }
 
+const COMMON_FILTERS = ["q", "tab", "tagId", "ownerMembershipId", "owner", "includeArchived", "archivedOnly"];
+/** What each list lets a view filter, sort and show: the keys of that list's own endpoint and screen. Anything else is refused. */
+export const VIEW_FIELD_ALLOW: Record<ViewEntity, { filters: readonly string[]; sorts: readonly string[]; columns: readonly string[] }> = {
+  leads: {
+    filters: [...COMMON_FILTERS, "leadStatusId", "leadSourceId", "temperature", "temp", "status", "source"],
+    sorts: ["createdAt", "updatedAt", "temperature", "nextFollowUpAt", "name", "status", "source", "owner"],
+    columns: ["name", "company", "contact", "email", "phone", "status", "temperature", "source", "owner", "next", "nextFollowUpAt", "score", "tags", "service", "createdAt", "updatedAt"],
+  },
+  deals: {
+    filters: [...COMMON_FILTERS, "pipelineStageId", "stage", "outcome", "companyId", "stalled", "closeDatePassed", "valueMin", "valueMax", "marginMin", "marginMax"],
+    sorts: ["createdAt", "updatedAt", "name", "title", "stage", "closeDate", "expectedCloseDate", "company", "owner", "value", "margin"],
+    columns: ["name", "title", "company", "contact", "stage", "owner", "closeDate", "expectedCloseDate", "probability", "tags", "value", "margin", "createdAt", "updatedAt"],
+  },
+  companies: {
+    filters: [...COMMON_FILTERS, "industry", "type", "tier"],
+    sorts: ["createdAt", "updatedAt", "name", "owner", "industry"],
+    columns: ["name", "industry", "type", "tier", "owner", "contacts", "deals", "tags", "createdAt", "updatedAt", "lastContactedAt"],
+  },
+  contacts: {
+    filters: [...COMMON_FILTERS, "companyId", "company"],
+    sorts: ["createdAt", "updatedAt", "name", "company", "owner", "lastContactedAt"],
+    columns: ["name", "company", "email", "phone", "jobTitle", "owner", "tags", "createdAt", "updatedAt", "lastContactedAt"],
+  },
+  tasks: {
+    filters: [...COMMON_FILTERS, "status", "priority", "companyId", "contactId", "leadId", "dealId", "overdueOnly", "assigneeMembershipId", "assignee", "dueFrom", "dueTo"],
+    sorts: ["createdAt", "updatedAt", "dueAt", "title", "priority", "status", "assignee"],
+    columns: ["title", "dueAt", "priority", "status", "assignee", "owner", "linked", "company", "createdAt", "updatedAt"],
+  },
+};
+
+/** The first filter, sort or column name this list does not offer (an unknown name is refused, not passed through). */
+export function firstUnknownField(entity: ViewEntity, parts: Partial<ViewParts>): { path: string; field: string } | null {
+  const allow = VIEW_FIELD_ALLOW[entity];
+  for (const k of Object.keys(parts.filters ?? {})) if (!allow.filters.includes(k)) return { path: `filters.${k}`, field: k };
+  if (parts.sort && !allow.sorts.includes(parts.sort.field)) return { path: "sort", field: parts.sort.field };
+  for (const c of parts.columns ?? []) if (!allow.columns.includes(c)) return { path: "columns", field: c };
+  return null;
+}
+
 /** The permission a filter, sort or column key needs, or null when anyone who can open the list may use it. */
 export function restrictedKeyPermission(key: string): string | null {
   const k = key.toLowerCase();

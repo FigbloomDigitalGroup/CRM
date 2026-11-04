@@ -17,6 +17,7 @@ import {
   checkFileName,
   extensionOf,
   findAllowedType,
+  sanitiseFileName,
   type FilePolicy,
 } from "../storage/policy";
 import { buildStorageKey } from "../storage/keys";
@@ -147,7 +148,7 @@ function validateDeclared(policy: FilePolicy, input: { name: string; mimeType: s
     issues.push({ path: "checksumSha256", message: "The checksum must be a 64-character hex SHA-256.", code: "FILE_CHECKSUM_INVALID" });
   }
   if (issues.length > 0) throw refused(issues);
-  return nameCheck.name;
+  return sanitiseFileName(nameCheck.name);
 }
 
 export async function createUpload(ctx: AuthContext, input: CreateUploadInput) {

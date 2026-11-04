@@ -1,6 +1,6 @@
 import { adminDb } from "../db/adminClient";
 import { largeDealNeedsApproval } from "../lib/approvalRules";
-import { consumeGrant, findUsableMoveGrant } from "../repositories/approvalRequests";
+import { consumeGrant, findUsableMoveGrant, type GrantSnapshot } from "../repositories/approvalRequests";
 import { listRulesForStage } from "../repositories/pipelines";
 import { loadApprovalRules } from "./approvalRuleService";
 import { isFeatureEnabled } from "./featureService";
@@ -52,12 +52,13 @@ export async function approvalGateBlocker(
   dealId: string,
   to: { id: string; name: string; isWon: boolean },
   now = new Date(),
+  actor?: GrantActor,
 ): Promise<GateBlocker | null> {
   const deal = await adminDb.deal.findFirst({ where: { id: dealId, organizationId }, select: { id: true, value: true, currency: true, outcome: true } });
   if (!deal) return null;
   const reason = await moveApprovalReason(organizationId, deal, to);
   if (!reason) return null;
-  if (await findUsableMoveGrant(organizationId, dealId, to.id, now)) return null;
+  if (await findUsableMoveGrant(organizationId, dealId, to.id, now, snapshotOf(deal), actor)) return null;
   return {
     code: "APPROVAL_REQUIRED",
     message:
@@ -68,7 +69,19 @@ export async function approvalGateBlocker(
 }
 
 /** Spends the approval a move used. Called after the move succeeded; a move that needed none does nothing. */
-export async function consumeMoveGrant(organizationId: string, dealId: string, toStageId: string, now = new Date()): Promise<void> {
-  const grant = await findUsableMoveGrant(organizationId, dealId, toStageId, now);
+export async function consumeMoveGrant(organizationId: string, dealId: string, toStageId: string, now = new Date(), actor?: GrantActor): Promise<void> {
+  // The deal has just moved, but its value and currency are the ones the grant was checked against.
+  const deal = await adminDb.deal.findFirst({ where: { id: dealId, organizationId }, select: { value: true, currency: true } });
+  const grant = await findUsableMoveGrant(organizationId, dealId, toStageId, now, deal ? snapshotOf(deal) : undefined, actor);
   if (grant) await consumeGrant(organizationId, grant.id, now);
+}
+
+/** Who is using a grant: its requester, or anyone who may edit every deal (Management), may spend it. */
+export interface GrantActor {
+  membershipId: string;
+  canEditAll: boolean;
+}
+
+function snapshotOf(deal: { value: unknown; currency: string }): GrantSnapshot {
+  return { value: deal.value === null || deal.value === undefined ? null : Number(deal.value), currency: deal.currency };
 }

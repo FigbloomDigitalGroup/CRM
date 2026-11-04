@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { assertNewDealStageAllowed } from "./dealStageGate";
 import { auditCustomFieldChanges, prepareCustomFields } from "./customFieldService";
 import { assertWritable, cleanArchiveReason } from "../lib/archive";
 import { maskDeal } from "../auth/masking";
@@ -150,6 +151,7 @@ export async function createDeal(
       "A new deal must start in an open pipeline stage.",
     );
   }
+  await assertNewDealStageAllowed(ctx.organizationId, stage);
 
   const custom = await prepareCustomFields(ctx.organizationId, "DEAL", {
     incoming: input.customFields as Record<string, unknown> | undefined,

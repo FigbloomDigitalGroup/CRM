@@ -197,6 +197,21 @@ export interface AskInput {
   record?: { kind: "lead" | "deal" | "company"; id: string } | null;
 }
 
+async function reserveRequest(ctx: AuthContext, config: { dailyLimitPerUser: number; dailyLimitPerOrg: number }, data: Record<string, unknown>) {
+  const since = startOfDay();
+  return adminDb.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"assistant-reserve:" + ctx.organizationId}))`;
+    const [mine, org] = await Promise.all([
+      tx.assistantRequest.count({ where: { organizationId: ctx.organizationId, membershipId: ctx.membershipId, createdAt: { gte: since } } }),
+      tx.assistantRequest.count({ where: { organizationId: ctx.organizationId, createdAt: { gte: since } } }),
+    ]);
+    if (mine >= config.dailyLimitPerUser) throw new RateLimitedError(`You have used your ${config.dailyLimitPerUser} questions for today. The limit resets tomorrow.`);
+    if (org >= config.dailyLimitPerOrg) throw new RateLimitedError("Your organisation has reached its daily limit for the assistant. It resets tomorrow.");
+    const row = await tx.assistantRequest.create({ data: data as never });
+    return { id: row.id, mine: mine + 1 };
+  });
+}
+
 export async function askAssistant(ctx: AuthContext, orgSlug: string, input: AskInput) {
   requirePermission(ctx, "ai.use");
   await requireFeature(ctx.organizationId, "assistant.enabled");
@@ -209,10 +224,6 @@ export async function askAssistant(ctx: AuthContext, orgSlug: string, input: Ask
     throw new ValidationError("The assistant is not set up for this deployment yet.", [{ path: "provider", message: "Ask whoever runs Figbloom to configure it.", code: "ASSISTANT_NOT_CONFIGURED" }]);
   }
   const config = await loadConfig(ctx.organizationId);
-  const usage = await usageToday(ctx.organizationId, ctx.membershipId);
-  if (usage.mine >= config.dailyLimitPerUser) throw new RateLimitedError(`You have used your ${config.dailyLimitPerUser} questions for today. The limit resets tomorrow.`);
-  if (usage.org >= config.dailyLimitPerOrg) throw new RateLimitedError("Your organisation has reached its daily limit for the assistant. It resets tomorrow.");
-
   const context = await buildAssistantContext(ctx, { orgSlug, focus: input.record ?? null });
   const basis = basisFor(ctx, context);
   const base = {
@@ -227,6 +238,8 @@ export async function askAssistant(ctx: AuthContext, orgSlug: string, input: Ask
     recordId: context.focus?.id ?? null,
   };
 
+  // Reserve the question before the provider call: the check and the insert happen under one lock, so concurrent requests cannot all pass the limit.
+  const reserved = await reserveRequest(ctx, config, { ...base, status: "RESERVED" });
   let response;
   try {
     response = await provider.complete({
@@ -237,7 +250,8 @@ export async function askAssistant(ctx: AuthContext, orgSlug: string, input: Ask
     });
   } catch {
     // Nothing from the provider's error is passed on: it may echo the request.
-    const failed = await adminDb.assistantRequest.create({ data: { ...base, status: "ERROR", error: "The provider did not answer." } });
+    // The reservation stays counted as a failed attempt (a deliberate rule: a failing provider cannot be hammered past the limit).
+    const failed = await adminDb.assistantRequest.update({ where: { id: reserved.id }, data: { status: "ERROR", error: "The provider did not answer." } });
     await recordAuditEvent({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: "assistant.asked", entityType: "AssistantRequest", entityId: failed.id, metadata: { status: "ERROR" } });
     throw new ValidationError("The assistant could not answer just now. Try again in a moment.", [{ path: "provider", message: "Try again.", code: "ASSISTANT_UNAVAILABLE" }]);
   }
@@ -267,9 +281,9 @@ export async function askAssistant(ctx: AuthContext, orgSlug: string, input: Ask
     }
   }
 
-  const request = await adminDb.assistantRequest.create({
+  const request = await adminDb.assistantRequest.update({
+    where: { id: reserved.id },
     data: {
-      ...base,
       answer: text.slice(0, MAX_ANSWER),
       status: "ANSWERED",
       model: response.model,
@@ -316,7 +330,7 @@ export async function askAssistant(ctx: AuthContext, orgSlug: string, input: Ask
   return {
     requestId: request.id,
     message: { who: "ai" as const, text, basis, ...(items ? { items } : {}), ...(draft ? { draft } : {}), ...(action ? { action, actionState: "pending" as const } : {}) },
-    usage: { today: usage.mine + 1, limit: config.dailyLimitPerUser },
+    usage: { today: reserved.mine, limit: config.dailyLimitPerUser },
   };
 }
 
@@ -354,6 +368,7 @@ export async function confirmProposal(ctx: AuthContext, proposalId: string) {
 }
 
 export async function dismissProposal(ctx: AuthContext, proposalId: string) {
+  await requireFeature(ctx.organizationId, "assistant.enabled");
   const proposal = await loadOwnProposal(ctx, proposalId);
   if (proposal.status !== "PENDING") return { status: proposal.status };
   const done = await adminDb.assistantProposal.updateMany({ where: { id: proposal.id, status: "PENDING" }, data: { status: "DISMISSED", decidedAt: new Date() } });

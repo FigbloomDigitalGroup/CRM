@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
-import { resolveRequestContext } from "@/auth/requestContext";
+import { resolveGatedContext } from "@/app/api/_lib/gatedContext";
 import { startConnection } from "@/services/oauthConnectionService";
 
 const StartSchema = z.strictObject({
@@ -16,7 +16,7 @@ const StartSchema = z.strictObject({
 export async function POST(request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "release.v11");
     return startConnection(ctx, await parseJsonBody(request, StartSchema));
   });
 }

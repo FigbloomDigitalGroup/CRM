@@ -222,3 +222,17 @@ describe("saved views: release gate and tenant isolation", () => {
     expect(await getView(a.salesA, v.id)).toMatchObject({ id: v.id });
   });
 });
+
+describe("review fixes: only fields the list offers", () => {
+  it("rejects an unknown filter, sort or column name with a validation error and accepts the list's own", async () => {
+    const w = await world();
+    const bad = await createView(w.salesA, { entity: "leads", name: "Unknown filter", filters: { passwordHash: "x" } }).catch((e) => e);
+    expect(bad).toBeInstanceOf(ValidationError);
+    expect(bad.issues[0]).toMatchObject({ code: "FIELD_NOT_ALLOWED" });
+    await expect(createView(w.salesA, { entity: "leads", name: "Unknown sort", sort: { field: "internalNotes", direction: "asc" } })).rejects.toBeInstanceOf(ValidationError);
+    await expect(createView(w.salesA, { entity: "leads", name: "Unknown column", columns: ["name", "ssn"] })).rejects.toBeInstanceOf(ValidationError);
+    await expect(createView(w.salesA, { entity: "leads", name: "Other list's field", filters: { pipelineStageId: "x" } })).rejects.toBeInstanceOf(ValidationError);
+    const ok = await createView(w.salesA, { entity: "leads", name: "Fine", filters: { temperature: "HOT", leadStatusId: "x" }, sort: { field: "createdAt", direction: "desc" }, columns: ["name", "owner"] });
+    await expect(updateView(w.salesA, ok.id, { filters: { notAField: 1 } })).rejects.toBeInstanceOf(ValidationError);
+  });
+});

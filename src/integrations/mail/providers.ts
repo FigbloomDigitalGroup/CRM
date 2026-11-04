@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { OAuthTransientError, type OAuthProviderKey } from "../oauth/types";
+import { safeMimeType, sanitiseFileName } from "../../storage/policy";
 import type { MailProviderClient, OutgoingMail, ProviderMail } from "./types";
 
 /**
@@ -41,9 +42,11 @@ function gmailText(part: GmailPart | undefined): string {
 
 function mimeFor(mail: OutgoingMail, messageId: string): string {
   const boundary = `fb-${randomUUID()}`;
+  // eslint-disable-next-line no-control-regex
+  const line = (v: string) => v.replace(/[\r\n\u0000-\u001f\u007f]+/g, " ").trim();
   const head = [
-    `To: ${mail.to.join(", ")}`,
-    ...(mail.cc.length ? [`Cc: ${mail.cc.join(", ")}`] : []),
+    `To: ${mail.to.map(line).join(", ")}`,
+    ...(mail.cc.length ? [`Cc: ${mail.cc.map(line).join(", ")}`] : []),
     `Subject: =?UTF-8?B?${Buffer.from(mail.subject).toString("base64")}?=`,
     `Message-ID: ${messageId}`,
     ...(mail.inReplyTo?.internetMessageId ? [`In-Reply-To: ${mail.inReplyTo.internetMessageId}`, `References: ${mail.inReplyTo.internetMessageId}`] : []),
@@ -53,7 +56,11 @@ function mimeFor(mail: OutgoingMail, messageId: string): string {
   if (mail.attachments.length === 0) return [...head, ...text].join("\r\n");
   const parts = [`--${boundary}`, ...text];
   for (const a of mail.attachments) {
-    parts.push(`--${boundary}`, `Content-Type: ${a.mimeType}; name="${a.name.replace(/"/g, "")}"`, "Content-Transfer-Encoding: base64", `Content-Disposition: attachment; filename="${a.name.replace(/"/g, "")}"`, "", a.content.toString("base64"));
+    const name = sanitiseFileName(a.name);
+    // ASCII fallback plus the RFC 2231/5987 form for the real name, so non-ASCII names survive without raw bytes in the header.
+    const ascii = name.replace(/[^ -~]/g, "_");
+    const encoded = encodeURIComponent(name).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+    parts.push(`--${boundary}`, `Content-Type: ${safeMimeType(a.mimeType)}; name="${ascii}"; name*=UTF-8''${encoded}`, "Content-Transfer-Encoding: base64", `Content-Disposition: attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`, "", a.content.toString("base64"));
   }
   parts.push(`--${boundary}--`);
   return [...head, `Content-Type: multipart/mixed; boundary="${boundary}"`, "", ...parts].join("\r\n");

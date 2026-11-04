@@ -26,6 +26,9 @@ import { beginSignInEnrolment, confirmSignInEnrolment, verifySignInCode } from "
 import { resolveActiveMembership } from "../src/repositories/memberships";
 import { createTestMembership, createTestOrganization } from "./helpers/fixtures";
 
+// One trusted proxy in front: the last X-Forwarded-For entry is the client (src/app/api/_lib/clientRequest.ts).
+process.env.TRUSTED_PROXY_HOPS = "1";
+
 /**
  * FIG-1134 (B6.02): two-step sign-in for organisation users. Test secrets are
  * generated per run (never real values); the RFC 6238 vectors are the public
@@ -70,6 +73,15 @@ afterEach(() => {
 });
 afterAll(async () => {
   await adminDb.organization.deleteMany({ where: { id: { in: orgIds } } });
+});
+// These are V1.1 features: the test organisations run on release V1.1 (the V1 refusal is tested in releaseGateV11.test.ts).
+const ORIGINAL_RELEASE = process.env.ACTIVE_RELEASE;
+beforeAll(() => {
+  process.env.ACTIVE_RELEASE = "v1.1";
+});
+afterAll(() => {
+  if (ORIGINAL_RELEASE === undefined) delete process.env.ACTIVE_RELEASE;
+  else process.env.ACTIVE_RELEASE = ORIGINAL_RELEASE;
 });
 beforeAll(() => {
   vi.stubEnv("LOGIN_RATE_LIMIT_MAX_PER_EMAIL", "1000");
@@ -473,5 +485,116 @@ describe("the hand-off from the frozen login page", () => {
     expect(unauthenticatedLanding(jar({ figbloom_two_step_pending: "abc" }))).toBe("/two-step");
     expect(unauthenticatedLanding(jar({}))).toBe("/login");
     expect(unauthenticatedLanding(jar({ figbloom_platform_two_step_pending: "abc" }))).toBe("/login");
+  });
+});
+
+describe("security review fixes", () => {
+  async function invite(orgId: string, email: string) {
+    const mgmt = await (await import("./helpers/fixtures")).createTestContext(orgId, "MANAGEMENT");
+    const membershipService = await import("../src/services/membershipService");
+    let token = "";
+    await membershipService.inviteMember(mgmt, { email, name: "Invitee", roleKey: "SALES" }, (t) => ((token = t), t));
+    return token;
+  }
+
+  it("an invite link does not bypass the invitee's own two-step", async () => {
+    const { user } = await person();
+    await enrol(user.id);
+    const org = await createTestOrganization("InviteTwoStep");
+    orgIds.push(org.id);
+    const token = await invite(org.id, user.email);
+    const before = await adminDb.session.count({ where: { userId: user.id } });
+    const { acceptMembershipInvite } = await import("../src/services/authService");
+    const result = await acceptMembershipInvite(token, undefined, CLIENT.userAgent, ip());
+    expect(result).toMatchObject({ twoStepRequired: true, purpose: "VERIFY", userId: user.id });
+    expect("token" in result).toBe(false);
+    expect(await adminDb.session.count({ where: { userId: user.id } })).toBe(before);
+  });
+
+  it("an invite into an organisation that enforces two-step goes to enrolment, for existing and new users", async () => {
+    const { org, user } = await person("MANAGEMENT");
+    orgIds.push(org.id);
+    await enrol(user.id);
+    await setTwoStepPolicy((await resolveActiveMembership(user.id, org.id))!, true);
+    const { acceptMembershipInvite } = await import("../src/services/authService");
+
+    const fresh = `new.${randomUUID().slice(0, 8)}@example.test`;
+    const tokenNew = await invite(org.id, fresh);
+    const r1 = await acceptMembershipInvite(tokenNew, "a-fine-password-123", CLIENT.userAgent, ip());
+    expect(r1).toMatchObject({ twoStepRequired: true, purpose: "ENROL" });
+    const newUser = await adminDb.user.findUniqueOrThrow({ where: { email: fresh } });
+    expect(await adminDb.session.count({ where: { userId: newUser.id } })).toBe(0);
+
+    const { user: other } = await person();
+    const tokenOld = await invite(org.id, other.email);
+    const r2 = await acceptMembershipInvite(tokenOld, undefined, CLIENT.userAgent, ip());
+    expect(r2).toMatchObject({ twoStepRequired: true, purpose: "ENROL" });
+  });
+
+  it("an invite for a user without two-step or policy still signs in (same shape as before)", async () => {
+    const { user } = await person();
+    const org = await createTestOrganization("InvitePlain");
+    orgIds.push(org.id);
+    const token = await invite(org.id, user.email);
+    const { acceptMembershipInvite } = await import("../src/services/authService");
+    const r = await acceptMembershipInvite(token, undefined, CLIENT.userAgent, ip());
+    expect(r).toMatchObject({ userId: user.id, organizationSlug: org.slug });
+    expect("token" in r).toBe(true);
+  });
+
+  it("the failure counter is not reset by a right password while the second step is owed, and increments atomically", async () => {
+    const { user } = await person();
+    await enrol(user.id);
+    await adminDb.user.update({ where: { id: user.id }, data: { failedSignInCount: 3 } });
+    await pending(user.email);
+    expect((await adminDb.user.findUniqueOrThrow({ where: { id: user.id } })).failedSignInCount).toBe(3);
+
+    const { incrementFailedSignIn } = await import("../src/services/authService");
+    await adminDb.user.update({ where: { id: user.id }, data: { failedSignInCount: 0, lockedUntil: null } });
+    await Promise.all(Array.from({ length: 4 }, () => incrementFailedSignIn(user.id)));
+    expect((await adminDb.user.findUniqueOrThrow({ where: { id: user.id } })).failedSignInCount).toBe(4);
+  });
+
+  it("parallel wrong codes cannot get past the five-attempt cap", async () => {
+    vi.stubEnv("TWO_STEP_RATE_LIMIT_MAX_PER_USER", "1000");
+    vi.stubEnv("TWO_STEP_RATE_LIMIT_MAX_PER_IP", "1000");
+    const { user } = await person();
+    await enrol(user.id);
+    const challenge = await pending(user.email);
+    const results = await Promise.allSettled(
+      Array.from({ length: 12 }, () => verifySignInCode(challenge.challengeToken, "000000", { ipAddress: ip() })),
+    );
+    expect(results.every((r) => r.status === "rejected")).toBe(true);
+    expect((await adminDb.user.findUniqueOrThrow({ where: { id: user.id } })).failedSignInCount).toBeLessThanOrEqual(5);
+  });
+
+  it("a password reset revokes trusted devices", async () => {
+    const { user } = await person();
+    const { trustThisDevice } = await import("../src/services/twoStepService");
+    await trustThisDevice(user.id, { userAgent: CLIENT.userAgent, ipAddress: ip() });
+    expect(await listTrustedDevices(user.id)).toHaveLength(1);
+    const { requestPasswordReset, resetPassword } = await import("../src/services/authService");
+    let token = "";
+    await requestPasswordReset(user.email, (t) => ((token = t), t), ip());
+    await resetPassword(token, "another-new-password-56");
+    expect(await listTrustedDevices(user.id)).toHaveLength(0);
+  });
+
+  it("has row-level security enabled and forced on the tenant two-step tables, and figbloom_app sees no row even when re-granted", async () => {
+    const { appDb } = await import("../src/db/orgScopedClient");
+    const tables = ["user_two_step", "user_backup_codes", "user_trusted_devices", "two_step_challenges"];
+    const rows = await adminDb.$queryRaw<{ relname: string; relrowsecurity: boolean; relforcerowsecurity: boolean }[]>`
+      SELECT relname, relrowsecurity, relforcerowsecurity FROM pg_class WHERE relname = ANY(${tables}) AND relkind = 'r'`;
+    expect(rows).toHaveLength(4);
+    for (const r of rows) expect([r.relname, r.relrowsecurity, r.relforcerowsecurity]).toEqual([r.relname, true, true]);
+    await adminDb.$executeRawUnsafe(`GRANT SELECT ON "user_two_step" TO figbloom_app`);
+    try {
+      const { user } = await person();
+      await enrol(user.id);
+      const seen = await appDb.$queryRawUnsafe<unknown[]>(`SELECT 1 FROM "user_two_step"`);
+      expect(seen).toHaveLength(0);
+    } finally {
+      await adminDb.$executeRawUnsafe(`REVOKE ALL ON "user_two_step" FROM figbloom_app`);
+    }
   });
 });

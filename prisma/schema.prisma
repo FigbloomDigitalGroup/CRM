@@ -638,6 +638,8 @@ model PlatformIdentity {
   failedSignInCount   Int       @default(0) @map("failed_sign_in_count")
   lastFailedSignInAt  DateTime? @map("last_failed_sign_in_at")
   lockedUntil         DateTime? @map("locked_until")
+  /// Last reset or recovery of the password or second step; a DELETE approval needs this to be older than 24 hours.
+  credentialsResetAt  DateTime? @map("credentials_reset_at")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -1196,6 +1198,8 @@ model Contact {
   mergedIntoId           String?   @map("merged_into_id")
   /// Set by quick-log (FIG-1054) when a call or WhatsApp message to this person was logged.
   lastContactedAt        DateTime? @map("last_contacted_at")
+  /// When true, sequences never send or draft email to this person.
+  doNotContact           Boolean   @default(false) @map("do_not_contact")
   createdAt              DateTime  @default(now()) @map("created_at")
   updatedAt              DateTime  @updatedAt @map("updated_at")
 
@@ -1738,6 +1742,7 @@ enum AuthRateLimitAction {
   SURVEY_RESPONSE
   QUOTE_VIEW
   WEB_FORM
+  ASSISTANT_ASK
 }
 
 /// Durable, cross-instance rate-limit counter (FIG-784) shared by every
@@ -2976,6 +2981,8 @@ model PlatformDataRequest {
   closedAt                DateTime? @map("closed_at")
   closedReason            String?   @map("closed_reason")
   previousOrgStatus       String?   @map("previous_org_status")
+  /// Set before stored files are removed; after this the request cannot be cancelled and the deletion can be resumed.
+  deletionStartedAt       DateTime? @map("deletion_started_at")
   updatedAt               DateTime  @default(now()) @updatedAt @map("updated_at")
 
   approvals    PlatformDataRequestApproval[]
@@ -3318,6 +3325,9 @@ model ApprovalRequest {
   /// Shown to the requester. Required when the request is rejected.
   decisionReason          String?   @map("decision_reason")
   expiresAt               DateTime? @map("expires_at")
+  /// A deal-move grant is bound to the deal's value and currency at the time it was asked for (null on older rows: never usable).
+  grantValue              Decimal?  @map("grant_value") @db.Decimal(14, 2)
+  grantCurrency           String?   @map("grant_currency")
   consumedAt              DateTime? @map("consumed_at")
   resumedAt               DateTime? @map("resumed_at")
   resumeError             String?   @map("resume_error")

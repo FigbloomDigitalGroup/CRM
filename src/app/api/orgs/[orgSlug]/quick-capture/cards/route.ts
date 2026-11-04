@@ -2,7 +2,7 @@ import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
 import { withIdempotency } from "@/lib/idempotency";
-import { resolveRequestContext } from "@/auth/requestContext";
+import { resolveGatedContext } from "@/app/api/_lib/gatedContext";
 import { startCardCapture } from "@/services/cardCaptureService";
 
 const StartSchema = z.strictObject({
@@ -16,7 +16,7 @@ const StartSchema = z.strictObject({
 export async function POST(request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "release.v11");
     const body = await parseJsonBody(request, StartSchema);
     return withIdempotency(ctx, request, body, () => startCardCapture(ctx, body));
   });

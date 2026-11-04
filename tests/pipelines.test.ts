@@ -201,7 +201,8 @@ describe("pipelines: stage rules block a move with a reason (FIG-1147)", () => {
     const { quote } = await createQuote(w.sales, w.deal.id, { lines: [{ catalogueItemId: w.camera.id, quantity: 1 }] });
     expect((await checkDealMove(w.sales, w.deal.id, { pipelineStageId: proposal.id })).blockers.map((b) => b.code)).toEqual(["QUOTE_NOT_APPROVED"]);
     const versionId = (await adminDb.quoteVersion.findFirstOrThrow({ where: { quoteId: quote.id } })).id;
-    await transitionVersion(w.org.id, versionId, ["DRAFT"], "APPROVED", { lock: true });
+    await transitionVersion(w.org.id, versionId, ["DRAFT"], "PENDING_APPROVAL", { lock: true });
+    await transitionVersion(w.org.id, versionId, ["PENDING_APPROVAL"], "APPROVED");
     expect((await moveDeal(w.sales, w.deal.id, { pipelineStageId: proposal.id })).deal.pipelineStageId).toBe(proposal.id);
   });
 

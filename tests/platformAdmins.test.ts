@@ -36,6 +36,9 @@ import {
 } from "../src/services/platformSignInService";
 import { createTestMembership, createTestOrganization } from "./helpers/fixtures";
 
+// One trusted proxy in front: the last X-Forwarded-For entry is the client (src/app/api/_lib/clientRequest.ts).
+process.env.TRUSTED_PROXY_HOPS = "1";
+
 /**
  * FIG-1140 (B6.08) and the platform half of FIG-1134 (B6.02): platform admin
  * sign-in (password, then a second step, always), the minimum-two rule,
@@ -82,6 +85,20 @@ async function signedIn(identity: { id: string; email: string }, secret?: string
 async function activeAdmin(label?: string) {
   const identity = await makeAdmin(label);
   return { identity, ...(await signedIn(identity)) };
+}
+
+/** Runs `fn` and returns what it returned plus the link that was emailed (no SMTP in tests, so it is written to the log). The API result never carries it. */
+async function withEmailedLink<T>(fn: () => Promise<T>): Promise<{ result: T; token: string }> {
+  const spy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+  try {
+    const result = await fn();
+    const text = spy.mock.calls.map((c) => c.join(" ")).join("\n");
+    const found = [...text.matchAll(/platform\/accept-invite\?token=([A-Za-z0-9_-]+)/g)].pop();
+    if (!found) throw new Error("no emailed link was logged");
+    return { result, token: found[1] };
+  } finally {
+    spy.mockRestore();
+  }
 }
 
 async function audited(action: string, actorEmail: string) {
@@ -329,11 +346,12 @@ describe("invitations and recovery", () => {
   it("invites by email, creates the admin only when the link is used once, and audits it", async () => {
     const a = await activeAdmin("a");
     const email = `new.${randomUUID().slice(0, 6)}@platform.example.com`;
-    const link = await invitePlatformAdmin(a.ctx, { email: email.toUpperCase(), name: "New Admin" });
+    const { result: link, token } = await withEmailedLink(() => invitePlatformAdmin(a.ctx, { email: email.toUpperCase(), name: "New Admin" }));
     expect(link.email).toBe(email);
+    expect(JSON.stringify(link)).not.toContain(token);
+    expect(link).not.toHaveProperty("inviteUrl");
     expect(await adminDb.platformIdentity.findUnique({ where: { email } })).toBeNull();
     const row = await adminDb.platformAdminInvite.findFirstOrThrow({ where: { email } });
-    const token = new URL(link.inviteUrl).searchParams.get("token")!;
     expect(row.tokenHash).not.toContain(token);
     expect((await listPlatformAdmins(a.ctx)).invitations.map((i) => i.email)).toContain(email);
 
@@ -352,14 +370,13 @@ describe("invitations and recovery", () => {
   it("refuses an expired or withdrawn link", async () => {
     const a = await activeAdmin("a");
     const email = `exp.${randomUUID().slice(0, 6)}@platform.example.com`;
-    const link = await invitePlatformAdmin(a.ctx, { email, name: "Exp" });
-    const token = new URL(link.inviteUrl).searchParams.get("token")!;
+    const { token } = await withEmailedLink(() => invitePlatformAdmin(a.ctx, { email, name: "Exp" }));
     await adminDb.platformAdminInvite.updateMany({ where: { email }, data: { expiresAt: new Date(Date.now() - 1000) } });
     await expect(acceptPlatformInvite(token, PASSWORD, null, ip())).rejects.toBeInstanceOf(ValidationError);
 
-    const link2 = await invitePlatformAdmin(a.ctx, { email, name: "Exp" });
+    const { result: link2, token: token2 } = await withEmailedLink(() => invitePlatformAdmin(a.ctx, { email, name: "Exp" }));
     await revokePlatformInvite(a.ctx, link2.id);
-    await expect(acceptPlatformInvite(new URL(link2.inviteUrl).searchParams.get("token")!, PASSWORD, null, ip())).rejects.toBeInstanceOf(ValidationError);
+    await expect(acceptPlatformInvite(token2, PASSWORD, null, ip())).rejects.toBeInstanceOf(ValidationError);
     await expect(revokePlatformInvite(a.ctx, link2.id)).rejects.toBeInstanceOf(NotFoundError);
     expect(await adminDb.platformIdentity.findUnique({ where: { email } })).toBeNull();
   });
@@ -378,8 +395,9 @@ describe("invitations and recovery", () => {
   it("recovers a lost password with a single-use link that also resets two-step and sessions", async () => {
     const a = await activeAdmin("a");
     const b = await activeAdmin("b");
-    const link = await issuePlatformRecoveryLink(a.ctx, b.identity.id);
-    const token = new URL(link.inviteUrl).searchParams.get("token")!;
+    const { result: link, token } = await withEmailedLink(() => issuePlatformRecoveryLink(a.ctx, b.identity.id));
+    expect(link).not.toHaveProperty("inviteUrl");
+    expect(JSON.stringify(link)).not.toContain(token);
     const newPassword = `new-${randomUUID()}-Zz9`;
     await expect(acceptPlatformInvite(token, newPassword, null, ip())).resolves.toEqual({ email: b.identity.email, kind: "RECOVERY" });
     await expect(acceptPlatformInvite(token, newPassword, null, ip())).rejects.toBeInstanceOf(ValidationError);
@@ -389,6 +407,22 @@ describe("invitations and recovery", () => {
     expect((await startPlatformSignIn(b.identity.email, newPassword, CLIENT())).purpose).toBe("ENROL");
     expect((await audited("platform.admin_recovery_issued", a.identity.email)).length).toBe(1);
     expect((await audited("platform.admin_recovered", b.identity.email)).length).toBe(1);
+    expect((await adminDb.platformIdentity.findUniqueOrThrow({ where: { id: b.identity.id } })).credentialsResetAt).not.toBeNull();
+  });
+
+  it("only another active admin can issue a recovery link; a suspended issuer and self-recovery are refused", async () => {
+    const a = await activeAdmin("a");
+    const b = await activeAdmin("b");
+    await expect(issuePlatformRecoveryLink(a.ctx, a.identity.id)).rejects.toBeInstanceOf(ValidationError);
+    await adminDb.platformIdentity.update({ where: { id: a.identity.id }, data: { status: "SUSPENDED" } });
+    await expect(issuePlatformRecoveryLink(a.ctx, b.identity.id)).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("a two-step reset stamps the identity so its approvals wait 24 hours", async () => {
+    const a = await activeAdmin("a");
+    const b = await activeAdmin("b");
+    await resetPlatformAdminTwoStep(a.ctx, b.identity.id);
+    expect((await adminDb.platformIdentity.findUniqueOrThrow({ where: { id: b.identity.id } })).credentialsResetAt).not.toBeNull();
   });
 });
 

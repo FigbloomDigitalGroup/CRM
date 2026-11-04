@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
-import { resolveRequestContext } from "@/auth/requestContext";
+import { resolveGatedContext } from "@/app/api/_lib/gatedContext";
 import { disconnectConnection, updateConnectionSettings } from "@/services/oauthConnectionService";
 
 const SettingsSchema = z.strictObject({
@@ -16,7 +16,7 @@ const SettingsSchema = z.strictObject({
 export async function DELETE(_request: Request, { params }: { params: Promise<{ orgSlug: string; connectionId: string }> }) {
   return handleRoute(async () => {
     const { orgSlug, connectionId } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "release.v11");
     return disconnectConnection(ctx, connectionId);
   });
 }
@@ -25,7 +25,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
 export async function PATCH(request: Request, { params }: { params: Promise<{ orgSlug: string; connectionId: string }> }) {
   return handleRoute(async () => {
     const { orgSlug, connectionId } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "release.v11");
     const body = await parseJsonBody(request, SettingsSchema);
     return updateConnectionSettings(ctx, connectionId, body);
   });

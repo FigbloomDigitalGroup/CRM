@@ -224,7 +224,8 @@ function parseQuantity(value: unknown, path: string, issues: ValidationIssue[]):
   return round2(n);
 }
 
-async function resolveLines(organizationId: string, currency: string, inputs: QuoteLineInput[], existing: QuoteLine[]): Promise<NewLine[]> {
+async function resolveLines(ctx: AuthContext, currency: string, inputs: QuoteLineInput[], existing: QuoteLine[]): Promise<NewLine[]> {
+  const organizationId = ctx.organizationId;
   const issues: ValidationIssue[] = [];
   if (inputs.length > MAX_QUOTE_LINES) throw new ValidationError(`A quote has at most ${MAX_QUOTE_LINES} lines.`, [{ path: "lines", message: `At most ${MAX_QUOTE_LINES} lines.` }]);
   const ids = [...new Set(inputs.filter((l) => !l.lineId).map((l) => l.catalogueItemId).filter((x): x is string => !!x))];
@@ -278,7 +279,8 @@ async function resolveLines(organizationId: string, currency: string, inputs: Qu
       });
       return;
     }
-    // A custom line.
+    // A custom line takes any price, so it would walk round the discount approval: only people who manage the catalogue may add one.
+    if (!hasPermission(ctx, "catalogue.manage")) throw deny(ctx, "custom quote lines (catalogue.manage)", ["catalogue.manage"]);
     const description = (input.description ?? "").trim();
     if (!description || description.length > 300) issues.push({ path: `${path}.description`, message: "A custom line needs a description of 1 to 300 characters.", code: "DESCRIPTION_REQUIRED" });
     const unitPrice = input.unitPrice === undefined ? (issues.push({ path: `${path}.unitPrice`, message: "A custom line needs a unit price.", code: "INVALID_AMOUNT" }), null) : parseMoney(input.unitPrice, `${path}.unitPrice`, issues, "The unit price");
@@ -409,7 +411,7 @@ export async function createQuote(
   const validUntil = input.validUntil === undefined ? addDays(now, settings.validityDays) : parseValidUntil(input.validUntil, issues, now);
   const terms = input.terms === undefined ? settings.defaultTerms : parseTerms(input.terms, issues);
   if (issues.length > 0 || currency === null || discount === null || validUntil === null) throw new ValidationError("This quote is not valid.", issues);
-  const lines = await resolveLines(ctx.organizationId, currency, input.lines ?? [], []);
+  const lines = await resolveLines(ctx, currency, input.lines ?? [], []);
 
   const { quote, version } = await createQuoteWithFirstVersion({
     organizationId: ctx.organizationId,
@@ -495,7 +497,7 @@ export async function updateDraftVersion(ctx: AuthContext, quoteId: string, vers
   const validUntil = input.validUntil === undefined ? current.validUntil.toISOString().slice(0, 10) : parseValidUntil(input.validUntil, issues, now);
   const terms = input.terms === undefined ? current.terms : parseTerms(input.terms, issues);
   if (issues.length > 0 || discount === null || validUntil === null) throw new ValidationError("This quote is not valid.", issues);
-  const lines = input.lines ? await resolveLines(ctx.organizationId, current.currency, input.lines, current.lines) : null;
+  const lines = input.lines ? await resolveLines(ctx, current.currency, input.lines, current.lines) : null;
   const effective: NewLine[] =
     lines ??
     current.lines.map((l) => ({ catalogueItemId: l.catalogueItemId, description: l.description, unit: l.unit, quantity: Number(l.quantity), unitPrice: Number(l.unitPrice), unitCost: l.unitCost === null ? null : Number(l.unitCost), taxable: l.taxable, lineTotal: Number(l.lineTotal) }));
@@ -582,6 +584,9 @@ export async function applyQuoteTotalToDeal(ctx: AuthContext, quoteId: string, v
   if (!canSeeDealValue(ctx, deal)) throw deny(ctx, "deals.view.value (to copy a quote total to the deal)", ["deals.view.value"]);
   const row = await getVersionWithLines(ctx.organizationId, quoteId, version);
   if (!row) throw new NotFoundError("QuoteVersion", `${quoteId}/${version}`);
+  if (!["APPROVED", "SENT", "ACCEPTED"].includes(row.status)) {
+    throw new ValidationError("Only an approved, sent or accepted version can set the deal value.", [{ path: "version", message: `This version is ${row.status.toLowerCase()}.`, code: "VERSION_NOT_FINAL" }]);
+  }
   return updateDeal(ctx, deal.id, { value: Number(row.total), currency: row.currency });
 }
 

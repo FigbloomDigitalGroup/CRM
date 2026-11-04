@@ -213,6 +213,11 @@ export async function enrol(ctx: AuthContext, sequenceId: string, ref: { leadId?
   if (sequence.subjectType !== type) throw new ValidationError(`This sequence is for ${sequence.subjectType === "LEAD" ? "leads" : "deals"}.`, [{ path: type === "LEAD" ? "leadId" : "dealId", message: "Wrong kind of record for this sequence." }]);
   const state = await loadSubject(ctx.organizationId, { type, leadId: ref.leadId ?? null, dealId: ref.dealId ?? null });
   if (!state.exists || state.archivedAt || state.closed) throw new ValidationError("A closed or archived record cannot be enrolled.", [{ path: type === "LEAD" ? "leadId" : "dealId", message: "The record is closed or archived.", code: "RECORD_CLOSED" }]);
+  // A SEND step emails unattended as the record owner, so only the owner or a person who manages sequences may start it.
+  const sends = sequence.steps.some((s) => s.kind === "EMAIL" && s.emailMode === "SEND");
+  if (sends && state.ownerMembershipId !== ctx.membershipId && !hasPermission(ctx, MANAGE)) {
+    throw new ValidationError("This sequence sends emails for the record owner, so only the owner or someone who manages sequences can start it.", [{ path: "sequenceId", message: "Ask the record owner, or choose a draft-only sequence.", code: "SEQUENCE_SEND_OWNER_ONLY" }]);
+  }
   const first = sequence.steps[0]!;
   const row = await createEnrollmentRow({
     organizationId: ctx.organizationId,

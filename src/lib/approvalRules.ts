@@ -38,9 +38,15 @@ export function discountNeedsApproval(discountPercent: number, rules: ApprovalRu
   return rules.discount.enabled && discountPercent > rules.discount.thresholdPercent;
 }
 
+/**
+ * Whether marking a deal won must wait for an approver. A deal whose size cannot be compared with the limit (no value, a zero
+ * value, or another currency) also waits: otherwise the owner could clear the value or change the currency to skip the rule.
+ */
 export function largeDealNeedsApproval(amount: number | null, currency: string, rules: ApprovalRuleSettings): boolean {
   const r = rules.largeDeal;
-  return r.enabled && amount !== null && currency === r.currency && amount > r.thresholdAmount;
+  if (!r.enabled) return false;
+  if (amount === null || !Number.isFinite(amount) || amount <= 0 || currency !== r.currency) return true;
+  return amount > r.thresholdAmount;
 }
 
 function obj(v: unknown): Record<string, unknown> {

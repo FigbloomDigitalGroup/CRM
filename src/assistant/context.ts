@@ -32,8 +32,24 @@ const INJECTION_PATTERNS: { flag: string; re: RegExp }[] = [
   { flag: "special-token", re: /<\|[^>]*\|>|\[\/?INST\]|<\/?(system|assistant|records?|instructions?)>/gi },
 ];
 
-/** Money in free text: an amount with a currency, as in `redactMoneyText` (src/auth/masking.ts). */
-const MONEY_RE = /(?:\b(?:KES|KSH|KSHS|USD|EUR|GBP|UGX|TZS|RWF)\b\.?\s*|[$€£]\s?)(\d[\d,]*(?:\.\d+)?)(?:\s?(?:k|m|million|bn))?|\b(\d[\d,]*(?:\.\d+)?)\s?(?:KES|KSH|KSHS|USD|EUR|GBP|UGX|TZS|RWF)\b/gi;
+/** Money in free text: an amount next to a currency word or symbol, in digits or words, or a bare `5k` / `5m`; see also `redactMoneyFragments`. */
+const CUR = "KES|KSH|KSHS|KShs?|SH|SHS|USD|EUR|GBP|UGX|TZS|RWF|shillings?|dollars?|euros?|pounds?|bucks";
+const NUM = String.raw`(?:\d{1,3}(?:[,\u00a0 ]\d{3})+|\d[\d,]*)(?:\.\d+)?`;
+const SUF = String.raw`(?:\s?(?:k|m|mn|million|bn|billion|thousand)\b)?`;
+const WORD = "(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion|half|few|several)";
+const WORDS = String.raw`${WORD}(?:[\s-]+(?:and\s+)?${WORD})*`;
+const MONEY_RE = new RegExp(
+  [
+    String.raw`(?:\b(?:${CUR})\b\.?\s*|[$€£]\s?)${NUM}${SUF}`,
+    String.raw`\b${NUM}${SUF}\s?(?:\b(?:${CUR})\b|[$€£])`,
+    String.raw`\b(?:${CUR})\b\.?\s*${WORDS}\b`,
+    String.raw`\b${WORDS}\s+(?:${CUR})\b`,
+    String.raw`(?<![\w.])\d+(?:\.\d+)?\s?(?:k|m|mn)\b`,
+  ].join("|"),
+  "gi",
+);
+const MONEY_CONTEXT_RE = new RegExp(String.raw`\b(?:${CUR}|budget|price|priced|cost|costs|value|worth|fee|fees|margin|discount|paid|pay|payment|invoice|invoiced|quote|quoted|revenue|deposit)\b|[$€£]`, "i");
+const BIG_NUMBER_RE = /(?<![\w.])\d{4,}(?![\w])|\d{1,3}(?:,\d{3})+|\d\s?(?:k|m|mn)\b/i;
 export const HIDDEN = "[value hidden]";
 
 export interface CleanText {
@@ -66,6 +82,17 @@ export function cleanRecordText(raw: string | null | undefined, options: { redac
       redactions += 1;
       return HIDDEN;
     });
+    // A sentence that talks about money and carries a large number is dropped whole, whatever form the amount took.
+    text = text
+      .split(/(?<=[.;!?])\s+/)
+      .map((fragment) => {
+        if (!fragment.includes(HIDDEN) && MONEY_CONTEXT_RE.test(fragment) && BIG_NUMBER_RE.test(fragment)) {
+          redactions += 1;
+          return HIDDEN;
+        }
+        return fragment;
+      })
+      .join(" ");
   }
   return { text: text.slice(0, options.max ?? MAX_TEXT), flags, redactions };
 }
@@ -199,9 +226,10 @@ export function filterAnswerMoney(ctx: Pick<AuthContext, "permissionKeys">, text
   if (ctx.permissionKeys.includes("deals.view.value")) return { text, redactions: 0 };
   const allowed = new Set(allowedFigures);
   let redactions = 0;
-  const out = text.replace(MONEY_RE, (match, a: string | undefined, b: string | undefined) => {
-    const n = Number((a ?? b ?? "").replace(/,/g, ""));
-    if (allowed.has(n) && !/(k|m|million|bn)$/i.test(match.trim())) return match;
+  const out = text.replace(MONEY_RE, (match: string) => {
+    const digits = /\d[\d,\u00a0 ]*(?:\.\d+)?/.exec(match)?.[0] ?? "";
+    const n = Number(digits.replace(/[,\s\u00a0]/g, ""));
+    if (digits && allowed.has(n) && !/\d\s?(?:k|m|mn|million|bn|billion|thousand)\b/i.test(match)) return match;
     redactions += 1;
     return HIDDEN;
   });

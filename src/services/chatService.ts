@@ -1,3 +1,4 @@
+import { deleteChatFiles } from "./chatPrivacyService";
 import { Prisma } from "@prisma/client";
 import type { AuthContext } from "../auth/context";
 import { hasPermission, requirePermission } from "../auth/context";
@@ -433,7 +434,12 @@ export async function listChannels(ctx: AuthContext, options: { includeArchived?
 export async function getUnreadTotals(ctx: AuthContext) {
   await gateChat(ctx);
   return withOrgContext(ctx.organizationId, async (tx) => {
-    const counts = await unreadCounts(tx, ctx.organizationId, ctx.membershipId);
+    const all = await unreadCounts(tx, ctx.organizationId, ctx.membershipId);
+    // Record channels count only while the person can still open the record, as in the channel list.
+    const recordChannels = all.size ? await tx.chatChannel.findMany({ where: { organizationId: ctx.organizationId, id: { in: [...all.keys()] }, kind: "RECORD" } }) : [];
+    const openable = await openableRecordKeys(tx, ctx, recordChannels.map((c) => ({ type: c.recordType as RecordType, id: c.recordId! })));
+    const closed = new Set(recordChannels.filter((c) => !openable.has(`${c.recordType}:${c.recordId}`)).map((c) => c.id));
+    const counts = new Map([...all].filter(([id]) => !closed.has(id)));
     let unread = 0;
     let mentions = 0;
     for (const v of counts.values()) {
@@ -586,10 +592,16 @@ export async function deleteChannel(ctx: AuthContext, channelId: string) {
     if (!canManage(ctx, access)) throw new ForbiddenError("chat.channels.manage", { roleKey: ctx.roleKey, organizationId: ctx.organizationId, permissionKeys: ["chat.channels.manage"] });
     if (!access.channel.archivedAt) throw new ValidationError("Archive the channel before deleting it.", [{ path: "channelId", message: "Not archived." }]);
     const messages = await tx.chatMessage.count({ where: { channelId } });
+    const channelMessages = await tx.chatMessage.findMany({ where: { channelId, organizationId: ctx.organizationId }, select: { id: true } });
+    const fileIds = (await tx.chatMessageAttachment.findMany({ where: { organizationId: ctx.organizationId, messageId: { in: channelMessages.map((m) => m.id) } }, select: { fileId: true } })).map((a) => a.fileId);
     await tx.chatChannel.delete({ where: { id: channelId } });
-    return { kind: access.channel.kind, name: access.channel.name, messages };
+    return { kind: access.channel.kind, name: access.channel.name, messages, fileIds };
   });
-  await recordAuditEvent({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: "chat.channel_deleted", entityType: "ChatChannel", entityId: channelId, metadata: meta });
+  // The files that lived only in this channel go with it (a file also attached to a record stays).
+  await deleteChatFiles(ctx.organizationId, meta.fileIds);
+  const { fileIds: _files, ...auditMeta } = meta;
+  void _files;
+  await recordAuditEvent({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: "chat.channel_deleted", entityType: "ChatChannel", entityId: channelId, metadata: auditMeta });
   return { ok: true };
 }
 
@@ -945,6 +957,9 @@ export async function deliverChatNotifications(organizationId: string, messageId
       return refs.every((r) => records.get(refKey(r))?.openable);
     });
     if (!allowed) continue;
+    // A retried job must not notify twice: one notification per person per message.
+    const already = await adminDb.notification.findFirst({ where: { organizationId, membershipId, entityType: "ChatMessage", entityId: message.id }, select: { id: true } });
+    if (already) continue;
     const where = channel.kind === "DIRECT" ? "a direct message" : `#${channel.name}`;
     await notifyEvent({
       organizationId,
@@ -976,11 +991,17 @@ export async function deleteMessage(ctx: AuthContext, channelId: string, message
     // The text goes with the message; the row stays so the numbers and the thread keep their shape.
     await tx.chatMessage.update({ where: { id: messageId }, data: { body: "", cardType: null, cardId: null, deletedAt: new Date(), deletedByMembershipId: ctx.membershipId, updatedAt: new Date() } });
     await tx.chatMessageMention.deleteMany({ where: { messageId } });
+    const fileIds = (await tx.chatMessageAttachment.findMany({ where: { organizationId: ctx.organizationId, messageId }, select: { fileId: true } })).map((a) => a.fileId);
     await tx.chatMessageAttachment.deleteMany({ where: { messageId } });
     await tx.chatReaction.deleteMany({ where: { messageId } });
-    return { channelId, seq: message.seq, own: message.authorMembershipId === ctx.membershipId, kind: access.channel.kind };
+    return { channelId, seq: message.seq, own: message.authorMembershipId === ctx.membershipId, kind: access.channel.kind, fileIds };
   });
-  if (meta) await recordAuditEvent({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: "chat.message_deleted", entityType: "ChatMessage", entityId: messageId, metadata: meta });
+  if (meta) {
+    await deleteChatFiles(ctx.organizationId, meta.fileIds);
+    const { fileIds: _files, ...auditMeta } = meta;
+    void _files;
+    await recordAuditEvent({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: "chat.message_deleted", entityType: "ChatMessage", entityId: messageId, metadata: auditMeta });
+  }
   return { ok: true };
 }
 

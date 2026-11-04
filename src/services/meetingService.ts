@@ -9,7 +9,7 @@ import { recordAuditEvent } from "../repositories/auditEvents";
 import { createCommunication as createCommunicationRecord } from "../repositories/communications";
 import { findContactByEmail } from "../repositories/contacts";
 import { createActivity } from "./activityService";
-import { ConnectionUnavailableError, findConnectionFor, getAccessToken, getUsableConnection, recordSyncResult } from "./oauthConnectionService";
+import { canConfigure, ConnectionUnavailableError, findConnectionFor, getAccessToken, getUsableConnection, recordSyncResult } from "./oauthConnectionService";
 import { assertCanAccessLinkedRecords, type LinkedRecordIds } from "./recordAccess";
 import { createTask } from "./taskService";
 
@@ -45,7 +45,7 @@ export function readCalendarSettings(connection: Pick<OAuthConnection, "settings
 export async function listProviderCalendars(ctx: AuthContext, connectionId: string) {
   const connection = await getUsableConnection(ctx.organizationId, connectionId);
   if (connection.kind !== "CALENDAR") throw new NotFoundError("Connection", connectionId);
-  if (connection.membershipId !== ctx.membershipId && !hasPermission(ctx, "configuration.manage")) throw new NotFoundError("Connection", connectionId);
+  if (!canConfigure(ctx, connection)) throw new NotFoundError("Connection", connectionId);
   const { token } = await getAccessToken(ctx.organizationId, connectionId);
   const provider = await getCalendarProvider(connection.provider as OAuthProviderKey);
   return { items: await provider.listCalendars(token), selected: readCalendarSettings(connection).calendarId };
@@ -104,6 +104,7 @@ async function recordContactEmails(ctx: AuthContext, ids: LinkedRecordIds): Prom
 }
 
 export async function scheduleMeeting(ctx: AuthContext, input: ScheduleMeetingInput) {
+  requirePermission(ctx, "meetings.schedule");
   requirePermission(ctx, "activities.create");
   const title = input.title?.trim();
   if (!title) throw new ValidationError("A title is required.", [{ path: "title", message: "Name the meeting." }]);
@@ -195,6 +196,7 @@ async function loadMeeting(ctx: AuthContext, activityId: string) {
 }
 
 export async function rescheduleMeeting(ctx: AuthContext, activityId: string, patch: { start?: string; end?: string; title?: string }) {
+  requirePermission(ctx, "meetings.schedule");
   requirePermission(ctx, "activities.create");
   const { link, activity } = await loadMeeting(ctx, activityId);
   if (link.status === "CANCELLED") throw new ValidationError("This meeting was cancelled.", [{ path: "status", message: "Schedule a new one." }]);
@@ -213,6 +215,7 @@ export async function rescheduleMeeting(ctx: AuthContext, activityId: string, pa
 }
 
 export async function cancelMeeting(ctx: AuthContext, activityId: string) {
+  requirePermission(ctx, "meetings.schedule");
   requirePermission(ctx, "activities.create");
   const { link } = await loadMeeting(ctx, activityId);
   if (link.status === "CANCELLED") return meetingView(link, activityId);

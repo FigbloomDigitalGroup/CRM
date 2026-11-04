@@ -2472,6 +2472,9 @@
               "nullable": true,
               "description": "Observed as null in the reference example."
             },
+            "doNotContact": {
+              "type": "boolean"
+            },
             "createdAt": {
               "type": "string",
               "format": "date-time"
@@ -2496,6 +2499,7 @@
             "ownerMembershipId",
             "createdByMembershipId",
             "customFields",
+            "doNotContact",
             "createdAt",
             "updatedAt"
           ],
@@ -2829,6 +2833,9 @@
               "nullable": true,
               "description": "Observed as null in the reference example."
             },
+            "doNotContact": {
+              "type": "boolean"
+            },
             "createdAt": {
               "type": "string",
               "format": "date-time"
@@ -3023,6 +3030,7 @@
             "ownerMembershipId",
             "createdByMembershipId",
             "customFields",
+            "doNotContact",
             "createdAt",
             "updatedAt",
             "company",
@@ -3233,6 +3241,9 @@
         "nullable": true,
         "description": "Observed as null in the reference example."
       },
+      "doNotContact": {
+        "type": "boolean"
+      },
       "createdAt": {
         "type": "string",
         "format": "date-time"
@@ -3427,6 +3438,7 @@
       "ownerMembershipId",
       "createdByMembershipId",
       "customFields",
+      "doNotContact",
       "createdAt",
       "updatedAt",
       "company",
@@ -3510,6 +3522,9 @@
             "lastContactedAt": {
               "nullable": true,
               "description": "Observed as null in the reference example."
+            },
+            "doNotContact": {
+              "type": "boolean"
             },
             "createdAt": {
               "type": "string",
@@ -3705,6 +3720,7 @@
             "ownerMembershipId",
             "createdByMembershipId",
             "customFields",
+            "doNotContact",
             "createdAt",
             "updatedAt",
             "company",
@@ -5466,13 +5482,13 @@
                           "type": "string"
                         },
                         "oldestDaysOverdue": {
-                          "nullable": true,
-                          "description": "Observed as null in the reference example."
+                          "type": "integer"
                         }
                       },
                       "required": [
                         "count",
-                        "outstanding"
+                        "outstanding",
+                        "oldestDaysOverdue"
                       ],
                       "additionalProperties": true
                     },
@@ -7014,6 +7030,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "doNotContact": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -7038,6 +7057,7 @@
           "ownerMembershipId",
           "createdByMembershipId",
           "customFields",
+          "doNotContact",
           "createdAt",
           "updatedAt"
         ],
@@ -7081,6 +7101,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "pipelineId": {
+            "type": "string"
+          },
           "isWon": {
             "type": "boolean"
           },
@@ -7105,6 +7128,7 @@
           "key",
           "name",
           "sequence",
+          "pipelineId",
           "isWon",
           "isLost",
           "isActive",
@@ -7474,6 +7498,9 @@
                   "nullable": true,
                   "description": "Observed as null in the reference example."
                 },
+                "pipelineId": {
+                  "type": "string"
+                },
                 "isWon": {
                   "type": "boolean"
                 },
@@ -7498,6 +7525,7 @@
                 "key",
                 "name",
                 "sequence",
+                "pipelineId",
                 "isWon",
                 "isLost",
                 "isActive",
@@ -7716,6 +7744,9 @@
           "quotes.enabled": {
             "type": "boolean"
           },
+          "communication.group": {
+            "type": "boolean"
+          },
           "customer_support.role": {
             "type": "boolean"
           }
@@ -7736,6 +7767,7 @@
           "preferences.own_colours",
           "organisation.switcher",
           "quotes.enabled",
+          "communication.group",
           "customer_support.role"
         ],
         "additionalProperties": true
@@ -9746,6 +9778,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "doNotContact": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -9770,6 +9805,7 @@
           "ownerMembershipId",
           "createdByMembershipId",
           "customFields",
+          "doNotContact",
           "createdAt",
           "updatedAt"
         ],
@@ -11436,13 +11472,13 @@
             "type": "string"
           },
           "oldestDaysOverdue": {
-            "nullable": true,
-            "description": "Observed as null in the reference example."
+            "type": "integer"
           }
         },
         "required": [
           "count",
-          "outstanding"
+          "outstanding",
+          "oldestDaysOverdue"
         ],
         "additionalProperties": true
       },
@@ -12831,6 +12867,9 @@
               "nullable": true,
               "description": "Observed as null in the reference example."
             },
+            "pipelineId": {
+              "type": "string"
+            },
             "isWon": {
               "type": "boolean"
             },
@@ -12855,6 +12894,7 @@
             "key",
             "name",
             "sequence",
+            "pipelineId",
             "isWon",
             "isLost",
             "isActive",
@@ -16243,6 +16283,9 @@
         "nullable": true,
         "description": "Observed as null in the reference example."
       },
+      "doNotContact": {
+        "type": "boolean"
+      },
       "createdAt": {
         "type": "string",
         "format": "date-time"
@@ -16267,6 +16310,7 @@
       "ownerMembershipId",
       "createdByMembershipId",
       "customFields",
+      "doNotContact",
       "createdAt",
       "updatedAt"
     ],
@@ -16770,6 +16814,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "doNotContact": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -16794,6 +16841,7 @@
           "ownerMembershipId",
           "createdByMembershipId",
           "customFields",
+          "doNotContact",
           "createdAt",
           "updatedAt"
         ],
@@ -16837,6 +16885,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "pipelineId": {
+            "type": "string"
+          },
           "isWon": {
             "type": "boolean"
           },
@@ -16861,6 +16912,7 @@
           "key",
           "name",
           "sequence",
+          "pipelineId",
           "isWon",
           "isLost",
           "isActive",
@@ -19486,6 +19538,9 @@
         "nullable": true,
         "description": "Observed as null in the reference example."
       },
+      "doNotContact": {
+        "type": "boolean"
+      },
       "createdAt": {
         "type": "string",
         "format": "date-time"
@@ -19512,6 +19567,7 @@
       "archivedAt",
       "archivedByMembershipId",
       "customFields",
+      "doNotContact",
       "createdAt",
       "updatedAt"
     ],
@@ -19661,6 +19717,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "doNotContact": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -19681,6 +19740,7 @@
           "ownerMembershipId",
           "createdByMembershipId",
           "customFields",
+          "doNotContact",
           "createdAt",
           "updatedAt"
         ],
@@ -20705,6 +20765,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "doNotContact": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -20729,6 +20792,7 @@
           "ownerMembershipId",
           "createdByMembershipId",
           "customFields",
+          "doNotContact",
           "createdAt",
           "updatedAt"
         ],
@@ -20772,6 +20836,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "pipelineId": {
+            "type": "string"
+          },
           "isWon": {
             "type": "boolean"
           },
@@ -20796,6 +20863,7 @@
           "key",
           "name",
           "sequence",
+          "pipelineId",
           "isWon",
           "isLost",
           "isActive",
@@ -21122,6 +21190,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "doNotContact": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -21146,6 +21217,7 @@
           "ownerMembershipId",
           "createdByMembershipId",
           "customFields",
+          "doNotContact",
           "createdAt",
           "updatedAt"
         ],
@@ -21189,6 +21261,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "pipelineId": {
+            "type": "string"
+          },
           "isWon": {
             "type": "boolean"
           },
@@ -21213,6 +21288,7 @@
           "key",
           "name",
           "sequence",
+          "pipelineId",
           "isWon",
           "isLost",
           "isActive",
@@ -21694,6 +21770,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "pipelineId": {
+            "type": "string"
+          },
           "isWon": {
             "type": "boolean"
           },
@@ -21718,6 +21797,7 @@
           "key",
           "name",
           "sequence",
+          "pipelineId",
           "isWon",
           "isLost",
           "isActive",
@@ -23256,6 +23336,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "doNotContact": {
+            "type": "boolean"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -23280,6 +23363,7 @@
           "ownerMembershipId",
           "createdByMembershipId",
           "customFields",
+          "doNotContact",
           "createdAt",
           "updatedAt"
         ],
@@ -23464,6 +23548,9 @@
             "nullable": true,
             "description": "Observed as null in the reference example."
           },
+          "pipelineId": {
+            "type": "string"
+          },
           "isWon": {
             "type": "boolean"
           },
@@ -23488,6 +23575,7 @@
           "key",
           "name",
           "sequence",
+          "pipelineId",
           "isWon",
           "isLost",
           "isActive",
@@ -24524,6 +24612,17 @@
       "submittedAt": {
         "type": "string",
         "format": "date-time"
+      },
+      "exportStatus": {
+        "type": "string"
+      },
+      "exportExpiresAt": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "deleteAfter": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
       }
     },
     "required": [
@@ -24531,7 +24630,8 @@
       "kind",
       "status",
       "requestedByMembershipId",
-      "submittedAt"
+      "submittedAt",
+      "exportStatus"
     ],
     "additionalProperties": true
   },
@@ -26208,6 +26308,10 @@
       },
       "automationRuns": {
         "type": "integer"
+      },
+      "chatMessages": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
       },
       "archivedLeads": {
         "nullable": true,

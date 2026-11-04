@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
-import { resolveRequestContext } from "@/auth/requestContext";
+import { resolveGatedContext } from "@/app/api/_lib/gatedContext";
+import { enforceRateLimit } from "@/auth/rateLimiter";
 import { askAssistant } from "@/services/assistantService";
 
 const AskSchema = z.strictObject({
@@ -13,7 +14,8 @@ const AskSchema = z.strictObject({
 export async function POST(request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "release.v11");
+    await enforceRateLimit("ASSISTANT_ASK", [{ scope: "member", key: ctx.membershipId, windowMs: 60_000, max: 10 }]);
     return askAssistant(ctx, orgSlug, await parseJsonBody(request, AskSchema));
   });
 }

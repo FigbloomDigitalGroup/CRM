@@ -1,3 +1,4 @@
+import { openSecret, sealSecret } from "../lib/secretBox";
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { NotFoundError, ValidationError } from "../auth/errors";
@@ -30,6 +31,16 @@ const KEY_PATTERN = /^[a-z][a-z0-9_]{0,29}$/;
 const MAX_FORMS = 50;
 
 type Row = NonNullable<Awaited<ReturnType<typeof getFormRow>>>;
+
+/** The captcha secret is stored encrypted like OAuth tokens (src/lib/secretBox.ts). */
+function sealCaptchaSecret(value: string | null | undefined): string | null {
+  return typeof value === "string" && value.trim() ? sealSecret(value.trim()) : null;
+}
+
+/** The plain secret for verifying a token. A value saved before sealing existed is not in the sealed format and is returned as stored. */
+export function readCaptchaSecret(stored: string): string {
+  return /^v1\.[\w-]+\.[\w-]+\.[\w-]+$/.test(stored) ? openSecret(stored) : stored;
+}
 
 /** A form as the builder sees it. The captcha secret is write-only: only whether one is set is ever returned. */
 function present(row: Row) {
@@ -125,7 +136,7 @@ export async function createForm(
     ...(input.successMessage !== undefined ? { successMessage: cleanMessage(input.successMessage) } : {}),
     allowedOrigins: origins.origins,
     honeypotFieldName: honeypot,
-    captchaSecret: typeof input.captchaSecret === "string" && input.captchaSecret.trim() ? input.captchaSecret.trim() : null,
+    captchaSecret: sealCaptchaSecret(input.captchaSecret),
     createdByMembershipId: ctx.membershipId,
   });
   await recordAuditEvent({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: "web_form.created", entityType: "WebForm", entityId: row.id, newValue: { name } });
@@ -161,7 +172,7 @@ export async function updateForm(
   throwProblems(problems);
   if (patch.leadSourceKey !== undefined) data.leadSourceKey = await checkSource(ctx, patch.leadSourceKey);
   if (patch.successMessage !== undefined) data.successMessage = cleanMessage(patch.successMessage);
-  if (patch.captchaSecret !== undefined) data.captchaSecret = typeof patch.captchaSecret === "string" && patch.captchaSecret.trim() ? patch.captchaSecret.trim() : null;
+  if (patch.captchaSecret !== undefined) data.captchaSecret = sealCaptchaSecret(patch.captchaSecret);
   if (patch.status !== undefined) {
     if (!(STATUSES as readonly string[]).includes(patch.status)) throw new ValidationError("status is DRAFT, PUBLISHED or ARCHIVED.", [{ path: "status", message: "DRAFT, PUBLISHED or ARCHIVED." }]);
     data.status = patch.status;

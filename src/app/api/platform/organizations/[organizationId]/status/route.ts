@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
+import { requireRecentVerification } from "@/services/platformAdminService";
 import { requirePlatformApi } from "@/app/api/platform/_lib/platformRoute";
 import { transitionOrganization } from "@/services/organizationLifecycleService";
 
@@ -13,6 +14,7 @@ const Body = z.strictObject({
 export async function POST(request: Request, { params }: { params: Promise<{ organizationId: string }> }) {
   return handleRoute(async () => {
     const platform = await requirePlatformApi("platform.organizations.suspend");
+    await requireRecentVerification(platform);
     const { organizationId } = await params;
     const body = await parseJsonBody(request, Body);
     return transitionOrganization(platform, organizationId, body.action, body.reason, { requestId: request.headers.get("x-request-id") });

@@ -5,7 +5,7 @@ import type { StoredChallenge } from "../auth/twoStep/engine";
 import { tenantTwoStep } from "../auth/twoStep/stores";
 import { adminDb } from "../db/adminClient";
 import { getAccessState } from "./accessStateService";
-import { completeSignIn, lockoutPolicy, type SignedInSession } from "./authService";
+import { completeSignIn, incrementFailedSignIn, lockoutPolicy, type SignedInSession } from "./authService";
 import { recordAuthAuditEvent } from "./authAudit";
 import { sendSecurityAlert } from "./securityAlertService";
 import { recordSignInEvent } from "./signInEventService";
@@ -47,19 +47,10 @@ function clientOf(challenge: StoredChallenge): ClientInfo {
 }
 
 /** A wrong second-step code: the challenge, and the account's lockout counter, both move. */
-async function registerWrongCode(challenge: StoredChallenge, user: { id: string; email: string; failedSignInCount: number }): Promise<never> {
-  await tenantTwoStep.failChallenge(challenge);
+async function registerWrongCode(challenge: StoredChallenge, user: { id: string; email: string }): Promise<never> {
+  // The challenge attempt was already counted by reserveAttempt before the code was checked.
   const policy = lockoutPolicy();
-  const failures = user.failedSignInCount + 1;
-  const locking = failures >= policy.maxFailures;
-  await adminDb.user.update({
-    where: { id: user.id },
-    data: {
-      failedSignInCount: failures,
-      lastFailedSignInAt: new Date(),
-      ...(locking ? { lockedUntil: new Date(Date.now() + policy.durationMs) } : {}),
-    },
-  });
+  const { failures, locking } = await incrementFailedSignIn(user.id);
   const client = clientOf(challenge);
   await recordSignInEvent({
     userId: user.id,
@@ -100,6 +91,7 @@ export async function verifySignInCode(
   const challenge = await tenantTwoStep.loadChallenge(challengeToken, "VERIFY");
   await limitStep(challenge.subjectId, options.ipAddress ?? challenge.ipAddress, "TWO_STEP_VERIFY");
   const user = await loadUser(challenge);
+  await tenantTwoStep.reserveAttempt(challenge);
 
   const result = await tenantTwoStep.verifyAnyCode(user.id, code);
   if (!result) return registerWrongCode(challenge, user);
@@ -128,6 +120,7 @@ export async function confirmSignInEnrolment(
   const challenge = await tenantTwoStep.loadChallenge(challengeToken, "ENROL");
   await limitStep(challenge.subjectId, options.ipAddress ?? challenge.ipAddress, "TWO_STEP_ENROL");
   const user = await loadUser(challenge);
+  await tenantTwoStep.reserveAttempt(challenge);
   const enrolled = await tenantTwoStep.confirmEnrolment(user.id, code);
   if (!enrolled) {
     if (!(await tenantTwoStep.store.getCredential(user.id))) throw new ValidationError("Start the set-up first.");

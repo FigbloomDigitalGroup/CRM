@@ -554,3 +554,95 @@ describe("the routes", () => {
     expect((await call(del, { confirmSlug: world.org.slug })).status).toBe(404);
   });
 });
+
+describe("hardening: reset credentials, resumable deletion, verify it's you", () => {
+  it("a deletion approval from an identity reset in the last 24 hours is refused, and an approval followed by a reset blocks the gate", async () => {
+    const world = await setup();
+    const request = await submitOrganisationRequest(world.management, { kind: "DELETE" });
+    await adminDb.platformIdentity.update({ where: { id: admin1.id }, data: { credentialsResetAt: new Date() } });
+    await expect(decideDataRequest(admin1.actor, request.id, { decision: "APPROVE" })).rejects.toMatchObject({ issues: [{ code: "CREDENTIALS_RECENTLY_RESET" }] });
+    await adminDb.platformIdentity.update({ where: { id: admin1.id }, data: { credentialsResetAt: new Date(Date.now() - 2 * DAY) } });
+    await decideDataRequest(admin1.actor, request.id, { decision: "APPROVE" });
+    await decideDataRequest(admin2.actor, request.id, { decision: "APPROVE" });
+    await runExportJob(world.org.id);
+    const after = new Date(Date.now() + 31 * DAY);
+    expect((await checkDeletionGate(request.id, after)).ok).toBe(true);
+    await adminDb.platformIdentity.update({ where: { id: admin2.id }, data: { credentialsResetAt: new Date() } });
+    const gate = await checkDeletionGate(request.id, after);
+    expect(gate.ok).toBe(false);
+    expect(gate.blockers.join(" ")).toMatch(/reset within 24 hours/);
+    await adminDb.platformIdentity.update({ where: { id: admin2.id }, data: { credentialsResetAt: null } });
+    await adminDb.platformIdentity.update({ where: { id: admin1.id }, data: { credentialsResetAt: null } });
+  });
+
+  it("a deletion that fails while removing files is resumable, and cannot be cancelled once started", async () => {
+    const at = new Date("2026-12-01T09:00:00Z");
+    const { org, request } = await approvedDeletion(at);
+    const now = new Date(at.getTime() + 31 * DAY);
+    const fileId = randomUUID();
+    const storageKey = buildStorageKey(org.id, "attachment", fileId);
+    await getStorageDriver().putObject(storageKey, Buffer.from("x"), { contentType: "text/plain" });
+    await adminDb.file.create({ data: { id: fileId, organizationId: org.id, purpose: "ATTACHMENT", name: "a.txt", sizeBytes: 1, mimeType: "text/plain", storageKey, status: "READY" } });
+    const spy = vi.spyOn(getStorageDriver(), "deleteObject").mockRejectedValueOnce(new Error("storage unavailable"));
+    try {
+      await expect(executeDeletion(admin1.actor, request.id, { confirmSlug: org.slug }, { now })).rejects.toThrow(/storage unavailable/);
+    } finally {
+      spy.mockRestore();
+    }
+    const half = await row(request.id);
+    expect(half.status).toBe("APPROVED");
+    expect(half.deletionStartedAt).not.toBeNull();
+    expect(await statusOf(org.id)).toBe("OFFBOARDING");
+    await expect(cancelDataRequest(admin3.actor, request.id, "Too late to cancel")).rejects.toMatchObject({ issues: [{ code: "DELETION_STARTED" }] });
+    const done = await executeDeletion(admin1.actor, request.id, { confirmSlug: org.slug }, { now });
+    expect(done.request.status).toBe("COMPLETED");
+    expect(await statusOf(org.id)).toBe("OFFBOARDED");
+  });
+
+  it("a request cancelled before the deletion starts is never deleted (files stay)", async () => {
+    const at = new Date("2026-12-01T09:00:00Z");
+    const { org, request } = await approvedDeletion(at);
+    const fileId = randomUUID();
+    const storageKey = buildStorageKey(org.id, "attachment", fileId);
+    await getStorageDriver().putObject(storageKey, Buffer.from("keep"), { contentType: "text/plain" });
+    await adminDb.file.create({ data: { id: fileId, organizationId: org.id, purpose: "ATTACHMENT", name: "k.txt", sizeBytes: 4, mimeType: "text/plain", storageKey, status: "READY" } });
+    await cancelDataRequest(admin3.actor, request.id, "Changed their mind");
+    const spy = vi.spyOn(getStorageDriver(), "deleteObject");
+    try {
+      await expect(executeDeletion(admin1.actor, request.id, { confirmSlug: org.slug }, { now: new Date(at.getTime() + 31 * DAY) })).rejects.toThrow(ValidationError);
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await adminDb.file.count({ where: { id: fileId } })).toBe(1);
+  });
+
+  it("every irreversible platform route asks to verify it's you when the session verification is stale", async () => {
+    const decision = await import("../src/app/api/platform/data-requests/[requestId]/decision/route");
+    const del = await import("../src/app/api/platform/data-requests/[requestId]/delete/route");
+    const cancel = await import("../src/app/api/platform/data-requests/[requestId]/cancel/route");
+    const retry = await import("../src/app/api/platform/data-requests/[requestId]/retry-export/route");
+    const status = await import("../src/app/api/platform/organizations/[organizationId]/status/route");
+    const incidents = await import("../src/app/api/platform/health/incidents/route");
+    const resolve = await import("../src/app/api/platform/health/incidents/[incidentId]/resolve/route");
+    const stale = await makePlatformAdmin("stale");
+    await adminDb.platformSession.updateMany({ where: { platformIdentityId: stale.id }, data: { verifiedAt: new Date(Date.now() - 24 * 3600_000) } });
+    holder.jar = stale.jar;
+    const id = randomUUID();
+    const body = { decision: "APPROVE", confirmSlug: "x", reason: "a good reason", action: "suspend", component: "api", severity: "MINOR", title: "t" };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const post = (m: { POST: (r: Request, c: any) => Promise<Response> }, params: Record<string, string>) => m.POST(jsonRequest("/api/platform/x", "POST", body), ctxParams(params));
+    for (const res of [
+      await post(decision, { requestId: id }),
+      await post(del, { requestId: id }),
+      await post(cancel, { requestId: id }),
+      await post(retry, { requestId: id }),
+      await post(status, { organizationId: id }),
+      await post(incidents, {}),
+      await post(resolve, { incidentId: id }),
+    ]) {
+      expect(res.status).toBe(403);
+      expect(JSON.stringify(await res.json())).toMatch(/Verify it's you/);
+    }
+  });
+});

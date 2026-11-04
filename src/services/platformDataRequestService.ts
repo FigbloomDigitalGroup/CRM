@@ -12,6 +12,7 @@ import { enqueueJobFor } from "../jobs/runner";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { getStorageDriver } from "../storage";
 import { buildStorageKey } from "../storage/keys";
+import { EXPORTED_TABLES, EXPORT_TABLE_FILTERS } from "./organisationExportTables";
 import { eraseMemberChat } from "./chatPrivacyService";
 import { cleanReason, transitionOrganization } from "./organizationLifecycleService";
 import { recordPlatformAudit } from "./platformAuditService";
@@ -41,12 +42,13 @@ export const APPROVALS_REQUIRED = { EXPORT: 1, DELETE: 2 } as const;
 const DAY_MS = 86_400_000;
 const MAX_EXPORT_BYTES = 200 * 1024 * 1024;
 const PERMISSION = "security.manage";
+const FRESH_RESET_MS = DAY_MS;
 
-/** Tables the export leaves out: sign-in material and connection secrets, never useful to the organisation and dangerous to hand out. */
-const EXPORT_EXCLUDED_TABLES = new Set([
-  "sessions", "push_subscriptions", "website_api_keys", "inbound_email_keys", "oauth_connections", "oauth_states",
-  "background_jobs", "idempotency_keys", "user_two_step", "user_backup_codes", "user_trusted_devices", "two_step_challenges",
-]);
+/** A credential reset or recovery within 24 hours before (or any time after) the approval makes the approval unusable. */
+function isFreshlyReset(resetAt: Date | null | undefined, at: Date): boolean {
+  return !!resetAt && resetAt.getTime() > at.getTime() - FRESH_RESET_MS;
+}
+
 const EXPORT_REDACTED_COLUMN = /(hash|secret|token|password|verifier|p256dh|_enc$|api_key)/i;
 
 export function retentionDays(env: Record<string, string | undefined> = process.env): number {
@@ -248,6 +250,12 @@ export async function decideDataRequest(
     if (request.approvals.some((a) => a.approverIdentityId === actor.identityId)) {
       throw new ValidationError("You have already decided on this request. A different person has to decide next.", [{ path: "decision", message: "One decision per person.", code: "ALREADY_DECIDED" }]);
     }
+    if (input.decision === "APPROVE" && request.kind === "DELETE") {
+      const me = await tx.platformIdentity.findUnique({ where: { id: actor.identityId }, select: { credentialsResetAt: true } });
+      if (isFreshlyReset(me?.credentialsResetAt, now)) {
+        throw new ValidationError("Your password or two-step sign-in was reset in the last 24 hours. Approving a deletion has to wait until that has passed.", [{ path: "decision", message: "Credentials reset within 24 hours.", code: "CREDENTIALS_RECENTLY_RESET" }]);
+      }
+    }
     await tx.platformDataRequestApproval.create({
       data: { requestId, approverIdentityId: actor.identityId, approverLabel: actor.email, decision: input.decision, comment, decidedAt: now },
     });
@@ -310,14 +318,20 @@ export async function retryExport(actor: Actor, requestId: string, options: { re
 export async function cancelDataRequest(actor: Actor, requestId: string, rawReason: string | undefined, options: { requestId?: string | null; now?: Date } = {}) {
   const reason = cleanReason(rawReason);
   const now = options.now ?? new Date();
-  const row = await adminDb.platformDataRequest.findUnique({ where: { id: requestId } });
-  if (!row) throw new NotFoundError("Data request", requestId);
-  if (row.status !== "SUBMITTED" && row.status !== "APPROVED") {
-    throw new ValidationError(`This request is already ${row.status.toLowerCase()}.`, [{ path: "status", message: "Already closed.", code: "NOT_OPEN" }]);
-  }
-  await adminDb.$transaction(async (tx) => {
+  // Under the request's row lock, so a deletion that is starting and a cancellation cannot both win.
+  const row = await adminDb.$transaction(async (tx) => {
+    const locked = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM platform_data_requests WHERE id = ${requestId} FOR UPDATE`;
+    if (locked.length === 0) throw new NotFoundError("Data request", requestId);
+    const current = await tx.platformDataRequest.findUniqueOrThrow({ where: { id: requestId } });
+    if (current.status !== "SUBMITTED" && current.status !== "APPROVED") {
+      throw new ValidationError(`This request is already ${current.status.toLowerCase()}.`, [{ path: "status", message: "Already closed.", code: "NOT_OPEN" }]);
+    }
+    if (current.deletionStartedAt) {
+      throw new ValidationError("The deletion has already started and can no longer be cancelled.", [{ path: "status", message: "Deletion in progress.", code: "DELETION_STARTED" }]);
+    }
     await tx.platformDataRequest.update({ where: { id: requestId }, data: { status: "CANCELLED", closedAt: now, closedReason: reason, updatedAt: now } });
-    await recordPlatformAudit(tx, { actorIdentityId: actor.identityId, actorLabel: actor.email, action: "data_request.cancelled", targetType: "DataRequest", targetId: requestId, organizationId: row.organizationId, organizationSlug: row.organizationSlug, reason, metadata: { kind: row.kind }, requestId: options.requestId ?? null });
+    await recordPlatformAudit(tx, { actorIdentityId: actor.identityId, actorLabel: actor.email, action: "data_request.cancelled", targetType: "DataRequest", targetId: requestId, organizationId: current.organizationId, organizationSlug: current.organizationSlug, reason, metadata: { kind: current.kind }, requestId: options.requestId ?? null });
+    return current;
   });
   if (row.kind === "DELETE" && row.status === "APPROVED") {
     const org = await adminDb.organization.findUnique({ where: { id: row.organizationId }, select: { status: true } });
@@ -362,8 +376,10 @@ export async function buildOrganisationExport(organizationId: string, now = new 
   const tables: Record<string, Record<string, unknown>[]> = {};
   const counts: Record<string, number> = {};
   let bytes = 0;
-  for (const table of (await organisationTables()).filter((t) => !EXPORT_EXCLUDED_TABLES.has(t))) {
-    const rows = await adminDb.$queryRawUnsafe<{ row: Record<string, unknown> }[]>(`SELECT row_to_json(t) AS row FROM "${table}" t WHERE organization_id = $1`, organizationId);
+  // Allow-list: a table is exported only when it is named in EXPORTED_TABLES (a test keeps both lists complete).
+  for (const table of (await organisationTables()).filter((t) => EXPORTED_TABLES.includes(t))) {
+    const extra = EXPORT_TABLE_FILTERS[table] ? ` AND ${EXPORT_TABLE_FILTERS[table]}` : "";
+    const rows = await adminDb.$queryRawUnsafe<{ row: Record<string, unknown> }[]>(`SELECT row_to_json(t) AS row FROM "${table}" t WHERE t.organization_id = $1${extra}`, organizationId);
     if (rows.length === 0) continue;
     tables[table] = rows.map((r) => redact(r.row));
     counts[table] = rows.length;
@@ -443,18 +459,24 @@ export interface DeletionGateResult {
 }
 
 /** Every condition for deleting, re-read from the database. Used by the deletion itself and shown in the console before the admin types the slug. */
-export async function checkDeletionGate(requestId: string, now = new Date()): Promise<DeletionGateResult & { request: PlatformDataRequest | null }> {
-  const request = await adminDb.platformDataRequest.findUnique({ where: { id: requestId }, include: { approvals: true } });
+export async function checkDeletionGate(requestId: string, now = new Date(), db: Pick<Prisma.TransactionClient, "platformDataRequest" | "organization"> = adminDb): Promise<DeletionGateResult & { request: PlatformDataRequest | null }> {
+  const request = await db.platformDataRequest.findUnique({ where: { id: requestId }, include: { approvals: true } });
   if (!request) return { ok: false, blockers: ["There is no such request."], request: null };
   const blockers: string[] = [];
   if (request.kind !== "DELETE") blockers.push("Only a deletion request can delete an organisation.");
   if (request.status !== "APPROVED") blockers.push(`The request is ${request.status.toLowerCase()}, not approved.`);
   const approvers = new Set(request.approvals.filter((a) => a.decision === "APPROVE").map((a) => a.approverIdentityId));
   if (approvers.size < APPROVALS_REQUIRED.DELETE) blockers.push(`Two different approvers are needed; there ${approvers.size === 1 ? "is" : "are"} ${approvers.size}.`);
+  const approverRows = request.approvals.filter((a) => a.decision === "APPROVE");
+  const identities = await getPlatformDb().platformIdentity.findMany({ where: { id: { in: approverRows.map((a) => a.approverIdentityId) } }, select: { id: true, credentialsResetAt: true } });
+  const resetById = new Map(identities.map((i) => [i.id, i.credentialsResetAt]));
+  if (approverRows.some((a) => isFreshlyReset(resetById.get(a.approverIdentityId), a.decidedAt))) {
+    blockers.push("An approver's password or two-step sign-in was reset within 24 hours of approving. Approve again once 24 hours have passed.");
+  }
   if (!request.deleteAfter) blockers.push("No waiting period has been set.");
   else if (request.deleteAfter.getTime() > now.getTime()) blockers.push(`The waiting period runs until ${request.deleteAfter.toISOString().slice(0, 10)}.`);
   if (!request.exportReadyAt) blockers.push("The organisation's export has not been packaged yet.");
-  const org = await adminDb.organization.findUnique({ where: { id: request.organizationId }, select: { status: true } });
+  const org = await db.organization.findUnique({ where: { id: request.organizationId }, select: { status: true } });
   if (!org) blockers.push("The organisation no longer exists.");
   else if (org.status !== "OFFBOARDING") blockers.push(`The organisation is ${org.status.toLowerCase()}, not offboarding.`);
   return { ok: blockers.length === 0, blockers, request };
@@ -486,6 +508,23 @@ export async function executeDeletion(actor: Actor, requestId: string, input: { 
     throw new ValidationError("Type the organisation's slug exactly to confirm.", [{ path: "confirmSlug", message: "Does not match the organisation's slug.", code: "CONFIRMATION_MISMATCH" }]);
   }
   const organizationId = request.organizationId;
+
+  // Step 1, one short transaction: lock the request and the organisation, re-check everything under the lock, and record that the
+  // deletion has started. From here a cancellation is refused. Running this again after a crash passes the same checks (resumable).
+  await adminDb.$transaction(async (tx) => {
+    const locked = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM platform_data_requests WHERE id = ${requestId} FOR UPDATE`;
+    if (locked.length === 0) throw new NotFoundError("Data request", requestId);
+    await tx.$queryRaw`SELECT id FROM organizations WHERE id = ${organizationId} FOR UPDATE`;
+    const again = await checkDeletionGate(requestId, now, tx);
+    if (!again.ok) {
+      throw new ValidationError(again.blockers[0] ?? "Deletion is not allowed.", again.blockers.map((message) => ({ path: "request", message, code: "DELETION_BLOCKED" })));
+    }
+    if (!request.deletionStartedAt) {
+      await tx.platformDataRequest.update({ where: { id: requestId }, data: { deletionStartedAt: now, updatedAt: now } });
+      await recordPlatformAudit(tx, { actorIdentityId: actor.identityId, actorLabel: actor.email, action: "data_request.deletion_started", targetType: "DataRequest", targetId: requestId, organizationId, organizationSlug: request.organizationSlug, requestId: options.requestId ?? null });
+    }
+  });
+
   const approvals = await adminDb.platformDataRequestApproval.findMany({ where: { requestId, decision: "APPROVE" }, orderBy: { decidedAt: "asc" } });
   const org = await adminDb.organization.findUniqueOrThrow({ where: { id: organizationId } });
 
@@ -501,7 +540,8 @@ export async function executeDeletion(actor: Actor, requestId: string, input: { 
     chatErasure.filesDeleted += erased.filesDeleted;
   }
 
-  // Stored bytes next: nothing can bring them back.
+  // Stored bytes next: nothing can bring them back. Only after step 1 committed; deleting an object twice is harmless, so a
+  // crash here is resumed by calling the deletion again.
   const files = await adminDb.file.findMany({ where: { organizationId }, select: { storageKey: true } });
   const driver = getStorageDriver();
   let filesRemoved = 0;
@@ -511,6 +551,12 @@ export async function executeDeletion(actor: Actor, requestId: string, input: { 
   }
 
   const certificate = await adminDb.$transaction(async (tx) => {
+    // Step 2: still the same request, still started, not cancelled meanwhile.
+    await tx.$queryRaw`SELECT id FROM platform_data_requests WHERE id = ${requestId} FOR UPDATE`;
+    const still = await tx.platformDataRequest.findUniqueOrThrow({ where: { id: requestId }, select: { status: true, deletionStartedAt: true } });
+    if (still.status !== "APPROVED" || !still.deletionStartedAt) {
+      throw new ValidationError("The request is no longer approved for deletion.", [{ path: "request", message: "Request changed.", code: "DELETION_BLOCKED" }]);
+    }
     await tx.$executeRaw`DELETE FROM organizations WHERE id = ${organizationId}`;
     // The tombstone keeps the id and slug (a slug is never reused and the platform's records still point at the id); the name goes.
     await tx.$executeRaw`

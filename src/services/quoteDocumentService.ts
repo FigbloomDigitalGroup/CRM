@@ -17,7 +17,8 @@ import { getStorageDriver } from "../storage";
 import { loadApprovalRules } from "./approvalRuleService";
 import { sendAndLogEmail } from "./communicationService";
 import { renderTemplate } from "./emailTemplateService";
-import { requireFeature } from "./featureService";
+import { isOrganizationActive } from "../repositories/webForms";
+import { isFeatureEnabled, requireFeature } from "./featureService";
 import { loadQuoteAndDeal, presentVersion, quoteAuditSnapshot, requireQuoteWrite } from "./quoteService";
 
 /**
@@ -35,6 +36,9 @@ import { loadQuoteAndDeal, presentVersion, quoteAuditSnapshot, requireQuoteWrite
 
 export const MAX_LINK_DAYS = 90;
 const TIMELINE_GAP_MS = 60 * 60 * 1000;
+/** One VIEWED event per link in this window, and one LINK_EXPIRED_VISIT per link per hour, so a token cannot flood the log. */
+const VIEW_EVENT_GAP_MS = 10 * 60 * 1000;
+const EXPIRED_VISIT_GAP_MS = 60 * 60 * 1000;
 
 function sha256(text: string): string {
   return createHash("sha256").update(text).digest("hex");
@@ -125,7 +129,8 @@ export interface SendQuoteInput {
   linkExpiresInDays?: number;
 }
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// The same pattern the mail service uses: one address, no list separators or angle brackets.
+const EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
 
 export async function sendQuote(ctx: AuthContext, quoteId: string, version: number, input: SendQuoteInput = {}, now = new Date()) {
   await requireFeature(ctx.organizationId, "quotes.enabled");
@@ -266,6 +271,15 @@ async function withLogo(organizationId: string, html: string): Promise<string> {
   return html.replace(/<img src="__QUOTE_LOGO_URL__"[^>]*>/g, `<strong>${escapeHtml(name)}</strong>`);
 }
 
+async function senderName(organizationId: string): Promise<string> {
+  const org = await adminDb.organization.findUnique({ where: { id: organizationId }, select: { name: true, displayName: true } });
+  return org?.displayName?.trim() ? org.displayName : (org?.name ?? "the sender");
+}
+
+async function recentEvent(organizationId: string, shareId: string, type: string, since: Date): Promise<boolean> {
+  return (await adminDb.quoteEvent.findFirst({ where: { organizationId, shareId, type, occurredAt: { gt: since } }, select: { id: true } })) !== null;
+}
+
 /** Opens a link: logs the view, counts it, writes the deal timeline (at most hourly), and returns the stored document. */
 export async function openQuoteLink(token: string, client: { userAgent?: string | null } = {}, now = new Date()): Promise<PublicQuoteResult> {
   if (!/^[A-Za-z0-9_-]{20,100}$/.test(token)) return { status: "not_found" };
@@ -275,15 +289,26 @@ export async function openQuoteLink(token: string, client: { userAgent?: string 
   if (!version) return { status: "not_found" };
   const userAgent = client.userAgent?.slice(0, 200) ?? null;
 
+  // A link stops working, without any trace, when its organisation is deactivated, the quotes feature is off, or the
+  // version was turned down or replaced by a newer one the client has been given.
+  if (!(await isOrganizationActive(share.organizationId)) || !(await isFeatureEnabled(share.organizationId, "quotes.enabled"))) return { status: "not_found" };
+  if (version.status === "REJECTED") return { status: "not_found" };
+  const newer = await adminDb.quoteVersion.findFirst({ where: { quoteId: version.quoteId, organizationId: share.organizationId, version: { gt: version.version }, status: { in: ["SENT", "ACCEPTED"] } }, select: { id: true } });
+  if (newer) return { status: "not_found" };
+
   if (share.expiresAt.getTime() <= now.getTime()) {
+    if (await recentEvent(share.organizationId, share.id, "LINK_EXPIRED_VISIT", new Date(now.getTime() - EXPIRED_VISIT_GAP_MS))) {
+      return { status: "expired", organizationName: await senderName(share.organizationId) };
+    }
     await addEvent({ organizationId: share.organizationId, quoteId: version.quoteId, quoteVersionId: version.id, shareId: share.id, type: "LINK_EXPIRED_VISIT", occurredAt: now, userAgent });
-    const org = await adminDb.organization.findUnique({ where: { id: share.organizationId }, select: { name: true, displayName: true } });
-    return { status: "expired", organizationName: org?.displayName?.trim() ? org.displayName : (org?.name ?? "the sender") };
+    return { status: "expired", organizationName: await senderName(share.organizationId) };
   }
 
   const timeline = share.lastTimelineAt === null || now.getTime() - share.lastTimelineAt.getTime() >= TIMELINE_GAP_MS;
   const updated = await recordView(share.organizationId, share.id, now, timeline);
-  await addEvent({ organizationId: share.organizationId, quoteId: version.quoteId, quoteVersionId: version.id, shareId: share.id, type: "VIEWED", occurredAt: now, userAgent });
+  if (!(await recentEvent(share.organizationId, share.id, "VIEWED", new Date(now.getTime() - VIEW_EVENT_GAP_MS)))) {
+    await addEvent({ organizationId: share.organizationId, quoteId: version.quoteId, quoteVersionId: version.id, shareId: share.id, type: "VIEWED", occurredAt: now, userAgent });
+  }
   if (timeline && share.createdByMembershipId) {
     const deal = await adminDb.deal.findFirst({ where: { id: version.quote.dealId, organizationId: share.organizationId }, select: { id: true, companyId: true, primaryContactId: true } });
     if (deal) {

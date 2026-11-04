@@ -70,7 +70,7 @@ export interface OperationDef {
 }
 
 /** The contract version. 1.0.0 is the V1 freeze (docs/API_CHANGELOG.md); later changes bump it and add a change note. */
-export const API_VERSION = "1.0.0";
+export const API_VERSION = "1.1.0";
 
 const ORG = "/api/orgs/{orgSlug}";
 

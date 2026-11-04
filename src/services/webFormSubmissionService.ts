@@ -1,3 +1,4 @@
+import { readCaptchaSecret } from "./webFormService";
 import { NotFoundError, ValidationError } from "../auth/errors";
 import { verifyCaptchaToken } from "../auth/captcha";
 import { enforceRateLimit, type RateLimitRule } from "../auth/rateLimiter";
@@ -92,6 +93,25 @@ export async function submitWebForm(orgSlug: string, publicKey: string, rawBodyT
     const bytes = Buffer.byteLength(rawBodyText, "utf8");
     if (bytes > MAX_PAYLOAD_BYTES) reject("PAYLOAD_TOO_LARGE", `${bytes} bytes (max ${MAX_PAYLOAD_BYTES}).`);
 
+    if (form.allowedOrigins.length > 0 && (!meta.origin || !form.allowedOrigins.includes(meta.origin))) {
+      reject("ORIGIN_NOT_ALLOWED", meta.origin ?? "(no Origin or Referer header)");
+    }
+
+    let body: unknown;
+    try {
+      body = JSON.parse(rawBodyText);
+    } catch {
+      reject("VALIDATION_FAILED", "Invalid JSON.");
+    }
+
+    // A trap-field submission is answered like a success before any bucket is spent on it.
+    const trap = typeof body === "object" && body !== null && !Array.isArray(body) ? (body as Record<string, unknown>)[form.honeypotFieldName] : undefined;
+    if (typeof trap === "string" && trap.trim().length > 0) {
+      outcome = "HONEYPOT_TRIGGERED";
+      reason = "The hidden trap field was filled in.";
+      return { message: form.successMessage };
+    }
+
     const rules: RateLimitRule[] = [
       { scope: "ip", key: meta.ipAddress, windowMs: windowMs(), max: maxPerIp() },
       { scope: "form", key: form.id, windowMs: windowMs(), max: maxPerForm() },
@@ -105,17 +125,6 @@ export async function submitWebForm(orgSlug: string, publicKey: string, rawBodyT
       throw err;
     }
 
-    if (form.allowedOrigins.length > 0 && (!meta.origin || !form.allowedOrigins.includes(meta.origin))) {
-      reject("ORIGIN_NOT_ALLOWED", meta.origin ?? "(no Origin or Referer header)");
-    }
-
-    let body: unknown;
-    try {
-      body = JSON.parse(rawBodyText);
-    } catch {
-      reject("VALIDATION_FAILED", "Invalid JSON.");
-    }
-
     const checked = checkSubmission(form.fields as unknown as FormField[], form.honeypotFieldName, body);
 
     if (checked.honeypotFilled) {
@@ -127,7 +136,7 @@ export async function submitWebForm(orgSlug: string, publicKey: string, rawBodyT
 
     if (form.captchaSecret) {
       const token = (body as Record<string, unknown>).captchaToken;
-      const passed = typeof token === "string" && (await verifyCaptchaToken(form.captchaSecret, token, meta.ipAddress));
+      const passed = typeof token === "string" && (await verifyCaptchaToken(readCaptchaSecret(form.captchaSecret), token, meta.ipAddress));
       if (!passed) reject("CAPTCHA_FAILED", "Missing or invalid captcha token.");
     }
 

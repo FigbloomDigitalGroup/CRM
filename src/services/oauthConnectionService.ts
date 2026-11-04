@@ -272,6 +272,11 @@ async function loadOwned(ctx: AuthContext, id: string): Promise<OAuthConnection>
   return row;
 }
 
+/** Only the owner changes a personal connection's settings; Management changes the shared (ownerless) one. */
+export function canConfigure(ctx: AuthContext, row: { membershipId: string | null }): boolean {
+  return row.membershipId === ctx.membershipId || (row.membershipId === null && hasPermission(ctx, "configuration.manage"));
+}
+
 /** Revokes at the provider (best effort), wipes the tokens, marks REVOKED. Sync stops at once. */
 export async function disconnectConnection(ctx: AuthContext, id: string) {
   const row = await loadOwned(ctx, id);
@@ -301,6 +306,8 @@ export async function disconnectConnection(ctx: AuthContext, id: string) {
 /** What a person may change on their own connection: the calendar to use, the mail exclusion list. Merged into `settings`. */
 export async function updateConnectionSettings(ctx: AuthContext, id: string, patch: Record<string, unknown>) {
   const row = await loadOwned(ctx, id);
+  // Management may disconnect anyone's connection but may not reconfigure someone's personal mailbox or calendar; the shared organisation connection has no owner, so Management manages it.
+  if (!canConfigure(ctx, row)) throw new NotFoundError("Connection", id);
   if (row.revokedAt) throw new ConnectionUnavailableError("DISCONNECTED", "This connection was disconnected.");
   const updated = await adminDb.oAuthConnection.update({ where: { id: row.id }, data: { settings: { ...((row.settings ?? {}) as object), ...patch } as never } });
   await recordAuditEvent({

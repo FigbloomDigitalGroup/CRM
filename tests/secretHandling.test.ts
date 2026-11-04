@@ -6,6 +6,9 @@ import { GET as jobsGet } from "../src/app/api/cron/jobs/route";
 import { GET as sweepGet } from "../src/app/api/cron/notifications-sweep/route";
 
 /** G1.05: shared secrets are compared in constant time, and a secret that reaches a log line is not written. */
+// Captcha secrets are stored sealed, which needs the integration key.
+process.env.INTEGRATION_ENCRYPTION_KEY ??= Buffer.alloc(32, 7).toString("base64");
+
 describe("secret handling", () => {
   it("matches only the exact secret, whatever its length, and never a missing one", () => {
     expect(secretsMatch("s3cret-value", "s3cret-value")).toBe(true);

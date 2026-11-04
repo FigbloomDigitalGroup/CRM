@@ -2205,3 +2205,10 @@ Known gaps: no OCR engine bundled (vision model when `ANTHROPIC_API_KEY` is set,
 Tests: `tests/cardCapture.test.ts` (18).
 
 New routes are listed in NOT_IN_V1_CONTRACT. `tests/apiWalk.test.ts` and its matrix snapshot will need regenerating once all M13 lanes are in (`UPDATE_API_SNAPSHOTS=1`); the assistant routes answer FEATURE_UNAVAILABLE while the toggle is off.
+
+## Stage 13 close-out (M13, 4 Nov 2026)
+
+- **State:** the V1.1 backend is built on `makeover/m13-backend-v11` (migrations `20261104090000` to `20261110120000`, 28 new test files, new docs listed in CLAUDE.md). Nothing is wired to the demo screens yet (M14).
+- **Checks done by reading code:** `docs/M13_CLOSEOUT.md` (scheduling check and integration check). Gaps found: no configured scheduler call for `/api/cron/jobs` and `/api/cron/platform-maintenance`; the quote send uses the organisation SMTP, not the connected mailbox; `mail.use` and `meetings.schedule` are seeded but not read; the assistant default model is still Opus; several new environment variables are missing from `docs/DEPLOYMENT.md`.
+- **Decisions:** ten decisions taken on Given's behalf are in `docs/DECISIONS.md` section 5 (all reversible), with a table of the lane decisions above (5.1).
+- **Not run:** the full suite, because the database was down. The `apiWalk` snapshots still need regenerating (`UPDATE_API_SNAPSHOTS=1`) once all lanes are in.

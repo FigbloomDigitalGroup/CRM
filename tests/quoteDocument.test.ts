@@ -205,7 +205,7 @@ describe("share links, expiry and view tracking (FIG-1144)", () => {
     expect(types).toEqual(["SENT", "LINK_REVOKED"]);
   });
 
-  it("logs every view, counts it, and writes the deal timeline once an hour at most, without any amount in it", async () => {
+  it("counts every view, logs one per 10 minutes, and writes the deal timeline once an hour at most, without any amount in it", async () => {
     const { w, quote, token } = await sentQuote();
     const open = (offsetMinutes: number) => openQuoteLink(token, { userAgent: "TestBrowser/1.0" }, new Date(NOW.getTime() + offsetMinutes * 60_000));
     await open(1);
@@ -213,7 +213,7 @@ describe("share links, expiry and view tracking (FIG-1144)", () => {
     await open(30);
     await open(70);
     const activity = await getQuoteActivity(w.sales, quote.id, 1);
-    expect(activity.events.filter((e) => e.type === "VIEWED")).toHaveLength(4);
+    expect(activity.events.filter((e) => e.type === "VIEWED")).toHaveLength(3);
     expect(activity.shares[0]).toMatchObject({ viewCount: 4, active: true });
     expect(activity.shares[0]!.firstViewedAt).toBeTruthy();
 
@@ -221,7 +221,7 @@ describe("share links, expiry and view tracking (FIG-1144)", () => {
     expect(timeline).toHaveLength(2);
     expect(timeline[0]).toMatchObject({ subject: expect.stringMatching(/opened by the client/), authorMembershipId: w.sales.membershipId });
     expect(timeline.map((a) => `${a.subject} ${a.description}`).join(" ")).not.toMatch(/\d{2},\d{3}|KES/);
-    expect(await adminDb.quoteEvent.count({ where: { organizationId: w.org.id, userAgent: "TestBrowser/1.0" } })).toBe(4);
+    expect(await adminDb.quoteEvent.count({ where: { organizationId: w.org.id, userAgent: "TestBrowser/1.0" } })).toBe(3);
   });
 
   it("an expired visit is recorded as such and does not count as a view", async () => {

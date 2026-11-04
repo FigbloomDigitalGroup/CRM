@@ -29,6 +29,7 @@ import {
   sendDraft,
   sendMail,
   syncMailbox,
+  requestConnectionSync as requestConnectionSyncAs,
   unscheduleDraft,
   updateDraft,
 } from "../src/services/mailService";
@@ -67,6 +68,15 @@ const oauthFake: OAuthProviderClient = {
 
 let mail: FakeMail;
 const previousKey = process.env.INTEGRATION_ENCRYPTION_KEY;
+// These are V1.1 features: the test organisations run on release V1.1 (the V1 refusal is tested in releaseGateV11.test.ts).
+const ORIGINAL_RELEASE = process.env.ACTIVE_RELEASE;
+beforeAll(() => {
+  process.env.ACTIVE_RELEASE = "v1.1";
+});
+afterAll(() => {
+  if (ORIGINAL_RELEASE === undefined) delete process.env.ACTIVE_RELEASE;
+  else process.env.ACTIVE_RELEASE = ORIGINAL_RELEASE;
+});
 beforeAll(async () => {
   process.env.INTEGRATION_ENCRYPTION_KEY = randomBytes(32).toString("base64");
   dir = await mkdtemp(join(tmpdir(), "figbloom-mail-"));
@@ -474,5 +484,65 @@ describe("real Gmail and Graph clients (fake provider server)", () => {
     const call = s.seen.at(-1)!;
     expect(call.url).toBe("https://graph.microsoft.com/v1.0/me/sendMail");
     expect(JSON.parse(String(call.init.body))).toMatchObject({ saveToSentItems: true, message: { subject: "S" } });
+  });
+});
+
+describe("review fixes: snippets, mail.use, settings ownership and MIME safety", () => {
+  it("stores a snippet of at most 200 characters from a synced message, not the whole body", async () => {
+    const { org, sales, contact } = await setup();
+    const conn = await connectMail(sales);
+    mail.inbox = [incoming({ id: "long1", bodyText: "A".repeat(4000) })];
+    await syncMailbox(org.id, conn.id!);
+    const rows = await timeline(org.id, contact.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.summary!.length).toBeLessThanOrEqual(200);
+  });
+
+  it("needs mail.use as well as communications.create to draft, send, list or schedule", async () => {
+    const { sales, contact } = await setup();
+    await connectMail(sales);
+    const without: AuthContext = { ...sales, permissionKeys: sales.permissionKeys.filter((k) => k !== "mail.use") };
+    await expect(createDraft(without, { to: ["a@b.test"], subject: "x", body: "x", contactId: contact.id })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(sendMail(without, { to: ["a@b.test"], subject: "x", body: "x", contactId: contact.id })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(listDrafts(without)).rejects.toBeInstanceOf(ForbiddenError);
+    const draft = await createDraft(sales, { to: ["a@b.test"], subject: "x", body: "x", contactId: contact.id });
+    await expect(sendDraft(without, draft.id)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(scheduleDraft(without, draft.id, new Date(Date.now() + 3_600_000))).rejects.toBeInstanceOf(ForbiddenError);
+    expect(mail.sent).toHaveLength(0);
+  });
+
+  it("lets only the owner change a personal connection's settings; Management may still disconnect it", async () => {
+    const { org, management, sales } = await setup();
+    const conn = await connectMail(sales);
+    await expect(updateConnectionSettings(management, conn.id!, { excluded: ["x@y.test"] })).rejects.toBeInstanceOf(NotFoundError);
+    await expect(requestConnectionSyncAs(management, conn.id!)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(updateConnectionSettings(sales, conn.id!, { excluded: ["x@y.test"] })).resolves.toBeDefined();
+    await disconnectConnection(management, conn.id!);
+    expect((await adminDb.oAuthConnection.findUniqueOrThrow({ where: { id: conn.id! } })).revokedAt).not.toBeNull();
+    void org;
+  });
+
+  it("builds attachment headers without line breaks, with an RFC 2231 name and a safe media type", async () => {
+    const seen: string[] = [];
+    const impl = (async (_url: string, init: RequestInit = {}) => {
+      seen.push(String(init.body ?? ""));
+      return new Response(JSON.stringify({ id: "s1" }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const client = createMailProvider("GOOGLE", impl);
+    await client.sendMessage("tok", {
+      to: ["a@b.test\r\nBcc: evil@x.test"],
+      cc: [],
+      subject: "S",
+      body: "B",
+      attachments: [{ name: 'in"voice\r\nBcc: evil@x.test\u00e9.png', mimeType: "image/png\r\nX-Evil: 1", content: PNG }],
+    });
+    const raw = Buffer.from(JSON.parse(seen[0]!).raw, "base64url").toString("utf8");
+    const headerBlock = raw.split("\r\n\r\n")[0]!;
+    expect(raw).not.toMatch(/^Bcc:/im);
+    expect(raw).not.toMatch(/^X-Evil:/im);
+    expect(headerBlock).toContain("To: a@b.test Bcc: evil@x.test");
+    expect(raw).toContain("application/octet-stream");
+    expect(raw).toContain("filename*=UTF-8''");
+    expect(raw).toContain("%C3%A9");
   });
 });

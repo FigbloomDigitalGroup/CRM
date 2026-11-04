@@ -106,7 +106,7 @@ describe("provisioning (PL3)", () => {
     // The owner accepts, signs in, and uses the organisation.
     const accepted = await acceptMembershipInvite(new URL(url).searchParams.get("token")!, "a-long-enough-password-1");
     expect(accepted.organizationSlug).toBe(body.slug);
-    const ctx = await resolveRequestContext(body.slug, cookieJar({ [SESSION_COOKIE_NAME]: accepted.token }));
+    const ctx = await resolveRequestContext(body.slug, cookieJar({ [SESSION_COOKIE_NAME]: (accepted as { token: string }).token }));
     expect(ctx).toMatchObject({ organizationId: made.organizationId, roleKey: "MANAGEMENT" });
     expect(ctx.permissionKeys.length).toBeGreaterThan(10);
   });

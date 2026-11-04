@@ -21,7 +21,7 @@ import { getStorageDriver } from "../storage";
 
 const DAY_MS = 86_400_000;
 
-async function deleteChatFiles(organizationId: string, fileIds: string[]): Promise<number> {
+export async function deleteChatFiles(organizationId: string, fileIds: string[]): Promise<number> {
   const ids = [...new Set(fileIds)];
   if (ids.length === 0) return 0;
   // A file that is also attached to a record stays; only files that lived in chat go.

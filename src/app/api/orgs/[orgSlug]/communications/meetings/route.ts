@@ -2,7 +2,7 @@ import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
 import { withIdempotency } from "@/lib/idempotency";
-import { resolveRequestContext } from "@/auth/requestContext";
+import { resolveGatedContext } from "@/app/api/_lib/gatedContext";
 import { scheduleMeeting } from "@/services/meetingService";
 
 const MeetingSchema = z.strictObject({
@@ -20,7 +20,7 @@ const MeetingSchema = z.strictObject({
 export async function POST(request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "communication.group");
     const body = await parseJsonBody(request, MeetingSchema);
     return withIdempotency(ctx, request, body, () => scheduleMeeting(ctx, body));
   });

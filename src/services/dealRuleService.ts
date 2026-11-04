@@ -20,6 +20,8 @@ import { createDealMove, getDealMove, latestOpenMove, markMoveUndone } from "../
 import { getDeal, listDeals, updateDeal } from "./dealService";
 import { consumeMoveGrant, approvalGateBlocker } from "./approvalGateService";
 import { stageRuleBlockers } from "./pipelineService";
+import { isFeatureEnabled } from "./featureService";
+import type { UpdateDealServiceInput } from "./dealService";
 
 /**
  * Deal rules (FIG-1035, B2.06). Stalled thresholds per stage with an
@@ -148,6 +150,10 @@ export interface MoveCheck {
   reopens: boolean;
 }
 
+function grantActor(ctx: AuthContext) {
+  return { membershipId: ctx.membershipId, canEditAll: hasPermission(ctx, "deals.edit.all") };
+}
+
 async function evaluateMove(ctx: AuthContext, dealId: string, input: MoveInput) {
   const deal = await getDeal(ctx, dealId);
   const [stages, lostReason] = await Promise.all([
@@ -175,7 +181,7 @@ async function evaluateMove(ctx: AuthContext, dealId: string, input: MoveInput) 
   // reason is returned at once. A rule blocks and explains; it never moves the deal (hard rule 9).
   if (to && blockers.length === 0 && to.id !== from.id) {
     for (const r of await stageRuleBlockers(ctx.organizationId, dealId, to.id)) blockers.push({ code: r.code, message: r.message, field: "pipelineStageId", ...(r.fields ? { fields: r.fields } : {}) });
-    const approval = await approvalGateBlocker(ctx.organizationId, dealId, to);
+    const approval = await approvalGateBlocker(ctx.organizationId, dealId, to, new Date(), grantActor(ctx));
     if (approval) blockers.push({ code: approval.code, message: approval.message, field: "pipelineStageId" });
   }
   const check: MoveCheck = {
@@ -220,7 +226,7 @@ export async function moveDeal(ctx: AuthContext, dealId: string, input: MoveInpu
     undoExpiresAt: new Date(Date.now() + MOVE_UNDO_WINDOW_MS),
     previous: JSON.parse(JSON.stringify(previous)),
   });
-  await consumeMoveGrant(ctx.organizationId, dealId, to!.id);
+  await consumeMoveGrant(ctx.organizationId, dealId, to!.id, new Date(), grantActor(ctx));
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,
@@ -232,6 +238,24 @@ export async function moveDeal(ctx: AuthContext, dealId: string, input: MoveInpu
     metadata: { moveId: move.id, lostReasonId: input.lostReasonId ?? null },
   });
   return { deal: updated, move: { id: move.id, undoExpiresAt: move.undoExpiresAt, undoable: !to!.isWon } };
+}
+
+/**
+ * PATCH /deals/{id} (review finding 1). A change of stage goes through `moveDeal`, so every move gate applies (valid quote, approval,
+ * required fields, wrong pipeline, lost reason, reopen permission) with the same error codes and the same move record and audit
+ * event as the /move endpoint. The other fields are saved first so the gates see the value the person is asking to move with.
+ * A request that does not change the stage, and every request in a V1 organisation (which has no gates), is a plain update.
+ */
+export async function updateDealChecked(ctx: AuthContext, dealId: string, input: UpdateDealServiceInput) {
+  if (!input.pipelineStageId) return updateDeal(ctx, dealId, input);
+  const current = await getDeal(ctx, dealId);
+  if (current.pipelineStageId === input.pipelineStageId || !(await isFeatureEnabled(ctx.organizationId, "release.v11"))) return updateDeal(ctx, dealId, input);
+
+  const { pipelineStageId, lostReasonId, handoff, ...fields } = input;
+  const hasFields = Object.values(fields).some((v) => v !== undefined);
+  if (hasFields) await updateDeal(ctx, dealId, fields);
+  const moved = await moveDeal(ctx, dealId, { pipelineStageId, lostReasonId, handoff: handoff as MoveInput["handoff"] });
+  return moved.deal;
 }
 
 function requireEdit(ctx: AuthContext, ownerMembershipId: string) {

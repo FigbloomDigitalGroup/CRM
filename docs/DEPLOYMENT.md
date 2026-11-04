@@ -101,6 +101,31 @@ by whether an environment needs it:
 | `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` | Optional | Optional | Defaults to `15`. See "Scheduled jobs," below. |
 | `SMS_PROVIDER_API_KEY` | Not needed | Optional | No real SMS provider is wired up yet (FIG-597) -- see `src/notifications/sms.ts`. Setting this alone does nothing. |
 | `LOG_LEVEL` | Optional (defaults to `info`) | Optional | `pino` level -- see "Logging," below. |
+| `CRON_SECRET` (all cron routes) | Not needed | **Required** | Bearer secret for `/api/cron/jobs`, `/api/cron/platform-maintenance` and `/api/cron/notifications-sweep`. Unset: the routes fail closed (500). |
+| `TWO_STEP_ENCRYPTION_KEY` | Optional (dev fallback key) | **Required** | 32 random bytes, base64. Encrypts two-step secrets. Unset in production: two-step enrolment and sign-in fail closed. |
+| `INTEGRATION_ENCRYPTION_KEY` | Optional | **Required for mail and calendar connections** | base64 of 32 random bytes. Encrypts stored OAuth tokens. Unset: no connection token can be stored or read (feature disabled). |
+| `PLATFORM_DB_PASSWORD` | Required | **Required** | Password for the `figbloom_platform` role, created by `npm run db:bootstrap-role`. Unset: the platform role is not created and the platform console cannot connect. |
+| `PLATFORM_DATABASE_URL` | Required | **Required** | Same host/db, `figbloom_platform` credentials; used by the platform console. Unset: the platform console fails closed. |
+| `PLATFORM_DB_ROLE` / `APP_DB_ROLE` | Optional | Optional | Role names for the bootstrap script; default `figbloom_platform` / `figbloom_app`. |
+| `PLATFORM_DELETION_WAIT_DAYS` | Optional | Optional | Retention wait for platform data requests and exports, in days. Default 30; values below 7 are ignored. |
+| `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` | Optional | Required to offer Gmail and Google Calendar | Unset: the Google connection is unavailable (feature disabled). Register `${APP_BASE_URL}/api/integrations/oauth/callback` as the redirect address; there is no separate redirect variable, it derives from `APP_BASE_URL`. |
+| `MICROSOFT_OAUTH_CLIENT_ID` / `MICROSOFT_OAUTH_CLIENT_SECRET` | Optional | Required to offer Outlook | Unset: the Microsoft connection is unavailable. Same redirect address. |
+| `MICROSOFT_OAUTH_TENANT` | Optional | Optional | Default `common`. |
+| `ANTHROPIC_API_KEY` | Optional | Required for the assistant and business-card reader | Unset: the assistant says it is not set up; the card reader falls back to typing. Also needs `@anthropic-ai/sdk` installed. |
+| `ASSISTANT_MODEL` | Optional | Optional | Claude model id for the assistant. Code default is `claude-opus-5-5` today (the decision says Sonnet; see `docs/M13_CLOSEOUT.md`). |
+| `TRUSTED_PROXY_HOPS` | Optional | Required behind a proxy | Number of trusted proxy hops. When unset, `X-Forwarded-For` is ignored (per-IP limits then have no key). |
+| `TWO_STEP_RATE_LIMIT_MAX_PER_USER` / `_MAX_PER_IP` / `_WINDOW_MS` | Optional | Optional | Two-step code attempts per window. Defaults 10 / 30 / 900000 ms. |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Optional | Required for web push | All three needed; unset: push is disabled. Subject is a `mailto:` or `https:` contact. |
+| `PUSH_EXTRA_HOSTS` | Optional | Optional | Comma-separated extra push-service hosts to allow. |
+| `JOBS_POLL_INTERVAL_MS` | Optional | Optional | Poll interval of `npm run jobs:worker`; default 5000. |
+| `MIGRATION_MAX_ROWS` / `MIGRATION_ROLLBACK_WINDOW_HOURS` | Optional | Optional | Data-migration row ceiling (default 50000) and rollback window. |
+| `INVITE_RESEND_COOLDOWN_MS` | Optional | Optional | Brake on re-sending a pending invite; default 60000. |
+| `APP_VERSION` | Optional | Optional | Version reported to the PWA; falls back to the Vercel commit sha, then `dev`. |
+| `HIDE_DEV_LOGIN_ACCOUNTS` | Optional | Omit | `true` hides the dev sign-in chips in a demo run. |
+| `SENTRY_ENVIRONMENT` / `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | Optional | Optional | Sentry environment name; default is `NODE_ENV`. |
+| `LOG_PLAIN` | Optional | Not needed | `1` turns off pretty logging in development. |
+| `NEXT_PUBLIC_API_SOURCE` / `NEXT_PUBLIC_MOCK_API_URL` | Optional | Omit | Frontend data source (`real` or `mock`) and mock server address. |
+| `NEXT_PUBLIC_DEMO_SCREENS` | Optional | Omit | `true` shows demo-data screens in production; leave unset until they are wired. |
 | `NODE_ENV` | Set by tooling (`next dev`/`test`) | `production` | Set automatically by `next build`/`next start`; the Dockerfile also sets it explicitly in the runner stage. |
 
 ## Secrets handling
@@ -164,8 +189,8 @@ own -- wire it to one of:
   an HTTP request:
   `*/15 * * * * docker exec <container> npm run notifications:sweep`
 
-Either way, the interval between triggers is yours to choose when you
-configure the scheduler/cron entry -- 15-30 minutes is reasonable. The app
+Either way, the interval for the sweep is yours to choose -- 15-30 minutes is
+reasonable for the sweep alone. (`/api/cron/jobs` needs 5 minutes or less, see "Scheduled work" below.) The app
 does not need to be told what that interval is in order to run the sweep;
 see the next section for what `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES`
 actually does.
@@ -201,6 +226,67 @@ logs a structured line (`src/lib/logger.ts`, so it reaches whatever log
 aggregator you've wired up) on completion and on any per-organization
 failure.
 
+## Scheduled work
+
+Nothing in this repo schedules itself: the image has no scheduler sidecar, the
+compose files have no scheduler service, and the repo has no `vercel.json` or
+scheduled workflow. Whoever runs the environment must install **all** the calls
+below. Without them mail sync, scheduled sends, chat notifications,
+data-request exports, retention and the platform audit check never run.
+
+| Route | Interval | What it runs |
+|---|---|---|
+| `/api/cron/jobs` | **Every 5 minutes or less** | The job queue for every organisation: `oauth.refresh`, `mail.sync`, `calendar.sync`, `mail.send_scheduled`, `chat.notify`, `sequences.run`, `platform.org_export`, `notifications.sweep` and the other job types in `docs/JOBS.md`, including the daily `privacy.retention` (with the chat retention purge). `mail.sync` runs every 5 minutes, and queued jobs start late by up to the interval between calls. |
+| `/api/cron/platform-maintenance` | Daily | Platform audit-chain verification and the purge of expired organisation exports. |
+| `/api/cron/notifications-sweep` | 15 to 30 minutes (see "Scheduled jobs") | Due and overdue task notifications and email delivery retries. Also covered by `/api/cron/jobs`; keep it only if you want it on its own interval. |
+
+All three accept `GET` or `POST` and need the secret in `CRON_SECRET` (set per
+environment; if unset the routes refuse to run), sent as
+`Authorization: Bearer <CRON_SECRET>` (or `X-Cron-Secret: <CRON_SECRET>`).
+`npm run jobs:worker` is a long-running alternative to the `/api/cron/jobs`
+call (polls every `JOBS_POLL_INTERVAL_MS`, default 5000); it does not replace
+the platform-maintenance call.
+
+**Crontab (VPS)**
+
+```cron
+*/5 * * * *  curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/jobs
+15 3 * * *   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/platform-maintenance
+*/30 * * * * curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://your-domain/api/cron/notifications-sweep
+```
+
+**GitHub Actions** (a separate workflow file; secrets `CRON_SECRET` and `APP_URL`.
+GitHub can delay scheduled runs by several minutes, so prefer a crontab where mail sync matters.)
+
+```yaml
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+    - cron: "15 3 * * *"
+jobs:
+  call:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.APP_URL }}/api/cron/jobs"
+          if [ "${{ github.event.schedule }}" = "15 3 * * *" ]; then
+            curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.APP_URL }}/api/cron/platform-maintenance"
+          fi
+```
+
+**Vercel** (`vercel.json`; Vercel sends `Authorization: Bearer $CRON_SECRET` itself
+when the `CRON_SECRET` environment variable is set; a 5-minute schedule needs a plan that allows it)
+
+```json
+{
+  "crons": [
+    { "path": "/api/cron/jobs", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/platform-maintenance", "schedule": "15 3 * * *" },
+    { "path": "/api/cron/notifications-sweep", "schedule": "*/30 * * * *" }
+  ]
+}
+```
+
 ## Rate limiting on login/signup/password-reset
 
 `POST /api/auth/login`, `/api/auth/signup`, and
@@ -211,6 +297,8 @@ backing store (`auth_rate_limit_attempts`) the website lead-capture
 endpoint's own rate limiting uses (FIG-594) -- one durable mechanism, not
 two. No setup is required beyond applying migrations as usual; there is no
 sidecar, no Redis, nothing extra to deploy.
+
+**Client address and proxies.** `X-Forwarded-For` is only trusted when `TRUSTED_PROXY_HOPS` is set to the number of proxies in front of the app (1 for one load balancer): the entry that many places from the right is taken as the client. When it is unset the header is ignored and `X-Real-IP` (set by the platform) is used; with neither, IP-based limits are skipped for that request.
 
 **Defaults** (all tunable via env, see `.env.example`):
 
@@ -383,3 +471,14 @@ container, `figbloom_app` role provisioning, the full Vitest suite, a
 production build, and a separate job that builds the Docker image itself
 -- so a broken Dockerfile fails CI the same way a broken test would,
 rather than being discovered at deploy time.
+
+## Go-live checklist for V1.1 features
+
+- [ ] Platform role created: `PLATFORM_DB_PASSWORD` set, then `npm run db:bootstrap-role` and `npm run db:grant-role`; `PLATFORM_DATABASE_URL` set.
+- [ ] Platform admin created with `npm run platform:bootstrap-admin`.
+- [ ] `TWO_STEP_ENCRYPTION_KEY` and `INTEGRATION_ENCRYPTION_KEY` set (32 random bytes, base64, different per environment).
+- [ ] SMTP configured (`SMTP_*`); in production links are never logged, so without SMTP invites and resets cannot be delivered.
+- [ ] `CRON_SECRET` set and the scheduler entries from "Scheduled work" installed (`/api/cron/jobs` every 5 minutes or less, `/api/cron/platform-maintenance` daily).
+- [ ] `TRUSTED_PROXY_HOPS` set when behind a proxy (number of trusted proxy hops; when unset `X-Forwarded-For` is ignored).
+- [ ] OAuth client ids and secrets set and `${APP_BASE_URL}/api/integrations/oauth/callback` registered, if mail and calendar connections are offered.
+- [ ] `APP_BASE_URL` set to the public URL; no dev accounts exist and `ALLOW_DEV_ACCOUNTS` is not set.

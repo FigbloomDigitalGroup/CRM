@@ -123,3 +123,36 @@ The backend for the platform console exists (`docs/PLATFORM_CONSOLE_API.md`); th
 | Suspend, reactivate, offboard (PL5, OS1) | FIG-1137 | `POST /api/platform/organizations/{id}/status`; the suspended screen (OS1) now shows from the real organisation status | platform half demo; OS1 is real |
 | Audit log (PL8) | FIG-1138 | `/api/platform/audit`, `/export`, `/verify` | demo data |
 | Data requests and offboarding (PL6, OS6) | FIG-1141 | `/api/platform/data-requests/*`; org side `/privacy/organisation-requests` (+ `/{id}/download`) | demo data |
+
+## M13 close-out (4 Nov 2026)
+
+The V1.1 backend is built and committed on `makeover/m13-backend-v11` (`bbdc883`). The table lists which backend issues exist for each demo-screen row above. **The "Wired to real API" column of the table above is unchanged: nothing is wired yet** (that is M14). Checks and gaps found: `docs/M13_CLOSEOUT.md`.
+
+| Demo-screen row (issue) | Backend issues built in M13 | Not covered by the backend yet |
+|---|---|---|
+| Platform shell and home (FIG-1160) | FIG-1135, FIG-1139 | none |
+| Organisations list, provisioning, detail, suspend (FIG-1161) | FIG-1136, FIG-1137 | none |
+| Offboarding, data requests, audit, health (FIG-1162) | FIG-1137, FIG-1138, FIG-1139, FIG-1141 | none |
+| Platform admins, security, verify (FIG-1163) | FIG-1134, FIG-1140 | none |
+| Platform mobile (FIG-1164) | same routes as FIG-1160 to FIG-1163 | none |
+| Platform support access, flags, announcements (FIG-1192, platform half) | none | whole backend (support access, flags and limits, announcements) |
+| Customer Support workspace (FIG-1178) | FIG-1155 | no SLA clocks, no outbound reply email, no public survey page |
+| Organisation switcher (FIG-1165) | FIG-1133 | none |
+| Suspended screen, Settings data requests (FIG-1166) | FIG-1137, FIG-1141 | "notify the organisation" switch on suspend |
+| Two-step code, enrolment, Settings two-step (FIG-1167) | FIG-1134 | in-app alert notification |
+| Support access card, banner, history, announcements (FIG-1192, organisation side) | none | whole backend |
+| Ask Figbloom panel (FIG-1171) | FIG-1152 | summaries, scoring, churn options, history |
+| Command palette, Help, What's new (FIG-1172) | FIG-1149 | recent records |
+| Saved views (FIG-1173) | FIG-1148 | none |
+| Settings: email and calendar, AI assistant (FIG-1175) | FIG-1153, FIG-807, FIG-808, FIG-1152 | none |
+| Mobile camera photos, card scan (FIG-1177) | FIG-1154 | offline queue entry for photos |
+| Quote builder, document, versions (FIG-1168) | FIG-1142, FIG-1143, FIG-1144 | PDF output, a viewer page for the quote link |
+| Approvals inbox (FIG-1169) | FIG-1145 | none |
+| Forecast and targets (FIG-1170) | FIG-1146 | none |
+| Settings: catalogue, pipelines, sequences, web forms, approval rules (FIG-1174) | FIG-1142, FIG-1147, FIG-1150, FIG-1151, FIG-1145 | none |
+| E-signature and deposit request (FIG-1193) | none | V2 backend (M16) |
+| Settings: roles and field access, developers (FIG-1194) | none | V2 backend (M16) |
+| Communication group (FIG-1378) | FIG-1384 (`communication.group` toggle and keys) | none |
+| Chat workspace (FIG-1379) | FIG-1382 to FIG-1385 | none |
+| Mail workspace (FIG-1380) | FIG-807, FIG-1153 | none |
+| Video Conference (FIG-1381) | FIG-808, FIG-1153 | none |

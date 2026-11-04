@@ -2,6 +2,7 @@ import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
+import { requireFeature } from "@/services/featureService";
 import { withIdempotency } from "@/lib/idempotency";
 import { createSequence, listSequences } from "@/services/followUpService";
 
@@ -27,6 +28,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ org
   return handleRoute(async () => {
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
+    await requireFeature(ctx.organizationId, "release.v11"); // release gate before body validation
     const body = await parseJsonBody(request, CreateSequenceSchema);
     return withIdempotency(ctx, request, body, () => createSequence(ctx, body));
   });

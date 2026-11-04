@@ -38,6 +38,15 @@ const fakeReader: CardExtractor = {
   },
 };
 
+// These are V1.1 features: the test organisations run on release V1.1 (the V1 refusal is tested in releaseGateV11.test.ts).
+const ORIGINAL_RELEASE = process.env.ACTIVE_RELEASE;
+beforeAll(() => {
+  process.env.ACTIVE_RELEASE = "v1.1";
+});
+afterAll(() => {
+  if (ORIGINAL_RELEASE === undefined) delete process.env.ACTIVE_RELEASE;
+  else process.env.ACTIVE_RELEASE = ORIGINAL_RELEASE;
+});
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "figbloom-card-"));
   process.env.STORAGE_SIGNING_SECRET = "card-test-secret";

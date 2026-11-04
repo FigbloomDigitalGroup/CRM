@@ -185,6 +185,17 @@ export function createTwoStepEngine(store: TwoStepStore) {
       return challenge;
     },
 
+    /**
+     * Counts an attempt BEFORE the code is checked, atomically (the database
+     * increments and returns the new value), so parallel guesses cannot all slip
+     * past the cap that loadChallenge checked. Past the cap: same "expired" answer.
+     */
+    async reserveAttempt(challenge: StoredChallenge): Promise<{ attemptsLeft: number }> {
+      const attempts = await store.addAttempt(challenge.id);
+      if (attempts > MAX_CHALLENGE_ATTEMPTS) throw new UnauthorizedError("This sign-in has expired. Sign in again.");
+      return { attemptsLeft: Math.max(0, MAX_CHALLENGE_ATTEMPTS - attempts) };
+    },
+
     /** A wrong code: counts against the challenge; at the limit the challenge is burned and the person signs in again. */
     async failChallenge(challenge: StoredChallenge): Promise<{ attemptsLeft: number }> {
       const attempts = await store.addAttempt(challenge.id);

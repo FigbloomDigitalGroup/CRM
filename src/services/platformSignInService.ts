@@ -49,16 +49,20 @@ function audit(identity: { id: string; email: string } | null, action: string, m
 /** A wrong password or code: counts toward the lock (settings: attempts and minutes). Always returns the same thrown answer. */
 async function registerFailure(identity: PlatformIdentity, reason: "password" | "code"): Promise<never> {
   const settings = await loadPlatformSettings();
-  const failures = identity.failedSignInCount + 1;
-  const locking = failures >= settings.maxFailedAttempts;
-  await getPlatformDb().platformIdentity.update({
+  // Atomic increment: parallel failures cannot overwrite each other's count.
+  const row = await getPlatformDb().platformIdentity.update({
     where: { id: identity.id },
-    data: {
-      failedSignInCount: failures,
-      lastFailedSignInAt: new Date(),
-      ...(locking ? { lockedUntil: new Date(Date.now() + settings.lockoutMinutes * 60_000) } : {}),
-    },
+    data: { failedSignInCount: { increment: 1 }, lastFailedSignInAt: new Date() },
+    select: { failedSignInCount: true },
   });
+  const failures = row.failedSignInCount;
+  const locking = failures >= settings.maxFailedAttempts;
+  if (locking) {
+    await getPlatformDb().platformIdentity.update({
+      where: { id: identity.id },
+      data: { lockedUntil: new Date(Date.now() + settings.lockoutMinutes * 60_000) },
+    });
+  }
   await audit(identity, locking ? "platform.signin_locked" : "platform.signin_failed", { reason, failures });
   if (locking) await emailSecurityAlert(identity.email, "too_many_failures");
   throw new UnauthorizedError(reason === "password" ? GENERIC_FAILURE : "That code is not right.");
@@ -126,9 +130,9 @@ export async function verifyPlatformSignInCode(challengeToken: string | undefine
   const challenge = await engine.loadChallenge(challengeToken, "VERIFY");
   await limitStep(challenge.subjectId, client.ipAddress ?? challenge.ipAddress, "TWO_STEP_VERIFY");
   const identity = await loadIdentityFor(challenge);
+  await engine.reserveAttempt(challenge);
   const result = await engine.verifyAnyCode(identity.id, code);
   if (!result) {
-    await engine.failChallenge(challenge);
     return registerFailure(identity, "code");
   }
   if (result.method === "backup") {
@@ -152,10 +156,10 @@ export async function confirmPlatformEnrolment(challengeToken: string | undefine
   const challenge = await engine.loadChallenge(challengeToken, "ENROL");
   await limitStep(challenge.subjectId, client.ipAddress ?? challenge.ipAddress, "TWO_STEP_ENROL");
   const identity = await loadIdentityFor(challenge);
+  await engine.reserveAttempt(challenge);
   const enrolled = await engine.confirmEnrolment(identity.id, code);
   if (!enrolled) {
     if (!(await engine.store.getCredential(identity.id))) throw new ValidationError("Start the set-up first.");
-    await engine.failChallenge(challenge);
     return registerFailure(identity, "code");
   }
   await audit(identity, "platform.two_step_enrolled");

@@ -1,4 +1,5 @@
 import { LIFECYCLE_KEYS, transitionCompany } from "./lifecycleService";
+import { assertConvertStageAllowed } from "./dealStageGate";
 import type { Prisma } from "@prisma/client";
 import { assertWritable, cleanArchiveReason } from "../lib/archive";
 import { findDuplicates } from "./duplicateService";
@@ -523,6 +524,8 @@ export async function convertLead(
       throw new ValidationError("newContact.firstName is required.");
     }
   }
+
+  await assertConvertStageAllowed(ctx.organizationId, input.pipelineStageId);
 
   try {
     const deal = await convertLeadToDeal({

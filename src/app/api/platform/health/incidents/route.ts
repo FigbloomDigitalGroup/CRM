@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
+import { requireRecentVerification } from "@/services/platformAdminService";
 import { requirePlatformApi } from "@/app/api/platform/_lib/platformRoute";
 import { createIncident, listIncidents } from "@/services/platformHealthService";
 
@@ -22,6 +23,7 @@ const Body = z.strictObject({
 export async function POST(request: Request) {
   return handleRoute(async () => {
     const platform = await requirePlatformApi("platform.health.manage");
+    await requireRecentVerification(platform);
     return createIncident(platform, await parseJsonBody(request, Body), request.headers.get("x-request-id"));
   });
 }

@@ -15,8 +15,16 @@ export function findPendingFor(organizationId: string, kind: string, subjectType
   return withOrgContext(organizationId, (tx) => tx.approvalRequest.findFirst({ where: { organizationId, kind, subjectType, subjectId, status: "PENDING" } }));
 }
 
-export function listApprovalRequests(organizationId: string, where: Prisma.ApprovalRequestWhereInput) {
-  return withOrgContext(organizationId, (tx) => tx.approvalRequest.findMany({ where: { organizationId, ...where }, orderBy: [{ createdAt: "desc" }, { id: "asc" }] }));
+/** The first `take` rows (newest first) and the count of everything the filter matches. */
+export function pageApprovalRequests(organizationId: string, where: Prisma.ApprovalRequestWhereInput, take: number) {
+  return withOrgContext(organizationId, async (tx) => {
+    const full = { ...where, organizationId };
+    const [rows, total] = await Promise.all([
+      take > 0 ? tx.approvalRequest.findMany({ where: full, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take }) : Promise.resolve([]),
+      tx.approvalRequest.count({ where: full }),
+    ]);
+    return { rows, total };
+  });
 }
 
 /** Decides a PENDING request, once. Returns the decided row, or null when it was no longer pending (someone else decided first). */
@@ -43,10 +51,20 @@ export function markResumed(organizationId: string, id: string, error: string | 
   );
 }
 
-/** An approved, unspent, unexpired grant for moving this deal to this stage. */
-export function findUsableMoveGrant(organizationId: string, dealId: string, toStageId: string, now: Date) {
-  return withOrgContext(organizationId, (tx) =>
-    tx.approvalRequest.findFirst({
+/** The deal value and currency a grant must still match when it is used. */
+export interface GrantSnapshot {
+  value: number | null;
+  currency: string;
+}
+
+/**
+ * An approved, unspent, unexpired grant for moving this deal to this stage. When `snapshot` is given the grant must have been
+ * asked for at the deal's current value and currency (an edit since then voids it); rows without a snapshot never match. When
+ * `actor` is given, only the requester or someone who may edit every deal can spend it.
+ */
+export function findUsableMoveGrant(organizationId: string, dealId: string, toStageId: string, now: Date, snapshot?: GrantSnapshot, actor?: { membershipId: string; canEditAll: boolean }) {
+  return withOrgContext(organizationId, async (tx) => {
+    const rows = await tx.approvalRequest.findMany({
       where: {
         organizationId,
         kind: "LARGE_DEAL",
@@ -58,8 +76,27 @@ export function findUsableMoveGrant(organizationId: string, dealId: string, toSt
         OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
       },
       orderBy: { decidedAt: "desc" },
-    }),
-  );
+    });
+    return (
+      rows.find((r) => {
+        if (snapshot) {
+          if (r.grantCurrency === null || r.grantCurrency !== snapshot.currency) return false;
+          const granted = r.grantValue === null ? null : Number(r.grantValue);
+          if (granted !== snapshot.value) return false;
+        }
+        if (actor && !actor.canEditAll && r.requestedByMembershipId !== actor.membershipId) return false;
+        return true;
+      }) ?? null
+    );
+  });
+}
+
+/** Withdraws an approved grant that has not been spent, so it can no longer be used. */
+export function revokeGrant(organizationId: string, id: string, now: Date) {
+  return withOrgContext(organizationId, async (tx) => {
+    const res = await tx.approvalRequest.updateMany({ where: { id, organizationId, status: "APPROVED", consumedAt: null, subjectType: "DEAL_MOVE" }, data: { expiresAt: now } });
+    return res.count === 1;
+  });
 }
 
 /** Spends a grant once: two moves cannot use one approval. */

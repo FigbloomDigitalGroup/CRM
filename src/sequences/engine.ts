@@ -14,6 +14,7 @@ import {
   getSequenceRow,
   type SubjectState,
 } from "../repositories/followUps";
+import { adminDb } from "../db/adminClient";
 import { sendAndLogEmail } from "../services/communicationService";
 import { renderTemplate } from "../services/emailTemplateService";
 import type { AuthContext } from "../auth/context";
@@ -151,6 +152,15 @@ async function moveOn(organizationId: string, e: Enrollment, position: number, o
   await advanceEnrollment(organizationId, e.id, { nextPosition: next, nextRunAt: dueAt(e.scheduleFrom, offsets[next]!), lastStepAt: now });
 }
 
+async function isDoNotContact(organizationId: string, subject: SubjectState): Promise<boolean> {
+  const or: object[] = [];
+  if (subject.contactId) or.push({ id: subject.contactId });
+  if (subject.contactEmail) or.push({ email: { equals: subject.contactEmail.trim(), mode: "insensitive" } });
+  if (or.length === 0) return false;
+  const hit = await adminDb.contact.findFirst({ where: { organizationId, doNotContact: true, OR: or as never }, select: { id: true } });
+  return hit !== null;
+}
+
 type Step = NonNullable<Awaited<ReturnType<typeof getSequenceRow>>>["steps"][number];
 interface StepResult {
   outcome: "DONE" | "SKIPPED" | "FAILED";
@@ -178,6 +188,8 @@ async function executeStep(organizationId: string, e: Enrollment, step: Step, su
   } catch (err) {
     return { outcome: "SKIPPED", result: `The template could not be used: ${err instanceof Error ? err.message : "unknown error"}` };
   }
+  // A person marked do-not-contact gets no sequence email, drafted or sent (the contact on the record, or any contact with this address).
+  if (await isDoNotContact(organizationId, subject)) return { outcome: "SKIPPED", result: "Not emailed: this person is marked do not contact." };
   const draftBody = `Draft prepared for you. Check it, then send it from the ${e.leadId ? "lead" : "deal"}.\n\nSubject: ${rendered.subject}\n\n${rendered.body}`;
   const draft = async (note: string): Promise<StepResult> => {
     const task = await createStepTask({ organizationId, title: step.title, description: `${note}${draftBody}`.slice(0, 20000), assigneeMembershipId: owner.membershipId, dueAt: now, priority: step.priority as "LOW" | "MEDIUM" | "HIGH", ...record });

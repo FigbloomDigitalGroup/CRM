@@ -30,7 +30,7 @@ A suggested task is a `assistant_proposals` row (PENDING, 30 minutes). `POST ...
 
 ## Provider setup
 
-Default: Claude through `@anthropic-ai/sdk`, loaded only when `ANTHROPIC_API_KEY` is set; model `ASSISTANT_MODEL` (default `claude-opus-5-5`). The package is not a dependency of the project yet: run `npm install @anthropic-ai/sdk` where the assistant is switched on. Without package or key the assistant says it is not set up. Any other model: `setAssistantProviderFactory` with an `AssistantProvider` (`complete(request)`).
+Default: Claude through `@anthropic-ai/sdk`, loaded only when `ANTHROPIC_API_KEY` is set; model `ASSISTANT_MODEL` (default `claude-sonnet-5-5`). The package is not a dependency of the project yet: run `npm install @anthropic-ai/sdk` where the assistant is switched on. Without package or key the assistant says it is not set up. Any other model: `setAssistantProviderFactory` with an `AssistantProvider` (`complete(request)`).
 
 ## Decisions taken without being asked
 

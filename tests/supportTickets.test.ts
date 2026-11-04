@@ -83,7 +83,8 @@ describe("the gate", () => {
         listSurveys(ctx),
         getSupportCustomerView(ctx, company.id),
       ];
-      for (const call of calls) await expect(call, role).rejects.toBeInstanceOf(ForbiddenError);
+      // Handlers are attached to every call at once, so no rejection is ever left unhandled while an earlier one is awaited.
+      await Promise.all(calls.map((call) => expect(call, role).rejects.toBeInstanceOf(ForbiddenError)));
     }
   });
 });

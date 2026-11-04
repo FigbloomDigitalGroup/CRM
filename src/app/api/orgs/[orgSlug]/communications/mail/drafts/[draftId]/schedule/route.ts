@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
-import { resolveRequestContext } from "@/auth/requestContext";
+import { resolveGatedContext } from "@/app/api/_lib/gatedContext";
 import { scheduleDraft, unscheduleDraft } from "@/services/mailService";
 
 type P = { params: Promise<{ orgSlug: string; draftId: string }> };
@@ -10,7 +10,7 @@ type P = { params: Promise<{ orgSlug: string; draftId: string }> };
 export async function POST(request: Request, { params }: P) {
   return handleRoute(async () => {
     const { orgSlug, draftId } = await params;
-    const ctx = await resolveRequestContext(orgSlug);
+    const ctx = await resolveGatedContext(orgSlug, "communication.group");
     const body = await parseJsonBody(request, z.strictObject({ sendAt: z.string() }));
     return scheduleDraft(ctx, draftId, new Date(body.sendAt));
   });
@@ -20,6 +20,6 @@ export async function POST(request: Request, { params }: P) {
 export async function DELETE(_request: Request, { params }: P) {
   return handleRoute(async () => {
     const { orgSlug, draftId } = await params;
-    return unscheduleDraft(await resolveRequestContext(orgSlug), draftId);
+    return unscheduleDraft(await resolveGatedContext(orgSlug, "communication.group"), draftId);
   });
 }

@@ -84,6 +84,15 @@ const oauthFake: OAuthProviderClient = {
 
 let cal: FakeCalendar;
 const previousKey = process.env.INTEGRATION_ENCRYPTION_KEY;
+// These are V1.1 features: the test organisations run on release V1.1 (the V1 refusal is tested in releaseGateV11.test.ts).
+const ORIGINAL_RELEASE = process.env.ACTIVE_RELEASE;
+beforeAll(() => {
+  process.env.ACTIVE_RELEASE = "v1.1";
+});
+afterAll(() => {
+  if (ORIGINAL_RELEASE === undefined) delete process.env.ACTIVE_RELEASE;
+  else process.env.ACTIVE_RELEASE = ORIGINAL_RELEASE;
+});
 beforeAll(() => {
   process.env.INTEGRATION_ENCRYPTION_KEY = randomBytes(32).toString("base64");
 });
@@ -363,5 +372,19 @@ describe("row-level security (mail drafts and calendar links)", () => {
       expect(await tx.calendarEventLink.count({ where: { organizationId: org.id } })).toBe(1);
       expect(await tx.mailDraft.count({ where: { organizationId: org.id } })).toBe(1);
     });
+  });
+});
+
+describe("review fixes: meetings.schedule and calendar ownership", () => {
+  it("needs meetings.schedule as well as activities.create, and only the owner lists or changes a personal calendar", async () => {
+    const { management, sales, lead } = await setup();
+    const conn = await connectCalendar(sales);
+    const without: AuthContext = { ...sales, permissionKeys: sales.permissionKeys.filter((k) => k !== "meetings.schedule") };
+    await expect(scheduleMeeting(without, { title: "x", start: inOneDay(), link: { type: "Lead", id: lead.id } })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(rescheduleMeeting(without, "nope", { title: "y" })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(cancelMeeting(without, "nope")).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(listProviderCalendars(management, conn.id!)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(updateConnectionSettings(management, conn.id!, { calendarId: "primary" })).rejects.toBeInstanceOf(NotFoundError);
+    await expect(listProviderCalendars(sales, conn.id!)).resolves.toBeDefined();
   });
 });

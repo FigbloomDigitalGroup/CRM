@@ -30,7 +30,7 @@ import { recordAuditEvent } from "../repositories/auditEvents";
 import { getAccessState, type AccessState } from "./accessStateService";
 import { recordAuthAuditEvent } from "./authAudit";
 import { recordSignInEvent } from "./signInEventService";
-import { signInRequirement } from "./twoStepService";
+import { revokeAllTrustedDevices, signInRequirement } from "./twoStepService";
 import { tenantTwoStep } from "../auth/twoStep/stores";
 import { sendSecurityAlert } from "./securityAlertService";
 import {
@@ -320,16 +320,7 @@ export async function startSignIn(
 
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) {
-    const failures = user.failedSignInCount + 1;
-    const locking = failures >= policy.maxFailures;
-    await adminDb.user.update({
-      where: { id: user.id },
-      data: {
-        failedSignInCount: failures,
-        lastFailedSignInAt: new Date(now),
-        ...(locking ? { lockedUntil: new Date(now + policy.durationMs) } : {}),
-      },
-    });
+    const { failures, locking } = await incrementFailedSignIn(user.id);
     if (locking) {
       await recordSignInEvent({
         userId: user.id,
@@ -368,14 +359,15 @@ export async function startSignIn(
     throw new AccountDeactivatedError();
   }
 
-  if (user.failedSignInCount > 0 || user.lockedUntil) {
+  const requirement = await signInRequirement(user.id, trustedDeviceToken);
+  // The counter is reset only once every step is done: with a second step still
+  // owed (here, or in twoStepSignInService.finish) wrong codes keep accumulating.
+  if (requirement === "NONE" && (user.failedSignInCount > 0 || user.lockedUntil)) {
     await adminDb.user.update({
       where: { id: user.id },
       data: { failedSignInCount: 0, lockedUntil: null },
     });
   }
-
-  const requirement = await signInRequirement(user.id, trustedDeviceToken);
   if (requirement !== "NONE") {
     const { token, expiresAt } = await tenantTwoStep.issueChallenge(user.id, requirement, client);
     if (requirement === "ENROL") await recordAuthAuditEvent(user.id, "auth.two_step.enrolment_forced");
@@ -391,6 +383,27 @@ export async function startSignIn(
   }
 
   return completeSignIn(user, access, client);
+}
+
+/**
+ * Counts one failed attempt (wrong password or wrong second-step code) atomically:
+ * the database increments the counter, so parallel guesses cannot overwrite each
+ * other, and the lock is set from the value the database returned.
+ */
+export async function incrementFailedSignIn(userId: string): Promise<{ failures: number; locking: boolean }> {
+  const policy = lockoutPolicy();
+  const now = Date.now();
+  const row = await adminDb.user.update({
+    where: { id: userId },
+    data: { failedSignInCount: { increment: 1 }, lastFailedSignInAt: new Date(now) },
+    select: { failedSignInCount: true },
+  });
+  const failures = row.failedSignInCount;
+  const locking = failures >= policy.maxFailures;
+  if (locking) {
+    await adminDb.user.update({ where: { id: userId }, data: { lockedUntil: new Date(now + policy.durationMs) } });
+  }
+  return { failures, locking };
 }
 
 /**
@@ -494,6 +507,8 @@ export async function resetPassword(
   const passwordHash = await hashPassword(newPassword);
   await adminDb.user.update({ where: { id: userId }, data: { passwordHash } });
   await revokeAllSessionsForUser(userId, "PASSWORD_RESET");
+  // A trusted device skips the second step: a reset must not leave one valid.
+  await revokeAllTrustedDevices(userId);
   await recordAuthAuditEvent(userId, "auth.password_reset");
 }
 
@@ -543,12 +558,23 @@ export async function acceptMembershipInvite(
   userAgent?: string | null,
   ipAddress?: string | null,
   place?: string | null,
-): Promise<{
-  token: string;
-  expiresAt: Date;
-  userId: string;
-  organizationSlug: string;
-}> {
+  trustedDeviceToken?: string | null,
+): Promise<
+  | {
+      token: string;
+      expiresAt: Date;
+      userId: string;
+      organizationSlug: string;
+    }
+  | {
+      twoStepRequired: true;
+      purpose: "VERIFY" | "ENROL";
+      challengeToken: string;
+      challengeExpiresAt: Date;
+      userId: string;
+      organizationSlug: string;
+    }
+> {
   const tokenHash = hashInviteToken(token);
 
   // Validate the password *before* consuming the single-use token -- doing
@@ -586,6 +612,27 @@ export async function acceptMembershipInvite(
   });
 
   const client = clientOf(userAgent, ipAddress, place);
+
+  // The link proves the mailbox, not the second factor: apply the same decision as
+  // password sign-in (own two-step, or the organisation's policy) before any session.
+  const requirement = await signInRequirement(user.id, trustedDeviceToken);
+  if (requirement !== "NONE") {
+    const challenge = await tenantTwoStep.issueChallenge(user.id, requirement, client);
+    if (requirement === "ENROL") await recordAuthAuditEvent(user.id, "auth.two_step.enrolment_forced");
+    const org = await adminDb.organization.findUniqueOrThrow({
+      where: { id: membership.organizationId },
+      select: { slug: true },
+    });
+    return {
+      twoStepRequired: true,
+      purpose: requirement,
+      challengeToken: challenge.token,
+      challengeExpiresAt: challenge.expiresAt,
+      userId: user.id,
+      organizationSlug: org.slug,
+    };
+  }
+
   const {
     token: sessionToken,
     expiresAt,

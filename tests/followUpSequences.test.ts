@@ -461,3 +461,34 @@ describe("tenant isolation", () => {
     expect(await tasksOf(a.org.id, a.lead.id)).toHaveLength(0);
   });
 });
+
+describe("review fixes: who may start a sending sequence, and do-not-contact", () => {
+  it("lets only the record owner or Management start a sequence with a SEND step; a draft-only sequence is open to anyone who can open the record", async () => {
+    const w = await world();
+    const viewer = { ...w.otherSales, permissionKeys: [...w.otherSales.permissionKeys, "leads.view.all"] };
+    const refusal = await enrol(viewer, w.sequence.id, { leadId: w.lead.id }, T0).catch((e) => e);
+    expect(refusal).toBeInstanceOf(ValidationError);
+    expect(refusal.issues[0]).toMatchObject({ code: "SEQUENCE_SEND_OWNER_ONLY" });
+    expect(await adminDb.followUpEnrollment.count({ where: { organizationId: w.org.id } })).toBe(0);
+
+    const draftOnly = await createSequence(w.management, { name: "Drafts only", subjectType: "LEAD", steps: [{ dayOffset: 0, kind: "EMAIL", title: "Draft", emailTemplateId: w.draftTemplate.id, emailMode: "DRAFT" }] });
+    await updateSequence(w.management, draftOnly.id, { isActive: true });
+    await expect(enrol(viewer, draftOnly.id, { leadId: w.lead.id }, T0)).resolves.toBeDefined();
+
+    await expect(enrol(w.management, w.sequence.id, { leadId: w.lead.id }, T0)).resolves.toBeDefined();
+  });
+
+  it("sends and drafts no email to a contact marked do-not-contact, and says so in the log", async () => {
+    const w = await world();
+    await adminDb.contact.update({ where: { id: w.contact.id }, data: { doNotContact: true } });
+    const e = await enrol(w.sales, w.sequence.id, { leadId: w.lead.id }, T0);
+    await runDueSequences({ organizationId: w.org.id, now: T0 });
+    await runDueSequences({ organizationId: w.org.id, now: day(2) });
+    await runDueSequences({ organizationId: w.org.id, now: day(5) });
+    expect(await listCommunicationsForLead(w.sales, w.lead.id)).toHaveLength(0);
+    expect((await tasksOf(w.org.id, w.lead.id)).map((t) => t.title)).toEqual(["Intro call"]);
+    const runs = (await getEnrollment(w.sales, e.id)).runs.filter((r) => r.outcome === "SKIPPED");
+    expect(runs).toHaveLength(2);
+    expect(runs[0]!.result).toContain("do not contact");
+  });
+});

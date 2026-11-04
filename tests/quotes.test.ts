@@ -57,10 +57,13 @@ describe("quote arithmetic (FIG-1143)", () => {
   });
 });
 
+// Custom lines need catalogue.manage (R3-4), so tests that add one use a seller who also manages the catalogue.
+const withCatalogue = <T extends { permissionKeys: string[] }>(ctx: T): T => ({ ...ctx, permissionKeys: [...ctx.permissionKeys, "catalogue.manage"] });
+
 describe("quotes (FIG-1143, B6.11)", () => {
   it("builds a quote from the catalogue, numbers it, and masks cost and margin for Sales while Management sees them", async () => {
     const w = await commercialWorld();
-    const created = await createQuote(w.sales, w.deal.id, {
+    const created = await createQuote(withCatalogue(w.sales), w.deal.id, {
       lines: [
         { catalogueItemId: w.camera.id, quantity: 12 },
         { catalogueItemId: w.recorder.id, quantity: 1 },
@@ -91,7 +94,7 @@ describe("quotes (FIG-1143, B6.11)", () => {
     const { quote } = await createQuote(w.sales, w.deal.id, { lines: [{ catalogueItemId: w.camera.id, quantity: 2 }] });
     const v = await getQuoteVersion(w.management, quote.id, 1);
     expect(v).toMatchObject({ cost: 22000, marginPct: 41, subtotal: 37000, total: 37000 });
-    const withCustom = await updateDraftVersion(w.sales, quote.id, 1, {
+    const withCustom = await updateDraftVersion(withCatalogue(w.sales), quote.id, 1, {
       lines: [{ lineId: v.lines[0]!.id, quantity: 2 }, { description: "Travel", quantity: 1, unitPrice: 1000 }],
     });
     expect(withCustom.total).toBe(38000);
@@ -143,7 +146,7 @@ describe("quotes (FIG-1143, B6.11)", () => {
     const w = await commercialWorld();
     const past = new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10);
     const bad = await issuesOf(
-      createQuote(w.sales, w.deal.id, {
+      createQuote(withCatalogue(w.sales), w.deal.id, {
         discountPercent: 31,
         validUntil: past,
         lines: [
@@ -158,7 +161,7 @@ describe("quotes (FIG-1143, B6.11)", () => {
     const codes = bad.map((i) => i.code);
     expect(codes).toEqual(expect.arrayContaining(["INVALID_DISCOUNT", "VALIDITY_IN_PAST"]));
     const lineIssues = await issuesOf(
-      createQuote(w.sales, w.deal.id, {
+      createQuote(withCatalogue(w.sales), w.deal.id, {
         lines: [
           { catalogueItemId: w.camera.id, quantity: 0 },
           { catalogueItemId: w.camera.id, quantity: 1, unitPrice: 1 },
@@ -238,7 +241,8 @@ describe("quotes (FIG-1143, B6.11)", () => {
     const { quote } = await createQuote(w.sales, w.deal.id, { lines: [{ catalogueItemId: w.camera.id, quantity: 3 }] });
     const id = await versionIdOf(w.org.id, quote.id, 1);
     expect((await issuesOf(recordQuoteResponse(w.sales, quote.id, 1, { outcome: "ACCEPTED" })))[0]).toMatchObject({ code: "NOT_SENT" });
-    await transitionVersion(w.org.id, id, ["DRAFT"], "APPROVED", { lock: true });
+    await transitionVersion(w.org.id, id, ["DRAFT"], "PENDING_APPROVAL", { lock: true });
+    await transitionVersion(w.org.id, id, ["PENDING_APPROVAL"], "APPROVED");
     await transitionVersion(w.org.id, id, ["APPROVED"], "SENT", { sentAt: new Date() });
     const done = await recordQuoteResponse(w.sales, quote.id, 1, { outcome: "ACCEPTED", note: "Signed on site" });
     expect(done).toMatchObject({ status: "ACCEPTED", decisionReason: "Signed on site" });
@@ -309,7 +313,8 @@ describe("the Proposal Sent gate (FIG-1143)", () => {
     const w = await commercialWorld();
     const { quote } = await createQuote(w.sales, w.deal.id, { lines: [{ catalogueItemId: w.camera.id, quantity: 1 }], validUntil: new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10) });
     const id = await versionIdOf(w.org.id, quote.id, 1);
-    await transitionVersion(w.org.id, id, ["DRAFT"], "APPROVED", { lock: true });
+    await transitionVersion(w.org.id, id, ["DRAFT"], "PENDING_APPROVAL", { lock: true });
+    await transitionVersion(w.org.id, id, ["PENDING_APPROVAL"], "APPROVED");
     expect(await quoteGateBlocker(w.org.id, w.deal.id)).toBeNull();
     const later = new Date(Date.now() + 10 * 86_400_000);
     expect(await quoteGateBlocker(w.org.id, w.deal.id, later)).toMatchObject({ code: "QUOTE_EXPIRED" });

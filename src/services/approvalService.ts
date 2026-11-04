@@ -22,8 +22,9 @@ import {
   findPendingFor,
   findUsableMoveGrant,
   getApprovalRequest,
-  listApprovalRequests,
+  pageApprovalRequests,
   markResumed,
+  revokeGrant,
 } from "../repositories/approvalRequests";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { getDealById } from "../repositories/deals";
@@ -237,8 +238,10 @@ function presentRow(ctx: AuthContext, row: ApprovalRequest, names: Map<string, s
   };
 }
 
-async function exportItems(ctx: AuthContext, own: boolean, names: Map<string, string>, now: Date): Promise<ApprovalItem[]> {
-  const rows = await adminDb.exportApproval.findMany({ where: { organizationId: ctx.organizationId, ...(own ? { requestedByMembershipId: ctx.membershipId } : {}) }, orderBy: { createdAt: "desc" }, take: 200 });
+type ExportRow = Awaited<ReturnType<typeof adminDb.exportApproval.findMany>>[number];
+type ErasureRow = Awaited<ReturnType<typeof adminDb.dataSubjectRequest.findMany>>[number];
+
+function exportItems(ctx: AuthContext, rows: ExportRow[], names: Map<string, string>, now: Date): ApprovalItem[] {
   return rows.map((a) => {
     const expired = a.status === "APPROVED" && a.expiresAt !== null && a.expiresAt <= now;
     const status: ApprovalStatus = a.status === "PENDING" ? "PENDING" : a.status === "REJECTED" ? "REJECTED" : expired ? "EXPIRED" : "APPROVED";
@@ -264,11 +267,8 @@ async function exportItems(ctx: AuthContext, own: boolean, names: Map<string, st
   });
 }
 
-async function erasureItems(ctx: AuthContext, now: Date): Promise<ApprovalItem[]> {
-  // Erasure rows carry a person's name, so they are for the people who handle privacy requests only.
-  if (!hasPermission(ctx, "security.manage")) return [];
-  const rows = await adminDb.dataSubjectRequest.findMany({ where: { organizationId: ctx.organizationId, kind: "ERASURE", status: "AWAITING_SECOND_CONFIRMATION" }, orderBy: { createdAt: "desc" }, take: 200 });
-  void now;
+// Erasure rows carry a person's name, so callers pass them only to people who handle privacy requests.
+function erasureItems(ctx: AuthContext, rows: ErasureRow[]): ApprovalItem[] {
   return rows.map((r) => ({
     id: r.id,
     source: "ERASURE" as const,
@@ -307,20 +307,40 @@ export async function listApprovals(
   if (filters.status && !["PENDING", "APPROVED", "REJECTED", "CANCELLED", "EXPIRED"].includes(filters.status)) throw new ValidationError("status is not an approval status.", [{ path: "status", message: "Use PENDING, APPROVED, REJECTED, CANCELLED or EXPIRED." }]);
   if (filters.kind && !["DISCOUNT", "EXPORT", "DELETION", "LARGE_DEAL"].includes(filters.kind)) throw new ValidationError("kind is not an approval kind.", [{ path: "kind", message: "Use DISCOUNT, EXPORT, DELETION or LARGE_DEAL." }]);
   const own = !isApprover || filters.mine === true;
-
-  const rows = await listApprovalRequests(ctx.organizationId, own ? { requestedByMembershipId: ctx.membershipId } : {});
-  const exportRows = await adminDb.exportApproval.findMany({ where: { organizationId: ctx.organizationId, ...(own ? { requestedByMembershipId: ctx.membershipId } : {}) }, select: { requestedByMembershipId: true, decidedByMembershipId: true }, take: 200 });
-  const names = await namesOf(ctx.organizationId, [...rows.flatMap((r) => [r.requestedByMembershipId, r.decidedByMembershipId]), ...exportRows.flatMap((r) => [r.requestedByMembershipId, r.decidedByMembershipId])]);
-  const items = [
-    ...rows.map((r) => presentRow(ctx, r, names, now)),
-    ...(await exportItems(ctx, own, names, now)),
-    ...(own ? [] : await erasureItems(ctx, now)),
-  ]
-    .filter((i) => (filters.status ? i.status === filters.status : true) && (filters.kind ? i.kind === filters.kind : true))
-    .sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime() || a.id.localeCompare(b.id));
   const paging = resolvePaging(request);
-  const page = buildPage(items.slice(paging.skip, paging.skip + paging.take), items.length, paging);
-  return { ...page, pending: items.filter((i) => i.status === "PENDING").length, canDecide: isApprover };
+  const want = paging.skip + paging.take;
+
+  // Filters run in the database. Each source gives at most the rows the requested page can need, plus its own count.
+  const orgId = ctx.organizationId;
+  const mineReq = own ? { requestedByMembershipId: ctx.membershipId } : {};
+  const expiredReq: Prisma.ApprovalRequestWhereInput = { status: "APPROVED", expiresAt: { lte: now }, consumedAt: null, resumedAt: null };
+  const expiredExp: Prisma.ExportApprovalWhereInput = { status: "APPROVED", expiresAt: { lte: now } };
+  const st = filters.status;
+  const reqStatus: Prisma.ApprovalRequestWhereInput = !st ? {} : st === "EXPIRED" ? expiredReq : st === "APPROVED" ? { status: "APPROVED", NOT: expiredReq } : { status: st };
+  const expStatus: Prisma.ExportApprovalWhereInput = !st ? {} : st === "PENDING" || st === "REJECTED" ? { status: st } : st === "CANCELLED" ? { id: "" } : st === "EXPIRED" ? expiredExp : { status: { notIn: ["PENDING", "REJECTED"] }, NOT: expiredExp };
+  const reqWhere: Prisma.ApprovalRequestWhereInput = { organizationId: orgId, ...mineReq, ...reqStatus, ...(filters.kind ? { kind: filters.kind } : {}) };
+  const expWhere: Prisma.ExportApprovalWhereInput = { organizationId: orgId, ...(own ? { requestedByMembershipId: ctx.membershipId } : {}), ...expStatus };
+  const eraseWhere: Prisma.DataSubjectRequestWhereInput = { organizationId: orgId, kind: "ERASURE", status: "AWAITING_SECOND_CONFIRMATION" };
+  const wantExport = !filters.kind || filters.kind === "EXPORT";
+  const wantErasure = !own && hasPermission(ctx, "security.manage") && (!filters.kind || filters.kind === "DELETION") && (!st || st === "PENDING");
+  const countPending = !st || st === "PENDING";
+
+  const [reqPage, expRows, expTotal, expPending, eraseRows, eraseTotal, reqPending] = await Promise.all([
+    pageApprovalRequests(orgId, reqWhere, want),
+    wantExport ? adminDb.exportApproval.findMany({ where: expWhere, orderBy: { createdAt: "desc" }, take: want }) : Promise.resolve([] as ExportRow[]),
+    wantExport ? adminDb.exportApproval.count({ where: expWhere }) : Promise.resolve(0),
+    wantExport && countPending ? adminDb.exportApproval.count({ where: { ...expWhere, status: "PENDING" } }) : Promise.resolve(0),
+    wantErasure ? adminDb.dataSubjectRequest.findMany({ where: eraseWhere, orderBy: { createdAt: "desc" }, take: want }) : Promise.resolve([] as ErasureRow[]),
+    wantErasure ? adminDb.dataSubjectRequest.count({ where: eraseWhere }) : Promise.resolve(0),
+    countPending ? pageApprovalRequests(orgId, { ...reqWhere, status: "PENDING" }, 0) : Promise.resolve({ rows: [], total: 0 }),
+  ]);
+  const names = await namesOf(orgId, [...reqPage.rows.flatMap((x) => [x.requestedByMembershipId, x.decidedByMembershipId]), ...expRows.flatMap((x) => [x.requestedByMembershipId, x.decidedByMembershipId])]);
+  const items = [...reqPage.rows.map((x) => presentRow(ctx, x, names, now)), ...exportItems(ctx, expRows, names, now), ...erasureItems(ctx, eraseRows)].sort(
+    (x, y) => y.requestedAt.getTime() - x.requestedAt.getTime() || x.id.localeCompare(y.id),
+  );
+  const total = reqPage.total + expTotal + eraseTotal;
+  const page = buildPage(items.slice(paging.skip, paging.skip + paging.take), total, paging);
+  return { ...page, pending: reqPending.total + expPending + eraseTotal, canDecide: isApprover };
 }
 
 export async function getApproval(ctx: AuthContext, id: string, now = NOW()) {
@@ -332,9 +352,19 @@ export async function getApproval(ctx: AuthContext, id: string, now = NOW()) {
     const names = await namesOf(ctx.organizationId, [row.requestedByMembershipId, row.decidedByMembershipId]);
     return presentRow(ctx, row, names, now);
   }
-  const found = (await listApprovals(ctx, {}, { pageSize: 100 }, now)).items.find((i) => i.id === id);
-  if (!found) throw new NotFoundError("ApprovalRequest", id);
-  return found;
+  // Export approvals and erasure confirmations are read by id, never by scanning a page.
+  if (!isApprover && !hasPermission(ctx, "quotes.create")) throw deny(ctx, "approvals (quotes.approve, or quotes.create for your own requests)", ["quotes.approve", "quotes.create"]);
+  const own = !isApprover;
+  const exp = await adminDb.exportApproval.findFirst({ where: { id, organizationId: ctx.organizationId, ...(own ? { requestedByMembershipId: ctx.membershipId } : {}) } });
+  if (exp) {
+    const names = await namesOf(ctx.organizationId, [exp.requestedByMembershipId, exp.decidedByMembershipId]);
+    return exportItems(ctx, [exp], names, now)[0]!;
+  }
+  if (!own && hasPermission(ctx, "security.manage")) {
+    const er = await adminDb.dataSubjectRequest.findFirst({ where: { id, organizationId: ctx.organizationId, kind: "ERASURE", status: "AWAITING_SECOND_CONFIRMATION" } });
+    if (er) return erasureItems(ctx, [er])[0]!;
+  }
+  throw new NotFoundError("ApprovalRequest", id);
 }
 
 // ---------------------------------------------------------------------------
@@ -411,7 +441,7 @@ export async function requestDealMoveApproval(ctx: AuthContext, dealId: string, 
   const reason = await moveApprovalReason(ctx.organizationId, deal, stage);
   if (!reason) throw fail("This move needs no approval.", "APPROVAL_NOT_NEEDED");
   const subjectId = moveSubjectId(dealId, stage.id);
-  const usable = await findUsableMoveGrant(ctx.organizationId, dealId, stage.id, now);
+  const usable = await findUsableMoveGrant(ctx.organizationId, dealId, stage.id, now, { value: deal.value === null ? null : Number(deal.value), currency: deal.currency }, { membershipId: ctx.membershipId, canEditAll: hasPermission(ctx, "deals.edit.all") });
   if (usable) return presentRow(ctx, usable, await namesOf(ctx.organizationId, [usable.requestedByMembershipId, usable.decidedByMembershipId]), now);
   const existing = await findPendingFor(ctx.organizationId, "LARGE_DEAL", "DEAL_MOVE", subjectId);
   if (existing) return presentRow(ctx, existing, await namesOf(ctx.organizationId, [existing.requestedByMembershipId]), now);
@@ -426,6 +456,9 @@ export async function requestDealMoveApproval(ctx: AuthContext, dealId: string, 
     detail: { summary: reason.why === "THRESHOLD" ? `A deal above the ${rules.largeDeal.currency} ${rules.largeDeal.thresholdAmount.toLocaleString("en-KE")} limit needs approval before it is marked won.` : `${stage.name} needs approval before a deal can move there.`, toStageId: stage.id, toStageName: stage.name } as Prisma.InputJsonValue,
     requestedByMembershipId: ctx.membershipId,
     requesterNote: clip(input.note),
+    // The grant is for the deal as it is now: an edit of the value or currency before the move voids it.
+    grantValue: deal.value,
+    grantCurrency: deal.currency,
   });
   await recordAuditEvent({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: "approval.requested", entityType: "ApprovalRequest", entityId: created.id, metadata: { kind: "LARGE_DEAL", dealId, toStageId: stage.id } });
   await emailApprovers(ctx.organizationId, ctx.membershipId, "A won deal needs your approval", `${company?.name ?? "A deal"} is waiting to be marked won. Open the approvals inbox to decide.`);
@@ -472,6 +505,14 @@ async function decideRequest(ctx: AuthContext, row: ApprovalRequest, input: Deci
   requirePermission(ctx, "quotes.approve");
   if (row.requestedByMembershipId === ctx.membershipId) {
     throw new ValidationError("Someone else has to decide your own request.", [{ path: "id", message: "A different approver must decide.", code: "SELF_APPROVAL" }]);
+  }
+  // An approver can take back a deal-move approval that has not been used yet (a rejection with a reason).
+  if (row.status === "APPROVED" && row.subjectType === "DEAL_MOVE" && !input.approve && row.consumedAt === null) {
+    if (!(await revokeGrant(ctx.organizationId, row.id, now))) throw new ValidationError("This approval was already used.", [{ path: "id", message: "Already used.", code: "ALREADY_DECIDED" }]);
+    await recordAuditEvent({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: "approval.revoked", entityType: "ApprovalRequest", entityId: row.id, metadata: { kind: row.kind, dealId: row.dealId, hasReason: reason !== null } });
+    await emailRequester(ctx.organizationId, row.requestedByMembershipId, `Approval withdrawn: ${row.title}`, `The approval was taken back. Reason: ${reason}`);
+    const names = await namesOf(ctx.organizationId, [row.requestedByMembershipId, row.decidedByMembershipId]);
+    return presentRow(ctx, (await getApprovalRequest(ctx.organizationId, row.id)) ?? row, names, now);
   }
   const status = input.approve ? "APPROVED" : "REJECTED";
   const decided = await decidePending(

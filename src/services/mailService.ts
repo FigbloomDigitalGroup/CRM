@@ -22,6 +22,7 @@ import {
   getAccessToken,
   getUsableConnection,
   recordSyncResult,
+  canConfigure,
 } from "./oauthConnectionService";
 import { assertCanAccessLinkedRecords, type LinkedRecordIds } from "./recordAccess";
 import { rescoreCompanyQuietly, rescoreLeadQuietly } from "./scoreEngine";
@@ -43,6 +44,7 @@ import { rescoreCompanyQuietly, rescoreLeadQuietly } from "./scoreEngine";
 export const MAX_RECIPIENTS = 20;
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 const MAX_SUMMARY = 5000;
+const MAX_SYNC_SNIPPET = 200; // a synced mailbox shows a snippet on the timeline, never the whole body (readable by anyone who can open the contact)
 const SYNC_BATCH = 100;
 const FIRST_SYNC_DAYS = 30;
 const EMAIL = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
@@ -128,7 +130,7 @@ export async function syncMailbox(organizationId: string, connectionId: string) 
         matched = await findContactByEmail(organizationId, address);
         if (matched) break;
       }
-      const summary = (mail.bodyText.trim() || "(no message body)").slice(0, MAX_SUMMARY);
+      const summary = (mail.bodyText.trim() || "(no message body)").slice(0, MAX_SYNC_SNIPPET);
       const reference = mail.internetMessageId ?? `mail:${connection.provider}:${mail.id}`;
       if (matched) {
         await createCommunicationRecord({
@@ -190,7 +192,7 @@ export async function syncAllMailboxes(organizationId: string) {
 /** "Sync now" for the person's own mailbox or calendar: queued on the job framework, not run inside the request. */
 export async function requestConnectionSync(ctx: AuthContext, connectionId: string) {
   const connection = await getUsableConnection(ctx.organizationId, connectionId);
-  if (connection.membershipId !== ctx.membershipId && !hasPermission(ctx, "configuration.manage")) throw new NotFoundError("Connection", connectionId);
+  if (!canConfigure(ctx, connection)) throw new NotFoundError("Connection", connectionId);
   const type = connection.kind === "EMAIL" ? "mail.sync" : "calendar.sync";
   const job = await enqueueJobFor({ organizationId: ctx.organizationId, type, payload: { connectionId }, createdByMembershipId: ctx.membershipId });
   return { queued: true, jobId: job.id };
@@ -252,6 +254,7 @@ async function checkAttachments(ctx: AuthContext, ids: string[]) {
 }
 
 async function validateDraftFields(ctx: AuthContext, input: DraftInput) {
+  requirePermission(ctx, "mail.use");
   requirePermission(ctx, "communications.create");
   const links: LinkedRecordIds = { companyId: input.companyId, contactId: input.contactId, leadId: input.leadId, dealId: input.dealId };
   await assertCanAccessLinkedRecords(ctx, links, { requireWritable: true });
@@ -279,6 +282,7 @@ export async function createDraft(ctx: AuthContext, input: DraftInput) {
 }
 
 async function loadOwnDraft(ctx: AuthContext, id: string): Promise<MailDraft> {
+  requirePermission(ctx, "mail.use");
   const draft = await adminDb.mailDraft.findFirst({ where: { id, organizationId: ctx.organizationId, membershipId: ctx.membershipId } });
   if (!draft) throw new NotFoundError("Draft", id);
   return draft;
@@ -289,6 +293,7 @@ export async function getDraft(ctx: AuthContext, id: string) {
 }
 
 export async function listDrafts(ctx: AuthContext, status?: string) {
+  requirePermission(ctx, "mail.use");
   requirePermission(ctx, "communications.view");
   const rows = await adminDb.mailDraft.findMany({
     where: { organizationId: ctx.organizationId, membershipId: ctx.membershipId, ...(status ? { status } : {}) },
@@ -357,6 +362,7 @@ async function loadAttachments(ctx: AuthContext, ids: string[]): Promise<Outgoin
 }
 
 async function performSend(ctx: AuthContext, claimed: MailDraft) {
+  requirePermission(ctx, "mail.use");
   const fail = async (message: string, status: "FAILED" | "DRAFT" = "FAILED") => {
     await adminDb.mailDraft.update({ where: { id: claimed.id }, data: { status, lastError: message.slice(0, 300) } });
   };
@@ -424,6 +430,7 @@ async function performSend(ctx: AuthContext, claimed: MailDraft) {
 
 /** Sends a draft the person owns, now. A second call for a draft that is queued, sending or sent changes nothing and says so. */
 export async function sendDraft(ctx: AuthContext, draftId: string) {
+  requirePermission(ctx, "mail.use");
   requirePermission(ctx, "communications.create");
   const draft = await loadOwnDraft(ctx, draftId);
   if (draft.status === "SENT") return { draft: draftView(draft), communicationId: draft.communicationId, alreadySent: true as const };
@@ -439,6 +446,7 @@ export async function sendMail(ctx: AuthContext, input: DraftInput) {
 }
 
 export async function scheduleDraft(ctx: AuthContext, draftId: string, sendAt: Date) {
+  requirePermission(ctx, "mail.use");
   requirePermission(ctx, "communications.create");
   if (Number.isNaN(sendAt.getTime()) || sendAt.getTime() < Date.now() + 30_000) throw new ValidationError("Choose a time in the future.", [{ path: "sendAt", message: "Pick a time at least a minute from now." }]);
   if (sendAt.getTime() > Date.now() + 90 * 86_400_000) throw new ValidationError("Choose a time within 90 days.", [{ path: "sendAt", message: "Too far ahead." }]);
@@ -490,6 +498,7 @@ export async function runScheduledSend(organizationId: string, draftId: string) 
  * service, so a role that may not open it gets the usual refusal.
  */
 export async function getMailRecordCard(ctx: AuthContext, ref: { dealId?: string; companyId?: string; leadId?: string; contactId?: string }) {
+  requirePermission(ctx, "mail.use");
   requirePermission(ctx, "communications.view");
   await assertCanAccessLinkedRecords(ctx, ref);
   if (ref.dealId) {

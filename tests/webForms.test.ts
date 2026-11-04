@@ -4,10 +4,16 @@ import { ForbiddenError, NotFoundError, RateLimitedError, ValidationError } from
 import { adminDb } from "../src/db/adminClient";
 import { withOrgContext } from "../src/db/orgScopedClient";
 import { checkSubmission, cleanFields, cleanOrigins, DEFAULT_FIELDS, SubmissionRejected } from "../src/lib/webForms";
-import { createForm, deleteForm, getForm, listForms, listFormSubmissions, rotateFormKey, updateForm } from "../src/services/webFormService";
+import { readCaptchaSecret, createForm, deleteForm, getForm, listForms, listFormSubmissions, rotateFormKey, updateForm } from "../src/services/webFormService";
 import { getPublicForm, submitWebForm } from "../src/services/webFormSubmissionService";
 import { POST as publicPost, OPTIONS as publicOptions } from "../src/app/api/public/orgs/[orgSlug]/forms/[formKey]/submissions/route";
+import { getClientIp } from "../src/app/api/_lib/clientRequest";
 import { createTestContext, createTestOrganization } from "./helpers/fixtures";
+
+// One trusted proxy in front: the last X-Forwarded-For entry is the client (src/app/api/_lib/clientRequest.ts).
+process.env.TRUSTED_PROXY_HOPS = "1";
+// Captcha secrets are stored sealed, which needs the integration key.
+process.env.INTEGRATION_ENCRYPTION_KEY ??= Buffer.alloc(32, 7).toString("base64");
 
 /** FIG-1151 (B6.19): web forms builder and the public form endpoint. Abuse and rate-limit tests. */
 
@@ -336,5 +342,58 @@ describe("web forms: keys, deletion and tenant isolation", () => {
       withOrgContext(b.org.id, (tx) => tx.webForm.create({ data: { organizationId: a.org.id, name: "Injected", publicKey: `wfk_${randomUUID()}`, fields: [] } })),
     ).rejects.toThrow();
     expect(await adminDb.lead.count({ where: { organizationId: b.org.id } })).toBe(0);
+  });
+});
+
+describe("review fixes: abuse ordering, secrets, links and the client address", () => {
+  it("does not spend the rate-limit buckets on a wrong origin or a trap-field submission", async () => {
+    process.env.WEB_FORM_RATE_LIMIT_MAX_PER_IP = "2";
+    const w = await world();
+    const form = await published(w, { allowedOrigins: ["https://figbloom.co.ke"] });
+    const ip = uniqueIp();
+    for (let i = 0; i < 5; i++) {
+      await expect(submitWebForm(w.org.slug, form.publicKey, body(), meta(ip, "https://evil.example"))).rejects.toBeInstanceOf(ValidationError);
+      await expect(submitWebForm(w.org.slug, form.publicKey, body({ [form.honeypotFieldName]: "bot" }), meta(ip, "https://figbloom.co.ke"))).resolves.toBeDefined();
+    }
+    await expect(submitWebForm(w.org.slug, form.publicKey, body(), meta(ip, "https://figbloom.co.ke"))).resolves.toBeDefined();
+    expect(await adminDb.lead.count({ where: { organizationId: w.org.id } })).toBe(1);
+  });
+
+  it("stores the captcha secret sealed, still reads an older plain value, and never returns it", async () => {
+    const w = await world();
+    const form = await published(w, { captchaSecret: "plain-secret-1" });
+    const row = await adminDb.webForm.findUniqueOrThrow({ where: { id: form.id } });
+    expect(row.captchaSecret).toMatch(/^v1\./);
+    expect(row.captchaSecret).not.toContain("plain-secret-1");
+    expect(readCaptchaSecret(row.captchaSecret!)).toBe("plain-secret-1");
+    expect(readCaptchaSecret("legacy-plain-value")).toBe("legacy-plain-value");
+    expect(JSON.stringify(form)).not.toContain("plain-secret-1");
+  });
+
+  it("counts bare domains and email-like links as links, but not the email field itself", () => {
+    const fields = DEFAULT_FIELDS;
+    const send = (message: string) => checkSubmission(fields, "website_url", { name: "Amara", email: "amara@example.test", message });
+    expect(() => send("see example.com/offer and bit.ly/x and shop.xyz")).toThrow(SubmissionRejected);
+    expect(() => send("write to a@b.com, c@d.org or e@f.net")).toThrow(SubmissionRejected);
+    expect(() => send("visit WWW.spam.biz, spam2.top/x, spam3.club")).toThrow(SubmissionRejected);
+    expect(() => send("I would like a quote for 3 sites, thanks. Mr.Smith")).not.toThrow();
+    expect(() => send("one link only: example.com")).not.toThrow();
+  });
+
+  it("reads X-Forwarded-For only when trusted proxies are configured, and then from the right", () => {
+    const req = new Request("http://localhost/x", { headers: { "x-forwarded-for": "6.6.6.6, 203.0.113.9", "x-real-ip": "10.0.0.1" } });
+    const saved = process.env.TRUSTED_PROXY_HOPS;
+    try {
+      delete process.env.TRUSTED_PROXY_HOPS;
+      expect(getClientIp(req)).toBe("10.0.0.1");
+      process.env.TRUSTED_PROXY_HOPS = "1";
+      expect(getClientIp(req)).toBe("203.0.113.9");
+      process.env.TRUSTED_PROXY_HOPS = "2";
+      expect(getClientIp(req)).toBe("6.6.6.6");
+      process.env.TRUSTED_PROXY_HOPS = "5";
+      expect(getClientIp(req)).toBe("10.0.0.1");
+    } finally {
+      process.env.TRUSTED_PROXY_HOPS = saved;
+    }
   });
 });

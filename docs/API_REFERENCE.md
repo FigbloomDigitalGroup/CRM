@@ -1,4 +1,4 @@
-# Figbloom CRM API reference (v1.0.0)
+# Figbloom CRM API reference (v1.1.0)
 
 Generated from the OpenAPI document by `npm run contract:update`; do not edit by hand. The document is `src/api/contract/openapi.v1.json`,
 the typed client is `src/api-client/`, and `npm run mock:api` serves every operation below without a database.
@@ -10,13 +10,19 @@ Operations marked *derived* have their request schema recorded from the route it
 ## Contents
 
 - [Activities](#activities) (2)
+- [Approval Rules](#approval-rules) (2)
+- [Approvals](#approvals) (4)
+- [Assistant](#assistant) (7)
 - [Attachments](#attachments) (3)
 - [Audit](#audit) (4)
 - [Auth](#auth) (6)
 - [Automations](#automations) (4)
 - [Calendar](#calendar) (2)
+- [Catalogue](#catalogue) (4)
+- [Chat](#chat) (23)
+- [Commands](#commands) (1)
 - [Comments](#comments) (4)
-- [Communications](#communications) (3)
+- [Communications](#communications) (16)
 - [Companies](#companies) (22)
 - [Company Services](#company-services) (3)
 - [Contacts](#contacts) (20)
@@ -28,22 +34,24 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Data migration](#data-migration) (17)
 - [Deal Moves](#deal-moves) (1)
 - [Deal Rules](#deal-rules) (2)
-- [Deals](#deals) (26)
+- [Deals](#deals) (29)
 - [Duplicates](#duplicates) (1)
 - [Email Templates](#email-templates) (5)
 - [Features](#features) (2)
 - [Files](#files) (8)
+- [Forecast](#forecast) (3)
 - [Handoff Settings](#handoff-settings) (2)
 - [Handoffs](#handoffs) (1)
+- [Help](#help) (2)
 - [Import and export](#import-and-export) (5)
 - [Imports](#imports) (1)
-- [Integrations](#integrations) (16)
+- [Integrations](#integrations) (23)
 - [Jobs](#jobs) (5)
 - [Lead Pool](#lead-pool) (5)
 - [Leads](#leads) (23)
 - [Lifecycle](#lifecycle) (3)
 - [Me](#me) (5)
-- [Memberships](#memberships) (10)
+- [Memberships](#memberships) (11)
 - [Merges](#merges) (1)
 - [My Work](#my-work) (1)
 - [Notification Preferences](#notification-preferences) (2)
@@ -52,11 +60,16 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Organisation](#organisation) (2)
 - [PWA](#pwa) (2)
 - [Payments](#payments) (14)
+- [Pipelines](#pipelines) (8)
 - [Preferences](#preferences) (4)
+- [Privacy](#privacy) (1)
 - [Profile](#profile) (6)
 - [Public](#public) (2)
 - [Push](#push) (4)
+- [Quick Capture](#quick-capture) (5)
 - [Quick capture](#quick-capture) (1)
+- [Quote Settings](#quote-settings) (2)
+- [Quotes](#quotes) (12)
 - [Reference Catalogs](#reference-catalogs) (4)
 - [Reference Data](#reference-data) (1)
 - [Reference data](#reference-data) (8)
@@ -65,13 +78,21 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Reports](#reports) (15)
 - [Scoring](#scoring) (2)
 - [Search](#search) (4)
-- [Security](#security) (3)
+- [Security](#security) (5)
+- [Sequence Enrollments](#sequence-enrollments) (5)
+- [Sequences](#sequences) (6)
 - [Session](#session) (2)
 - [Settings](#settings) (1)
+- [Support](#support) (1)
+- [Surveys](#surveys) (2)
 - [Sync](#sync) (2)
 - [Tags](#tags) (5)
 - [Tasks](#tasks) (15)
+- [Tickets](#tickets) (5)
+- [Views](#views) (7)
+- [Web Forms](#web-forms) (7)
 - [Website Lead Assignment Rules](#website-lead-assignment-rules) (4)
+- [Whats New](#whats-new) (1)
 
 ## Activities
 
@@ -92,6 +113,119 @@ Operations marked *derived* have their request schema recorded from the route it
 - **Body:** `type`: "CALL" | "MEETING" | "NOTE" | "EMAIL" | "WHATSAPP" | "OTHER", `subject`?: string, `description`?: string, `occurredAt`?: any, `outcome`?: string, `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string
 - **Returns:** `id`: string, `organizationId`: string, `type`: string, `subject`: string, `description`: string, `occurredAt`: string, `outcome`: string, `authorMembershipId`: string, `companyId`: string, `contactId`: string, `leadId`: string, `dealId`: string, `createdAt`: string, `importSessionId`?: null
 - **Errors:** 400, 401, 403, 404
+
+## Approval Rules
+
+### `GET …/approval-rules`
+
+`getApprovalRules` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/approval-rules`
+
+`patchApprovalRules` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `discount`?: object, `export`?: object, `largeDeal`?: object, `deletion`?: object
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+## Approvals
+
+### `GET …/approvals`
+
+`getApprovals` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `status`?: string, `kind`?: string, `mine`?: "true" | "false", `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/approvals/{approvalId}`
+
+`getApprovalsByApprovalId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/approvals/{approvalId}/cancel`
+
+`postApprovalsByApprovalIdCancel` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/approvals/{approvalId}/decision`
+
+`postApprovalsByApprovalIdDecision` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `approve`: boolean, `reason`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+## Assistant
+
+### `POST …/assistant/ask`
+
+`postAssistantAsk` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/assistant/audit`
+
+`getAssistantAudit` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/assistant/proposals/{proposalId}/confirm`
+
+`postAssistantProposalsByProposalIdConfirm` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/assistant/proposals/{proposalId}/dismiss`
+
+`postAssistantProposalsByProposalIdDismiss` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/assistant/requests/{requestId}/feedback`
+
+`postAssistantRequestsByRequestIdFeedback` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/assistant/settings`
+
+`getAssistantSettings` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PUT …/assistant/settings`
+
+`putAssistantSettings` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
 
 ## Attachments
 
@@ -291,6 +425,251 @@ The run log: each run with its rule, record and result
 - **Returns:** `kind`: string, `id`: string, `start`: string
 - **Errors:** 400, 401, 403, 404
 
+## Catalogue
+
+### `GET …/catalogue`
+
+`getCatalogue` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `status`?: string, `kind`?: string, `q`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/catalogue`
+
+`postCatalogue` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`: string, `price`: number | string, `sku`?: string | null, `description`?: string | null, `kind`?: string, `unit`?: string, `cost`?: number | string | null, `currency`?: string, `taxable`?: boolean, `status`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/catalogue/{itemId}`
+
+`getCatalogueByItemId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/catalogue/{itemId}`
+
+`patchCatalogueByItemId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`?: string, `price`?: number | string, `sku`?: string | null, `description`?: string | null, `kind`?: string, `unit`?: string, `cost`?: number | string | null, `currency`?: string, `taxable`?: boolean, `status`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+## Chat
+
+### `GET …/chat/channels`
+
+`getChatChannels` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `includeArchived`?: "true" | "false", `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/chat/channels`
+
+`postChatChannels` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `kind`: "PUBLIC" | "PRIVATE" | "DIRECT" | "RECORD", `name`?: string, `description`?: string, `memberIds`?: string[], `record`?: object
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/chat/channels/{channelId}`
+
+`getChatChannelsByChannelId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/chat/channels/{channelId}`
+
+`patchChatChannelsByChannelId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`?: string, `description`?: string | null, `archived`?: boolean
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `DELETE …/chat/channels/{channelId}`
+
+`deleteChatChannelsByChannelId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/chat/channels/{channelId}/join`
+
+`postChatChannelsByChannelIdJoin` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/chat/channels/{channelId}/leave`
+
+`postChatChannelsByChannelIdLeave` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/chat/channels/{channelId}/members`
+
+`getChatChannelsByChannelIdMembers` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/chat/channels/{channelId}/members`
+
+`postChatChannelsByChannelIdMembers` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `membershipIds`: string[]
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `DELETE …/chat/channels/{channelId}/members/{membershipId}`
+
+`deleteChatChannelsByChannelIdMembersByMembershipId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/chat/channels/{channelId}/messages`
+
+`getChatChannelsByChannelIdMessages` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `before`?: string, `after`?: string, `limit`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/chat/channels/{channelId}/messages`
+
+`postChatChannelsByChannelIdMessages` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `body`?: string, `card`?: object, `mentions`?: string[], `fileIds`?: string[]
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `DELETE …/chat/channels/{channelId}/messages/{messageId}`
+
+`deleteChatChannelsByChannelIdMessagesByMessageId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/chat/channels/{channelId}/messages/{messageId}/attachments/{fileId}`
+
+`getChatChannelsByChannelIdMessagesByMessageIdAttachmentsByFileId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/chat/channels/{channelId}/messages/{messageId}/reactions`
+
+`postChatChannelsByChannelIdMessagesByMessageIdReactions` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `emoji`: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `DELETE …/chat/channels/{channelId}/messages/{messageId}/reactions`
+
+`deleteChatChannelsByChannelIdMessagesByMessageIdReactions` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `emoji`: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/chat/channels/{channelId}/read`
+
+`postChatChannelsByChannelIdRead` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `upToSeq`?: number
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/chat/channels/{channelId}/typing`
+
+`postChatChannelsByChannelIdTyping` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/chat/people`
+
+`getChatPeople` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/chat/presence`
+
+`postChatPresence` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `status`?: "ONLINE" | "AWAY"
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/chat/search`
+
+`getChatSearch` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `q`: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/chat/sync`
+
+`getChatSync` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `since`?: string, `waitSeconds`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/chat/unread`
+
+`getChatUnread` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+## Commands
+
+### `GET …/commands`
+
+`getCommands` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
 ## Comments
 
 ### `PATCH …/comments/{commentId}`
@@ -351,6 +730,110 @@ Add a comment; `mentions` are member ids and only people who can open the record
 - **Body:** `channel`: "EMAIL" | "PHONE" | "WHATSAPP" | "SMS" | "MEETING" | "SOCIAL" | "OTHER", `direction`: "INBOUND" | "OUTBOUND", `occurredAt`?: any, `subject`?: string, `summary`: string, `externalReference`?: string, `activityId`?: string, `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string
 - **Returns:** any
 - **Errors:** 400, 401, 403, 404
+
+### `GET …/communications/mail/drafts`
+
+`getCommunicationsMailDrafts` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/communications/mail/drafts`
+
+`postCommunicationsMailDrafts` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/communications/mail/drafts/{draftId}`
+
+`getCommunicationsMailDraftsByDraftId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/communications/mail/drafts/{draftId}`
+
+`patchCommunicationsMailDraftsByDraftId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `DELETE …/communications/mail/drafts/{draftId}`
+
+`deleteCommunicationsMailDraftsByDraftId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/communications/mail/drafts/{draftId}/schedule`
+
+`postCommunicationsMailDraftsByDraftIdSchedule` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `DELETE …/communications/mail/drafts/{draftId}/schedule`
+
+`deleteCommunicationsMailDraftsByDraftIdSchedule` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/communications/mail/drafts/{draftId}/send`
+
+`postCommunicationsMailDraftsByDraftIdSend` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/communications/mail/record-card`
+
+`getCommunicationsMailRecordCard` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/communications/mail/send`
+
+`postCommunicationsMailSend` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/communications/meetings`
+
+`postCommunicationsMeetings` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/communications/meetings/{activityId}`
+
+`patchCommunicationsMeetingsByActivityId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `DELETE …/communications/meetings/{activityId}`
+
+`deleteCommunicationsMeetingsByActivityId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
 
 ### `POST …/communications/send-email`
 
@@ -608,7 +1091,7 @@ CSV of one company tab with the same filters (companies.export; bulk-export rule
 `getContactsByContactId` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, finance
-- **Returns:** `id`: string, `organizationId`: string, `companyId`: string, `firstName`: string, `lastName`: string, `phone`: string, `email`: string, `jobTitle`?: null, `department`?: null, `socialProfiles`?: null, `notes`?: null, `ownerMembershipId`: string, `createdByMembershipId`: string, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `customFields`: object, `mergedIntoId`?: null, `lastContactedAt`?: null, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null, `company`: object, `owner`: object, `tags`: any[]
+- **Returns:** `id`: string, `organizationId`: string, `companyId`: string, `firstName`: string, `lastName`: string, `phone`: string, `email`: string, `jobTitle`?: null, `department`?: null, `socialProfiles`?: null, `notes`?: null, `ownerMembershipId`: string, `createdByMembershipId`: string, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `customFields`: object, `mergedIntoId`?: null, `lastContactedAt`?: null, `doNotContact`: boolean, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null, `company`: object, `owner`: object, `tags`: any[]
 - **Errors:** 401, 403, 404
 
 ### `PATCH …/contacts/{contactId}`
@@ -617,7 +1100,7 @@ CSV of one company tab with the same filters (companies.export; bulk-export rule
 
 - **Credential:** sessionCookie; **access:** management, sales
 - **Body:** `customFields`?: object, `firstName`?: string, `lastName`?: string, `companyId`?: string | null, `phone`?: string, `email`?: string, `jobTitle`?: string, `department`?: string, `notes`?: string, `ownerMembershipId`?: string | null
-- **Returns:** `id`: string, `organizationId`: string, `companyId`: string, `firstName`: string, `lastName`: string, `phone`: string, `email`: string, `jobTitle`?: null, `department`?: null, `socialProfiles`?: null, `notes`?: null, `ownerMembershipId`: string, `createdByMembershipId`: string, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `customFields`: object, `mergedIntoId`?: null, `lastContactedAt`?: null, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
+- **Returns:** `id`: string, `organizationId`: string, `companyId`: string, `firstName`: string, `lastName`: string, `phone`: string, `email`: string, `jobTitle`?: null, `department`?: null, `socialProfiles`?: null, `notes`?: null, `ownerMembershipId`: string, `createdByMembershipId`: string, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `customFields`: object, `mergedIntoId`?: null, `lastContactedAt`?: null, `doNotContact`: boolean, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
 - **Errors:** 400, 401, 403, 404
 
 ### `POST …/contacts/{contactId}/archive`
@@ -626,7 +1109,7 @@ CSV of one company tab with the same filters (companies.export; bulk-export rule
 
 - **Credential:** sessionCookie; **access:** management, sales
 - **Body:** `reason`?: string
-- **Returns:** `id`: string, `organizationId`: string, `companyId`: string, `firstName`: string, `lastName`: string, `phone`: string, `email`: string, `jobTitle`?: null, `department`?: null, `socialProfiles`?: null, `notes`?: null, `ownerMembershipId`: string, `createdByMembershipId`: string, `archivedAt`: string, `archivedByMembershipId`: string, `archiveReason`?: null, `customFields`: object, `mergedIntoId`?: null, `lastContactedAt`?: null, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
+- **Returns:** `id`: string, `organizationId`: string, `companyId`: string, `firstName`: string, `lastName`: string, `phone`: string, `email`: string, `jobTitle`?: null, `department`?: null, `socialProfiles`?: null, `notes`?: null, `ownerMembershipId`: string, `createdByMembershipId`: string, `archivedAt`: string, `archivedByMembershipId`: string, `archiveReason`?: null, `customFields`: object, `mergedIntoId`?: null, `lastContactedAt`?: null, `doNotContact`: boolean, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
 - **Errors:** 400, 401, 403, 404
 
 ### `GET …/contacts/{contactId}/attachments`
@@ -1490,7 +1973,7 @@ Get one deal (value masked for roles without deals.view.value)
 `postDealsByDealIdMove` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, finance
-- **Body:** `pipelineStageId`: string, `lostReasonId`?: string | null, `handoff`?: object
+- **Body:** `pipelineStageId`: string, `lostReasonId`?: string | null, `changePipeline`?: boolean, `handoff`?: object
 - **Returns:** any
 - **Errors:** 400, 401, 403, 404
 
@@ -1499,7 +1982,7 @@ Get one deal (value masked for roles without deals.view.value)
 `postDealsByDealIdMoveCheck` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, finance
-- **Body:** `pipelineStageId`: string, `lostReasonId`?: string | null, `handoff`?: object
+- **Body:** `pipelineStageId`: string, `lostReasonId`?: string | null, `changePipeline`?: boolean, `handoff`?: object
 - **Returns:** `allowed`: boolean, `blockers`: object[], `needsLostReason`: boolean, `handoffPrompt`: boolean, `reopens`: boolean
 - **Errors:** 400, 401, 403, 404
 
@@ -1527,6 +2010,32 @@ Get one deal (value masked for roles without deals.view.value)
 - **Credential:** sessionCookie; **access:** management, sales, delivery, finance
 - **Body:** `status`: "DRAFT" | "SENT" | "VIEWED" | "ACCEPTED" | "REJECTED" | "EXPIRED"
 - **Returns:** `id`: string, `organizationId`: string, `dealId`: string, `proposalNumber`: string, `status`: string, `amount`: string, `currency`: string, `ownerMembershipId`: string, `sentAt`?: null, `respondedAt`?: null, `documentReference`?: null, `notes`?: null, `createdAt`: string, `updatedAt`: string, `amountMasked`: boolean
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/deals/{dealId}/quote`
+
+`getDealsByDealIdQuote` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/deals/{dealId}/quote`
+
+`postDealsByDealIdQuote` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `lines`?: object[], `discountPercent`?: number | string, `validUntil`?: string, `terms`?: string | null, `currency`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/deals/{dealId}/request-approval`
+
+`postDealsByDealIdRequestApproval` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `pipelineStageId`: string, `note`?: string
+- **Returns:** any
 - **Errors:** 400, 401, 403, 404
 
 ### `POST …/deals/{dealId}/restore`
@@ -1559,7 +2068,7 @@ Get one deal (value masked for roles without deals.view.value)
 `getDealsBoard` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, finance
-- **Query:** `ownerMembershipId`?: string, `companyId`?: string, `includeArchived`?: "true" | "false"
+- **Query:** `ownerMembershipId`?: string, `companyId`?: string, `includeArchived`?: "true" | "false", `pipelineId`?: string
 - **Returns:** `columns`: object[], `defaultStalledDays`: number
 - **Errors:** 400, 401, 403, 404
 
@@ -1730,6 +2239,32 @@ Upload a file's bytes with a signed upload link (local storage driver only).
 - **Credential:** signedToken
 - **Errors:** 400, 403, 404
 
+## Forecast
+
+### `GET …/forecast`
+
+`getForecast` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/forecast/targets`
+
+`getForecastTargets` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PUT …/forecast/targets`
+
+`putForecastTargets` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
 ## Handoff Settings
 
 ### `GET …/handoff-settings`
@@ -1759,6 +2294,25 @@ Upload a file's bytes with a signed upload link (local storage driver only).
 - **Query:** `status`?: string, `mine`?: "true" | "false", `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
 - **Returns:** `items`: any[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`?: null, `counts`: object
 - **Errors:** 400, 401, 403, 404
+
+## Help
+
+### `GET …/help`
+
+`getHelp` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `q`?: string, `area`?: string, `page`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/help/{slug}`
+
+`getHelpBySlug` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
 
 ## Import and export
 
@@ -1837,6 +2391,62 @@ Integrations registry: Connected, Not connected or Planned, each derived from re
 - **Credential:** sessionCookie; **access:** management
 - **Returns:** `integrations`: object[], `counts`: object
 - **Errors:** 401, 403
+
+### `GET …/integrations/connections`
+
+`getIntegrationsConnections` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/integrations/connections/{connectionId}`
+
+`patchIntegrationsConnectionsByConnectionId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `DELETE …/integrations/connections/{connectionId}`
+
+`deleteIntegrationsConnectionsByConnectionId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/integrations/connections/{connectionId}/calendars`
+
+`getIntegrationsConnectionsByConnectionIdCalendars` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/integrations/connections/{connectionId}/sync`
+
+`postIntegrationsConnectionsByConnectionIdSync` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/integrations/connections/organization`
+
+`getIntegrationsConnectionsOrganization` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/integrations/connections/start`
+
+`postIntegrationsConnectionsStart` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
 
 ### `GET …/integrations/inbound-email-key`
 
@@ -2426,6 +3036,14 @@ The person's recent sign-ins and failed attempts.
 - **Returns:** any
 - **Errors:** 400, 401, 403, 404
 
+### `POST …/memberships/{membershipId}/two-step-reset`
+
+`postMembershipsByMembershipIdTwoStepReset` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
 ### `POST …/memberships/{membershipId}/unlock`
 
 `postMembershipsByMembershipIdUnlock` · *derived*
@@ -2800,6 +3418,78 @@ Due this week, overdue, collected this month, still owing
 - **Returns:** `dueThisWeek`: object, `overdue`: object, `collectedThisMonth`: object, `outstanding`: string, `nothingToCollect`: boolean
 - **Errors:** 401, 403
 
+## Pipelines
+
+### `GET …/pipelines`
+
+`getPipelines` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/pipelines`
+
+`postPipelines` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`: string, `stages`: object[], `serviceIds`?: string[]
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/pipelines/{pipelineId}`
+
+`getPipelinesByPipelineId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/pipelines/{pipelineId}`
+
+`patchPipelinesByPipelineId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`?: string, `isActive`?: boolean, `isDefault`?: boolean, `serviceIds`?: string[]
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/pipelines/{pipelineId}/stages`
+
+`postPipelinesByPipelineIdStages` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`: string, `probability`?: number | null, `position`?: number
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `PATCH …/pipelines/{pipelineId}/stages/{stageId}`
+
+`patchPipelinesByPipelineIdStagesByStageId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`?: string, `probability`?: number | null, `stalledAfterDays`?: number | null, `isActive`?: boolean
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `PUT …/pipelines/{pipelineId}/stages/{stageId}/rules`
+
+`putPipelinesByPipelineIdStagesByStageIdRules` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `rules`: object[]
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `PUT …/pipelines/{pipelineId}/stages/reorder`
+
+`putPipelinesByPipelineIdStagesReorder` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `stageIds`: string[]
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
 ## Preferences
 
 ### `GET …/me/preferences`
@@ -2843,6 +3533,16 @@ Restore the look from before the last reset (single use)
 - **Body:** `token`: string
 - **Returns:** `appearance`: object, `personalisation`: object, `startPage`: object, `sidebar`: object, `regional`: object, `deviceOnly`: object, `catalogue`: object, `undoAvailable`: boolean
 - **Errors:** 400, 401, 403
+
+## Privacy
+
+### `GET …/privacy/organisation-requests/{requestId}/download`
+
+`getPrivacyOrganisationRequestsByRequestIdDownload` · *derived*
+
+- **Credential:** sessionCookie; **access:** management
+- **Returns:** any
+- **Errors:** 401, 403, 404
 
 ## Profile
 
@@ -2972,6 +3672,48 @@ Stop sending push to one of the caller's own devices
 - **Returns:** object
 - **Errors:** 401, 404
 
+## Quick Capture
+
+### `POST …/quick-capture/cards`
+
+`postQuickCaptureCards` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/quick-capture/cards/{captureId}`
+
+`getQuickCaptureCardsByCaptureId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `DELETE …/quick-capture/cards/{captureId}`
+
+`deleteQuickCaptureCardsByCaptureId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/quick-capture/cards/{captureId}/confirm`
+
+`postQuickCaptureCardsByCaptureIdConfirm` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/quick-capture/cards/{captureId}/extract`
+
+`postQuickCaptureCardsByCaptureIdExtract` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
 ## Quick capture
 
 ### `POST …/quick-capture`
@@ -2984,6 +3726,125 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 - **Body:** `name`: string, `phone`?: string, `email`?: string, `company`?: string, `serviceId`?: string, `sourceId`?: string, `note`?: string, `followUp`?: object, `duplicateDecision`?: "OPEN_EXISTING" | "CREATE_ANYWAY" | "MERGE", `duplicateId`?: string
 - **Returns:** object
 - **Errors:** 400, 401, 403, 404
+
+## Quote Settings
+
+### `GET …/quote-settings`
+
+`getQuoteSettings` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/quote-settings`
+
+`patchQuoteSettings` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `requireForProposalSent`?: boolean, `validityDays`?: number, `defaultTerms`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+## Quotes
+
+### `GET …/quotes`
+
+`getQuotes` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `dealId`?: string, `status`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/quotes/{quoteId}`
+
+`getQuotesByQuoteId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/quotes/{quoteId}/shares/{shareId}/revoke`
+
+`postQuotesByQuoteIdSharesByShareIdRevoke` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/quotes/{quoteId}/versions`
+
+`postQuotesByQuoteIdVersions` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `refreshPrices`?: boolean
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/quotes/{quoteId}/versions/{version}`
+
+`getQuotesByQuoteIdVersionsByVersion` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PUT …/quotes/{quoteId}/versions/{version}`
+
+`putQuotesByQuoteIdVersionsByVersion` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/quotes/{quoteId}/versions/{version}/activity`
+
+`getQuotesByQuoteIdVersionsByVersionActivity` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/quotes/{quoteId}/versions/{version}/apply-to-deal`
+
+`postQuotesByQuoteIdVersionsByVersionApplyToDeal` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/quotes/{quoteId}/versions/{version}/preview`
+
+`getQuotesByQuoteIdVersionsByVersionPreview` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/quotes/{quoteId}/versions/{version}/request-approval`
+
+`postQuotesByQuoteIdVersionsByVersionRequestApproval` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/quotes/{quoteId}/versions/{version}/response`
+
+`postQuotesByQuoteIdVersionsByVersionResponse` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/quotes/{quoteId}/versions/{version}/send`
+
+`postQuotesByQuoteIdVersionsByVersionSend` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
 
 ## Reference Catalogs
 
@@ -3478,6 +4339,116 @@ Global search: groups with totals, paged per group (`type` + `page`), archived o
 - **Returns:** `items`: any[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`?: null
 - **Errors:** 400, 401, 403, 404
 
+### `GET …/security/two-step-policy`
+
+`getSecurityTwoStepPolicy` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/security/two-step-policy`
+
+`patchSecurityTwoStepPolicy` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+## Sequence Enrollments
+
+### `GET …/sequence-enrollments`
+
+`getSequenceEnrollments` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `leadId`?: string, `dealId`?: string, `sequenceId`?: string, `status`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/sequence-enrollments/{enrollmentId}`
+
+`getSequenceEnrollmentsByEnrollmentId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/sequence-enrollments/{enrollmentId}/end`
+
+`postSequenceEnrollmentsByEnrollmentIdEnd` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/sequence-enrollments/{enrollmentId}/pause`
+
+`postSequenceEnrollmentsByEnrollmentIdPause` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/sequence-enrollments/{enrollmentId}/resume`
+
+`postSequenceEnrollmentsByEnrollmentIdResume` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+## Sequences
+
+### `GET …/sequences`
+
+`getSequences` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/sequences`
+
+`postSequences` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/sequences/{sequenceId}`
+
+`getSequencesBySequenceId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/sequences/{sequenceId}`
+
+`patchSequencesBySequenceId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `DELETE …/sequences/{sequenceId}`
+
+`deleteSequencesBySequenceId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/sequences/{sequenceId}/enrollments`
+
+`postSequencesBySequenceIdEnrollments` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `leadId`?: string, `dealId`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
 ## Session
 
 ### `GET /api/session`
@@ -3511,6 +4482,36 @@ Settings landing page: profile, member counts by state, integration states (Mana
 - **Credential:** sessionCookie; **access:** management
 - **Returns:** `profile`: object, `members`: object, `integrations`: object
 - **Errors:** 401, 403
+
+## Support
+
+### `GET …/support/customers/{companyId}`
+
+`getSupportCustomersByCompanyId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+## Surveys
+
+### `GET …/surveys`
+
+`getSurveys` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `companyId`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/surveys`
+
+`postSurveys` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `ticketId`?: string | null, `companyId`?: string, `contactId`?: string | null
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
 
 ## Sync
 
@@ -3711,6 +4712,176 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 - **Returns:** `key`: string, `label`: string, `count`: number, `items`: any[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`?: null
 - **Errors:** 400, 401, 403, 404
 
+## Tickets
+
+### `GET …/tickets`
+
+`getTickets` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `status`?: string, `priority`?: string, `ownerMembershipId`?: string, `companyId`?: string, `q`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/tickets`
+
+`postTickets` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `companyId`: string, `contactId`?: string | null, `title`: string, `description`?: string | null, `priority`?: string, `ownerMembershipId`?: string | null
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/tickets/{ticketId}`
+
+`getTicketsByTicketId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/tickets/{ticketId}`
+
+`patchTicketsByTicketId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `title`?: string, `status`?: string, `priority`?: string, `ownerMembershipId`?: string | null
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/tickets/{ticketId}/messages`
+
+`postTicketsByTicketIdMessages` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `kind`: string, `body`: string, `authorLabel`?: string | null
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+## Views
+
+### `GET …/views`
+
+`getViews` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `entity`?: string, `pinned`?: "true" | "false"
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/views`
+
+`postViews` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `entity`: string, `name`: string, `scope`?: string, `filters`?: any, `sort`?: any, `columns`?: any, `pinned`?: boolean
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/views/{viewId}`
+
+`getViewsByViewId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/views/{viewId}`
+
+`patchViewsByViewId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`?: string, `scope`?: string, `filters`?: any, `sort`?: any, `columns`?: any
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `DELETE …/views/{viewId}`
+
+`deleteViewsByViewId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PUT …/views/{viewId}/pin`
+
+`putViewsByViewIdPin` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `pinned`: boolean
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `PUT …/views/pinned-order`
+
+`putViewsPinnedOrder` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `ids`: string[]
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+## Web Forms
+
+### `GET …/web-forms`
+
+`getWebForms` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/web-forms`
+
+`postWebForms` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`: string, `fields`?: any, `leadSourceKey`?: string | null, `successMessage`?: string, `allowedOrigins`?: any, `honeypotFieldName`?: string, `captchaSecret`?: string | null
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/web-forms/{formId}`
+
+`getWebFormsByFormId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/web-forms/{formId}`
+
+`patchWebFormsByFormId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`?: string, `status`?: string, `fields`?: any, `leadSourceKey`?: string | null, `successMessage`?: string, `allowedOrigins`?: any, `honeypotFieldName`?: string, `captchaSecret`?: string | null
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `DELETE …/web-forms/{formId}`
+
+`deleteWebFormsByFormId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/web-forms/{formId}/rotate-key`
+
+`postWebFormsByFormIdRotateKey` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/web-forms/{formId}/submissions`
+
+`getWebFormsByFormIdSubmissions` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `accepted`?: "true" | "false", `outcome`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
 ## Website Lead Assignment Rules
 
 ### `GET …/website-lead-assignment-rules`
@@ -3746,4 +4917,15 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 - **Credential:** sessionCookie; **access:** management
 - **Body:** `direction`: "up" | "down"
 - **Returns:** `ok`: boolean
+- **Errors:** 400, 401, 403, 404
+
+## Whats New
+
+### `GET …/whats-new`
+
+`getWhatsNew` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `since`?: string, `limit`?: number
+- **Returns:** any
 - **Errors:** 400, 401, 403, 404
