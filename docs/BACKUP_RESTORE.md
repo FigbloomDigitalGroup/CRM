@@ -149,6 +149,21 @@ Corrections to this document: (1) `db:grant-role` works on the database named in
 
 Not tested and still for a person: decryption of an encrypted dump (no keys exist yet), download from the real backup storage, a realistic volume, the human steps and the clock time of a real switch-over.
 
+### Re-run on the rebuilt staging stack, 5 Nov 2026 (FIG-1125)
+
+Same procedure, quiet machine, the current image and migrations. **Still small volume** (73 tables, 747 rows in the live database, dump 446 KiB, about 15 MB database), so read it as proof of the procedure and as "seconds at this size", not as an RTO at production volume.
+
+| Step | Time |
+|---|---|
+| Snapshot of the source | 0.3 s |
+| Dump (`pg_dump -Fc`) | 0.5 s |
+| Restore into a scratch database | 4.7 s |
+| Verify (72 table counts, RLS flags, policies) | 0.2 s |
+| Dump plus restore | 5.3 s |
+| Result | **PASS**: every table count matched, RLS and all policies present |
+
+Two further runs of the same dump on the same day (the rollback proof in `docs/CUTOVER_PLAN.md`) restored in 8.1 s and 5.7 s to 10.5 s. Against the 1 hour database RTO in section 5 this leaves a wide margin at this size; the margin at real size is not measured. **Closed on the criterion "successful restore drill with measured times recorded here".** What remains true and is not a criterion of FIG-1125: automated nightly backups need a real host with a scheduler, backup storage and two key holders (section 9), and the volume drill belongs to the production rehearsal (FIG-1258).
+
 ## 8. Moving to AWS later
 
 No AWS service decision is made here. The move is a dump and restore:

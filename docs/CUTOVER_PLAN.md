@@ -181,6 +181,24 @@ The shared tables otherwise match: rows counted 86,740 in the source and 86,821 
 
 **Result: PASS.** Upgrade, post-upgrade steps, reconciliation (zero unexplained differences) and rollback all work on the staging PostgreSQL, with and without the temporary indexes.
 
+### Rollback proof on the live staging database, 5 Nov 2026 (FIG-1127, and part 2 of the rollback dry run for FIG-1126)
+
+The same steps as section 7, done with the tools inside the staging PostgreSQL container (`docker exec figbloom_crm_staging_postgres`, so no tools were needed on the host) on the real staging database `figbloom_crm_staging` (73 tables, 747 rows; the live database was only read):
+
+| Step | Result |
+|---|---|
+| 1. Pre-cutover backup (`pg_dump -Fc`), checked with `pg_restore --list` | 1.2 s, 446 KiB, 1,012 catalogue entries |
+| 2. Restore into a scratch database (the "upgraded copy") | 8.1 s |
+| 3. `reconcile-counts` live against scratch | 72 tables, 747 rows each side, 593 rows spot-checked: **zero differences**, exit 0 |
+| 4. Damage the copy (delete all 33 `sessions` rows), reconcile again | detected: `sessions` source 33, target 0, 33 sampled rows missing, exit 1 |
+| 5. **Rollback**: drop the damaged database, restore the backup into an empty one | 5.7 s |
+| 6. `reconcile-counts` again | 747 rows each side, 593 spot-checked: **zero differences**, exit 0 |
+| 7. Clean-up | scratch database and dump removed |
+
+Rollback is therefore proven on the staging PostgreSQL itself, as well as in the six earlier rehearsals above, and the reconciliation script both finds damage and confirms its repair. **Still the same limits:** the data is small and invented (Path A: there is no production data, decision 6.2); the timings are for this size. A repeat on a copy of real data is required only if real data exists (Path B).
+
+One operational finding: after Docker Desktop restarted, host connections to the published staging database port (35432) were refused until the PostgreSQL container was restarted. Anything that runs from the host (the staging scripts, `reconcile-counts`) needs that port working; in-container tools (`docker exec`) do not.
+
 **Script changes made for this run (small):** `scripts/migration-rehearsal.ts` now accepts `REHEARSAL_DB_OLD` and `REHEARSAL_DB_UP` (names of the scratch databases, so it can share a PostgreSQL with other work), `REHEARSAL_RECONCILE=1` (runs `reconcile-counts` after the upgrade and after the rollback and keeps the output in the result file), and `REHEARSAL_BACKFILL_SCRIPT=1` (runs the shipped backfill script twice instead of the in-process call); it also counts the rows in tables new in V1. `PG_CONTAINER` was already supported and must name the PostgreSQL container (`figbloom_crm_staging_postgres` here). Set `APP_DATABASE_URL` with the real app role password: the rehearsal runs `bootstrap-role`, which sets that role's password, so a placeholder would change it on a shared PostgreSQL (here it was set to the same value, so nothing changed).
 
 **What only a human can do:** (1) say whether real data exists (Path A or B, question 1); (2) if it does, provide a copy and have this rehearsal repeated on it (restore the dump into a scratch database, take it as the V0 side, upgrade, reconcile, roll back) and record the numbers here; (3) decide whether the deal-rules migration is edited (cleaner than the temporary indexes); (4) sign section 10.
