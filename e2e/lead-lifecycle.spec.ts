@@ -45,12 +45,12 @@ test("create lead -> assign -> convert -> move stage -> log activity -> complete
     await expect(owner).toBeEnabled();
     const [response] = await Promise.all([
       page.waitForResponse((r) => /\/leads\/.+\/assign$/.test(r.url()) && r.request().method() === "POST"),
-      owner.selectOption({ label: "Dev Sales (Sales)" }),
+      owner.selectOption({ label: "Ruth Kibet (Sales)" }),
     ]);
     expect(response.ok()).toBe(true);
     // Confirm the reassignment actually persisted, not just the select's own local state.
     await page.reload();
-    await expect(page.getByRole("combobox", { name: /^Owner/ }).locator("option:checked")).toHaveText(/^Dev Sales/);
+    await expect(page.getByRole("combobox", { name: /^Owner/ }).locator("option:checked")).toHaveText(/^Ruth Kibet/);
   });
 
   let dealUrl = "";

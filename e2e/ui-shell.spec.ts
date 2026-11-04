@@ -54,11 +54,11 @@ test.describe("top bar identity", () => {
     await expect(orgCard.getByRole("link", { name: "Profile and preferences" })).toBeVisible();
     await page.keyboard.press("Escape");
 
-    const user = page.getByRole("button", { name: /Dev Sales.*account menu/ });
-    await expect(user).toContainText("Dev Sales");
+    const user = page.getByRole("button", { name: /Ruth Kibet.*account menu/ });
+    await expect(user).toContainText("Ruth Kibet");
     await expect(user).toContainText("Sales");
     await user.click();
-    const popover = page.getByRole("dialog", { name: /Account: Dev Sales/ });
+    const popover = page.getByRole("dialog", { name: /Account: Ruth Kibet/ });
     await expect(popover.getByRole("link", { name: "Profile and preferences" })).toBeVisible();
     await popover.getByRole("button", { name: /Sign out$/ }).click();
     await page.waitForURL(/\/login/);

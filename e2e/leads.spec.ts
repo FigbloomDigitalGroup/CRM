@@ -131,7 +131,7 @@ test.describe("creating, archiving and restoring", () => {
     await expect(bar.getByText("2 selected")).toBeVisible();
     const sales = a.ref.members.find((m) => m.userEmail === SALES)!;
     await bar.getByRole("combobox", { name: "Reassign selected to" }).selectOption(sales.membershipId);
-    await expect(page.getByText(/2 leads reassigned to Dev Sales/)).toBeVisible();
+    await expect(page.getByText(/2 leads reassigned to Ruth Kibet/)).toBeVisible();
     await expect(bar).toHaveCount(0);
   });
 });

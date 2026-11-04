@@ -75,7 +75,15 @@ export function uniqueSuffix(): string {
 
 /** Goes to a page and waits until React has hydrated, so a fill/click is not lost to a not-yet-interactive client component. */
 export async function gotoAndSettle(page: Page, path: string): Promise<void> {
-  await page.goto(path);
+  try {
+    await page.goto(path);
+  } catch (e) {
+    // Straight after sign-in the app may still be redirecting to the same address (the phone frame sends a narrow screen to /m); WebKit then reports
+    // the goto as interrupted by that navigation. The page is where we wanted it, so let it finish and go on; anything else is a real failure.
+    if (!/interrupted by another navigation/.test(String(e))) throw e;
+    await page.waitForLoadState("load");
+    await page.goto(path);
+  }
   await page.waitForLoadState("networkidle");
 }
 

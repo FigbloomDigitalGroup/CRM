@@ -56,6 +56,8 @@ export default defineConfig({
       // The component gallery (src/app/o/[orgSlug]/dev/gallery) is a 404 everywhere except development and this suite (F1.02).
       E2E_UI_GALLERY: "true",
       ALLOW_DEV_ACCOUNTS: "true",
+      // The Customer Support role (and the other V1.1 features the specs open) is off below this release; a developer's .env sets it, CI has no .env.
+      ACTIVE_RELEASE: "v2",
       // Every spec signs in through the real /login, and the suite as a whole
       // signs in far more often than the production limit (5 per email per 15
       // minutes) allows. Raised for this server only; the limiter itself is

@@ -166,7 +166,7 @@ test.describe("search (G2)", () => {
 
 test.describe("notifications (G3)", () => {
   test("a mention in a comment reaches the person's bell, opens the record, and the read state sticks", async ({ browser }) => {
-    // Management creates a lead for Dev Sales and mentions them in a comment.
+    // Management creates a lead for Ruth Kibet and mentions them in a comment.
     const mgrCtx = await browser.newContext();
     const mgr = await mgrCtx.newPage();
     await loginAs(mgr, "dev.management@figbloom.local");

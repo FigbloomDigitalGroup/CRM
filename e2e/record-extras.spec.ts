@@ -55,7 +55,7 @@ test.describe("record extras on a lead", () => {
     const lead = await makeLead(page);
     await gotoAndSettle(page, `/o/${ORG_SLUG}/leads/${lead.id}`);
     const box = page.getByLabel("Write a comment");
-    await box.fill("Please look at this @Dev");
+    await box.fill("Please look at this @Ruth");
     const options = page.getByRole("group", { name: "Mention a teammate" }).getByRole("button");
     await expect(options.first()).toBeVisible();
     const chosen = (await options.first().innerText()).trim();
