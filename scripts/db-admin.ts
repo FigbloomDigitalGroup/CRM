@@ -13,6 +13,7 @@ import "dotenv/config";
 import { Client } from "pg";
 
 const APP_ROLE = process.env.APP_DB_ROLE ?? "figbloom_app";
+const PLATFORM_ROLE = process.env.PLATFORM_DB_ROLE ?? "figbloom_platform";
 const APP_DBS = (
   process.env.APP_DB_NAMES ?? "figbloom_crm_dev,figbloom_crm_test"
 )
@@ -74,6 +75,37 @@ async function bootstrapRole(): Promise<void> {
       );
     }
     console.log(`Granted CONNECT on: ${APP_DBS.join(", ")}`);
+
+    // FIG-1135 (B6.03): the dedicated platform role. NOBYPASSRLS and no tenant
+    // privilege (see grantRole). Skipped when PLATFORM_DB_PASSWORD is not set.
+    const platformPassword = process.env.PLATFORM_DB_PASSWORD;
+    if (platformPassword) {
+      const existing = await client.query(
+        "SELECT 1 FROM pg_roles WHERE rolname = $1",
+        [PLATFORM_ROLE],
+      );
+      if (existing.rows.length === 0) {
+        await client.query(
+          `CREATE ROLE ${ident(PLATFORM_ROLE)} LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD $pw$${platformPassword}$pw$`,
+        );
+        console.log(`Created role "${PLATFORM_ROLE}".`);
+      } else {
+        // The migration creates it NOLOGIN: give it LOGIN and the password here.
+        await client.query(
+          `ALTER ROLE ${ident(PLATFORM_ROLE)} LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD $pw$${platformPassword}$pw$`,
+        );
+        console.log(`Role "${PLATFORM_ROLE}" already exists -- login and password updated.`);
+      }
+      for (const db of APP_DBS) {
+        await client.query(
+          `GRANT CONNECT ON DATABASE ${ident(db)} TO ${ident(PLATFORM_ROLE)}`,
+        );
+      }
+    } else {
+      console.log(
+        `PLATFORM_DB_PASSWORD is not set -- skipped login for "${PLATFORM_ROLE}" (platform sign-in will not work).`,
+      );
+    }
   } finally {
     await client.end();
   }
@@ -124,9 +156,41 @@ async function grantRole(): Promise<void> {
     await client.query(
       `REVOKE SELECT, INSERT, UPDATE, DELETE ON "platform_identities" FROM ${ident(APP_ROLE)}`,
     );
+    // FIG-1135: platform sessions and the operational-count view belong to the
+    // platform role alone.
+    await client.query(
+      `REVOKE SELECT, INSERT, UPDATE, DELETE ON "platform_sessions" FROM ${ident(APP_ROLE)}`,
+    );
+    await client.query(
+      `REVOKE SELECT, INSERT, UPDATE, DELETE ON "platform_organization_counts" FROM ${ident(APP_ROLE)}`,
+    );
     await client.query(
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${ident(APP_ROLE)}`,
     );
+
+    // FIG-1135: the platform role gets exactly its own two tables and the
+    // counts view. Everything is revoked first, so re-running this never leaves
+    // a tenant privilege behind. Default privileges grant it nothing.
+    const platform = await client.query(
+      "SELECT 1 FROM pg_roles WHERE rolname = $1",
+      [PLATFORM_ROLE],
+    );
+    if (platform.rows.length > 0) {
+      await client.query(
+        `REVOKE ALL ON ALL TABLES IN SCHEMA public FROM ${ident(PLATFORM_ROLE)}`,
+      );
+      await client.query(
+        `REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM ${ident(PLATFORM_ROLE)}`,
+      );
+      await client.query(`GRANT USAGE ON SCHEMA public TO ${ident(PLATFORM_ROLE)}`);
+      await client.query(
+        `GRANT SELECT, INSERT, UPDATE, DELETE ON "platform_identities", "platform_sessions" TO ${ident(PLATFORM_ROLE)}`,
+      );
+      await client.query(
+        `GRANT SELECT ON "platform_organization_counts" TO ${ident(PLATFORM_ROLE)}`,
+      );
+      console.log(`Granted "${PLATFORM_ROLE}" its platform tables and the counts view only.`);
+    }
     console.log(
       `Granted table privileges to "${APP_ROLE}" (audit_events remains append-only; website_lead_request_log, auth_rate_limit_attempts and platform_identities are restricted).`,
     );

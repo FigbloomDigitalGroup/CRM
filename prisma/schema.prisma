@@ -625,10 +625,37 @@ model PlatformIdentity {
   isDev        Boolean  @default(false) @map("is_dev")
   /// B1.08: the only look setting a platform admin has (LIGHT or DARK).
   uiMode       String   @default("LIGHT") @map("ui_mode")
+  /// B6.03: ACTIVE or SUSPENDED (a suspended admin cannot sign in).
+  status       String   @default("ACTIVE")
+  lastSignInAt DateTime? @map("last_sign_in_at")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  sessions PlatformSession[]
+
   @@map("platform_identities")
+}
+
+/// B6.03: the platform admin's own session type. Same idea as `Session`
+/// (hashed token, revocable, idle and absolute expiry) but tied to a platform
+/// identity and never to an organisation.
+model PlatformSession {
+  id                 String    @id @default(uuid())
+  platformIdentityId String    @map("platform_identity_id")
+  tokenHash          String    @unique @map("token_hash")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  expiresAt          DateTime  @map("expires_at")
+  absoluteExpiresAt  DateTime  @map("absolute_expires_at")
+  lastSeenAt         DateTime  @default(now()) @map("last_seen_at")
+  revokedAt          DateTime? @map("revoked_at")
+  revokedReason      String?   @map("revoked_reason")
+  userAgent          String?   @map("user_agent")
+  ipAddress          String?   @map("ip_address")
+
+  identity PlatformIdentity @relation(fields: [platformIdentityId], references: [id], onDelete: Cascade)
+
+  @@index([platformIdentityId])
+  @@map("platform_sessions")
 }
 
 /// A create request already seen, keyed by the client's Idempotency-Key header

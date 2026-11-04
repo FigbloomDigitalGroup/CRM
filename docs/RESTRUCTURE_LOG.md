@@ -64,6 +64,7 @@ The dates are my proposal to fit the fixed 22 Nov date; they are not signed off.
 | Offboarding, data requests, platform audit, health | FIG-1162 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no |
 | Platform admins, security, verify, not-found | FIG-1163 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no |
 | Platform mobile | FIG-1164 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no |
+| Platform sign-in and identity (the real API behind the console door) | FIG-1135 | n/a (backend) | identity, sessions, role and counts built 4 Nov 2026 (`docs/PLATFORM_IDENTITY.md`); the console screens still read demo data, and real sign-in waits for B6.02 |
 | Platform support access, flags and limits, announcements (PL7, PL12, PL13; platform half) | FIG-1192 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no |
 | Customer Support workspace (tickets, detail, satisfaction, role-limited customer) | FIG-1178 | yes (`src/ui/screens/support/demo/`) | no |
 | Organisation switcher (TB4) | FIG-1165 | yes (`src/ui/screens/orgside/demo/`) | no |

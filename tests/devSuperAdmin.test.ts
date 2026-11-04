@@ -307,9 +307,10 @@ describe("the platform identity cannot reach tenant data", () => {
       SELECT relrowsecurity AS rls, relforcerowsecurity AS forced
       FROM pg_class WHERE relname = 'platform_identities'`;
     expect(row).toEqual({ rls: true, forced: true });
-    const policies = await adminDb.$queryRaw<{ n: bigint }[]>`
-      SELECT COUNT(*) AS n FROM pg_policies WHERE tablename = 'platform_identities'`;
-    expect(Number(policies[0]!.n)).toBe(0);
+    // FIG-1135 (B6.03): the only policy is the platform role's own; the tenant role has none.
+    const policies = await adminDb.$queryRaw<{ roles: string[] }[]>`
+      SELECT roles::text[] AS roles FROM pg_policies WHERE tablename = 'platform_identities'`;
+    expect(policies.map((p) => p.roles)).toEqual([["figbloom_platform"]]);
   });
 
   it("sees no tenant rows even with a tenant context set for it", async () => {

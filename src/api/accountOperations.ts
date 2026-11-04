@@ -14,6 +14,8 @@ export const NOT_IN_V1_CONTRACT: Record<string, string> = {
   "/api/dev-session": "development only (CLAUDE.md rule 10)",
   "/api/dev-sentry-test": "development only",
   "/api/platform/preferences": "Platform Super Admin, V1.1",
+  "/api/platform/me": "Platform Super Admin, V1.1 (B6.03)",
+  "/api/platform/organizations": "Platform Super Admin, V1.1 (B6.03); counts only",
   "/api/openapi.json": "serves this document, outside production only",
 };
 
