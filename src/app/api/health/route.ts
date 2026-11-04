@@ -3,6 +3,7 @@ import { adminDb } from "@/db/adminClient";
 import { appDb } from "@/db/orgScopedClient";
 import { logger } from "@/lib/logger";
 import { instrumentRequest } from "@/observability/instrument";
+import { currentRequestContext } from "@/observability/requestContext";
 import { getNotificationsSweepStatus } from "@/services/notificationSweepService";
 
 /**
@@ -24,11 +25,13 @@ import { getNotificationsSweepStatus } from "@/services/notificationSweepService
 export async function GET() {
   // FIG-1124: counted in /api/metrics and logged with a request id, like every other route.
   return instrumentRequest(async () => {
+    const requestId = currentRequestContext()?.requestId;
+    const headers = requestId ? { "x-request-id": requestId } : undefined;
     try {
       await adminDb.$queryRaw`SELECT 1`;
     } catch (err) {
       logger.error({ err }, "Health check failed: database unreachable");
-      return NextResponse.json({ status: "error" }, { status: 503 });
+      return NextResponse.json({ status: "error" }, { status: 503, headers });
     }
 
     // The running app talks to the database as the least-privilege application role (`figbloom_app`), not the owner,
@@ -37,7 +40,7 @@ export async function GET() {
       await appDb.$queryRaw`SELECT 1`;
     } catch (err) {
       logger.error({ err }, "Health check failed: application database role cannot connect");
-      return NextResponse.json({ status: "error", appRole: "error" }, { status: 503 });
+      return NextResponse.json({ status: "error", appRole: "error" }, { status: 503, headers });
     }
 
     let notificationsSweep: {
@@ -56,6 +59,6 @@ export async function GET() {
       logger.error({ err }, "Health check: failed to read notifications sweep status");
     }
 
-    return NextResponse.json({ status: "ok", appRole: "ok", notificationsSweep });
+    return NextResponse.json({ status: "ok", appRole: "ok", notificationsSweep }, { headers });
   });
 }
