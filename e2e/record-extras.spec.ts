@@ -55,7 +55,8 @@ test.describe("record extras on a lead", () => {
     const lead = await makeLead(page);
     await gotoAndSettle(page, `/o/${ORG_SLUG}/leads/${lead.id}`);
     const box = page.getByLabel("Write a comment");
-    await box.fill("Please look at this @Ruth");
+    // The signed-in user (Ruth) is never offered, so mention a teammate who can open any lead: Management (Luke).
+    await box.fill("Please look at this @Luke");
     const options = page.getByRole("group", { name: "Mention a teammate" }).getByRole("button");
     await expect(options.first()).toBeVisible();
     const chosen = (await options.first().innerText()).trim();
