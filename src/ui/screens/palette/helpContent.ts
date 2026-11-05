@@ -9,6 +9,11 @@ export const TIPS: Record<string, { title: string; tips: string[] }> = {
   deals: { title: "Deals", tips: ["Drag cards between stages, or use Move to… on touch screens.", "Deal values show only to roles that may see them. Hidden values are marked, not blank."] },
   tasks: { title: "Tasks", tips: ["Every task links to a lead, deal, company or contact.", "Overdue tasks appear first on your home page."] },
   companies: { title: "Companies", tips: ["Open a company for its full history: contacts, deals, services and payments you may see."] },
+  contacts: { title: "Contacts", tips: ["Tap Call or WhatsApp on a contact, then say how it went when you come back. The note is saved on their history."] },
+  handoffs: { title: "Handoffs", tips: ["When a deal is won, the handoff passes the customer to Delivery. Delivery sees what to deliver, never the price or margin."] },
+  renewals: { title: "Renewals", tips: ["Renewals lists customers who are due soon or have lapsed. Reminders create tasks. They never change a customer for you."] },
+  payments: { title: "Payments", tips: ["Payments is for Finance and Management only. Nothing is processed here: it records invoices and money received.", "A payment you reverse stays on the record, struck through, with the reason."] },
+  preferences: { title: "Preferences", tips: ["Your look, notifications and sign-in history are yours. If your organisation locks the look, the control says why."] },
   reports: { title: "Reports", tips: ["Reports follow your role. Without organisation reports you see My metrics."] },
   settings: { title: "Settings", tips: ["Changes are recorded in the audit log.", "Each editor says what a change affects before you save."] },
 };

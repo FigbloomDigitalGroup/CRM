@@ -237,9 +237,9 @@ export function AdoptionCard({ data }: { data: ManagementData }) {
 }
 
 const FIRST_RUN = [
-  { key: "invite", label: "Invite your team", path: "/settings" },
-  { key: "import", label: "Import existing data", path: "/settings" },
-  { key: "website", label: "Connect the website form", path: "/settings" },
+  { key: "invite", label: "Invite your team", path: "/settings?tab=members" },
+  { key: "import", label: "Import existing data", path: "/settings?tab=migration" },
+  { key: "website", label: "Connect the website form", path: "/settings?tab=website" },
   { key: "mobile", label: "Install on your phone", path: "" },
 ] as const;
 

@@ -42,7 +42,7 @@ Checklist against evidence: M4 issues built and in the working tree; API tests p
 | Script CSP is Report-Only | **Accept until the frontend can send per-request nonces.** | Enforcing it now would break the app's own scripts. |
 | No production antivirus without `CLAMD_HOST` | **Make it a go-live condition** (FIG-1257, P1.06). | Config, not code. |
 | 10 consecutive green full runs not done | **Run it before the tag.** A sweep is running (about 4 hours); result goes on FIG-1068. | It is the one explicit G1.01 criterion not yet met. |
-| Performance measured on a laptop | **Re-measure on the real host** (FIG-1255 does this for Supabase). | Server time only, no network. |
+| Performance measured on a laptop | **Re-measure on the real host** (FIG-1256 covers it on staging). | Server time only, no network. |
 | No independent penetration test | **Schedule one before real customer data** (P1.06). | Out of this gate's scope; stated plainly in the security review. |
 
 ## Before this can be Done

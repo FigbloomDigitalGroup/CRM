@@ -9,6 +9,7 @@ import { MIGRATION_JOB } from "../services/migrationConstants";
 import { runRetentionSweep } from "../services/privacyService";
 import { runMigrationJob } from "../services/migrationService";
 import { registerJob } from "./registry";
+import { FILES_PURGE_JOB_TYPE, purgeOrganizationFiles } from "./handlers/filePurge";
 import {
   NOTIFICATIONS_SWEEP_JOB_TYPE,
   sweepIntervalMinutes,
@@ -155,6 +156,20 @@ registerJob<{ sessionId: string; phase: "VALIDATE" | "DRY_RUN" | "IMPORT" | "ROL
   handler: async (ctx) => {
     await runMigrationJob(ctx.organizationId, ctx.payload, ctx.payload.actorMembershipId);
     return { sessionId: ctx.payload.sessionId, phase: ctx.payload.phase };
+  },
+});
+
+/** Bytes of deleted and quarantined files are removed from the object store after the retention window; the row and its audit trail stay. Logs counts only. */
+registerJob({
+  type: FILES_PURGE_JOB_TYPE,
+  schedule: { everyMs: 24 * 60 * 60_000 },
+  timeoutMs: 15 * 60_000,
+  maxAttempts: 3,
+  concurrency: 2,
+  handler: async (ctx) => {
+    const result = await purgeOrganizationFiles(ctx.organizationId);
+    if (result.purged > 0) ctx.log.info({ purged: result.purged }, "File purge done");
+    return result;
   },
 });
 

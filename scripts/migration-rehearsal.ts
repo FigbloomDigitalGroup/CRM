@@ -27,8 +27,8 @@ const CONTAINER = process.env.PG_CONTAINER ?? "figbloom_crm_postgres";
 const SOURCE = process.env.DATABASE_URL;
 if (!SOURCE) throw new Error("DATABASE_URL must be set (see .env.example).");
 
-const DB_OLD = "figbloom_crm_rehearsal_old";
-const DB_UP = "figbloom_crm_rehearsal_up";
+const DB_OLD = process.env.REHEARSAL_DB_OLD ?? "figbloom_crm_rehearsal_old";
+const DB_UP = process.env.REHEARSAL_DB_UP ?? "figbloom_crm_rehearsal_up";
 const ORG_SLUG = "figbloom";
 
 const withDb = (url: string, db: string) => {
@@ -253,8 +253,17 @@ async function main() {
   await seedRolesAndPermissions();
   const orgs = await adminDb.organization.findMany({ select: { id: true, slug: true } });
   // The upgrade backfill: adds what the new catalogue has and the organisation lacks, changes nothing that is already there.
-  for (const o of orgs) await seedOrganizationDefaults(o.id, { fillOnly: true });
-  for (const o of orgs) await seedOrganizationDefaults(o.id, { fillOnly: true }); // the second pass proves it is safe to run again
+  if (process.env.REHEARSAL_BACKFILL_SCRIPT === "1") {
+    // The shipped upgrade step itself (the runbook's step 6), twice: what it prints is what an operator sees on the day.
+    const first = await mustRun("backfill script, first run", "npx", ["tsx", "scripts/backfill-organization-defaults.ts"], { env: afterEnv });
+    const second = await mustRun("backfill script, second run", "npx", ["tsx", "scripts/backfill-organization-defaults.ts"], { env: afterEnv });
+    const lines = (o: string) => o.split(String.fromCharCode(10)).filter((l) => /^[a-z0-9-]+: /.test(l));
+    result.backfillScript = { first: lines(first.out), second: lines(second.out) };
+    log(`  backfill script: first ${JSON.stringify(lines(first.out))}, second ${JSON.stringify(lines(second.out))}`);
+  } else {
+    for (const o of orgs) await seedOrganizationDefaults(o.id, { fillOnly: true });
+    for (const o of orgs) await seedOrganizationDefaults(o.id, { fillOnly: true }); // the second pass proves it is safe to run again
+  }
   log(`  reference data and fill-only defaults for ${orgs.length} organisation(s), run twice`);
 
   log("5. Checks");
@@ -292,8 +301,27 @@ async function main() {
   result.appRoleRead = { viaApp, expected, matches: JSON.stringify(viaApp) === JSON.stringify(expected) };
   log(`  read through the app role: ${JSON.stringify(viaApp)} ${JSON.stringify(viaApp) === JSON.stringify(expected) ? "(matches)" : "(DIFFERS from " + JSON.stringify(expected) + ")"}`);
 
+  // Tables that did not exist in V0: how many rows each holds after the upgrade (only the backfill and the reconcile may have written any).
+  const allTables = (await up.$queryRawUnsafe<{ table_name: string }[]>(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name <> '_prisma_migrations' ORDER BY 1`)).map((r) => r.table_name);
+  const newTableRows: Record<string, number> = {};
+  for (const t of allTables.filter((t) => !(t in columns))) newTableRows[t] = Number((await up.$queryRawUnsafe<{ n: number }[]>(`SELECT count(*)::int AS n FROM "${t}"`))[0]!.n);
+  result.newTableRows = newTableRows;
+  log(`  ${Object.keys(newTableRows).length} tables are new in V1; rows in them: ${JSON.stringify(Object.fromEntries(Object.entries(newTableRows).filter(([, n]) => n > 0)))}`);
+
   const unvalidated = await up.$queryRawUnsafe<{ conname: string }[]>(`SELECT conname FROM pg_constraint WHERE NOT convalidated`);
   result.unvalidatedConstraints = unvalidated.map((r) => r.conname);
+
+  // Optional (REHEARSAL_RECONCILE=1): the same reconciliation the cutover plan uses (scripts/reconcile-counts.ts, docs/CUTOVER_PLAN.md section 6),
+  // old database as SOURCE, upgraded copy as TARGET. Differences are expected only for the tables meant to change and the tables new in V1.
+  const reconcile = async (label: string, extra: string[] = []) => {
+    const r = await run("npx", ["tsx", "scripts/reconcile-counts.ts", ...extra], { env: { RECONCILE_SOURCE_URL: url(DB_OLD), RECONCILE_TARGET_URL: url(DB_UP) } });
+    (result.reconcile as Record<string, unknown>)[label] = { exitCode: r.code, seconds: +(r.ms / 1000).toFixed(1), output: r.out.split(String.fromCharCode(10)).filter((l) => !/DEP0190|trace-deprecation/.test(l)).join(String.fromCharCode(10)) };
+    log(`  reconcile ${label}: exit ${r.code} (${(r.ms / 1000).toFixed(1)}s)`);
+  };
+  if (process.env.REHEARSAL_RECONCILE === "1") {
+    result.reconcile = {};
+    await reconcile("afterUpgrade");
+  }
 
   log("6. Rollback rehearsal (restore the backup over the upgraded copy)");
   await up.$disconnect();
@@ -305,6 +333,7 @@ async function main() {
   const rolledMigrations = Number((await rolled.$queryRawUnsafe<{ n: number }[]>(`SELECT count(*)::int AS n FROM _prisma_migrations`))[0]!.n);
   result.rollback = { seconds: +(rollbackMs / 1000).toFixed(1), identicalToBefore: rollbackDiff.length === 0, migrationsAfterRollback: rolledMigrations, migrationsBefore };
   log(`  rollback ${(rollbackMs / 1000).toFixed(1)}s: ${rollbackDiff.length === 0 ? "identical to the pre-upgrade database" : "DIFFERS"}; migrations recorded ${rolledMigrations} (was ${migrationsBefore})`);
+  if (process.env.REHEARSAL_RECONCILE === "1") await reconcile("afterRollback");
 
   // The old application's own code, from the tag, against the restored database: counts through its app role, a list, and a write that is
   // rolled back (proves the write path and RLS without changing the data).

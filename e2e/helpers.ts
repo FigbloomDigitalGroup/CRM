@@ -50,10 +50,27 @@ async function allowSecureCookieOverHttp(page: Page): Promise<void> {
   });
 }
 
+/**
+ * `page.goto` that survives the page redirecting itself at the same moment: straight after sign-in the app may still be sending a narrow screen to
+ * /m (WebKit: "interrupted by another navigation"), and after the cookies are cleared an open page may send itself to /login (Chromium:
+ * net::ERR_ABORTED). The page is where we wanted it or about to be, so let it finish and go again; at most twice, and any other error is real.
+ */
+async function gotoTolerant(page: Page, path: string): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await page.goto(path);
+      return;
+    } catch (e) {
+      if (attempt >= 2 || !/interrupted by another navigation|ERR_ABORTED/.test(String(e))) throw e;
+      await page.waitForLoadState("load").catch(() => undefined);
+    }
+  }
+}
+
 export async function loginAs(page: Page, email: string): Promise<void> {
   const webkit = page.context().browser()?.browserType().name() === "webkit";
   await allowSecureCookieOverHttp(page);
-  await page.goto("/login");
+  await gotoTolerant(page, "/login");
   // WebKit is quicker to show the form than to hydrate it, and a click before hydration is lost.
   if (webkit) await page.waitForLoadState("networkidle");
   await page.getByLabel("Email").fill(email);
@@ -75,15 +92,7 @@ export function uniqueSuffix(): string {
 
 /** Goes to a page and waits until React has hydrated, so a fill/click is not lost to a not-yet-interactive client component. */
 export async function gotoAndSettle(page: Page, path: string): Promise<void> {
-  try {
-    await page.goto(path);
-  } catch (e) {
-    // Straight after sign-in the app may still be redirecting to the same address (the phone frame sends a narrow screen to /m); WebKit then reports
-    // the goto as interrupted by that navigation. The page is where we wanted it, so let it finish and go on; anything else is a real failure.
-    if (!/interrupted by another navigation/.test(String(e))) throw e;
-    await page.waitForLoadState("load");
-    await page.goto(path);
-  }
+  await gotoTolerant(page, path);
   await page.waitForLoadState("networkidle");
 }
 

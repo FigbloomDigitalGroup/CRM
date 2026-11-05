@@ -431,6 +431,8 @@ export interface PurgeOptions {
   /** Days a deleted file's bytes are kept; defaults to `DEFAULT_RETENTION_DAYS`. Retention rules (B4.05) will supply this per organisation. */
   retentionDays?: number;
   now?: Date;
+  /** Limits the purge to one organisation (the background job runs once per organisation). Omitted: every organisation. */
+  organizationId?: string;
 }
 
 /**
@@ -444,14 +446,26 @@ export async function purgeDeletedFiles(options: PurgeOptions = {}) {
   const cutoff = new Date(now.getTime() - (options.retentionDays ?? DEFAULT_RETENTION_DAYS) * 86_400_000);
   const driver = getStorageDriver();
 
+  const orgFilter = options.organizationId ? { organizationId: options.organizationId } : {};
+
   // Uploads that were never completed become deleted files after a day.
   await adminDb.file.updateMany({
-    where: { status: "UPLOADING", uploadExpiresAt: { lt: new Date(now.getTime() - 86_400_000) } },
+    where: { ...orgFilter, status: "UPLOADING", uploadExpiresAt: { lt: new Date(now.getTime() - 86_400_000) } },
     data: { status: "DELETED", deletedAt: now },
   });
 
+  // Deleted files, and quarantined (infected) files, whose bytes outlived the window. A quarantined file has no
+  // deletion time, so its last change (the quarantine) counts. The row stays with `purged_at` set; deleting an
+  // object that is already gone is not an error (the drivers treat it as a no-op).
   const due = await adminDb.file.findMany({
-    where: { status: "DELETED", purgedAt: null, deletedAt: { lte: cutoff } },
+    where: {
+      ...orgFilter,
+      purgedAt: null,
+      OR: [
+        { status: "DELETED", deletedAt: { lte: cutoff } },
+        { status: "QUARANTINED", updatedAt: { lte: cutoff } },
+      ],
+    },
     select: { id: true, storageKey: true },
     take: 500,
   });

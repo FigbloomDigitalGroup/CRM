@@ -10,6 +10,12 @@ import { presignUrl, signRequestHeaders, uriEncode, type Credentials } from "./s
 export interface S3DriverOptions {
   /** Endpoint origin, for example `https://s3.eu-west-1.amazonaws.com` or a MinIO/R2 URL. */
   endpoint: string;
+  /**
+   * Optional origin that browsers can reach, used only for the signed links
+   * handed out (signUpload, signDownload). The signature covers that host.
+   * Server-side calls keep using `endpoint`. Unset means links use `endpoint`.
+   */
+  publicEndpoint?: string;
   region: string;
   bucket: string;
   accessKeyId: string;
@@ -38,8 +44,8 @@ export class S3Driver implements StorageDriver {
     this.doFetch = options.fetchImpl ?? fetch;
   }
 
-  private objectUrl(key: string): string {
-    const endpoint = new URL(this.options.endpoint);
+  private objectUrl(key: string, base: string = this.options.endpoint): string {
+    const endpoint = new URL(base);
     const encodedKey = uriEncode(key, false);
     if (this.options.forcePathStyle ?? true) {
       return `${endpoint.origin}/${this.options.bucket}/${encodedKey}`;
@@ -93,7 +99,7 @@ export class S3Driver implements StorageDriver {
     const now = this.now();
     const url = presignUrl({
       method: "PUT",
-      url: this.objectUrl(key),
+      url: this.objectUrl(key, this.options.publicEndpoint ?? this.options.endpoint),
       credentials: this.credentials,
       expiresInSeconds: options.expiresInSeconds,
       now,
@@ -112,7 +118,7 @@ export class S3Driver implements StorageDriver {
     const safeName = options.fileName.replace(/["\\\r\n]/g, "_");
     const url = presignUrl({
       method: "GET",
-      url: this.objectUrl(key),
+      url: this.objectUrl(key, this.options.publicEndpoint ?? this.options.endpoint),
       credentials: this.credentials,
       expiresInSeconds: options.expiresInSeconds,
       now,

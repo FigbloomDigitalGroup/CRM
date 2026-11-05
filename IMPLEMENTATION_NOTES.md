@@ -10,8 +10,8 @@ is not reopened anywhere below — these are the things they left open.
 TypeScript + PostgreSQL + Prisma, Next.js (App Router) + React for the
 API/UI layer, added to the same project rather than a separate app. Postgres
 + RLS was already the pattern in use on other FigBloom projects on this
-machine; Prisma keeps schema and migrations in one place without pulling in
-a full Supabase CLI stack this project doesn't otherwise need.
+machine; Prisma keeps schema and migrations in one place without a separate
+database toolchain this project doesn't otherwise need.
 
 ## Tenant isolation: composite FKs + RLS, both, not either/or
 
@@ -197,7 +197,7 @@ to fix a validation error.
 
 FIG-437 left the exact authentication provider as an open implementation
 decision ("Exact authentication provider," "Exact session/token strategy" —
-section 18). Chosen: in-house email/password, not NextAuth/Clerk/Supabase --
+section 18). Chosen: in-house email/password, not NextAuth/Clerk --
 this project has zero external-service dependencies anywhere else, the
 RBAC/tenant model it has to resolve into is already fully custom, and it's
 currently a single-organization internal tool where a vendor dependency
