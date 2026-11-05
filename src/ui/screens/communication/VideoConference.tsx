@@ -23,6 +23,13 @@ const nowTime = () => {
   const d = new Date();
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
+/** The time a new meeting starts at: 10:00 while that is still ahead, otherwise the next half hour (never a time the form itself would refuse as already past). */
+const defaultTime = () => {
+  const d = new Date();
+  if (d.getHours() < 9 || (d.getHours() === 9 && d.getMinutes() < 30)) return "10:00";
+  const next = new Date(d.getTime() + 30 * 60_000 - (d.getTime() % (30 * 60_000)));
+  return next.getDate() === d.getDate() ? `${pad(next.getHours())}:${pad(next.getMinutes())}` : nowTime();
+};
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const KIND_LABEL: Record<string, string> = { Lead: "Lead", Deal: "Deal", Company: "Company", Contact: "Contact" };
 
@@ -37,7 +44,7 @@ interface Form {
   withVideo: boolean;
   followUp: boolean;
 }
-const blank = (): Form => ({ title: "", record: null, attendees: "", description: "", date: today(), time: "10:00", minutes: "30", withVideo: true, followUp: true });
+const blank = (): Form => ({ title: "", record: null, attendees: "", description: "", date: today(), time: defaultTime(), minutes: "30", withVideo: true, followUp: true });
 const emails = (s: string) => s.split(/[,;\s]+/).map((a) => a.trim()).filter(Boolean);
 
 /**
@@ -59,7 +66,7 @@ export function VideoConference() {
   const [provider, setProvider] = useState<"GOOGLE" | "MICROSOFT">("GOOGLE");
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [moveId, setMoveId] = useState<string | null>(null);
-  const [move, setMove] = useState({ date: today(), time: "10:00" });
+  const [move, setMove] = useState({ date: today(), time: defaultTime() });
   const [session, setSession] = useState<Record<string, ScheduledMeeting>>({});
   const [cancelled, setCancelled] = useState<string[]>([]);
 
