@@ -29,7 +29,7 @@ State: Done (the product does it), Partly, Open (a person must act), N/A.
 | 11 | **Organisation-level requests** (export or delete a whole tenant) | Recorded and audited; carried out by the platform with two-person approval (V1.1); offboarding and export scripts exist (`docs/TENANT_OFFBOARDING.md`) | Partly | Given |
 | 12 | **Security safeguards** (integrity and confidentiality) | See `docs/SECURITY_SIGNOFF_V1.md`: tenant isolation, role permissions, masking, hashed passwords (bcrypt 12), signed uploads, headers, rate limits, audit log, encrypted transport in production. Encryption at rest depends on the host | Partly | Eng done; Given for host settings (section 6); independent penetration test is open |
 | 13 | **Malware scanning of uploads** | Built; needs `CLAMD_HOST` in production | Open | Given |
-| 14 | **Breach notification.** Notify the ODPC and affected people within the legal period (the DPA sets 72 hours for the ODPC; confirm) | No incident runbook in the repository. Audit log, sign-in history and error reporting give the evidence | Open | Given writes the runbook (who decides, who calls, templates); Lawyer confirms the period and content |
+| 14 | **Breach notification.** Notify the ODPC and affected people within the legal period (the DPA sets 72 hours for the ODPC; confirm) | Incident runbook written (`docs/RUNBOOKS.md` section 8, including the 72-hour decision step added 5 Nov 2026). Audit log, sign-in history and error reporting give the evidence | Open | Given writes the runbook (who decides, who calls, templates); Lawyer confirms the period and content |
 | 15 | **Processor agreements.** A written contract with every processor that handles personal data, and a check of its safeguards | None signed. Candidates are listed in section 4 | Open | Given and Lawyer |
 | 16 | **Registration with the Data Commissioner.** Controllers and processors registering under the DPA and the Registration of Data Controllers and Data Processors Regulations | Not done. Whether FigBloom must register, as which role, and the fee depends on the legal reading and thresholds | Open | Lawyer decides; Given files; Michael approves. Do this before real customer data |
 | 17 | **Data protection impact assessment** (high-risk processing; large scale or sensitive data) | Not done. Probably not triggered by a business CRM; a lawyer should say | Open | Lawyer |
@@ -60,12 +60,12 @@ State: Done (the product does it), Partly, Open (a person must act), N/A.
 
 | Provider or recipient | Purpose | Personal data involved | Location | Agreement signed (date) | Notes |
 |---|---|---|---|---|---|
-| Database host (this computer now; AWS later) | Stores all CRM data | All | Kenya now; region not chosen | | Decide with FIG-1258 |
-| Object storage for uploaded files (local now; AWS later) | Attachments, imports, exports | Files and their content | | | |
+| Database host (this computer now; AWS later) | Stores all CRM data | All | This computer (the checklist records Kenya); AWS region provisional, `docs/DATA_LOCATION_ASSESSMENT.md` | None needed while self-hosted; AWS data processing addendum before the move | Self-hosted, no processor today (assessment finding L-01) |
+| Object storage for uploaded files (local now; AWS later) | Attachments, imports, exports | Files and their content | This computer (SeaweedFS, private bucket) | None needed while self-hosted | Same move as the database |
 | Mail sending provider (production choice not made; staging uses a sandbox only) | Notifications and invites | Names, email addresses, message content | | | |
-| Error monitoring (Sentry, optional) | Error reports | Technical data, possibly user ids | | | Confirm it carries no personal data or set scrubbing |
-| Antivirus host | Scans uploads | File content | | | Self-hosted ClamAV keeps content in-house |
-| Hosting, CDN or backup provider | Delivery and backups | All, encrypted or not | | | |
+| Error monitoring (Sentry, optional) | Error reports | Technical data, possibly user ids | No project yet | Needed if Sentry is used | Scrubbing is built in (`src/lib/sentryScrub.ts`); confirm before enabling |
+| Antivirus host | Scans uploads | File content | This computer (staging); production host not chosen | None if self-hosted | Self-hosted ClamAV keeps content in-house; production refuses to start without `CLAMD_HOST` |
+| Hosting, CDN or backup provider | Delivery and backups | All, encrypted or not | Backups: this computer's volume; off-site storage not chosen | None yet | Backups are not encrypted and not off-site yet (assessment finding L-03) |
 | Linear and other internal tools | Project management | Must hold no customer data (CLAUDE.md rule 11) | | | Check no customer data is pasted |
 
 ## 5. Record of processing (the team fills this in)

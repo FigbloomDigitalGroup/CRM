@@ -17,6 +17,9 @@ Roles are cluster-level and are **not** in a `pg_dump` of one database. After a 
 
 ## 2. Schedule and retention (proposed)
 
+**Built and tested 5 Nov 2026 (FIG-1258):** `ops/backup/backup-nightly.sh`, run by the `backup` service of `docker-compose.staging.yml` (and the same script on any host with `pg_dump`). At 01:00 UTC it takes `pg_dump -Fc`, checks the file with `pg_restore --list`, records size and SHA-256, keeps **14 daily, 8 weekly (Sundays) and 12 monthly (the 1st)** copies on the backups volume, retries every 15 minutes after a failure, and writes metrics (`figbloom_backup_*`) that Prometheus scrapes. Alerts: **BackupMissing** (no success for 26 hours, page), **BackupNeverRan** (no success ever recorded, page), **BackupFailed** (last attempt failed, warn). Tests run on 5 Nov 2026: a backup of the live staging database (458,857 bytes, verified); the checksum file verifies; the file restores in 6.4 s and reconciles to **zero differences** (72 tables, 785 rows, 631 spot-checked); a wrong password exits 1, sets the status metric to 0 and leaves no partial file; retention keeps 2 of 3 files when set to 2. **Limits, stated plainly:** the copies are on the same computer's volume, not off-site, and are **not encrypted**. Anyone who loses the computer loses the data and its backups. Off-site storage, encryption and two key holders need storage and keys that a person provides (section 9). The 01:00 run itself has not yet been seen (the job has run at start and on demand); it is scheduled by the loop's clock arithmetic and the BackupMissing alert is the check that it happens.
+
+
 Nightly logical backup:
 
 ```bash

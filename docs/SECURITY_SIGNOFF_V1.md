@@ -77,11 +77,13 @@ npx vitest run tests/tenantAttack.test.ts tests/massAssignment.test.ts tests/fil
 
 On staging, once it exists: upload the EICAR string as a `.txt` file through the app and confirm the file is quarantined and cannot be downloaded; read the response headers of `/login`.
 
-## 6. Sign-off (empty until signed)
+## 6. Sign-off
 
 Acceptance: no open High or Critical finding, and every Open item above fixed or accepted in writing.
 
 | Role | Name | Decision (approve, approve with accepted items, reject) | Accepted finding IDs | Date | Signature |
 |---|---|---|---|---|---|
 | Team Lead | Michael | | | | |
-| Product owner | Given | | | | |
+| Product owner | Given | **Approve with accepted items** | S-01 to S-08 accepted as open: S-01 and S-02 are the ones that matter (a production ClamAV host is set before real files, and an independent penetration test is still to be arranged) | 5 Nov 2026 | Recorded by Claude on Given's written instruction in the session of 5 Nov 2026; no handwritten signature |
+
+**Michael's line is open.** Michael's approval of this sign-off is not recorded (Given reports that Michael approved the pilot waiver of FIG-1130 on 5 Nov 2026; that is a different decision). The findings table says accepting a finding needs Michael and Given in writing. Until Michael's line is filled, the Medium and lower items above are accepted by the product owner alone. No open High or Critical finding exists, which is what the acceptance criterion of FIG-1128 asks.

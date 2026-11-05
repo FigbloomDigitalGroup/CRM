@@ -159,7 +159,44 @@ services:
       - -c
       - while true; do curl -s -o /dev/null -m 120 -w 'cron/jobs %{http_code}\n' -X POST -H "Authorization:Bearer $$CRON_SECRET" http://app:3000/api/cron/jobs; sleep 60; done
 
+  # Nightly database backup (FIG-1258 / FIG-1125, docs/BACKUP_RESTORE.md): pg_dump -Fc at 01:00 UTC, checked, 14 daily + 8 weekly +
+  # 12 monthly copies on the backups volume, metrics for the alert rules. On this computer the copies stay on this computer's volume and are
+  # not encrypted: off-host copy and encryption need storage and keys a person provides.
+  backup:
+    image: postgres:16-alpine
+    container_name: figbloom_crm_staging_backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: figbloom
+      PGPASSWORD: ${STAGING_PG_OWNER_PASSWORD:?}
+      PGDATABASE: figbloom_crm_staging
+      BACKUP_DIR: /backups
+      BACKUP_HOUR_UTC: "01"
+      BACKUP_ON_START: "true"
+    entrypoint: ["/bin/sh", "/ops/backup-nightly.sh"]
+    volumes:
+      - ./ops/backup/backup-nightly.sh:/ops/backup-nightly.sh:ro
+      - figbloom_crm_staging_backups:/backups
+
+  # Serves the backup metrics file to Prometheus (read-only view of the backups volume's metrics folder).
+  backup-metrics:
+    image: busybox:1.36
+    container_name: figbloom_crm_staging_backup_metrics
+    restart: unless-stopped
+    command: ["httpd", "-f", "-p", "9101", "-h", "/backups/metrics"]
+    depends_on:
+      backup:
+        condition: service_started
+    volumes:
+      - figbloom_crm_staging_backups:/backups:ro
+
 volumes:
+  figbloom_crm_staging_backups:
   figbloom_crm_staging_pg:
   figbloom_crm_staging_objects:
   figbloom_crm_staging_clamav_db:

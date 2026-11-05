@@ -536,7 +536,7 @@ One person (an AI assistant working for Given) walked scenarios A, B and C again
 |---|---|---|---|
 | 1 | A, C | **Rolling back an image deleted the evidence.** Section 2a removed the bad container with `docker rm -f`, which deletes its logs, while section 2c says to save logs and request ids first. | Yes: the log is saved before the removal (2a step 2). Production also needs logs kept outside the container (a log driver or shipper); not built. |
 | 2 | A | **The smoke test passed while saving a deal was broken**, as the scenario says. The suite is read-only by design. | Text: deploy step 6 now adds a manual create-and-archive of a test lead. A safe write check in the production smoke suite is a possible follow-up. |
-| 3 | B | **The scenario assumes a 01:00 nightly dump, and no job takes one.** `docs/BACKUP_RESTORE.md` defines the nightly dump and the `backup:drill` script proves restore, but nothing runs a nightly backup on staging or production. Scenario B could not be carried out today. | **No. Open and serious**: a go-live blocker that needs a backup job (a container or host job that runs `pg_dump -Fc`, keeps 14 daily, alerts when a day is missing) and backup storage. Proposed to Given. |
+| 3 | B | **The scenario assumes a 01:00 nightly dump, and no job took one.** `docs/BACKUP_RESTORE.md` defined the nightly dump and `backup:drill` proved restore, but nothing ran a nightly backup on staging or production. Scenario B could not have been carried out. | **Built and tested 5 Nov 2026** (`ops/backup/backup-nightly.sh`, `docs/BACKUP_RESTORE.md` section 2): nightly dump, checked, 14 daily, 8 weekly, 12 monthly, alerts when a night is missing. **Still open:** off-site copy, encryption and two key holders (people). |
 | 4 | B | An evidence dump of a database that will not start is impossible. | Yes (2b step 2). |
 | 5 | B | No message for users after a restore (the user who "entered 20 deals this morning"). | Yes: template added in section 8. |
 | 6 | B | Two recovery key holders are required, none are named and no dump encryption key exists. | No: people (section 9). |
@@ -686,7 +686,7 @@ The 29 s covers the machine steps on a 446 KiB database; the 1 hour RTO target i
 
 - Name the on-call people, their phones, backups and hours (section 9), and set up the alert paging to them.
 - Hold the team table-top exercise (section 10) in the first production week and fill in its table (deferred, decision 6.12).
-- Build the nightly backup job and choose the backup storage (desk walkthrough, gap 3).
+- Choose off-site backup storage, encrypt the backups and name two key holders (the nightly job exists, section 10 gap 3).
 - Repeat the rollback dry run with a genuinely older build and a second person when a real host exists (done once on scratch copies, section 11b).
 - Decide the secrets rotation schedule and keep the secret log.
 - Confirm the RPO and RTO targets (they are still proposals in [BACKUP_RESTORE.md](BACKUP_RESTORE.md)).

@@ -1,5 +1,7 @@
 # Internal pilot plan (FIG-1130, P1.08)
 
+> **Decision, 5 Nov 2026 (decisions 6.12 and 6.13 in `docs/DECISIONS.md`).** There are no testers before go-live. Given waived a separate pilot and reported that **Michael approved this**; Michael's own written confirmation is not recorded in the repository. In place of a pilot, **the first production week with real users acts as the pilot**: the exit criteria below are checked with the adoption report at the end of hypercare (no later than 21 Nov 2026), and the go/no-go review of section 7 becomes that end-of-hypercare review. The plan below stays the method.
+
 Goal: a short live pilot with real FigBloom users to confirm V1 readiness against the measurable criteria in FIG-444 (`documents/FIG-444 Subscriber Readiness Plan and External Pilot Criteria.md`, sections 3, 4, 5 and 17). Acceptance (Linear): exit criteria met, or consciously waived by Michael and Given. Test: the pilot report (template in section 9, left empty).
 
 Related: UAT in [UAT_V1.md](UAT_V1.md), defects in [QA_DEFECTS.md](QA_DEFECTS.md), staging in [STAGING.md](STAGING.md), go-live, Sev definitions and hypercare in [GO_LIVE.md](GO_LIVE.md), review after launch in [POST_LAUNCH_REVIEW.md](POST_LAUNCH_REVIEW.md). Everything stays on `dev-given` (CLAUDE.md standing decision). This file is a plan; it authorises no merge, tag or deployment, and it changes no Linear status.
@@ -207,9 +209,9 @@ Attendees: Given, Michael, pilot lead, Engineering. Papers: the pilot report (se
 
 | Item | Value |
 |---|---|
-| Decision (go / go with waivers / no-go) | |
-| Criteria waived and the reason for each | |
-| Waived by (Michael and Given) and date | |
+| Decision (go / go with waivers / no-go) | Go with waivers: no separate pilot before go-live (5 Nov 2026) |
+| Criteria waived and the reason for each | A separate pilot with real users before go-live: no people are available. The first production week acts as the pilot; exit criteria are checked at the end of hypercare |
+| Waived by (Michael and Given) and date | Given, 5 Nov 2026; Michael approved according to Given (relayed in the session; his own written confirmation is not recorded) |
 | Conditions attached to go (for example "re-run adoption report on 17 Nov") | |
 | Next review date | |
 

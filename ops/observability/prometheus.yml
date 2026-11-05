@@ -21,6 +21,12 @@ scrape_configs:
     static_configs:
       - targets: ["app:3000"]
 
+  # Nightly backup job (docker-compose.staging.yml, service backup-metrics): last success, size, duration, files kept.
+  - job_name: backup
+    metrics_path: /backup.prom
+    static_configs:
+      - targets: ["backup-metrics:9101"]
+
   # Uptime probes through the blackbox exporter: health (must answer 200 and "status":"ok") and the login page (200).
   - job_name: health-probe
     metrics_path: /probe

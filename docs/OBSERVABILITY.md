@@ -69,6 +69,9 @@ Prometheus-style expressions, loaded from `ops/observability/alerts.yml`. Scrape
 | Slow requests (p95) | `histogram_quantile(0.95, sum by (le) (rate(figbloom_http_request_duration_seconds_bucket[5m]))) > 1` | 5 min | Warn; page above 3 |
 | Job lag | `max(figbloom_job_lag_seconds) > 600` | 2 min | Warn; page above 1800 |
 | Dead jobs | `sum(figbloom_jobs_dead) > 0` and increasing over 15 min | 0 | Warn |
+| Backup missing | `time() - figbloom_backup_last_success_timestamp_seconds > 93600` | 5 min | Page |
+| Backup never ran | `absent(figbloom_backup_last_success_timestamp_seconds)` | 30 min | Page |
+| Backup failed | `figbloom_backup_last_status == 0` | 5 min | Warn |
 | Metrics gone | `up{job="figbloom"} == 0` | 3 min | Warn |
 | New error group in the error tracker | first seen in production | immediate | Notify channel |
 

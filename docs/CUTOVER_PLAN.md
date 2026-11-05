@@ -203,13 +203,13 @@ One operational finding: after Docker Desktop restarted, host connections to the
 
 **What only a human can do:** (1) say whether real data exists (Path A or B, question 1); (2) if it does, provide a copy and have this rehearsal repeated on it (restore the dump into a scratch database, take it as the V0 side, upgrade, reconcile, roll back) and record the numbers here; (3) decide whether the deal-rules migration is edited (cleaner than the temporary indexes); (4) sign section 10.
 
-## 10. Sign-off (left empty)
+## 10. Sign-off
 
 | Item | Name | Role | Date | Decision |
 |---|---|---|---|---|
-| Path chosen (A or B) | | | | |
+| Path chosen (A or B) | Given | Product owner | 5 Nov 2026 | A (fresh organisation, decision 6.2) unless Given says real data exists; plan signed on that basis |
 | Window and freeze authorised | | | | |
-| Rehearsal reconciled to zero differences, rollback proven | | | | |
-| Plan approved | | | | |
+| Rehearsal reconciled to zero differences, rollback proven | Given | Product owner | 5 Nov 2026 | Accepted on the evidence in sections 9b and 7 (six rehearsals; rollback proven on the live staging database), at small invented volume |
+| Plan approved | Given | Product owner | 5 Nov 2026 | Approved. Recorded by Claude on Given's written instruction in the session of 5 Nov 2026; no handwritten signature. Michael's approval is not recorded |
 | Go decision (day of cutover) | | | | |
 | Cutover verified, release signed off | | | | |

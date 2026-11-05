@@ -66,6 +66,30 @@ groups:
           summary: "Dead background jobs are increasing"
           description: "The number of dead jobs grew in the last 15 minutes."
 
+      - alert: BackupMissing
+        expr: time() - figbloom_backup_last_success_timestamp_seconds > 93600
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "No successful database backup in the last 26 hours"
+          description: "The nightly backup (01:00 UTC) has not succeeded for more than 26 hours. Look at the backup container log first (docs/BACKUP_RESTORE.md)."
+
+      - alert: BackupNeverRan
+        expr: absent(figbloom_backup_last_success_timestamp_seconds)
+        for: 30m
+        labels: { severity: page }
+        annotations:
+          summary: "No backup has ever been recorded"
+          description: "The backup metrics show no successful backup at all (job not running, or it has never worked)."
+
+      - alert: BackupFailed
+        expr: figbloom_backup_last_status == 0
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "The last backup attempt failed"
+          description: "The backup job retries every 15 minutes; read its log if this persists."
+
       - alert: MetricsGone
         expr: up{job="figbloom"} == 0
         for: 3m
