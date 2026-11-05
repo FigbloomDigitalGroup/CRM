@@ -4,7 +4,7 @@ Goal: anyone on the team can deploy, roll back and handle an incident, at 2 a.m.
 
 Database: plain PostgreSQL, local for now, AWS later (Michael, 4 Nov 2026). Nothing here depends on a hosting vendor. This file links to the detailed documents instead of copying them: if a linked document and this one disagree, the linked document is right and this one needs fixing.
 
-Status: **written; the rollback dry run is done on local staging: part 1 (image rollback) on 4 Nov 2026 (section 11a) and part 2 (database rollback, with a real additive and a real destructive migration) on 5 Nov 2026 (section 11b).** Still to do: the table-top exercise with people (section 10); the on-call table (section 9) is empty. The issue is not done until the table-top has been held.
+Status: **written; the rollback dry run is done on local staging: part 1 (image rollback) on 4 Nov 2026 (section 11a) and part 2 (database rollback, with a real additive and a real destructive migration) on 5 Nov 2026 (section 11b).** The team table-top exercise (section 10) is **deferred to hypercare by Given's waiver (decision 6.12, 5 Nov 2026)** and replaced for now by a desk walkthrough by one person (section 10, "Desk walkthrough, 5 Nov 2026"), which found gaps that are fixed below. The on-call table (section 9) is still empty.
 
 ## 0. If you only read one thing
 
@@ -51,7 +51,7 @@ Steps (details and the exact `docker run` commands are in [DEPLOYMENT.md](DEPLOY
 3. **Build and push the image once:** `docker build -t figbloom-crm:<version> .`
 4. **Run the migration step once** (not per replica): the image with `RUN_MIGRATIONS_ON_START=true` and a no-op command, which runs `prisma migrate deploy`, `db:bootstrap-role` and `db:grant-role` (command in [DEPLOYMENT.md](DEPLOYMENT.md) step 2). Then `npm run seed` (production-safe: it only reconciles the role and permission catalogue). **The image cannot run it** (it has no `src/` folder and the seed imports it): run it from a checkout of the same commit with `DATABASE_URL` pointing at the target, as in [STAGING.md](STAGING.md) "Local staging stack".
 5. **Roll the replicas** onto the new image with `RUN_MIGRATIONS_ON_START` unset. One at a time if you have more than one; wait for `GET /api/health` to answer 200 `{"status":"ok"}` on each before the next.
-6. **Smoke test.** Staging: `STAGING_URL=https://<staging host> npx tsx scripts/staging-smoke.ts` (add `STAGING_UAT_PASSWORD` for the signed-in part). Production: `npm run smoke:prod` with the `SMOKE_*` variables set (see [GO_LIVE.md](GO_LIVE.md) section 4); all 7 tests must pass, none skipped.
+6. **Smoke test.** Staging: `STAGING_URL=https://<staging host> npx tsx scripts/staging-smoke.ts` (add `STAGING_UAT_PASSWORD` for the signed-in part). Production: `npm run smoke:prod` with the `SMOKE_*` variables set (see [GO_LIVE.md](GO_LIVE.md) section 4); all 7 tests must pass, none skipped. **The smoke test is read-only: it cannot see a broken save.** After every deploy also, as a person in the browser, create one test lead and archive it, so the write path is exercised.
 7. **Watch** the dashboards for 30 minutes ([OBSERVABILITY.md](OBSERVABILITY.md)): 5xx ratio, p95 latency, job lag, dead jobs, health. Do not walk away before that.
 8. **Record** the version, time, who deployed, and the smoke result in the deploy log (a Linear comment on the release issue is enough).
 
@@ -69,6 +69,7 @@ Put the previous image tag back on the replicas.
 2. Roll the replicas back to it, one at a time, the same way you rolled them forward (`RUN_MIGRATIONS_ON_START` unset). Do **not** run the migration step again. With plain Docker that means removing the bad container and starting the old tag with the same environment (no values on the command line; use an env file kept outside the repo):
 
    ```bash
+   docker logs <bad container> > incident-<date>.log 2>&1   # keep the evidence first: removing a container deletes its logs
    docker rm -f <bad container>
    docker run -d --name <name> --restart unless-stopped --network <network> -p <port>:3000 --env-file <env file> figbloom-crm:<previous tag>
    ```
@@ -84,7 +85,7 @@ When it is safe: the release had **no migrations**, or its migrations were only 
 Restore the pre-change backup into a new empty database and point the app at it. Full procedure and verification: [BACKUP_RESTORE.md](BACKUP_RESTORE.md) section 7; the same steps for the go-live are in [CUTOVER_PLAN.md](CUTOVER_PLAN.md) section 7.
 
 1. Freeze: put the app in a state where nobody writes (stop the replicas and jobs, or show the maintenance notice). **Every change made after the backup is lost by this rollback.** Say that out loud to the incident lead before you start.
-2. Take a dump of the broken database first, as evidence (`pg_dump -Fc -f broken-<date>.dump "$DATABASE_URL"`). Do not delete the broken database until the cause is known.
+2. Take a dump of the broken database first, as evidence (`pg_dump -Fc -f broken-<date>.dump "$DATABASE_URL"`). Do not delete the broken database until the cause is known. If the database will not start (full disk, corruption) a dump is impossible: stop it and keep a copy or a volume snapshot of its data directory instead, if there is room, and say in the timeline that none was taken.
 3. `createdb figbloom_restore_<date>` then `pg_restore --no-owner --no-privileges -d figbloom_restore_<date> before-<version>.dump`.
 4. Run `npm run db:bootstrap-role` and `npm run db:grant-role` against the restored database (`APP_DB_PASSWORD` from the secret store). Roles are not inside a dump of one database; without this step the app cannot connect.
 5. Verify: row counts against the numbers you recorded before the release (`npx tsx scripts/reconcile-counts.ts --source <url> --target <url>`, schema-owner URLs, exit code 0 means no difference), row-level security still on (`SELECT relrowsecurity FROM pg_class WHERE relname = 'organizations';` returns `t`).
@@ -321,7 +322,7 @@ If unsure between two, take the higher one and lower it later. Only Given and Mi
 
 Alerts map roughly as: health down, or 5xx above 2% for 3 minutes, is Sev-1 until shown otherwise; job lag and dead jobs are Sev-3 unless a main flow is blocked; a new error group in the tracker is triaged by the rules in [OBSERVABILITY.md](OBSERVABILITY.md).
 
-**Security incidents** (tenant exposure, masked values or payments shown to the wrong role, leaked secret, suspicion of either) are always Sev-1. Extra rules: save the evidence first (logs, request ids, a dump of the affected state), do not delete or "tidy" anything, tell Given and Michael at once, and do not discuss it outside the incident channel. The data protection side (notifying the regulator or affected customers) is a decision for Given and Michael with the checklist in `docs/DATA_PROTECTION_CHECKLIST.md`; the on-call person does not make it alone.
+**Security incidents** (tenant exposure, masked values or payments shown to the wrong role, leaked secret, suspicion of either) are always Sev-1. Extra rules: save the evidence first (logs, request ids, a dump of the affected state), do not delete or "tidy" anything, tell Given and Michael at once, and do not discuss it outside the incident channel. The data protection side (notifying the regulator or affected customers) is a decision for Given and Michael with the checklist in `docs/DATA_PROTECTION_CHECKLIST.md`; the on-call person does not make it alone. If personal data may have been exposed, Given decides with legal advice whether the Data Commissioner and the affected people must be told; the Kenya DPA period is 72 hours for the Commissioner (to be confirmed by the lawyer, `docs/DATA_PROTECTION_CHECKLIST.md` row 14). Write the time the incident was detected in the timeline; the period runs from awareness.
 
 ### Roles
 
@@ -391,6 +392,10 @@ Follow-ups: <Linear issues>   Post-incident review: <date>
 ```
 
 Rules for every message: plain words, no blame, no guesses stated as facts, no customer data, no secrets, no masked values (deal values, margins, costs, payments).
+
+**To users after a database restore** (Given approves before it goes out):
+
+> We had a problem with our database and restored it from the backup taken at <time> on <date>. Anything you entered or changed after <time> is lost. Please check what you did between <time> and <time> and enter it again. We are sorry. Everything else is as it was. We will tell you when the cause is fixed.
 
 ### Timeline log
 
@@ -521,7 +526,25 @@ Success looks like: evidence saved before any change; Given and Michael told wit
 | (not run yet) | B database restore | | | | | | | |
 | (not run yet) | C tenant breach | | | | | | | |
 
-Acceptance for FIG-1126: the three rows are filled, the gaps are fixed in this file, and Given has seen them.
+Acceptance for FIG-1126: the three rows are filled, the gaps are fixed in this file, and Given has seen them. **Waived for now (decision 6.12): no team is available before go-live. The team exercise is held in the first production week; until then the desk walkthrough below stands in for it.**
+
+### Desk walkthrough, 5 Nov 2026
+
+One person (an AI assistant working for Given) walked scenarios A, B and C against these runbooks, step by step and command by command, with nobody playing the roles and nothing run in production. This finds gaps in the text; it does not test how people behave, who picks up the phone, or how long a decision takes. Result per scenario and the gaps found:
+
+| # | Scenario | Gap found | Fixed here? |
+|---|---|---|---|
+| 1 | A, C | **Rolling back an image deleted the evidence.** Section 2a removed the bad container with `docker rm -f`, which deletes its logs, while section 2c says to save logs and request ids first. | Yes: the log is saved before the removal (2a step 2). Production also needs logs kept outside the container (a log driver or shipper); not built. |
+| 2 | A | **The smoke test passed while saving a deal was broken**, as the scenario says. The suite is read-only by design. | Text: deploy step 6 now adds a manual create-and-archive of a test lead. A safe write check in the production smoke suite is a possible follow-up. |
+| 3 | B | **The scenario assumes a 01:00 nightly dump, and no job takes one.** `docs/BACKUP_RESTORE.md` defines the nightly dump and the `backup:drill` script proves restore, but nothing runs a nightly backup on staging or production. Scenario B could not be carried out today. | **No. Open and serious**: a go-live blocker that needs a backup job (a container or host job that runs `pg_dump -Fc`, keeps 14 daily, alerts when a day is missing) and backup storage. Proposed to Given. |
+| 4 | B | An evidence dump of a database that will not start is impossible. | Yes (2b step 2). |
+| 5 | B | No message for users after a restore (the user who "entered 20 deals this morning"). | Yes: template added in section 8. |
+| 6 | B | Two recovery key holders are required, none are named and no dump encryption key exists. | No: people (section 9). |
+| 7 | C | No step for notifying the Data Commissioner and affected people (72 hours, awareness). | Yes: added to the security incident rule in section 8. The decision itself is Given's with the lawyer. |
+| 8 | A, B, C | The on-call and escalation table is empty, so "who rolls back / who is incident lead" has no answer. | No: Given names the people (section 9). Until then Given is the incident lead. |
+| 9 | C | "Flip the release flag off" is an environment value (`ACTIVE_RELEASE`), which needs a redeploy, not a switch. Taking the app down (stop the container) is the fast stop. | Noted: use the container stop as the first action, the flag after. |
+
+What stays open for the team exercise in hypercare: who answers the phone, how fast the incident lead is chosen, whether the templates are usable under pressure, and whether the people can find the commands without help.
 
 ## 11. Rollback dry-run checklist
 
@@ -662,7 +685,8 @@ The 29 s covers the machine steps on a 446 KiB database; the 1 hour RTO target i
 ## 12. What only people can do
 
 - Name the on-call people, their phones, backups and hours (section 9), and set up the alert paging to them.
-- Hold the table-top exercise (section 10) and fill in its table.
+- Hold the team table-top exercise (section 10) in the first production week and fill in its table (deferred, decision 6.12).
+- Build the nightly backup job and choose the backup storage (desk walkthrough, gap 3).
 - Repeat the rollback dry run with a genuinely older build and a second person when a real host exists (done once on scratch copies, section 11b).
 - Decide the secrets rotation schedule and keep the secret log.
 - Confirm the RPO and RTO targets (they are still proposals in [BACKUP_RESTORE.md](BACKUP_RESTORE.md)).

@@ -83,6 +83,9 @@ Run by Claude Code for Given against a **scratch copy of staging** (a temporary 
 
 **Not covered by this run (a person must do them, with a real inbox and a phone):** step 4 (install on the phone home screen); step 5 (following the "first 10 minutes" list in a role guide: does a new person manage without help?); the wording of the no-access message **on screen** (the API message is a permission key such as `finance.view.payments`; whether the screen adds "who to ask" is not checked here); step 7 for a role that sees a deal with its value hidden (only the Sales case was run); the look actually changing on screen. The fix made: the expected result of step 7 now describes what happens for Sales.
 
+**Deferred by Given's waiver (decision 6.12, 5 Nov 2026):** no people are available for training before go-live. The sessions below are held in the first production week and the attendance sheets are filled then. Until then the onboarding dry run above (done alone) is the test, and the role guides are the training material.
+
+
 ## Attendance sheet (copy for each session)
 
 Session: ____________  Date: ____________  Trainer: ____________  Note-taker: ____________
