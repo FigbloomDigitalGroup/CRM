@@ -164,6 +164,8 @@ Same procedure, quiet machine, the current image and migrations. **Still small v
 
 Two further runs of the same dump on the same day (the rollback proof in `docs/CUTOVER_PLAN.md`) restored in 8.1 s and 5.7 s to 10.5 s. Against the 1 hour database RTO in section 5 this leaves a wide margin at this size; the margin at real size is not measured. **Closed on the criterion "successful restore drill with measured times recorded here".** What remains true and is not a criterion of FIG-1125: automated nightly backups need a real host with a scheduler, backup storage and two key holders (section 9), and the volume drill belongs to the production rehearsal (FIG-1258).
 
+Rollback timing from the 5 Nov 2026 dry run (`docs/RUNBOOKS.md` section 11b; same procedure, scratch copies of staging, small volume): freeze 0.8 s, evidence dump 0.8 s, restore 5.6 s, roles 3.2 s, count check 8.9 s, previous image healthy 2.5 s: 29 s from freeze to serving with the smoke test passing. People steps (approval, announcement, key holders) are not included.
+
 ## 8. Moving to AWS later
 
 No AWS service decision is made here. The move is a dump and restore:

@@ -4,7 +4,7 @@ Goal: anyone on the team can deploy, roll back and handle an incident, at 2 a.m.
 
 Database: plain PostgreSQL, local for now, AWS later (Michael, 4 Nov 2026). Nothing here depends on a hosting vendor. This file links to the detailed documents instead of copying them: if a linked document and this one disagree, the linked document is right and this one needs fixing.
 
-Status: **written; part 1 of the rollback dry run (image rollback) was done on local staging on 4 Nov 2026, see section 11a.** Still to do: part 2 (database rollback, section 11) and the table-top exercise (section 10); the on-call table (section 9) is empty. The issue is not done until they are.
+Status: **written; the rollback dry run is done on local staging: part 1 (image rollback) on 4 Nov 2026 (section 11a) and part 2 (database rollback, with a real additive and a real destructive migration) on 5 Nov 2026 (section 11b).** Still to do: the table-top exercise with people (section 10); the on-call table (section 9) is empty. The issue is not done until the table-top has been held.
 
 ## 0. If you only read one thing
 
@@ -91,7 +91,7 @@ Restore the pre-change backup into a new empty database and point the app at it.
 6. Point `DATABASE_URL` and `APP_DATABASE_URL` in the secret store at the restored database, start the **previous** image, run the smoke test.
 7. Unfreeze, announce, and write down what was lost (the time window between the backup and the freeze).
 
-Timing: restore of the rehearsal database took 4 s ([MIGRATION_REHEARSAL.md](MIGRATION_REHEARSAL.md)); the RTO target is 1 hour including the people steps ([BACKUP_RESTORE.md](BACKUP_RESTORE.md) section 5, proposed, not yet confirmed). The timed drill on staging has not been run.
+Timing: restore of the rehearsal database took 4 s ([MIGRATION_REHEARSAL.md](MIGRATION_REHEARSAL.md)); the RTO target is 1 hour including the people steps ([BACKUP_RESTORE.md](BACKUP_RESTORE.md) section 5, proposed, not yet confirmed). Timed on 5 Nov 2026 at small volume (section 11b): freeze to serving with the smoke test passing 29 s, people steps not included.
 
 ### 2c. Decision rule
 
@@ -567,6 +567,7 @@ Afterwards:
 | Date | Run by | Environment | Part 1 time | Part 2 time | Result | Problems found | Fixes |
 |---|---|---|---|---|---|---|---|
 | 4 Nov 2026 | Claude Code for Given (one person, no second reader) | Local staging stack, own containers on ports 33010 and 33011 | About 30 s (mechanism only) | Not run | Part 1: image rollback works; part 2 not done | 8 findings, see 11a | Text fixed the same day; code questions open |
+| 5 Nov 2026 | Claude Code for Given (one person, no second reader) | Scratch copies of the staging database, own containers on ports 33004 and 33005 | Additive migration: old image served, smoke 18 of 18 | 29 s freeze to serving, smoke passing | Part 2 works; decision rule rows confirmed | 3 findings, see 11b | Text fixed the same day |
 
 ## 11a. Dry-run results, 4 Nov 2026
 
@@ -625,11 +626,44 @@ Time from the decision to roll back until the old image answered health: about 3
 - Run part 2 with two people where `pg_dump` and `pg_restore` are available, and repeat part 1 with a real migration and a genuinely older image.
 - Sign-off (section 13) stays empty.
 
+## 11b. Dry-run results, part 2 and a real schema change, 5 Nov 2026
+
+By one actor (an AI assistant working for Given), on **scratch copies of the staging database** (73 tables, about 700 rows, 446 KiB dump), never on the shared staging database. The scratch "live" database `figbloom_drill_live` was restored from a dump of staging; two temporary app containers (ports 33004 and 33005, same image as staging, environment taken from the running staging app, nothing printed) stood in for the old image and the rolled-back image. All scratch databases, containers and env files were removed afterwards and the shared staging stack was not touched. The smoke test is `scripts/staging-smoke.ts` (18 checks).
+
+| Step | What was done | Result | Time |
+|---|---|---|---|
+| Baseline | App on the scratch live database | smoke 18 of 18 | health 200 after 2.4 s |
+| Pre-release backup | `pg_dump -Fc` | 457,863 bytes, 1,012 catalogue entries | 0.6 s |
+| Release 1, **additive** | `ALTER TABLE leads ADD COLUMN` plus an index, old code still running | smoke **18 of 18**: the old code ignores a new column and index | n/a |
+| Release 2, **destructive** | the column `leads.lead_status_id` renamed (a column the code needs) | `/api/health` **still 200**; smoke **16 of 18**: both leads lists fail | n/a |
+| Freeze | app stopped | | 0.8 s |
+| Evidence dump of the broken database | `pg_dump -Fc` | | 0.8 s |
+| Restore into a new database | `pg_restore --no-owner --no-privileges` | | 5.6 s |
+| `db:bootstrap-role` and `db:grant-role` against it | roles set up for the app | | 3.2 s |
+| Count check | `reconcile-counts`, backup copy against restored database | 72 tables, 725 rows each side, 571 rows spot-checked: **zero differences**, exit 0; RLS on `organizations` is `t` | 8.9 s (includes making the backup copy) |
+| Previous image on the restored database | new container | first health 200 | 2.5 s |
+| Smoke on the restored database | | **18 of 18** | |
+| **Freeze to serving, smoke passing** | | | **29.2 s** (RTO target 1 hour) |
+
+Data-loss window: 6 sign-in records were written on the scratch live database after the backup (the smoke runs of releases 1 and 2); the restored database does not have them (43 at the backup, 49 on the broken database, 46 on the restored one, which is 43 plus the 3 written by the smoke run on the restored copy). The added column is gone and `lead_status_id` is back.
+
+**What this confirms in section 2c:** an additive migration is safe for an image rollback (tested with a real change, not just the same image twice); a destructive one needs the database rollback, and that works as written, including the roles step.
+
+**Findings**
+
+| # | Finding | Action |
+|---|---|---|
+| 1 | After the destructive migration `/api/health` stays 200 while core screens fail. Health checks the database connection, not the schema the code expects. Only the smoke test saw it. | Text: a green health check after a migration proves nothing about the schema; the smoke test (section 1, step 6 and 2a, step 3) is the check. No code change proposed: a schema check in health would need a list of expected columns and would also fail on additive migrations. |
+| 2 | A first attempt of this run built the container environment with a filter that dropped names containing digits (`S3_*`). The app started without a storage endpoint: health 200, `/api/me/context` 500, log line "S3_ENDPOINT is required when STORAGE_DRIVER=s3". | Another case of finding 1. When rolling back by hand, copy the **whole** environment (`docker inspect` `Config.Env`), never a filtered list. |
+| 3 | Not done in this run: the announcement from the section 8 templates, approval by Given before the restore (section 2c), a second person, a genuinely older build (both containers ran the same image), the people steps and their clock time. | Stay for the table-top (section 10, scenario B covers the approval and the announcement). |
+
+The 29 s covers the machine steps on a 446 KiB database; the 1 hour RTO target is about the people steps and the size of production. The timing is also noted in `docs/BACKUP_RESTORE.md`.
+
 ## 12. What only people can do
 
 - Name the on-call people, their phones, backups and hours (section 9), and set up the alert paging to them.
 - Hold the table-top exercise (section 10) and fill in its table.
-- Run the rollback dry run (section 11) on staging, after staging exists, and fill in its table.
+- Repeat the rollback dry run with a genuinely older build and a second person when a real host exists (done once on scratch copies, section 11b).
 - Decide the secrets rotation schedule and keep the secret log.
 - Confirm the RPO and RTO targets (they are still proposals in [BACKUP_RESTORE.md](BACKUP_RESTORE.md)).
 - Decide whether a maintenance-mode switch and an "end all sessions" admin action are worth building (neither exists today).
