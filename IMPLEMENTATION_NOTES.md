@@ -10,8 +10,8 @@ is not reopened anywhere below — these are the things they left open.
 TypeScript + PostgreSQL + Prisma, Next.js (App Router) + React for the
 API/UI layer, added to the same project rather than a separate app. Postgres
 + RLS was already the pattern in use on other FigBloom projects on this
-machine; Prisma keeps schema and migrations in one place without pulling in
-a full Supabase CLI stack this project doesn't otherwise need.
+machine; Prisma keeps schema and migrations in one place without a separate
+database toolchain this project doesn't otherwise need.
 
 ## Tenant isolation: composite FKs + RLS, both, not either/or
 
@@ -197,7 +197,7 @@ to fix a validation error.
 
 FIG-437 left the exact authentication provider as an open implementation
 decision ("Exact authentication provider," "Exact session/token strategy" —
-section 18). Chosen: in-house email/password, not NextAuth/Clerk/Supabase --
+section 18). Chosen: in-house email/password, not NextAuth/Clerk --
 this project has zero external-service dependencies anywhere else, the
 RBAC/tenant model it has to resolve into is already fully custom, and it's
 currently a single-organization internal tool where a vendor dependency
@@ -2037,6 +2037,14 @@ FIG-1095 to FIG-1102 (F3.01 to F3.08; also the UI halves of FIG-793, FIG-795 and
 - **What was built:** a collapsible Communication group in the sidebar (Conversations moved into it, not duplicated), and Chat, Mail and Video Conference screens in `src/ui/screens/communication/`, all on demo data (`demo/`). Details in `docs/M10_COMMUNICATION.md`; scope in `docs/COMMUNICATION_HUB_SCOPE.md`.
 - **Decisions taken without being asked, to be confirmed by Given:** Mail needs `communications.create` and Video Conference the calendar task permission, Chat is for every member (stand-ins until B6.26 defines the keys); Finance gets Chat only; Restricted Technical sees only the channels it was added to; with demo screens off the group holds Conversations only; the sidebar header count comes from link badges, and the Chat unread count waits for the API; the Connect buttons on Mail and Video Conference simulate the provider sign-in and share Settings state.
 - **Tests:** `tests/uiNavigation.test.ts`, `tests/communicationDemo.test.ts` (masking by role), `tests/components/communication/`, `e2e/m10-communication.spec.ts` (demo server only), `e2e/ui-shell.spec.ts`.
+
+## Stage 11 (M11): V1 quality assurance (FIG-1115 to FIG-1122, FIG-1259)
+
+- **What was built:** the QA suites in `e2e/qa/` (`role-journeys`, `a11y-sweep`, `visual`, `core-journeys`, `perf-budget`, with the shared `catalogue.ts`, `looks.ts` and the V1 traceability map `trace.ts`); `tests/e2eTraceability.test.ts` (every V1 checklist ID has a journey file that exists and has tests) and `tests/frozenAuthSource.test.ts` (the frozen sign-in pages differ from the `pre-makeover` tag only by the approved dev chips); `scripts/check-bundle-budget.ts` (`npm run check:bundle-budget`, run by CI after the build); Playwright projects `firefox`, `webkit`, `mobile-safari` (`npm run e2e:install:matrix`). Documents: `docs/A11Y_CHECKLIST.md`, `docs/BROWSER_MATRIX.md`, `docs/FRONTEND_PERFORMANCE.md`, `docs/UAT_V1.md`, `docs/QA_DEFECTS.md`, `docs/V1_QUALITY_GATE.md`.
+- **Fixes the QA found (app code):** a skip link; org block and account button names that contain their visible text (`Popover triggerLabel`); calendar chip names; the phone header title colour (it was near-black on dark green); contrast on the Won column total; 24 px minimum targets in Tasks and the calendar; a duplicate-key warning from repeated recent searches. Each has a test that fails without it (see `docs/QA_DEFECTS.md`).
+- **Vitest 2 to 5 (FIG-1259):** `vitest` and `@vitest/coverage-v8` 5.0.5, `vite` 7 (a peer of Vitest 5 and of `@vitejs/plugin-react`), `@types/node` 24 (Vitest 5 needs 22 or 24 and up). `environmentMatchGlobs` is gone in Vitest 4, so `vitest.config.ts` now has two projects that extend it, `node` and `components` (jsdom, `tests/components/**`). Coverage thresholds are unchanged. The seven Vitest-chain advisories are cleared; 22 other moderate ones remain from a newer `minimatch` advisory (eslint, Sentry), no fix available (D-07).
+- **Decisions taken without being asked, to be confirmed by Given:** the frozen-page comparison allows only the files carrying the approved dev chips; performance budgets are 185 KB shared and 300 KB per route (gzip), set about 10 percent over what was measured, and LCP 2.5 s as the median of five cold loads; WebKit runs the core journeys only, with the `Secure` cookie dropped in the test browser (the app is untouched); the Linux visual baselines are not recorded, so the visual suite skips on Linux until they are (see the gate document).
+- **Left open on purpose (Given decides):** D-01 (React #418 on every organisation page in the production build, cause not found), D-02 (Customer Support has no home), D-05 (phone Tasks LCP), the 50k-lead performance run, Linux visual baselines, UAT sessions, the manual accessibility and device passes, and the sign-offs. `docs/QA_DEFECTS.md` lists each with evidence.
 
 ## Stage 13 (M13, Backend V1.1): platform identity foundation (FIG-1135, B6.03)
 

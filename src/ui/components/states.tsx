@@ -4,8 +4,9 @@ import { Archive, FileX, Lock, WifiOff, TriangleAlert, Inbox } from "lucide-reac
 import type { ReactNode } from "react";
 import { copy } from "../copy";
 import { describeError, type Denial } from "../errors";
-import { Banner, Skeleton } from "./basics";
+import { Banner } from "./basics";
 import { Tooltip } from "./overlays";
+import { LoaderBlock } from "./loader";
 
 /**
  * The seven states every screen handles the same way (F1.05): loading, empty, error, no access, masked value, archived, offline.
@@ -14,14 +15,9 @@ import { Tooltip } from "./overlays";
 
 /* 1. Loading ------------------------------------------------------------------------------------------------------------------- */
 
-export function LoadingState({ label = copy.loading.label, lines = 4 }: { label?: string; lines?: number }) {
+export function LoadingState({ label = copy.loading.label }: { label?: string; /** kept for callers that still pass it: the loader replaces the grey lines */ lines?: number }) {
   return (
-    <div role="status" aria-busy="true" aria-live="polite" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <span className="fb-sr-only">{label}</span>
-      {Array.from({ length: lines }, (_, i) => (
-        <Skeleton key={i} width={`${90 - i * 12}%`} />
-      ))}
-    </div>
+    <LoaderBlock compact label={label} />
   );
 }
 

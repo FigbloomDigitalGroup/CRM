@@ -61,6 +61,16 @@ export function getApiClient(): ApiClient {
  * The development-only sign-in (`POST /api/dev-session`, FIG-605, FIG-1196). It is not part of the API contract (it exists only when dev accounts are
  * allowed, and answers 404 everywhere else), so it is not in the typed client; it lives here with the other network access. Used by the dev sign-in chips.
  */
+/** The preview build's dev chips (npm run preview): the same call the sign-in form makes, so the real password check and rate limit apply. */
+export async function signInWithDevPassword(email: string, password: string): Promise<{ ok: true; landing: string } | { ok: false; message: string }> {
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  return response.ok ? { ok: true, landing: "/o/figbloom" } : { ok: false, message: "Sign-in failed." };
+}
+
 export async function signInAsDevAccount(email: string): Promise<{ ok: true; landing: string } | { ok: false; message: string }> {
   const response = await fetch("/api/dev-session", {
     method: "POST",

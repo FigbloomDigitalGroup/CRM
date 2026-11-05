@@ -16,10 +16,11 @@ import { HIcon, Seg } from "../home/kit";
 import { InvoiceDialog } from "./InvoiceDialog";
 import { cents, day, dayShort, fromCents, INVOICE_LABEL, INVOICE_TONE, kes, kesShort, STATE_LABEL, STATE_TONE, type DealPayState, type InvoiceStatus } from "./format";
 import { useRefreshPayments, type DealPaymentRow, type InvoiceRow } from "./data";
+import { LoaderBlock } from "../../components/loader";
 
 type Tab = "all" | "OVERDUE" | "AWAITING_PAYMENT" | "NOT_INVOICED" | "PAID_IN_FULL";
 const PAGE_SIZE = 50;
-const INVOICE_HEAD = ["INVOICE", "FOR", "AMOUNT", "DUE", "STATUS"];
+const INVOICE_HEAD = ["Invoice", "For", "Amount", "Due", "Status"];
 
 /**
  * The Payments tracker (F1, FIG-1100). One row per won deal with what was contracted, received and still owed; open a row for its invoices,
@@ -138,12 +139,7 @@ export function PaymentsScreen() {
       </div>
 
       {deals.isPending ? (
-        <div className="fb-pay__stack" aria-busy="true">
-          <span className="fb-sr-only" role="status">Loading payments</span>
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="fb-pay__skel" />
-          ))}
-        </div>
+        <LoaderBlock compact label="Loading payments" />
       ) : rows.length === 0 ? (
         <div className="fb-pay__state">No won deals yet. When Sales closes one, it appears here with its contract amount.</div>
       ) : visible.length === 0 ? (
@@ -187,9 +183,9 @@ function DealAccount({ row, open, onToggle, onInvoice }: { row: DealPaymentRow; 
           <span className="fb-pay__co">{row.companyName}</span>
           <span className="fb-pay__what">{row.serviceName ?? "Deal"} · won {day(row.wonAt, timeZone)}</span>
         </span>
-        <span><span className="fb-pay__k">CONTRACT</span><span className="fb-pay__v">{row.dealValue === null ? "—" : kes(row.dealValue, cur)}</span></span>
-        <span><span className="fb-pay__k">PAID</span><span className="fb-pay__v">{kes(row.received, cur)}</span></span>
-        <span><span className="fb-pay__k">BALANCE</span><span className="fb-pay__v" data-alert={row.state === "OVERDUE" ? "true" : undefined}>{kes(row.outstanding, cur)}</span></span>
+        <span><span className="fb-pay__k">Contract</span><span className="fb-pay__v">{row.dealValue === null ? "—" : kes(row.dealValue, cur)}</span></span>
+        <span><span className="fb-pay__k">Paid</span><span className="fb-pay__v">{kes(row.received, cur)}</span></span>
+        <span><span className="fb-pay__k">Balance</span><span className="fb-pay__v" data-alert={row.state === "OVERDUE" ? "true" : undefined}>{kes(row.outstanding, cur)}</span></span>
         <span><span className="fb-pay__pill" style={{ background: tone.bg, color: tone.fg }}>{STATE_LABEL[row.state as DealPayState]}</span></span>
         <span className="fb-pay__chev" aria-hidden="true">{open ? "▴" : "▾"}</span>
       </button>

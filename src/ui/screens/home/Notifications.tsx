@@ -116,7 +116,7 @@ export function NotificationBell() {
       <button
         type="button"
         className="fb-bell"
-        aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+        aria-label={unread > 0 ? `Notifications, ${unread > 99 ? "99+" : unread} unread` : "Notifications"}
         title="Notifications"
         aria-haspopup="dialog"
         aria-expanded={open}

@@ -87,9 +87,18 @@ const SALES = { roleName: "Sales", permissionKeys: ["leads.create", "tasks.creat
 beforeEach(() => window.localStorage.clear());
 
 describe("Sales Today (D1)", () => {
+  it("ends with quick links for the screens and actions this role may use, and nothing else", async () => {
+    renderScreen(<HomeScreen />, salesHandlers(), SALES);
+    const nav = await screen.findByRole("navigation", { name: "Quick links" });
+    const labels = within(nav).getAllByRole("link").map((a) => a.textContent);
+    // SALES here may create leads, tasks and activities and view its own deals; it holds no lead or task view key, so no Leads, Tasks or Calendar link.
+    expect(labels).toEqual(["New lead", "Log a call", "New task", "Deals"]);
+    expect(within(nav).getByRole("link", { name: "Deals" })).toHaveAttribute("href", "/o/figbloom/deals");
+  });
+
   it("shows the design's four tiles, what to do today, the newest leads and the pipeline", async () => {
     const { container } = renderScreen(<HomeScreen />, salesHandlers(), SALES);
-    expect(await screen.findByRole("heading", { level: 1, name: "Today" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening), Test\.$/ })).toBeInTheDocument();
     expect(await screen.findByText("My work")).toBeInTheDocument();
 
     expect(await screen.findByTestId("kpi-today")).toHaveTextContent(/Follow-ups due today\s*1/);
@@ -115,7 +124,8 @@ describe("Sales Today (D1)", () => {
 
   it("offers only the quick actions the role may use", async () => {
     renderScreen(<HomeScreen />, salesHandlers(), { ...SALES, permissionKeys: ["leads.create"] });
-    expect(await screen.findByRole("link", { name: "New lead" })).toBeInTheDocument();
+    // The header button and the quick-links tile both lead to a new lead.
+    expect((await screen.findAllByRole("link", { name: "New lead" })).length).toBe(2);
     expect(screen.queryByRole("link", { name: "New task" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Log a call" })).toBeNull();
   });
@@ -278,7 +288,7 @@ describe("Finance (D3)", () => {
   const dash = { key: "finance", title: "Finance", scope: "", ok: true, data: { wonDeals: 2, openValue: null, payments: { available: true, dueThisWeek: { count: 0, outstanding: "0.00" }, overdue: { count: 1, outstanding: "50000.00", oldestDaysOverdue: 12 }, collectedThisMonth: { count: 3, amount: "120000.00" }, outstanding: "50000.00", nothingToCollect: false } } };
   const rows = [
     { dealId: "d1", companyName: "Davis & Shirtliff", serviceName: "Fleet / GPS", dealValue: "1250000.00", currency: "KES", received: "0.00", outstanding: "0.00", state: "NOT_INVOICED", nextNote: null },
-    { dealId: "d2", companyName: "Sarova Hotels", serviceName: "CCTV", dealValue: "400000.00", currency: "KES", received: "350000.00", outstanding: "50000.00", state: "OVERDUE", nextNote: "Chase on Friday" },
+    { dealId: "d2", companyName: "Sarova Hotels", serviceName: "CCTV", dealValue: "400000.00", currency: "KES", received: "350000.00", outstanding: "50000.00", state: "OVERDUE", nextNote: { note: "Chase on Friday", ownerMembershipId: null, nextOn: null } },
   ];
   it("shows what to invoice, what is overdue and what was collected, from the payments the API reports", async () => {
     const { container } = renderScreen(<HomeScreen />, { getDashboard: () => ({ available: [], sections: [dash] }), listWonDealPayments: () => page(rows) }, { roleName: "Finance", permissionKeys: [] });
@@ -309,8 +319,8 @@ describe("Restricted Technical (D3)", () => {
       getMyWork: () => ({ timeZone: "Africa/Nairobi", counts: {}, groups: [{ key: "THIS_WEEK", label: "This week", count: 1, items: t }] }),
     };
     const { container } = renderScreen(<HomeScreen />, handlers, { roleName: "Restricted Technical", permissionKeys: ["tasks.create"] });
-    expect(await screen.findByRole("heading", { level: 1, name: "My work" })).toBeInTheDocument();
-    expect(screen.getAllByText("Assigned to me").length).toBeGreaterThan(0);
+    expect(await screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening), Test\.$/ })).toBeInTheDocument();
+    expect((await screen.findAllByText("Assigned to me")).length).toBeGreaterThan(0);
     expect(await screen.findByText("Install the CCTV at Sarova")).toBeInTheDocument();
     expect(screen.getByText("CLIENT REQUIREMENTS FOR THIS WORK")).toBeInTheDocument();
     expect(screen.getByText("8 cameras")).toBeInTheDocument();

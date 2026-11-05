@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  ArrowRight,
   Banknote,
   BarChart3,
   Bell,
@@ -20,12 +21,15 @@ import {
   ListChecks,
   Lock,
   type LucideIcon,
+  MessageSquare,
   Package,
   Phone,
   Plus,
   RefreshCw,
   Search,
   SlidersHorizontal,
+  SquareCheckBig,
+  Target,
   TrendingUp,
   UserPlus,
   Users,
@@ -46,6 +50,10 @@ const ICONS: Record<string, LucideIcon> = {
   building: Building2,
   calendar: CalendarDays,
   chart: BarChart3,
+  "arrow-right": ArrowRight,
+  "check-square": SquareCheckBig,
+  message: MessageSquare,
+  target: Target,
   check: Check,
   "check-circle": CheckCircle2,
   "chevron-right": ChevronRight,
@@ -111,6 +119,7 @@ export function Panel({
         {action ? (
           <Link href={action.href} className="fb-hp__action">
             {action.label}
+            <ArrowRight size={12} aria-hidden="true" />
           </Link>
         ) : null}
       </div>
@@ -140,9 +149,6 @@ export function KpiGrid({ items }: { items: KpiDef[] }) {
           <>
             <div className="fb-kpi2__top">
               <span className="fb-kpi2__label">{k.label}</span>
-              <span className={`fb-kpi2__tile fb-tone--${k.tone}`} aria-hidden="true">
-                <HIcon name={k.icon} size={18} />
-              </span>
             </div>
             <div>
               <div className="fb-kpi2__n" data-alert={k.alertWhenPositive && (k.numeric ?? 0) > 0 ? "true" : undefined}>
@@ -198,7 +204,7 @@ export function KpiSkeleton() {
     <div aria-hidden="true" className="fb-hstack">
       <div className="fb-kpis">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="fb-hskel" style={{ height: 132 }} />
+          <div key={i} className="fb-hskel" style={{ height: 96 }} />
         ))}
       </div>
       <div className="fb-hgrid fb-hgrid--2-1">
@@ -336,6 +342,12 @@ const STRIPES = [
   "repeating-linear-gradient(90deg, rgba(255,255,255,.55) 0 2px, transparent 2px 6px), ",
   "repeating-linear-gradient(0deg, rgba(255,255,255,.55) 0 2px, transparent 2px 6px), ",
 ];
+
+/** One hue in steps, darkest first: the pipeline bar reads as a quiet run of greens (the legend keeps the same order and carries each stage's name and number). */
+export function stageShade(i: number, total: number): CSSProperties {
+  const strength = total <= 1 ? 100 : Math.round(100 - (i / (total - 1)) * 68);
+  return { background: strength >= 100 ? "var(--primary)" : `color-mix(in srgb, var(--primary) ${strength}%, var(--surface))` };
+}
 
 export function stageStyle(i: number, widthPct?: number): CSSProperties {
   return { ...(widthPct === undefined ? {} : { width: `${widthPct}%` }), background: `${STRIPES[i % STRIPES.length]}${STAGE_COLOURS[i % STAGE_COLOURS.length]}` };

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
-import { devAccountsAllowed } from "@/auth/devAccounts";
+import { devAccountsAllowed, previewChipsAllowed } from "@/auth/devAccounts";
 import {
   createPlatformCookieValue,
   createSessionCookieValue,
@@ -34,13 +34,18 @@ const DevSessionSchema = z.object({
  */
 export async function POST(request: Request) {
   return handleRoute(async () => {
-    if (!devAccountsAllowed()) {
+    const preview = !devAccountsAllowed() && previewChipsAllowed();
+    if (!devAccountsAllowed() && !preview) {
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
 
     const body = await parseJsonBody(request, DevSessionSchema);
 
     const platform = await findDevPlatformIdentityByEmail(body.email);
+    // The preview build (npm run preview, a local database only) opens this route for the dev Super Admin and for nobody else.
+    if (preview && !platform) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
     if (platform) {
       await recordDevPlatformSignIn(platform);
       const response = NextResponse.json({

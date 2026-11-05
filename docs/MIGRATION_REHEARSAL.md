@@ -9,7 +9,7 @@ OLD_TREE=<folder holding `git archive pre-makeover` extracted, after `npm ci`> n
 REHEARSAL_PRE_INDEX=1 ... same command ...      # with the mitigation described under "Finding 1"
 ```
 
-It creates and drops its own databases (`figbloom_crm_rehearsal_old`, `figbloom_crm_rehearsal_up`) and never touches dev, test or the scale database. The raw numbers go to `migration-rehearsal.json` (git-ignored).
+It creates and drops its own databases (`figbloom_crm_rehearsal_old`, `figbloom_crm_rehearsal_up`, or the names in `REHEARSAL_DB_OLD` and `REHEARSAL_DB_UP`) and never touches dev, test or the scale database. The raw numbers go to `migration-rehearsal.json` (git-ignored).
 
 ## What was rehearsed
 
@@ -74,3 +74,9 @@ The rehearsal showed the V1 catalogue holds the same statuses, sources, stages, 
 
 - The volume is a quarter of the G1.04 scale and invented. A real production database may be bigger or shaped differently. Finding 1 is the one place where size changes the answer; re-run the rehearsal on a copy of the real data (same command, point it at a restored dump) before the go-live if there is any doubt.
 - The probe touches one lead and one deal, so it shows lock waits on those tables, not every table. The migrations that take a lock on a big table are `deal_rules` (deals, finding 1), `archive_semantics` (about 1 s) and the index builds in `fk_indexes_for_deletes`; none of the others took more than a third of a second.
+
+## Repeat on the local staging PostgreSQL, 4 Nov 2026 (FIG-1127)
+
+The same rehearsal was run six times against the plain PostgreSQL of the local staging stack (scratch databases, owner connection, `PG_CONTAINER=figbloom_crm_staging_postgres`), with and without the temporary indexes, with the reconciliation (`REHEARSAL_RECONCILE=1`) and with the shipped backfill script (`REHEARSAL_BACKFILL_SCRIPT=1`). Same data volume (invented, 86,740 rows, a quarter of the G1.04 scale). Result: pass; every check above held again (restore identical, no row lost or changed, 63 of 63 tables with RLS, rollback identical, V0 code works on the restored database), the reconciliation reported only the intended differences (catalogue tables, 5 audit rows, 37 new empty tables apart from `custom_field_definitions` with 32 backfilled rows) and zero differences after the rollback. Finding 1 reproduced: deal-rules 12.6 to 21 s as shipped, 0.4 to 1.1 s with the temporary indexes. The backfill script added 32 `custom_field_definitions` on the first run and nothing on the second. Details and the explanation of every difference: `docs/CUTOVER_PLAN.md`, section "Rehearsal results, 4 Nov 2026". The data is still invented: a rehearsal on a copy of real data is required if real data exists.
+
+Extra switches of `scripts/migration-rehearsal.ts`: `REHEARSAL_DB_OLD` / `REHEARSAL_DB_UP` (scratch database names), `REHEARSAL_RECONCILE=1`, `REHEARSAL_BACKFILL_SCRIPT=1`. Always pass `APP_DATABASE_URL` with the real app role password on a shared PostgreSQL (the rehearsal runs `bootstrap-role`, which sets that password).

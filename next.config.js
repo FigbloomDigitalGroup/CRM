@@ -4,6 +4,9 @@ const { buildSecurityHeaders } = require("./config/securityHeaders");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Always defined (empty unless `npm run preview` sets it), so the bundler treats it as a constant and removes the dev sign-in chips from every
+  // other build; see src/app/_dev/DevChips.tsx and scripts/preview-local.js.
+  env: { NEXT_PUBLIC_PREVIEW_CHIPS: process.env.NEXT_PUBLIC_PREVIEW_CHIPS || "" },
   // `next dev` and `next build` both write to `.next`, so a dev server left running corrupts a production build made beside it (and the
   // other way round). Setting NEXT_DIST_DIR (for example `.next-e2e`) lets the end-to-end build live in its own folder. Unset, nothing changes.
   distDir: process.env.NEXT_DIST_DIR || ".next",
@@ -16,6 +19,11 @@ const nextConfig = {
   // mistaken for a design element while developing.
   devIndicators: {
     position: "bottom-right",
+  },
+  // Compile only the icons and chart parts a page actually uses. Without this the dev server (and the first build) pulls in the whole of
+  // lucide-react, which is hundreds of modules, for every page it compiles.
+  experimental: {
+    optimizePackageImports: ["lucide-react", "recharts", "@tanstack/react-query"],
   },
   // G1.05: clickjacking, MIME sniffing, referrer and browser-feature defaults on every response (see config/securityHeaders.js).
   async headers() {
@@ -34,10 +42,15 @@ const nextConfig = {
 // project-specific to hardcode here. No auth token (local dev, CI, or any
 // environment that hasn't set one up) just disables the upload step --
 // the app and its own Sentry init are completely unaffected either way.
-module.exports = withSentryConfig(nextConfig, {
+const sentryOptions = {
   silent: true,
   disableLogger: true,
   sourcemaps: {
     disable: !process.env.SENTRY_AUTH_TOKEN,
   },
-});
+};
+
+// The Sentry build wrapper rewrites every route and page while compiling, which makes `next dev` noticeably slower on each page it opens
+// for the first time. Its job (source maps, tunnelling, instrumentation of the build) only matters in a production build, so `next dev`
+// skips it. The runtime init in src/instrumentation*.ts still runs, and still sends nothing without a DSN.
+module.exports = process.env.NODE_ENV === "production" ? withSentryConfig(nextConfig, sentryOptions) : nextConfig;

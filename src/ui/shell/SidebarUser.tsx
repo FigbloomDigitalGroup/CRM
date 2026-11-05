@@ -25,6 +25,7 @@ export function SidebarUser({ name, roleName }: { name: string; roleName: string
     <div className="fb-sideuser">
       <span className="fb-sideuser__dot" aria-hidden="true">
         {name.trim().charAt(0).toUpperCase() || "?"}
+        <i className="fb-sideuser__status" />
       </span>
       <span className="fb-sideuser__text fb-sidebar__text">
         <span className="fb-sideuser__name">{name}</span>

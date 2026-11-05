@@ -38,6 +38,7 @@ import {
 } from "./model";
 import { TaskDrawer } from "./TaskDrawer";
 import { TaskHeader } from "./TaskHeader";
+import { LoaderBlock } from "@/ui/components/loader";
 
 type SectionId = "OVERDUE" | "TODAY" | "UPCOMING" | "NO_DATE" | "DONE";
 
@@ -298,12 +299,7 @@ export function TasksScreen() {
           ) : null}
 
           {groupsQuery.isLoading ? (
-            <div className="fb-tk-skeletons" role="status" aria-busy="true">
-              <span className="fb-sr-only">Loading tasks</span>
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="fb-tk-skel" />
-              ))}
-            </div>
+            <LoaderBlock compact label="Loading tasks" />
           ) : null}
 
           {groupsQuery.isError && !forbidden ? (

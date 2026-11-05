@@ -74,7 +74,7 @@ export function NotificationsTab() {
           <caption className="fb-sr-only">Which events notify you, and how</caption>
           <thead>
             <tr>
-              <th scope="col">EVENT</th>
+              <th scope="col">Event</th>
               {CHANNELS.map((c) => <th key={c.key} scope="col" className="fb-prefs__chan">{c.label.toUpperCase()}</th>)}
             </tr>
           </thead>

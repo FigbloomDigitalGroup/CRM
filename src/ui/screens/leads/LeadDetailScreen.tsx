@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { describeError } from "../../errors";
-import { ErrorState, LoadingState, NoAccess } from "../../components/states";
+import { ErrorState, NoAccess } from "../../components/states";
 import { useToast } from "../../components/toast";
 import { useApi, useApiQuery, useUndoable } from "../../data/hooks";
 import { useMember } from "../../data/member";
@@ -16,6 +16,7 @@ import { NoteDrawer, TaskDrawer, type CommKind } from "./QuickDrawers";
 import { DUE_COLOUR, statusTone, TEMPERATURES, TEMPERATURE_LABEL, tempTone, type Temperature } from "./format";
 import { Icon } from "./icons";
 import { RecordExtras } from "../extras/RecordExtras";
+import { LoaderBlock } from "../../components/loader";
 
 interface ActivityItem {
   id: string;
@@ -227,7 +228,7 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
     return rows.sort((a, b) => b.at - a.at);
   }, [activitiesQ.data, auditQ.data, tl, ref, fmt]);
 
-  if (leadQ.isLoading) return <LoadingState label="Loading the lead" lines={6} />;
+  if (leadQ.isLoading) return <LoaderBlock label="Loading the lead" />;
   if (leadQ.isError) {
     const d = describeError(leadQ.error);
     if (d.kind === "noAccess") return <NoAccess area="This lead" denial={d.denial} />;
@@ -420,7 +421,7 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
               <Icon name="arrow-circle" size={20} />
             </span>
             <div className="fb-ld-next-card__body">
-              <div className="fb-ld-eyebrow">NEXT FOLLOW-UP</div>
+              <div className="fb-ld-eyebrow">Next follow-up</div>
               <div className="fb-ld-next-card__when" style={{ color: nextState === "overdue" ? "var(--red)" : "var(--text)" }}>
                 {next ? fmt.dueLabel(next) : "No follow-up set"}
               </div>
@@ -452,7 +453,7 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
               {lead.notes ? <p className="fb-ld-website__msg">“{lead.notes as string}”</p> : null}
               <dl className="fb-ld-dl">
                 <div>
-                  <dt className="fb-ld-eyebrow">CAMPAIGN</dt>
+                  <dt className="fb-ld-eyebrow">Campaign</dt>
                   <dd style={{ fontFamily: "var(--fb-mono, monospace)", fontSize: 12, color: "var(--text-2)", fontWeight: 400 }}>
                     {qd.utm && Object.keys(qd.utm).length ? Object.entries(qd.utm).map(([k, v]) => `${k}=${v}`).join(" · ") : "Direct"}
                   </dd>
@@ -469,7 +470,7 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
                 {saveState === "saving" ? " · saving…" : saveState === "saved" ? " · saved" : saveState === "error" ? " · couldn’t save" : ""}
               </span>
             </div>
-            {qualQ.isLoading ? <div style={{ marginTop: 14 }} className="fb-ld-skel" /> : null}
+            {qualQ.isLoading ? <LoaderBlock compact label="Loading" /> : null}
             {qual && questions.length === 0 ? <p className="fb-ld-hint" style={{ margin: "14px 0 0" }}>No qualification questions for this service yet. Management can add them in Settings.</p> : null}
             <div className="fb-ld-qual">
               {questions.map((q) => {
@@ -674,7 +675,7 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
 
           {contact ? (
             <section className="fb-ld-panel" aria-label="Contact">
-              <div className="fb-ld-eyebrow">CONTACT</div>
+              <div className="fb-ld-eyebrow">Contact</div>
               <div className="fb-ld-contact">
                 <span className="fb-ld-contact__ini">{contactName(contact).split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}</span>
                 <div>

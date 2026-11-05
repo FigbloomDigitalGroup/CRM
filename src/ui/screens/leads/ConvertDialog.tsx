@@ -124,14 +124,14 @@ export function ConvertDialog({ leadId, onClose, onDone }: { leadId: string; onC
     >
       <div className="fb-ld-tiles">
         <div className="fb-ld-tile">
-          <div className="fb-ld-eyebrow">COMPANY</div>
+          <div className="fb-ld-eyebrow">Company</div>
           <div className="fb-ld-tile__name">{company?.name ?? (companyName || name)}</div>
           <div className="fb-ld-tile__note" style={{ color: company ? "var(--primary-text)" : "var(--orange-text)" }}>
             {company ? "Existing company found · linked" : "No match found · will be created"}
           </div>
         </div>
         <div className="fb-ld-tile">
-          <div className="fb-ld-eyebrow">CONTACT</div>
+          <div className="fb-ld-eyebrow">Contact</div>
           <div className="fb-ld-tile__name">{contact ? contactName(contact) : "No contact yet"}</div>
           <div className="fb-ld-tile__note" style={{ color: "var(--text-3)" }}>
             {contact ? "Existing contact · becomes primary contact" : "Add one later from the deal"}

@@ -18,8 +18,12 @@ import type { AskContext, ProposedAction } from "./types";
  * Wired to the real API (docs/RESTRUCTURE_LOG.md): the server answers FEATURE_UNAVAILABLE for an organisation not on V1.1, and the panels explain it.
  * Still reachable only outside production, or where `NEXT_PUBLIC_DEMO_SCREENS=true`, so a V1 production shell does not show them (a product call, see the W5 report). One panel is open at a time, and Escape closes it.
  */
-export function toolsEnabled(env: Record<string, string | undefined> = process.env): boolean {
-  return env.NODE_ENV !== "production" || env.NEXT_PUBLIC_DEMO_SCREENS === "true";
+export function toolsEnabled(env?: Record<string, string | undefined>): boolean {
+  // Read the two variables by their literal names when no `env` is passed. This runs in the browser too, where only literal `process.env.NAME`
+  // reads are replaced at build time; a whole `process.env` object (the old default) is empty there, which made the tools show in the browser of
+  // a production build while the server left them out: a hydration mismatch (D-01) and demo tools reachable in production.
+  if (env) return env.NODE_ENV !== "production" || env.NEXT_PUBLIC_DEMO_SCREENS === "true";
+  return process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_DEMO_SCREENS === "true";
 }
 
 type Panel = "palette" | "assistant" | "help" | null;

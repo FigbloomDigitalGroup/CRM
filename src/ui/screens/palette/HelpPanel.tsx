@@ -43,7 +43,7 @@ export function HelpPanel({ open, onClose, pathname, orgSlug }: { open: boolean;
         ))}
       </section>
       <section aria-labelledby="help-keys">
-        <h3 id="help-keys" className="fb-help-panel__label">KEYBOARD SHORTCUTS</h3>
+        <h3 id="help-keys" className="fb-help-panel__label">Keyboard shortcuts</h3>
         {content.shortcuts.map((k) => (
           <div key={k.label} className="fb-help-panel__key">
             <span>{k.label}</span>

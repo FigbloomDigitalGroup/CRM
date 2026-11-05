@@ -31,7 +31,12 @@ export default defineConfig({
   projects: [
     { name: "chromium", testIgnore: /mobile-.*\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
     // M9 (F4.10 to F4.12, FIG-791): the phone journeys run on a mid-range Android profile at 375 px wide with touch.
-    { name: "mobile-chrome", testMatch: /mobile-.*\.spec\.ts/, use: { ...devices["Pixel 5"], viewport: { width: 375, height: 812 } } },
+    { name: "mobile-chrome", testMatch: /(mobile-.*|qa[/\\]core-journeys)\.spec\.ts/, use: { ...devices["Pixel 5"], viewport: { width: 375, height: 812 } } },
+    // Q1.04 (FIG-1118): the cross-browser matrix. Chrome (the `chromium` project above), Firefox, Safari and iOS Safari run the core journeys only
+    // (`e2e/qa/core-journeys.spec.ts`); Android Chrome is `mobile-chrome`. Install the engines with `npm run e2e:install:matrix`.
+    { name: "firefox", testMatch: /qa[/\\]core-journeys\.spec\.ts/, use: { ...devices["Desktop Firefox"] } },
+    { name: "webkit", testMatch: /qa[/\\]core-journeys\.spec\.ts/, use: { ...devices["Desktop Safari"] } },
+    { name: "mobile-safari", testMatch: /qa[/\\]core-journeys\.spec\.ts/, use: { ...devices["iPhone 13"] } },
   ],
 
   // Reuses an already-running server locally (start one with `npm run
@@ -51,6 +56,8 @@ export default defineConfig({
       // The component gallery (src/app/o/[orgSlug]/dev/gallery) is a 404 everywhere except development and this suite (F1.02).
       E2E_UI_GALLERY: "true",
       ALLOW_DEV_ACCOUNTS: "true",
+      // The Customer Support role (and the other V1.1 features the specs open) is off below this release; a developer's .env sets it, CI has no .env.
+      ACTIVE_RELEASE: "v2",
       // Every spec signs in through the real /login, and the suite as a whole
       // signs in far more often than the production limit (5 per email per 15
       // minutes) allows. Raised for this server only; the limiter itself is

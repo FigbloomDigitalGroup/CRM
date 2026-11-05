@@ -9,6 +9,7 @@ import type { JsonSchema } from "./jsonSchema";
  *   /api/dev-session, /api/dev-sentry-test   development only; closed unless NODE_ENV=development and ALLOW_DEV_ACCOUNTS=true
  *   /api/platform/preferences                Platform Super Admin identity, V1.1 (and dev-only until then)
  *   /api/openapi.json                        serves this document, outside production only
+ *   /api/metrics                             operations endpoint for the metrics scraper (METRICS_TOKEN), not product API
  */
 export const NOT_IN_V1_CONTRACT: Record<string, string> = {
   "/api/orgs/{orgSlug}/chat/channels": "Chat, V1.1 (B6.24 to B6.26)",
@@ -168,6 +169,7 @@ export const NOT_IN_V1_CONTRACT: Record<string, string> = {
   "/api/orgs/{orgSlug}/web-forms/{formId}/submissions": "V1.1 web forms submission log (B6.19, FIG-1151)",
   "/api/public/orgs/{orgSlug}/forms/{formKey}": "V1.1 public web form definition (B6.19, FIG-1151)",
   "/api/public/orgs/{orgSlug}/forms/{formKey}/submissions": "V1.1 public web form endpoint (B6.19, FIG-1151)",
+  "/api/metrics": "operations endpoint for the metrics scraper (Prometheus text, METRICS_TOKEN), not part of the product API; docs/OBSERVABILITY.md",
 };
 
 type Security = "none" | "sessionCookie" | "websiteApiKey" | "inboundEmailKey" | "signedToken" | "cronSecret";

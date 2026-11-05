@@ -1,4 +1,5 @@
 import pino from "pino";
+import { currentRequestContext } from "../observability/requestContext";
 
 /**
  * Basic error monitoring/logging (FIG-595). Structured JSON to stdout --
@@ -60,12 +61,19 @@ export const REDACTED_PATHS = [
   "*.password", "*.newPassword", "*.token", "*.apiKey", "*.secret", "*.captchaSecret", "*.authorization", "*.cookie",
   "headers.authorization", "headers.cookie", "headers[\"x-figbloom-api-key\"]", "headers[\"x-figbloom-inbound-key\"]", "headers[\"x-cron-secret\"]",
   "req.headers.authorization", "req.headers.cookie",
+  // Rule 7: values masked by role never go to a log line either (deal values, margins, costs, payment amounts).
+  "dealValue", "margin", "cost", "paymentAmount", "*.dealValue", "*.margin", "*.cost", "*.paymentAmount",
 ];
 
 export const logger = pino({
   level: process.env.LOG_LEVEL ?? "info",
   // G1.05: a secret that ends up in a log line (a request body, a header, an error context) is written as [redacted], not stored.
   redact: { paths: REDACTED_PATHS, censor: "[redacted]" },
+  // P1.02: every line written during a request carries its request id (set by `instrumentRequest`); outside a request there is none.
+  mixin: () => {
+    const ctx = currentRequestContext();
+    return ctx ? { requestId: ctx.requestId } : {};
+  },
   transport:
     // LOG_PLAIN=1 turns the pretty worker off in development: pino-pretty's worker thread cannot be found under `next dev` on some machines (see above), and
     // every request that logs then fails with a 500. Unset, nothing changes.

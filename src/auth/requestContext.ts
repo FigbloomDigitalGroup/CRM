@@ -1,5 +1,6 @@
 import type { Session } from "@prisma/client";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { adminDb } from "../db/adminClient";
 import { resolveActiveMembership } from "../repositories/memberships";
 import type { AuthContext } from "./context";
@@ -80,10 +81,32 @@ async function resolveUserId(cookieStore: CookieReader): Promise<string | null> 
 export async function resolveUserContext(
   cookieStoreOverride?: CookieReader,
 ): Promise<Identity> {
-  const cookieStore = cookieStoreOverride ?? (await cookies());
-  const identity = await resolveIdentity(cookieStore);
+  const identity = cookieStoreOverride
+    ? await resolveIdentity(cookieStoreOverride)
+    : await resolveIdentityForRequest();
   if (!identity) throw new UnauthorizedError();
   return identity;
+}
+
+/**
+ * The identity of the page request being rendered, looked up once however many server components ask (the frame and the page both do, and
+ * each lookup is a database read). `cache` is scoped to one render, so nothing is shared between requests or people; outside a render (an
+ * API route) it simply calls through.
+ */
+const resolveIdentityForRequest = cache(async (): Promise<Identity | null> => resolveIdentity(await cookies()));
+
+/**
+ * Copies the cookies of the current request into a plain object that stays readable after the response has started. `after()` callbacks
+ * run once the page is on its way, when `cookies()` itself can no longer be called, so background work takes this snapshot first.
+ */
+export async function snapshotRequestCookies(): Promise<CookieReader> {
+  const jar = new Map((await cookies()).getAll().map((c) => [c.name, c.value] as const));
+  return {
+    get(name) {
+      const value = jar.get(name);
+      return value === undefined ? undefined : { value };
+    },
+  };
 }
 
 /**
@@ -120,15 +143,37 @@ export async function resolveRequestContext(
   cookieStoreOverride?: CookieReader,
   options: { allowOffboarding?: boolean } = {},
 ): Promise<AuthContext> {
-  const cookieStore = cookieStoreOverride ?? (await cookies());
-  const userId = await resolveUserId(cookieStore);
+  // The real cookie jar is resolved once per page render (the frame and the page both ask); tests with their own jar always do the full work.
+  // The per-render memo is keyed by organisation only, so a call that passes `allowOffboarding` (the data-request routes, B6.05) never uses it:
+  // it must not be answered from, or leave behind, a result computed for an ordinary call.
+  if (cookieStoreOverride) {
+    return resolveRequestContextUncached(orgSlug, () => resolveUserId(cookieStoreOverride), options);
+  }
+  return options.allowOffboarding
+    ? resolveRequestContextUncached(orgSlug, async () => (await resolveIdentityForRequest())?.userId ?? null, options)
+    : resolveRequestContextForRequest(orgSlug);
+}
+
+const resolveRequestContextForRequest = cache(async (orgSlug: string): Promise<AuthContext> =>
+  resolveRequestContextUncached(orgSlug, async () => (await resolveIdentityForRequest())?.userId ?? null),
+);
+
+async function resolveRequestContextUncached(
+  orgSlug: string,
+  findUserId: () => Promise<string | null>,
+  options: { allowOffboarding?: boolean } = {},
+): Promise<AuthContext> {
+  // The organisation lookup needs only the slug, so it runs while the session is being checked. Errors keep their order: no identity is
+  // reported before the organisation is, exactly as before.
+  const organizationLookup = adminDb.organization.findUnique({ where: { slug: orgSlug } });
+  organizationLookup.catch(() => undefined);
+
+  const userId = await findUserId();
   if (!userId) {
     throw new UnauthorizedError();
   }
 
-  const organization = await adminDb.organization.findUnique({
-    where: { slug: orgSlug },
-  });
+  const organization = await organizationLookup;
   if (!organization) {
     throw new NotFoundError("Organization", orgSlug);
   }

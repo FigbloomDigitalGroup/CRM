@@ -67,7 +67,7 @@ describe("guard 1: the dev seed", () => {
     const identity = await adminDb.platformIdentity.findUniqueOrThrow({
       where: { email: DEV_PLATFORM_IDENTITY.email },
     });
-    expect(identity).toMatchObject({ name: "Dev Super Admin", isDev: true });
+    expect(identity).toMatchObject({ name: "Michael Kiruti", isDev: true });
     expect(identity.passwordHash).toBeTruthy();
 
     // Separate from tenant users: no `users` row, so no membership can exist.
@@ -331,7 +331,7 @@ describe("the platform console's door (FIG-1160, replaces the V1.1 holding page)
     holder.jar = cookies({ [DEV_PLATFORM_COOKIE_NAME]: createPlatformCookieValue(platformId) });
     const { requireConsole } = await import("../src/app/platform/requireConsole");
     const who = await requireConsole();
-    expect(who.name).toBe("Dev Super Admin");
+    expect(who.name).toBe("Michael Kiruti");
     expect(who.email).toBe(DEV_PLATFORM_IDENTITY.email);
   });
 

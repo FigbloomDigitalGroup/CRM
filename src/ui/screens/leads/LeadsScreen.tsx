@@ -19,6 +19,7 @@ import { LeadDrawer } from "./LeadDrawer";
 import { DUE_COLOUR, personInitials, statusTone, tempTone, TEMPERATURE_LABEL, TEMPERATURES } from "./format";
 import { Icon } from "./icons";
 import { SavedViewsBar } from "../views/SavedViewsBar";
+import { LoaderBlock } from "../../components/loader";
 
 type TabId = "all" | "hot" | "pool" | "unassigned" | "converted" | "archived";
 interface Filters {
@@ -32,12 +33,12 @@ const NO_FILTERS: Filters = { q: "", status: "", temp: "", source: "", owner: ""
 
 type ColumnId = "status" | "temperature" | "source" | "service" | "next" | "owner";
 const COLUMNS: { id: ColumnId; label: string; header: string; sort?: string }[] = [
-  { id: "status", label: "Status", header: "STATUS" },
-  { id: "temperature", label: "Temperature", header: "TEMPERATURE", sort: "temperature" },
-  { id: "source", label: "Source", header: "SOURCE" },
-  { id: "service", label: "Service", header: "SERVICE" },
-  { id: "next", label: "Next follow-up", header: "NEXT FOLLOW-UP", sort: "nextFollowUpAt" },
-  { id: "owner", label: "Owner", header: "OWNER" },
+  { id: "status", label: "Status", header: "Status" },
+  { id: "temperature", label: "Temperature", header: "Temperature", sort: "temperature" },
+  { id: "source", label: "Source", header: "Source" },
+  { id: "service", label: "Service", header: "Service" },
+  { id: "next", label: "Next follow-up", header: "Next follow-up", sort: "nextFollowUpAt" },
+  { id: "owner", label: "Owner", header: "Owner" },
 ];
 
 interface Saved {
@@ -144,12 +145,14 @@ export function LeadsScreen() {
   const total = active.data?.total ?? 0;
 
   // Counts for the tabs and the header: a one-row page each, so the cost is a COUNT, never a fetch of the rows.
+  // They wait for the rows (the browser only runs a few requests at a time, and the rows are what the person came for).
+  const countsReady = !active.isLoading;
   const one = { page: 1, pageSize: 1 };
-  const allCount = useApiQuery("listLeads", { params: { orgSlug }, query: one }, { staleTime: 30_000 });
-  const hotCount = useApiQuery("listLeads", { params: { orgSlug }, query: { ...one, temperature: "HOT" } }, { staleTime: 30_000 });
-  const convCount = useApiQuery("listLeads", { params: { orgSlug }, query: { ...one, leadStatusId: converted?.id } }, { enabled: Boolean(converted), staleTime: 30_000 });
-  const archCount = useApiQuery("listLeads", { params: { orgSlug }, query: { ...one, archivedOnly: "true" } }, { staleTime: 30_000 });
-  const poolCount = useApiQuery("getLeadsPool", { params: { orgSlug }, query: { page: "1", pageSize: "1" } }, { enabled: poolTab !== null, staleTime: 30_000 });
+  const allCount = useApiQuery("listLeads", { params: { orgSlug }, query: one }, { enabled: countsReady, staleTime: 30_000 });
+  const hotCount = useApiQuery("listLeads", { params: { orgSlug }, query: { ...one, temperature: "HOT" } }, { enabled: countsReady, staleTime: 30_000 });
+  const convCount = useApiQuery("listLeads", { params: { orgSlug }, query: { ...one, leadStatusId: converted?.id } }, { enabled: countsReady && Boolean(converted), staleTime: 30_000 });
+  const archCount = useApiQuery("listLeads", { params: { orgSlug }, query: { ...one, archivedOnly: "true" } }, { enabled: countsReady, staleTime: 30_000 });
+  const poolCount = useApiQuery("getLeadsPool", { params: { orgSlug }, query: { page: "1", pageSize: "1" } }, { enabled: countsReady && poolTab !== null, staleTime: 30_000 });
 
   const tabs: { id: TabId; label: string; n: number | undefined; prov?: boolean }[] = [
     { id: "all", label: "All", n: allCount.data?.total },
@@ -527,7 +530,7 @@ export function LeadsScreen() {
                 <th className="fb-ld-th--check">
                   <input type="checkbox" aria-label="Select all" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))} disabled={rows.length === 0} />
                 </th>
-                <th scope="col">COMPANY / CONTACT</th>
+                <th scope="col">Company / contact</th>
                 {shownCols.map((c) => {
                   const sorted = sort === c.sort ? "ascending" : sort === `-${c.sort}` ? "descending" : "none";
                   return (
@@ -544,19 +547,13 @@ export function LeadsScreen() {
                   );
                 })}
                 <th scope="col" className="fb-ld-th--right">
-                  ACTIONS
+                  Actions
                 </th>
               </tr>
             </thead>
             <tbody>
               {loading
-                ? ["60%", "80%", "45%", "70%", "55%"].map((w, i) => (
-                    <tr key={i}>
-                      <td colSpan={colSpan} className="fb-ld-td--skel">
-                        <div className="fb-ld-skel" style={{ width: w }} />
-                      </td>
-                    </tr>
-                  ))
+                ? <tr><td colSpan={colSpan}><LoaderBlock compact label="Loading leads" /></td></tr>
                 : null}
               {!loading && !error
                 ? rows.map((l) => {

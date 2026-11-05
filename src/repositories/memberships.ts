@@ -78,13 +78,20 @@ export async function resolveActiveMembership(
   organizationId: string,
   options: { allowOffboarding?: boolean } = {},
 ) {
-  const membership = await adminDb.membership.findFirst({
-    where: { userId, organizationId, status: MembershipStatus.ACTIVE },
-    include: {
-      role: { include: { rolePermissions: { include: { permission: true } } } },
-      organization: { select: { status: true, name: true } },
-    },
-  });
+  // The feature configuration does not depend on the membership, so both are read at the same time (one round trip instead of two).
+  const [membership, config] = await Promise.all([
+    adminDb.membership.findFirst({
+      where: { userId, organizationId, status: MembershipStatus.ACTIVE },
+      include: {
+        role: { include: { rolePermissions: { include: { permission: true } } } },
+        organization: { select: { status: true, name: true } },
+      },
+    }),
+    // B1.01/B1.03: the keys a request carries are the role's catalogue keys
+    // adjusted for this organization's release, departure flags and (for
+    // Customer Support) role flag.
+    loadFeatureConfig(organizationId),
+  ]);
 
   if (!membership) {
     return null;
@@ -100,10 +107,6 @@ export async function resolveActiveMembership(
     throw new OrganizationUnavailableError(lock, membership.organization.name);
   }
 
-  // B1.01/B1.03: the keys a request carries are the role's catalogue keys
-  // adjusted for this organization's release, departure flags and (for
-  // Customer Support) role flag.
-  const config = await loadFeatureConfig(organizationId);
   return {
     membershipId: membership.id,
     userId: membership.userId,

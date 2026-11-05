@@ -8,6 +8,7 @@ import { useMember } from "../../data/member";
 import { downloadText } from "../leads/data";
 import { ReportCard } from "./ReportCard";
 import { formatCell, tableToCsv, type ReportColumn } from "./model";
+import { LoaderBlock } from "../../components/loader";
 
 /**
  * The customer reports (FIG-793, absorbed into F3.07): active, repeat and dormant customers, upcoming renewals and sales by salesperson. Each is a
@@ -30,9 +31,7 @@ function SkeletonCard({ title }: { title: string }) {
   return (
     <section className="fb-rep__card" aria-busy="true">
       <h2 className="fb-rep__cardtitle">{title}</h2>
-      <div className="fb-rep__skel" style={{ height: 120, marginTop: 14 }} role="status">
-        <span className="fb-sr-only">Loading {title}</span>
-      </div>
+      <LoaderBlock compact label={`Loading ${title}`} />
     </section>
   );
 }

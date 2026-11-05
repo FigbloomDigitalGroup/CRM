@@ -126,6 +126,7 @@ by whether an environment needs it:
 | `LOG_PLAIN` | Optional | Not needed | `1` turns off pretty logging in development. |
 | `NEXT_PUBLIC_API_SOURCE` / `NEXT_PUBLIC_MOCK_API_URL` | Optional | Omit | Frontend data source (`real` or `mock`) and mock server address. |
 | `NEXT_PUBLIC_DEMO_SCREENS` | Optional | Omit | `true` shows demo-data screens in production; leave unset until they are wired. |
+| `METRICS_TOKEN` | Not needed | Required to use `GET /api/metrics` | Long random value from the secret store, sent as a bearer token or `x-metrics-token`. Unset means the route answers 404. See `docs/OBSERVABILITY.md`. |
 | `NODE_ENV` | Set by tooling (`next dev`/`test`) | `production` | Set automatically by `next build`/`next start`; the Dockerfile also sets it explicitly in the runner stage. |
 
 ## Secrets handling
@@ -326,6 +327,8 @@ fails open entirely.
 
 ## Logging / error monitoring
 
+Request ids, metrics, alert rules and the alert drill are in `docs/OBSERVABILITY.md` (FIG-1124).
+
 Structured JSON logs to stdout via `pino` (`src/lib/logger.ts`) --
 pretty-printed in development, plain JSON lines in production, which is
 what any log aggregator (your platform's own log viewer, or a shipped-off
@@ -482,3 +485,6 @@ rather than being discovered at deploy time.
 - [ ] `TRUSTED_PROXY_HOPS` set when behind a proxy (number of trusted proxy hops; when unset `X-Forwarded-For` is ignored).
 - [ ] OAuth client ids and secrets set and `${APP_BASE_URL}/api/integrations/oauth/callback` registered, if mail and calendar connections are offered.
 - [ ] `APP_BASE_URL` set to the public URL; no dev accounts exist and `ALLOW_DEV_ACCOUNTS` is not set.
+## Database hosting
+
+Plain PostgreSQL, running locally for now, with a planned migration to AWS (Michael's decision, 4 Nov 2026; `docs/DECISIONS.md` section 5). Keep to standard PostgreSQL features so that move is a dump and restore plus new connection strings. The AWS services and region are not chosen yet.

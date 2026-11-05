@@ -493,16 +493,21 @@ export async function listTasksGrouped(ctx: AuthContext, query: GroupedTasksQuer
   const scoped = scopeTaskFilters(ctx, query.filters ?? {});
   const bounds = await taskGroupBounds(ctx);
   const wanted = (query.groups?.length ? query.groups : [...TASK_GROUP_KEYS]).filter(isGroupKey);
-  const counts = await countTaskGroups(ctx.organizationId, scoped, bounds);
   const paging = resolvePaging({ page: 1, pageSize: query.pageSize ?? DEFAULT_GROUP_PAGE_SIZE });
-  const groups = await Promise.all(
+  // The counts and every group's rows are independent reads, so they run together rather than the rows waiting for the counts.
+  const countsPromise = countTaskGroups(ctx.organizationId, scoped, bounds);
+  const decorated = Promise.all(
     TASK_GROUP_KEYS.filter((g) => wanted.includes(g)).map(async (key) => {
       const collapsed = key === "DONE" && !query.groups?.includes("DONE");
       const rows = collapsed ? [] : await listTaskGroup(ctx.organizationId, scoped, key, bounds, paging);
-      const page = buildPage(await decorate(ctx, rows), counts[key], paging);
-      return { key, label: TASK_GROUP_LABELS[key], count: counts[key], collapsed, ...page };
+      return { key, collapsed, rows: await decorate(ctx, rows) };
     }),
   );
+  const [counts, loaded] = await Promise.all([countsPromise, decorated]);
+  const groups = loaded.map(({ key, collapsed, rows }) => {
+    const page = buildPage(rows, counts[key], paging);
+    return { key, label: TASK_GROUP_LABELS[key], count: counts[key], collapsed, ...page };
+  });
   return { timeZone: bounds.timeZone, counts, groups };
 }
 

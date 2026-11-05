@@ -10,6 +10,7 @@ import { ErrorState } from "../../components/states";
 import { useToast } from "../../components/toast";
 import { useMemberName, useRefreshDeals } from "./data";
 import { dateLong, dateShort, initials, kes, when, type DealDetail, type HandoffRow, type HandoffStatus, type HandoffView } from "./model";
+import { LoaderBlock } from "../../components/loader";
 
 /**
  * F2.06 / P4: the Delivery Handoffs view. The left column lists every handoff the person may see; the right is the receiving view for the
@@ -56,11 +57,7 @@ export function HandoffsScreen() {
       </div>
 
       {list.isLoading ? (
-        <div className="fb-dhandgrid" role="status" aria-busy="true">
-          <span className="fb-sr-only">Loading handoffs</span>
-          <div className="fb-dskel" style={{ height: 240 }} />
-          <div className="fb-dskel" style={{ height: 420 }} />
-        </div>
+        <LoaderBlock compact label="Loading handoffs" />
       ) : list.error ? (
         <div className="fb-dstate">
           <ErrorState error={list.error} area="Handoffs" onRetry={() => void list.refetch()} />
@@ -146,7 +143,7 @@ function HandoffDetail({ dealId, row }: { dealId: string; row: HandoffRow }) {
     }
   }
 
-  if (view.isLoading) return <div className="fb-dskel" style={{ height: 420 }} role="status" aria-busy="true" />;
+  if (view.isLoading) return <LoaderBlock compact label="Loading the handoff" />;
   if (view.error || !h) {
     return (
       <div className="fb-dstate">
@@ -209,10 +206,10 @@ function HandoffDetail({ dealId, row }: { dealId: string; row: HandoffRow }) {
 
       <div className="fb-dhandfacts">
         {[
-          { k: "DELIVERY OWNER", v: h.deliveryOwner?.name ?? "Not assigned" },
-          { k: "START DATE", v: dateLong(h.startDate, member.timeZone) },
-          { k: "PRIMARY CONTACT", v: deal?.primaryContact ? `${deal.primaryContact.firstName} ${deal.primaryContact.lastName ?? ""}`.trim() : "—" },
-          { k: "STATUS", v: STATUS_LABEL[h.status] },
+          { k: "Delivery owner", v: h.deliveryOwner?.name ?? "Not assigned" },
+          { k: "Start date", v: dateLong(h.startDate, member.timeZone) },
+          { k: "Primary contact", v: deal?.primaryContact ? `${deal.primaryContact.firstName} ${deal.primaryContact.lastName ?? ""}`.trim() : "—" },
+          { k: "Status", v: STATUS_LABEL[h.status] },
         ].map((f) => (
           <div key={f.k} className="fb-dhandfact">
             <div className="fb-dmonohead fb-dmonohead--tight">{f.k}</div>

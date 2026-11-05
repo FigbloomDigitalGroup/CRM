@@ -32,6 +32,7 @@ import {
   type SectionResult,
   type TimelineItem,
 } from "./data";
+import { LoaderBlock } from "../../components/loader";
 
 type Denied = Extract<SectionResult<unknown>, { status: "no_access" }>;
 
@@ -121,18 +122,8 @@ export function CompanyDetailScreen({ companyId }: { companyId: string }) {
   }
   if (!data) {
     return (
-      <div className="fb-cu" data-screen-label="Customer 360" aria-busy="true">
-        <div className="fb-cu-skel" style={{ width: 260, height: 28 }} />
-        <div className="fb-cu-summary">
-          {[0, 1, 2, 3, 4].map((i) => (
-            <div key={i} className="fb-cu-fact">
-              <div className="fb-cu-skel" style={{ width: "60%" }} />
-            </div>
-          ))}
-        </div>
-        <div className="fb-cu-panel">
-          <div className="fb-cu-skel" style={{ width: "80%" }} />
-        </div>
+      <div className="fb-cu" data-screen-label="Customer 360">
+        <LoaderBlock label="Loading the customer" />
       </div>
     );
   }
@@ -327,7 +318,7 @@ export function CompanyDetailScreen({ companyId }: { companyId: string }) {
 
       <div className="fb-cu-summary">
         <div className="fb-cu-fact">
-          <div className="fb-cu-fact__k">LIFECYCLE</div>
+          <div className="fb-cu-fact__k">Lifecycle</div>
           {canLife ? (
             <select aria-label="Lifecycle" value={profile.lifecycle.state?.id ?? ""} onChange={(e) => e.target.value && e.target.value !== profile.lifecycle.state?.id && setLifeTo(e.target.value)}>
               {!profile.lifecycle.state ? <option value="">No state</option> : null}
@@ -352,7 +343,7 @@ export function CompanyDetailScreen({ companyId }: { companyId: string }) {
           ) : null}
         </div>
         <div className="fb-cu-fact">
-          <div className="fb-cu-fact__k">NEXT FOLLOW-UP</div>
+          <div className="fb-cu-fact__k">Next follow-up</div>
           {s.nextFollowUp?.status === "no_access" ? (
             <>
               <div className="fb-cu-fact__v" data-muted="true">Not for your role</div>
@@ -368,7 +359,7 @@ export function CompanyDetailScreen({ companyId }: { companyId: string }) {
           )}
         </div>
         <div className="fb-cu-fact">
-          <div className="fb-cu-fact__k">OPEN DEALS</div>
+          <div className="fb-cu-fact__k">Open deals</div>
           {dealsDenied ? (
             <>
               <div className="fb-cu-fact__v" data-muted="true">Not for your role</div>
@@ -382,7 +373,7 @@ export function CompanyDetailScreen({ companyId }: { companyId: string }) {
           )}
         </div>
         <div className="fb-cu-fact">
-          <div className="fb-cu-fact__k">WON TO DATE</div>
+          <div className="fb-cu-fact__k">Won to date</div>
           {dealsDenied ? (
             <div className="fb-cu-fact__v" data-muted="true">—</div>
           ) : (
@@ -395,7 +386,7 @@ export function CompanyDetailScreen({ companyId }: { companyId: string }) {
           )}
         </div>
         <div className="fb-cu-fact">
-          <div className="fb-cu-fact__k">OUTSTANDING</div>
+          <div className="fb-cu-fact__k">Outstanding</div>
           {payments ? (
             <>
               <div className="fb-cu-fact__v" style={{ color: Number(payments.totals.outstanding) > 0 ? "var(--orange-text)" : undefined }}>
@@ -411,7 +402,7 @@ export function CompanyDetailScreen({ companyId }: { companyId: string }) {
           )}
         </div>
         <div className="fb-cu-fact">
-          <div className="fb-cu-fact__k">OWNER</div>
+          <div className="fb-cu-fact__k">Owner</div>
           <div className="fb-cu-fact__v">{ownerName}</div>
           <div className="fb-cu-fact__sub">{profile.phone ?? ""}</div>
         </div>

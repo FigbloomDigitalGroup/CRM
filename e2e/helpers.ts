@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { BrowserContext, Page } from "@playwright/test";
 
 export const ORG_SLUG = "figbloom";
 
@@ -15,8 +15,64 @@ export const ORG_SLUG = "figbloom";
  */
 export const DEV_PASSWORD = "figbloom-dev-local";
 
+/**
+ * Safari (WebKit) refuses a `Secure` cookie from plain `http://localhost`; Chrome and Firefox make an exception for localhost. The production
+ * build marks the session cookie `Secure` (correct: production is HTTPS), so on the local test server WebKit never keeps its session. For WebKit
+ * only, the `Secure` attribute is dropped from the sign-in response in the test browser; the app's own cookie code is not touched (Q1.04).
+ */
+async function allowSecureCookieOverHttp(page: Page): Promise<void> {
+  if (page.context().browser()?.browserType().name() !== "webkit") return;
+  await page.route("**/api/auth/login", async (route) => {
+    const response = await route.fetch();
+    const origin = new URL(route.request().url()).origin;
+    const cookies: Array<Parameters<BrowserContext["addCookies"]>[0][number]> = [];
+    for (const h of await response.headersArray()) {
+      if (h.name.toLowerCase() !== "set-cookie") continue;
+      const [pair, ...attrs] = h.value.split(";").map((x) => x.trim());
+      const eq = pair.indexOf("=");
+      const attr = (k: string) => attrs.find((x) => x.toLowerCase().startsWith(`${k}=`))?.slice(k.length + 1);
+      const sameSite = (attr("samesite") ?? "Lax").toLowerCase();
+      const maxAge = Number(attr("max-age"));
+      cookies.push({
+        name: pair.slice(0, eq),
+        value: pair.slice(eq + 1),
+        url: origin,
+        httpOnly: attrs.some((x) => x.toLowerCase() === "httponly"),
+        sameSite: sameSite === "strict" ? "Strict" : sameSite === "none" ? "None" : "Lax",
+        ...(Number.isFinite(maxAge) && maxAge > 0 ? { expires: Math.floor(Date.now() / 1000) + maxAge } : {}),
+      });
+    }
+    // The browser would drop these (Secure, from plain http); the test puts them in its own jar without the flag, then lets the page see the body.
+    await page.context().addCookies(cookies);
+    const headers = { ...response.headers() };
+    delete headers["set-cookie"];
+    await route.fulfill({ response, headers });
+  });
+}
+
+/**
+ * `page.goto` that survives the page redirecting itself at the same moment: straight after sign-in the app may still be sending a narrow screen to
+ * /m (WebKit: "interrupted by another navigation"), and after the cookies are cleared an open page may send itself to /login (Chromium:
+ * net::ERR_ABORTED). The page is where we wanted it or about to be, so let it finish and go again; at most twice, and any other error is real.
+ */
+async function gotoTolerant(page: Page, path: string): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await page.goto(path);
+      return;
+    } catch (e) {
+      if (attempt >= 2 || !/interrupted by another navigation|ERR_ABORTED/.test(String(e))) throw e;
+      await page.waitForLoadState("load").catch(() => undefined);
+    }
+  }
+}
+
 export async function loginAs(page: Page, email: string): Promise<void> {
-  await page.goto("/login");
+  const webkit = page.context().browser()?.browserType().name() === "webkit";
+  await allowSecureCookieOverHttp(page);
+  await gotoTolerant(page, "/login");
+  // WebKit is quicker to show the form than to hydrate it, and a click before hydration is lost.
+  if (webkit) await page.waitForLoadState("networkidle");
   await page.getByLabel("Email").fill(email);
   // Not getByLabel("Password"): PasswordInput nests a "Show password"
   // toggle button inside the same <label>, which the browser folds into
@@ -36,7 +92,7 @@ export function uniqueSuffix(): string {
 
 /** Goes to a page and waits until React has hydrated, so a fill/click is not lost to a not-yet-interactive client component. */
 export async function gotoAndSettle(page: Page, path: string): Promise<void> {
-  await page.goto(path);
+  await gotoTolerant(page, path);
   await page.waitForLoadState("networkidle");
 }
 

@@ -36,12 +36,12 @@ export interface DevUser {
 }
 
 export const DEV_USERS: readonly DevUser[] = [
-  { id: "mg", email: "dev.management@figbloom.local", name: "Dev Management", roleKey: "MANAGEMENT" },
-  { id: "s1", email: "dev.sales@figbloom.local", name: "Dev Sales", roleKey: "SALES" },
-  { id: "s2", email: "dev.sales2@figbloom.local", name: "Dev Sales Two", roleKey: "SALES" },
-  { id: "dl", email: "dev.delivery@figbloom.local", name: "Dev Delivery", roleKey: "DELIVERY" },
-  { id: "fn", email: "dev.finance@figbloom.local", name: "Dev Finance", roleKey: "FINANCE" },
-  { id: "tc", email: "dev.tech@figbloom.local", name: "Dev Restricted Technical", roleKey: "RESTRICTED_TECHNICAL" },
+  { id: "mg", email: "dev.management@figbloom.local", name: "Luke Kipruto", roleKey: "MANAGEMENT" },
+  { id: "s1", email: "dev.sales@figbloom.local", name: "Ruth Kibet", roleKey: "SALES" },
+  { id: "s2", email: "dev.sales2@figbloom.local", name: "Victor Ogola", roleKey: "SALES" },
+  { id: "dl", email: "dev.delivery@figbloom.local", name: "Zion Suzuki", roleKey: "DELIVERY" },
+  { id: "fn", email: "dev.finance@figbloom.local", name: "Zilpa Okoth", roleKey: "FINANCE" },
+  { id: "tc", email: "dev.tech@figbloom.local", name: "Katam Kipkemboi", roleKey: "RESTRICTED_TECHNICAL" },
   // The proposed sixth role, behind `customer_support.role` (docs/DECISIONS.md 2.4): the flag stays off here, so this account signs in with no
   // permissions until the flag is turned on. With the Dev Super Admin below, that makes the eight dev accounts.
   { id: "cs", email: "dev.support@figbloom.local", name: "Dev Customer Support", roleKey: "CUSTOMER_SUPPORT" },
@@ -55,7 +55,7 @@ export const DEV_USERS: readonly DevUser[] = [
  */
 export const DEV_PLATFORM_IDENTITY = {
   email: "dev.superadmin@platform.figbloom.local",
-  name: "Dev Super Admin",
+  name: "Michael Kiruti",
 } as const;
 
 export const DEV_ORGANIZATIONS = {

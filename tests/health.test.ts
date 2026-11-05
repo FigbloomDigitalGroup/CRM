@@ -7,6 +7,9 @@ describe("GET /api/health", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.status).toBe("ok");
+    // The application role (figbloom_app) must be able to connect too, and the answer carries a request id (FIG-1124).
+    expect(body.appRole).toBe("ok");
+    expect(response.headers.get("x-request-id")).toBeTruthy();
     // Not asserting an exact status/timestamp here -- other test files in
     // the same run may have already exercised the real sweep job, which
     // shares this one global (non-org-scoped) row. Just the shape.

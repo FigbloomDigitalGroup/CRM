@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Skeleton } from "./basics";
 import { Popover } from "./overlays";
+import { LoaderBlock } from "./loader";
 
 export interface Column<T> {
   key: string;
@@ -224,15 +224,7 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {loading
-              ? Array.from({ length: 5 }, (_, i) => (
-                  <tr key={`s${i}`}>
-                    {Array.from({ length: colSpan }, (_, j) => (
-                      <td key={j}>
-                        <Skeleton width={j === 0 ? "70%" : "50%"} />
-                      </td>
-                    ))}
-                  </tr>
-                ))
+              ? <tr><td colSpan={colSpan}><LoaderBlock compact /></td></tr>
               : processed.map((row) => {
                   const key = rowKey(row);
                   const reason = rowDisabledReason?.(row);

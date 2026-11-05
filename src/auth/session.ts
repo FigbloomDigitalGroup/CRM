@@ -129,6 +129,9 @@ export async function createSession(
   };
 }
 
+/** How stale `lastSeenAt` may get before a request refreshes it. */
+const LAST_SEEN_REFRESH_MS = 30_000;
+
 export type SessionLookup =
   | { state: "active"; session: Session; userId: string }
   | { state: "expired" | "revoked"; email: string | null }
@@ -161,10 +164,14 @@ export async function lookupSession(
     return { state: "expired", email: user.email };
   }
 
-  await adminDb.session.update({
-    where: { id: row.id },
-    data: { lastSeenAt: new Date() },
-  });
+  // `lastSeenAt` only drives the "last active" line on the sessions list, which is shown to the minute, so a write on every one of the dozens
+  // of requests a single page makes (each page click is a page request plus several API calls) is pure latency. Refresh it at most every 30 s.
+  if (Date.now() - row.lastSeenAt.getTime() >= LAST_SEEN_REFRESH_MS) {
+    await adminDb.session.update({
+      where: { id: row.id },
+      data: { lastSeenAt: new Date() },
+    });
+  }
   return { state: "active", session: row, userId: row.userId };
 }
 

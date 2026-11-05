@@ -23,6 +23,7 @@ import {
 } from "./model";
 import { TaskDrawer } from "./TaskDrawer";
 import { TaskHeader } from "./TaskHeader";
+import { LoaderBlock } from "@/ui/components/loader";
 
 type Mode = "month" | "week" | "day" | "list";
 
@@ -44,7 +45,7 @@ interface CalItem {
   description?: string | null;
 }
 
-const DOWS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+const DOWS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MODES: { id: Mode; label: string }[] = [
   { id: "month", label: "Month" },
   { id: "week", label: "Week" },
@@ -237,10 +238,7 @@ export function CalendarScreen() {
         </div>
       ) : null}
       {cal.isLoading ? (
-        <div className="fb-tk-skeletons" role="status" aria-busy="true">
-          <span className="fb-sr-only">Loading the calendar</span>
-          <div className="fb-tk-skel fb-tk-skel--grid" />
-        </div>
+        <LoaderBlock label="Loading the calendar" />
       ) : null}
       {cal.data?.truncated ? <div className="fb-tk-lockline" role="status">This range has more than the calendar can show at once. Narrow it with the Day or Week view.</div> : null}
 
@@ -372,7 +370,7 @@ const kindText = (item: CalItem) => (item.type === "MEETING" ? "Meeting" : item.
 function Chip({ item, zone, onOpen }: { item: CalItem; zone: Zone; onOpen: () => void }) {
   const tone = toneOf(item);
   return (
-    <button type="button" data-ev className="fb-tk-chip" data-tone={tone} onClick={onOpen} aria-label={`${kindText(item)}: ${item.title}, ${shortTime(new Date(item.start), zone)}${item.overdue ? ", overdue" : ""}`}>
+    <button type="button" data-ev className="fb-tk-chip" data-tone={tone} onClick={onOpen} aria-label={`${shortTime(new Date(item.start), zone)} ${item.title}, ${kindText(item).toLowerCase()}${item.overdue ? ", overdue" : ""}`}>
       {item.overdue ? <span className="fb-tk-chip__dot" aria-hidden="true" /> : null}
       {item.kind === "activity" ? (item.type === "CALL" ? <Phone size={11} aria-hidden="true" /> : <Video size={11} aria-hidden="true" />) : null}
       <span className="fb-tk-chip__text">{shortTime(new Date(item.start), zone)} {item.title}</span>

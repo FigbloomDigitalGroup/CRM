@@ -7,7 +7,7 @@ import { Badge, Button } from "../../components/basics";
 import { Input, Select, Textarea } from "../../components/forms";
 import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
-import { demoScreensEnabled } from "../../demo/enabled";
+import { demoScreensEnabledClient } from "../../demo/enabled";
 import { Panel } from "../settings/kit";
 import { LoadingState } from "../../components/states";
 import { describeError } from "../../errors";
@@ -32,7 +32,7 @@ const STATUS_TONE = { Received: "info", "In review": "warning", Approved: "info"
  * Filing it only sends a request; nothing is deleted here (deletion and offboarding need two platform admins, see PL6). Demo data.
  */
 export function DataRequests() {
-  return demoScreensEnabled() ? <DataRequestsDemo /> : <NotYet name="Data requests" />;
+  return demoScreensEnabledClient() ? <DataRequestsDemo /> : <NotYet name="Data requests" />;
 }
 
 function DataRequestsDemo() {
@@ -108,7 +108,7 @@ function DataRequestsDemo() {
 
 /** Settings › Support access history (FIG-1192): every time Figbloom Support asked to look, who, why, what they opened and how it ended. */
 export function SupportHistory() {
-  return demoScreensEnabled() ? <SupportHistoryDemo /> : <NotYet name="Support access history" />;
+  return demoScreensEnabledClient() ? <SupportHistoryDemo /> : <NotYet name="Support access history" />;
 }
 
 function SupportHistoryDemo() {

@@ -8,8 +8,9 @@ import { useApi, useApiQuery, useUndoable } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { initialsOf } from "../../components/basics";
 import { dueLabel, money, moneyTotal } from "./format";
-import { HIcon, Panel, stageStyle } from "./kit";
+import { HIcon, Panel, stageShade } from "./kit";
 import { leadName, linkChipLabel, recordHref, type TaskItem } from "./dash";
+import { LoaderBlock } from "../../components/loader";
 
 /** Names for ids the dashboard answers with (stages, services, sources): one cached read, shared by every block. */
 export function useReferenceData() {
@@ -55,10 +56,7 @@ export function TodoPanel({ title = "Do these today", showOwner, groups = ["OVER
   return (
     <Panel title={title} action={{ label: "All tasks", href: `/o/${orgSlug}/tasks` }} className="fb-hp--todo">
       {loading ? (
-        <div className="fb-hrow" aria-busy="true">
-          <span className="fb-sr-only">Loading tasks</span>
-          <div className="fb-hskel" style={{ height: 40, flex: 1 }} />
-        </div>
+        <LoaderBlock compact label="Loading tasks" />
       ) : null}
       {items.map((t) => {
         const due = dueLabel(t.dueAt, { timeZone, hour12 });
@@ -76,7 +74,6 @@ export function TodoPanel({ title = "Do these today", showOwner, groups = ["OVER
               <div className="fb-hrow__title">{t.title}</div>
               <div className="fb-hrow__meta">
                 <span className="fb-due" data-state={due.state}>
-                  {due.state === "overdue" ? <HIcon name="alert" size={12} /> : null}
                   {due.text}
                 </span>
                 {showOwner && !bare && t.assigneeName ? <span className="fb-hrow__sub">{t.assigneeName}</span> : null}
@@ -201,7 +198,15 @@ export function NewLeadsPanel({ rows, since }: { rows: NewLeadRow[]; since: numb
           </Link>
         );
       })}
-      {shown.length === 0 ? <div className="fb-hrow fb-hrow--empty fb-hrow--quiet">No new leads since you were last here.</div> : null}
+      {shown.length === 0 ? (
+        <div className="fb-hempty">
+          <span className="fb-hempty__o" aria-hidden="true">
+            <HIcon name="users" size={18} />
+          </span>
+          <b>No new leads right now</b>
+          <span>New leads assigned to you will show here.</span>
+        </div>
+      ) : null}
     </Panel>
   );
 }
@@ -231,14 +236,14 @@ export function PipelineByStage() {
     <Panel title="Pipeline by stage" aside={q.isPending ? "Loading" : anyHidden ? `${totalCount} open` : `${moneyTotal(totalValue, open[0]?.values[0]?.currency ?? "KES")} open`} padded className="fb-hp--pipe">
       <div className="fb-stackbar" role="img" aria-label={open.length ? aria : "No open deals"}>
         {open.map((c, i) => (
-          <div key={c.stage.id} style={stageStyle(i, share(i))} />
+          <div key={c.stage.id} style={{ ...stageShade(i, open.length), width: `${share(i)}%` }} />
         ))}
       </div>
       <div className="fb-stagegrid">
         {open.map((c, i) => (
           <Link key={c.stage.id} href={`/o/${orgSlug}/deals`} className="fb-stagegrid__cell">
             <div className="fb-stagegrid__name">
-              <span className="fb-swatch" style={stageStyle(i)} aria-hidden="true" />
+              <span className="fb-swatch" style={stageShade(i, open.length)} aria-hidden="true" />
               {c.stage.name} · {c.count}
             </div>
             <div className="fb-stagegrid__val">{c.valuesHidden ? <MaskedValue reason="Deal values are shown only to roles that may see them." /> : amountsText(c.values)}</div>

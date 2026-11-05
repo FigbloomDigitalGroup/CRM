@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import { describeError, NoAccess, queryKeyFor, useApiQuery, useMember } from "@/ui";
 import { useSetTaskStatus } from "./hooks";
 import { dueLabel, dueStateOf, isOpen, linkHref, PRIORITY_LABEL, STATUS_LABEL, type GroupKey, type TaskGroups, type TaskItem, type TaskPriority, type TaskStatus, type Zone } from "./model";
+import { LoaderBlock } from "@/ui/components/loader";
 
 /* My work (D3) ---------------------------------------------------------------------------------------------------------------------- */
 
@@ -56,12 +57,7 @@ export function MyWorkList({ onCreate }: { onCreate?: () => void }) {
   }
   if (q.isLoading || !data) {
     return (
-      <div className="fb-tk-skeletons" role="status" aria-busy="true">
-        <span className="fb-sr-only">Loading your work</span>
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="fb-tk-skel fb-tk-skel--tall" />
-        ))}
-      </div>
+      <LoaderBlock label="Loading your work" />
     );
   }
 
@@ -147,7 +143,7 @@ function WorkCard({ task, zone, now, groupsKey }: { task: WorkItem; zone: Zone; 
           <div className="fb-tk-work__due" data-state={state}>{dueLabel(task.dueAt, false, now, zone)}</div>
           {task.description ? <p className="fb-tk-work__desc">{task.description}</p> : null}
           <div className="fb-tk-reqs">
-            <div className="fb-tk-reqs__label">CLIENT REQUIREMENTS FOR THIS WORK</div>
+            <div className="fb-tk-reqs__label">Client requirements for this work</div>
             <ul>{(lines.length ? lines : ["No requirements attached yet"]).map((l, i) => <li key={i}>{l}</li>)}</ul>
             {task.files.length ? (
               <ul className="fb-tk-files" aria-label="Files">
@@ -197,7 +193,7 @@ export function TasksPanel({
         <Link href={`/o/${orgSlug}/tasks`} className="fb-tk-panel__all">All tasks</Link>
       </div>
       {q.isLoading ? (
-        <div className="fb-tk-panel__empty" role="status" aria-busy="true"><span className="fb-sr-only">Loading tasks</span>Loading…</div>
+        <LoaderBlock compact label="Loading tasks" />
       ) : q.isError ? (
         <div className="fb-tk-panel__empty" role="alert">
           Tasks didn’t load.
