@@ -9,7 +9,11 @@ import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
 import { demoScreensEnabledClient } from "../../demo/enabled";
 import { Panel } from "../settings/kit";
-import { DEMO_ANOMALIES, type DemoDataRequest } from "./demo/data";
+import { LoadingState } from "../../components/states";
+import { describeError } from "../../errors";
+import { QueryFailure } from "../../featureUnavailable";
+import { useForgetDevice, useMyTwoStep, useSetTwoStepPolicy, useTwoStepPolicy } from "./api";
+import type { DemoDataRequest } from "./demo/data";
 import { orgSideDemo, useOrgSideDemo } from "./demo/store";
 
 /** Until these sections are wired to the API (M13/M14) a production build says so instead of showing sample records. */
@@ -151,81 +155,91 @@ function SupportHistoryDemo() {
   );
 }
 
-/** S7#2, Settings › Two-step sign-in (FIG-1167): the policy toggle, the trusted devices, unusual-activity alerts, and the preview of the code screen. */
+/**
+ * S7#2, Settings › Two-step sign-in (FIG-1167, wired to FIG-1134): the organisation policy (`security.manage` turns it on or off) and your own
+ * trusted devices. Turning the policy on needs your own two-step first and signs out members who have none; the API says so and the screen shows it.
+ */
 export function TwoStepSettings() {
-  return demoScreensEnabledClient() ? <TwoStepSettingsDemo /> : <NotYet name="Two-step sign-in" />;
-}
-
-function TwoStepSettingsDemo() {
-  const demo = useOrgSideDemo();
   const toast = useToast();
   const { can } = useMember();
-  const rows: { key: "mgmt" | "all" | "remember"; label: string; help: string }[] = [
-    { key: "mgmt", label: "Require for Management and Finance", help: "They see money and can approve." },
-    { key: "all", label: "Require for everyone", help: "Recommended once everyone has the app." },
-    { key: "remember", label: "Remember trusted devices for 30 days", help: "Asks for a code only on new devices." },
-  ];
+  const policy = useTwoStepPolicy();
+  const mine = useMyTwoStep();
+  const setPolicy = useSetTwoStepPolicy();
+  const forget = useForgetDevice();
   const canManage = can("security.manage") || can("configuration.manage");
+  const fail = (e: unknown) => toast.show({ tone: "danger", message: describeError(e).body });
   return (
     <div className="fb-set__body" data-screen-label="S7#2 Settings › Two-step sign-in">
-      
       <div className="fb-set-cards">
         <Panel title="Policy">
-          {rows.map((r) => (
-            <label key={r.key} className="fb-os-check">
+          {policy.isPending ? <LoadingState label="Loading the policy" lines={2} /> : null}
+          {policy.isError ? <QueryFailure error={policy.error} area="The two-step policy" onRetry={() => void policy.refetch()} /> : null}
+          {policy.data ? (
+            <label className="fb-os-check">
               <input
                 type="checkbox"
-                checked={demo.policy[r.key]}
-                disabled={!canManage}
-                onChange={(e) => {
-                  orgSideDemo.setPolicy(r.key, e.target.checked);
-                  toast.show({ message: "Policy saved. It is recorded in the audit log.", tone: "success" });
-                }}
+                checked={policy.data.required}
+                disabled={!canManage || setPolicy.isPending}
+                onChange={(e) =>
+                  setPolicy.mutate(e.target.checked, {
+                    onSuccess: (r) =>
+                      toast.show({
+                        message: r.required
+                          ? `Two-step sign-in is now required.${r.signedOut ? ` ${r.signedOut} member${r.signedOut === 1 ? "" : "s"} without it were signed out.` : ""}`
+                          : "Two-step sign-in is no longer required. The change is recorded in the audit log.",
+                        tone: "success",
+                      }),
+                    onError: fail,
+                  })
+                }
               />
               <span>
-                <b>{r.label}</b>
-                <span>{r.help}</span>
+                <b>Require for everyone in this organisation</b>
+                <span>
+                  People without it set up are walked through enrolment at their next sign-in. Trusted devices skip the code for {policy.data.trustedDeviceDays} days.
+                </span>
               </span>
             </label>
-          ))}
+          ) : null}
           <div className="fb-prefs-row" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Link className="fb-btn fb-btn--secondary" href="/two-step?demo=1">
-              Preview the code screen
-            </Link>
-            <Link className="fb-btn fb-btn--secondary" href="/two-step/setup">
-              Set up an authenticator
-            </Link>
+            {mine.data && !mine.data.enabled ? (
+              <Link className="fb-btn fb-btn--secondary" href="/two-step/setup">
+                Set up an authenticator
+              </Link>
+            ) : null}
+            {mine.data?.enabled ? <span className="fb-set-muted">Your two-step sign-in is on · {mine.data.backupCodesRemaining} backup codes left.</span> : null}
           </div>
         </Panel>
         <Panel title="Trusted devices" flush>
-          {demo.devices.length === 0 ? <p className="fb-set-muted" style={{ padding: "0 22px 18px" }}>No trusted devices. The next sign-in on any device asks for a code.</p> : null}
-          {demo.devices.map((d) => (
+          {mine.isPending ? <LoadingState label="Loading your devices" lines={2} /> : null}
+          {mine.isError ? <QueryFailure error={mine.error} area="Your trusted devices" onRetry={() => void mine.refetch()} /> : null}
+          {mine.data && mine.data.trustedDevices.length === 0 ? (
+            <p className="fb-set-muted" style={{ padding: "0 22px 18px" }}>
+              No trusted devices. The next sign-in on any device asks for a code.
+            </p>
+          ) : null}
+          {mine.data?.trustedDevices.map((d) => (
             <div key={d.id} className="fb-set-row">
               <Smartphone size={17} aria-hidden="true" />
               <div className="fb-set-row__main">
-                <div className="fb-set-row__name">{d.label}</div>
-                <div className="fb-set-row__meta">{d.meta}</div>
+                <div className="fb-set-row__name">{d.label ?? "Unnamed device"}</div>
+                <div className="fb-set-row__meta">
+                  Trusted until {new Date(d.expiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · last used{" "}
+                  {new Date(d.lastUsedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                </div>
               </div>
               <Button
                 variant="danger"
                 size="sm"
-                onClick={() => {
-                  orgSideDemo.forgetDevice(d.id);
-                  toast.show({ message: `${d.label} forgotten. It will ask for a code next time.` });
-                }}
+                onClick={() =>
+                  forget.mutate(d.id, {
+                    onSuccess: () => toast.show({ message: `${d.label ?? "The device"} forgotten. It will ask for a code next time.` }),
+                    onError: fail,
+                  })
+                }
               >
                 Forget
               </Button>
-            </div>
-          ))}
-        </Panel>
-        <Panel title="Unusual activity alerts" flush>
-          {DEMO_ANOMALIES.map((a) => (
-            <div key={a.id} className="fb-set-row">
-              <div className="fb-set-row__main">
-                <div className="fb-set-row__name">{a.label}</div>
-                <div className="fb-set-row__meta">{a.meta}</div>
-              </div>
             </div>
           ))}
         </Panel>

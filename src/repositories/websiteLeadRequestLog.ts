@@ -9,7 +9,8 @@ export type WebsiteLeadRequestOutcome =
   | "PAYLOAD_TOO_LARGE"
   | "VALIDATION_FAILED"
   | "HONEYPOT_TRIGGERED"
-  | "CAPTCHA_FAILED";
+  | "CAPTCHA_FAILED"
+  | "SPAM_CONTENT";
 
 export interface RecordWebsiteLeadRequestInput {
   organizationId?: string | null;

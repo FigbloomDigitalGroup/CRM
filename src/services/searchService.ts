@@ -3,7 +3,7 @@ import type { AuthContext } from "../auth/context";
 import { hasPermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
 import { phoneTail } from "../lib/matching";
-import type { Page, PageRequest } from "../lib/pagination";
+import { buildPage, resolvePaging, type Page, type PageRequest } from "../lib/pagination";
 import { clearRecentSearches, listRecentSearches, phoneMatchIds, rememberSearch } from "../repositories/search";
 import { listCompanies, listCompaniesPage } from "./companyService";
 import { listContacts, listContactsPage } from "./contactService";
@@ -125,8 +125,10 @@ export async function globalSearch(
 // Search v2 (FIG-1041, B2.12)
 // ---------------------------------------------------------------------------
 
-export type SearchGroupType = "companies" | "contacts" | "leads" | "deals" | "tasks";
+export type SearchGroupType = "companies" | "contacts" | "leads" | "deals" | "tasks" | "messages";
+/** The record groups: what "some results hidden" is judged against. Chat messages are a group of their own (FIG-1384), shown only to people who may use chat. */
 export const SEARCH_GROUP_TYPES: SearchGroupType[] = ["companies", "contacts", "leads", "deals", "tasks"];
+export const SEARCHABLE_GROUP_TYPES: SearchGroupType[] = [...SEARCH_GROUP_TYPES, "messages"];
 export type ArchivedMode = "exclude" | "include" | "only";
 
 export interface SearchRequest {
@@ -147,6 +149,7 @@ const GROUP_LABEL: Record<SearchGroupType, string> = {
   leads: "Leads",
   deals: "Deals",
   tasks: "Tasks",
+  messages: "Messages",
 };
 const GROUP_PREVIEW_SIZE = 5;
 
@@ -177,6 +180,7 @@ function allowedGroups(ctx: AuthContext): { allowed: Set<SearchGroupType>; limit
     allowed.add("tasks");
     if (!hasPermission(ctx, "tasks.view.all")) limited.push("tasks");
   }
+  if (hasPermission(ctx, "chat.view")) allowed.add("messages");
   return { allowed, limited };
 }
 
@@ -207,7 +211,7 @@ export async function searchAll(ctx: AuthContext, request: SearchRequest) {
   const phone = /^[+()\d\s.-]{7,}$/.test(q) && tail ? await phoneMatchIds(ctx.organizationId, tail) : null;
   const paging = request.type ? request.paging ?? {} : { pageSize: GROUP_PREVIEW_SIZE };
   const archive = archiveFilter(archived);
-  const wanted = SEARCH_GROUP_TYPES.filter((t) => allowed.has(t) && (!request.type || request.type === t));
+  const wanted = SEARCHABLE_GROUP_TYPES.filter((t) => allowed.has(t) && (!request.type || request.type === t));
 
   const run: Record<SearchGroupType, () => Promise<Page<SearchResultItem>>> = {
     companies: async () => {
@@ -258,6 +262,17 @@ export async function searchAll(ctx: AuthContext, request: SearchRequest) {
         sublabel: t.dueAt ? `Due ${t.dueAt.toISOString().slice(0, 10)}` : t.status,
         archived: t.archivedAt !== null,
       }));
+    },
+    // Chat messages the caller may read, matched on what they are allowed to see (FIG-1384). Off when the Communication group is off.
+    messages: async () => {
+      try {
+        const { searchMessages } = await import("./chatService");
+        const page = await searchMessages(ctx, q, paging);
+        return mapPage(page, (m) => ({ id: m.id, label: (m.body ?? "").slice(0, 120), sublabel: [m.channelName ? `#${m.channelName}` : "Direct message", m.authorName].filter(Boolean).join(" · "), archived: false }));
+      } catch (err) {
+        if ((err as Error).name === "FeatureUnavailableError") return buildPage<SearchResultItem>([], 0, resolvePaging(paging));
+        throw err;
+      }
     },
   };
 

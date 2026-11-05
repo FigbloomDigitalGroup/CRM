@@ -3,25 +3,10 @@
 import Link from "next/link";
 import { Check, Sparkles, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { demoRespond } from "./demo/respond";
-import { DAILY_LIMIT, type AskContext, type AssistantMessage, type ProposedAction, type Respond } from "./types";
+import { explainAssistantError } from "./api";
+import type { AskContext, AssistantMessage, ProposedAction, Respond } from "./types";
 
 const PROMPTS = ["Which proposals have no reply after a week?", "Show Hot leads with no task", "What’s overdue?", "What’s my open pipeline worth?"];
-
-function usedToday(): number {
-  try {
-    return Number(localStorage.getItem(`figbloom-demo-ask-count:${new Date().toISOString().slice(0, 10)}`) ?? "0") || 0;
-  } catch {
-    return 0;
-  }
-}
-function countOne(n: number) {
-  try {
-    localStorage.setItem(`figbloom-demo-ask-count:${new Date().toISOString().slice(0, 10)}`, String(n));
-  } catch {
-    /* the counter just restarts */
-  }
-}
 
 export interface AssistantPanelProps {
   open: boolean;
@@ -29,11 +14,19 @@ export interface AssistantPanelProps {
   /** The organisation's switch (Settings, AI assistant). Off: the panel explains and offers nothing. */
   enabled: boolean;
   ctx: AskContext;
-  respond?: Respond;
-  /** Runs the confirmed action. Nothing calls this until the person presses Confirm. */
-  onConfirmAction?: (action: ProposedAction) => void | Promise<void>;
+  /** Asks the real API (`useAssistantActions().respond`). */
+  respond: Respond;
+  /** Runs the confirmed action on the server. Nothing calls this until the person presses Confirm; the card says Done only after it resolves. */
+  onConfirmAction: (action: ProposedAction) => Promise<void>;
+  /** Tells the server the suggestion was declined (Not now). */
+  onDismissAction?: (action: ProposedAction) => Promise<void>;
+  onFeedback?: (requestId: string, value: "up" | "down") => Promise<void>;
   settingsHref?: string;
-  limit?: number;
+  /** Today's usage, from the server (`/assistant/settings`). Null while it loads or when it could not be read. */
+  usage?: { today: number; limit: number } | null;
+  /** Set when the server says the assistant cannot be used (switched off, release, role, not set up): the panel explains it and shows no input. */
+  unavailable?: string | null;
+  loading?: boolean;
 }
 
 /**
@@ -41,16 +34,15 @@ export interface AssistantPanelProps {
  * and send themselves, and proposes actions as cards. An action runs only when the person presses Confirm on its card; a card that is not
  * confirmed does nothing. When the organisation switches the assistant off the panel says so and shows no input.
  */
-export function AssistantPanel({ open, onClose, enabled, ctx, respond = demoRespond, onConfirmAction, settingsHref, limit = DAILY_LIMIT }: AssistantPanelProps) {
+export function AssistantPanel({ open, onClose, enabled, ctx, respond, onConfirmAction, onDismissAction, onFeedback, settingsHref, usage = null, unavailable = null, loading = false }: AssistantPanelProps) {
   const [thread, setThread] = useState<AssistantMessage[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [used, setUsed] = useState(0);
+  const [sent, setSent] = useState(0);
   const lastQuestion = useRef("");
   const input = useRef<HTMLInputElement>(null);
   const end = useRef<HTMLDivElement>(null);
 
-  useEffect(() => setUsed(usedToday()), []);
   useEffect(() => {
     if (open && enabled) input.current?.focus();
   }, [open, enabled]);
@@ -60,7 +52,9 @@ export function AssistantPanel({ open, onClose, enabled, ctx, respond = demoResp
 
   if (!open) return null;
 
-  const atLimit = used >= limit;
+  const limit = usage?.limit ?? null;
+  const used = usage ? Math.max(usage.today, usage ? 0 : sent) : sent;
+  const atLimit = limit !== null && used >= limit;
 
   async function ask(question: string) {
     const q = question.trim();
@@ -71,14 +65,10 @@ export function AssistantPanel({ open, onClose, enabled, ctx, respond = demoResp
     try {
       const replies = await respond(q, ctx);
       setThread((t) => [...t.filter((m) => !m.error), ...replies]);
-      const next = used + 1;
-      setUsed(next);
-      countOne(next);
-    } catch {
-      setThread((t) => [
-        ...t.filter((m) => !m.error),
-        { id: `e${Date.now()}`, who: "ai", error: true, text: "I couldn’t answer that just now. Nothing was changed. Try again in a moment." },
-      ]);
+      setSent((n) => n + 1);
+    } catch (e) {
+      const why = explainAssistantError(e);
+      setThread((t) => [...t.filter((m) => !m.error), { id: `e${Date.now()}`, who: "ai", error: true, retryable: why.retryable, text: why.text }]);
     } finally {
       setBusy(false);
     }
@@ -88,12 +78,28 @@ export function AssistantPanel({ open, onClose, enabled, ctx, respond = demoResp
 
   async function confirm(m: AssistantMessage) {
     if (!m.action || m.actionState !== "pending") return;
-    patch(m.id, { actionState: "confirmed" });
+    patch(m.id, { actionState: "confirming", actionError: undefined });
     try {
-      await onConfirmAction?.(m.action);
-    } catch {
-      patch(m.id, { actionState: "pending" });
+      await onConfirmAction(m.action);
+      patch(m.id, { actionState: "confirmed" });
+    } catch (e) {
+      patch(m.id, { actionState: "pending", actionError: explainAssistantError(e).text });
     }
+  }
+
+  async function decline(m: AssistantMessage) {
+    if (!m.action) return;
+    patch(m.id, { actionState: "dismissed" });
+    try {
+      await onDismissAction?.(m.action);
+    } catch {
+      /* the card is gone for this person either way; an unanswered suggestion expires on its own after 30 minutes */
+    }
+  }
+
+  function rate(m: AssistantMessage, value: "up" | "down") {
+    patch(m.id, { feedback: value });
+    if (m.requestId) void onFeedback?.(m.requestId, value)?.catch(() => patch(m.id, { feedback: undefined }));
   }
 
   return (
@@ -113,7 +119,15 @@ export function AssistantPanel({ open, onClose, enabled, ctx, respond = demoResp
         </button>
       </header>
 
-      {!enabled ? (
+      {unavailable ? (
+        <div className="fb-ask__off" role="status" data-testid="assistant-unavailable">
+          <strong>The assistant isn’t available</strong> {unavailable}
+        </div>
+      ) : loading ? (
+        <div className="fb-ask__off" role="status" data-testid="assistant-loading">
+          Checking whether the assistant is on for your organisation…
+        </div>
+      ) : !enabled ? (
         <div className="fb-ask__off" role="status" data-testid="assistant-off">
           <strong>The assistant is switched off</strong> for your organisation. Nothing you type here is read or sent anywhere.
           {settingsHref ? (
@@ -146,7 +160,7 @@ export function AssistantPanel({ open, onClose, enabled, ctx, respond = demoResp
                   </div>
                 ) : null}
                 <div>{m.text}</div>
-                {m.error ? (
+                {m.error && m.retryable ? (
                   <button type="button" className="fb-ask__chip" onClick={() => void ask(lastQuestion.current)}>
                     Try again
                   </button>
@@ -175,18 +189,24 @@ export function AssistantPanel({ open, onClose, enabled, ctx, respond = demoResp
                     <span className="fb-ask__eyebrow">{m.actionState === "confirmed" ? "DONE" : "WILL CREATE · NOTHING HAPPENS UNTIL YOU CONFIRM"}</span>
                     <strong>{m.action.title}</strong>
                     <span>
-                      For {m.action.forWhom} · due {m.action.due} · {m.action.about}
+                      For {m.action.forWhom} · due {m.action.due}
+                      {m.action.about ? ` · ${m.action.about}` : ""}
                     </span>
+                    {m.actionError ? (
+                      <span role="alert" className="fb-ask__hint">
+                        {m.actionError}
+                      </span>
+                    ) : null}
                     {m.actionState === "confirmed" ? (
                       <span className="fb-ask__done">
                         <Check size={14} aria-hidden="true" /> Task created
                       </span>
                     ) : (
                       <span className="fb-ask__btns">
-                        <button type="button" className="fb-ask__confirm" onClick={() => void confirm(m)}>
-                          Confirm
+                        <button type="button" className="fb-ask__confirm" disabled={m.actionState === "confirming"} onClick={() => void confirm(m)}>
+                          {m.actionState === "confirming" ? "Confirming…" : "Confirm"}
                         </button>
-                        <button type="button" className="fb-ask__chip" onClick={() => patch(m.id, { actionState: "dismissed" })}>
+                        <button type="button" className="fb-ask__chip" disabled={m.actionState === "confirming"} onClick={() => void decline(m)}>
                           Not now
                         </button>
                       </span>
@@ -196,10 +216,10 @@ export function AssistantPanel({ open, onClose, enabled, ctx, respond = demoResp
                 {m.who === "ai" && !m.error ? (
                   <div className="fb-ask__foot">
                     <span>{m.basis}</span>
-                    <button type="button" aria-label="Helpful" aria-pressed={m.feedback === "up"} onClick={() => patch(m.id, { feedback: "up" })}>
+                    <button type="button" aria-label="Helpful" aria-pressed={m.feedback === "up"} onClick={() => rate(m, "up")}>
                       <ThumbsUp size={14} aria-hidden="true" />
                     </button>
-                    <button type="button" aria-label="Not helpful" aria-pressed={m.feedback === "down"} onClick={() => patch(m.id, { feedback: "down" })}>
+                    <button type="button" aria-label="Not helpful" aria-pressed={m.feedback === "down"} onClick={() => rate(m, "down")}>
                       <ThumbsDown size={14} aria-hidden="true" />
                     </button>
                   </div>
@@ -246,7 +266,7 @@ export function AssistantPanel({ open, onClose, enabled, ctx, respond = demoResp
               </button>
             </div>
             <div className="fb-ask__hint">
-              {used} of {limit} questions used today · I only suggest; you confirm every change.
+              {limit !== null ? `${used} of ${limit} questions used today · ` : ""}I only suggest; you confirm every change.
             </div>
           </form>
         </>

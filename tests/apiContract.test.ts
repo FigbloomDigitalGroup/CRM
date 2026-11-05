@@ -93,8 +93,8 @@ describe("the document covers the API", () => {
 describe("the frozen contract", () => {
   const frozenText = readFileSync(FROZEN, "utf8");
 
-  it("is version 1.0.0 of the API", () => {
-    expect(JSON.parse(frozenText).info.version).toBe("1.0.0");
+  it("is version 1.1.0 of the API", () => {
+    expect(JSON.parse(frozenText).info.version).toBe("1.1.0");
     expect(API_VERSION).toMatch(/^1\./);
   });
 

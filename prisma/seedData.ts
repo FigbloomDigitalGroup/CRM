@@ -306,6 +306,31 @@ export const PERMISSIONS: { key: string; area: string; description: string }[] =
       area: "Communications",
       description: "Log a communication.",
     },
+    {
+      key: "chat.view",
+      area: "Communication",
+      description: "Open Chat and read the channels you are in (and public channels).",
+    },
+    {
+      key: "chat.post",
+      area: "Communication",
+      description: "Post, react and start direct messages and channels in Chat.",
+    },
+    {
+      key: "chat.channels.manage",
+      area: "Communication",
+      description: "Rename, archive and manage the members of any channel you can see.",
+    },
+    {
+      key: "mail.use",
+      area: "Communication",
+      description: "Use Mail: read the logged inbox and send from a record.",
+    },
+    {
+      key: "meetings.schedule",
+      area: "Communication",
+      description: "Start or schedule a meeting from a record.",
+    },
 
     {
       key: "proposals.view",
@@ -509,9 +534,15 @@ export const PERMISSION_MIN_RELEASE: Record<string, "v1" | "v1.1" | "v2"> = {
   "ai.use": "v1.1",
   "ai.configure": "v1.1",
   "deals.margin": "v1.1",
+  "chat.view": "v1.1",
+  "chat.post": "v1.1",
+  "chat.channels.manage": "v1.1",
+  "mail.use": "v1.1",
+  "meetings.schedule": "v1.1",
   "api_tokens.manage": "v2",
   "webhooks.manage": "v2",
-  "tickets.manage": "v2",
+  // FIG-1155 (B6.23): tickets arrive with V1.1; only Management and the flagged Customer Support role hold the key.
+  "tickets.manage": "v1.1",
 };
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -586,6 +617,11 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "tickets.manage",
     "deals.handoff",
     "handoff.manage",
+    "chat.view",
+    "chat.post",
+    "chat.channels.manage",
+    "mail.use",
+    "meetings.schedule",
   ],
   SALES: [
     "leads.view.own",
@@ -626,6 +662,10 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "leads.view.shared",
     "leads.claim",
     "deals.handoff",
+    "chat.view",
+    "chat.post",
+    "mail.use",
+    "meetings.schedule",
   ],
   DELIVERY: [
     "contacts.view",
@@ -643,6 +683,10 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "attachments.manage",
     "ai.use",
     "handoff.manage",
+    "chat.view",
+    "chat.post",
+    "mail.use",
+    "meetings.schedule",
   ],
   FINANCE: [
     "contacts.view",
@@ -656,6 +700,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "ai.use",
     "payments.manage",
     "finance.followup.note",
+    "chat.view",
+    "chat.post",
   ],
   RESTRICTED_TECHNICAL: [
     "tasks.view.own",
@@ -664,6 +710,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "activities.view",
     "communications.view",
     "mywork.view",
+    "chat.view",
+    "chat.post",
   ],
   // Proposed sixth role (docs/DECISIONS.md 2.4): behind `customer_support.role`.
   CUSTOMER_SUPPORT: [
@@ -681,5 +729,9 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "attachments.manage",
     "ai.use",
     "tickets.manage",
+    "chat.view",
+    "chat.post",
+    "mail.use",
+    "meetings.schedule",
   ],
 };

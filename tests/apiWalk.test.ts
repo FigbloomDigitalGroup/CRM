@@ -71,6 +71,8 @@ function letter(status: number): string {
 interface Walked {
   cells: Record<string, string>;
   unexplained: string[];
+  /** Routes that answered Management with the release refusal (FEATURE_UNAVAILABLE): a V1.1 feature in a V1 organisation. */
+  unavailable: Set<string>;
   leaks: string[];
   serverErrors: string[];
   requestSchemas: Record<string, { body?: unknown; query?: unknown }>;
@@ -104,7 +106,7 @@ describe("generated authorization matrix (G1.02)", () => {
     routeCount = routes.reduce((n, r) => n + r.methods.length, 0);
     const jobs = routes.flatMap((route) => route.methods.map((method) => ({ route, method }))).sort((a, b) => Number(a.method !== "GET") - Number(b.method !== "GET") || a.route.path.localeCompare(b.route.path));
 
-    walked = { cells: {}, unexplained: [], leaks: [], serverErrors: [], requestSchemas: {}, examples: {}, shapes: {}, synthesizedCount: 0 };
+    walked = { cells: {}, unexplained: [], unavailable: new Set(), leaks: [], serverErrors: [], requestSchemas: {}, examples: {}, shapes: {}, synthesizedCount: 0 };
     const stable = createStabiliser();
     let dirty = false;
     const canSeeDealValue = (ctx: AuthContext) => hasPermission(ctx, "deals.view.value") || ctx.membershipId === world.ctx.SALES.membershipId;
@@ -129,7 +131,12 @@ describe("generated authorization matrix (G1.02)", () => {
         if (method !== "GET" && res.status < 300) dirty = true;
 
         if (res.status >= 500) walked.serverErrors.push(`${role} ${key} -> ${res.status} ${res.code ?? ""}`);
-        if (res.status === 403) {
+        if (res.status === 403 && res.code === "FEATURE_UNAVAILABLE") {
+          // A different refusal from a missing permission: the feature belongs to a later release than this organisation's.
+          // It must still say so in the standard envelope, and it never depends on the role.
+          if (!res.json?.message || !res.json?.requestId) walked.unexplained.push(`${role} ${key}: release refusal without message or request id`);
+          if (role === "MANAGEMENT") walked.unavailable.add(key);
+        } else if (res.status === 403) {
           const d = res.json?.denial;
           const ok = res.code === "FORBIDDEN" && res.json?.message && res.json?.requestId && d && typeof d.yourRole === "string" && Array.isArray(d.ownerRoles) && Array.isArray(d.whoToAsk);
           if (!ok) walked.unexplained.push(`${role} ${key}: ${JSON.stringify(res.json).slice(0, 160)}`);
@@ -235,7 +242,9 @@ describe("generated authorization matrix (G1.02)", () => {
     });
 
     it("gives Management a way into every route it is not deliberately kept out of", () => {
-      const locked = rows().filter(([key, row]) => row[0] === "D" && !(key in MANAGEMENT_EXCLUDED)).map(([key]) => key);
+      // A route that is not in this organisation's release is closed to everyone, Management included; V1.1 routes are walked on
+      // a V1.1 organisation by G2.01 (FIG-1156).
+      const locked = rows().filter(([key, row]) => row[0] === "D" && !(key in MANAGEMENT_EXCLUDED) && !walked.unavailable.has(key)).map(([key]) => key);
       expect(locked).toEqual([]);
     });
 

@@ -59,7 +59,7 @@ describe("sidebar navigation per role", () => {
   });
 
   it("Restricted Technical sees My work and their tasks, and nothing about leads, deals or customers", () => {
-    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Communication: Conversations, Chat, Video Conference", "Insights & settings: Preferences"]);
+    expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Communication: Conversations, Chat", "Insights & settings: Preferences"]);
   });
 
   it("Customer Support (behind its flag) sees customers and tasks, no pipeline", () => {
@@ -72,10 +72,12 @@ describe("sidebar navigation per role", () => {
     ]);
   });
 
-  it("draws no link to a demo-only screen (Forecast, Approvals) where demo screens are off, so production never links to a 404", () => {
-    const labels = (role: string) => buildNav({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1" }).flatMap((s) => s.items.map((i) => i.label));
-    for (const role of ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "CUSTOMER_SUPPORT"]) {
-      expect(labels(role), role).not.toContain("Forecast & targets");
+  it("Forecast and Approvals are wired to the real API (no longer demo-only): they follow their permission keys with or without demo screens, and a role without the keys sees neither", () => {
+    const labels = (role: string, demoScreens?: boolean) => buildNav({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1", demoScreens }).flatMap((s) => s.items.map((i) => i.label));
+    expect(labels("MANAGEMENT")).toEqual(labels("MANAGEMENT", true));
+    expect(labels("MANAGEMENT")).toContain("Forecast & targets");
+    expect(labels("MANAGEMENT")).toContain("Approvals");
+    for (const role of ["CUSTOMER_SUPPORT"]) {
       expect(labels(role), role).not.toContain("Approvals");
     }
   });
@@ -88,15 +90,15 @@ describe("sidebar navigation per role", () => {
     }
   });
 
-  it("the Communication group is a dropdown; with demo screens off it holds Conversations only, so production links to no 404", () => {
+  it("the Communication group is a dropdown; Mail, Chat and Video follow their own permission keys (chat.view, mail.use, meetings.schedule), whether or not demo screens are on", () => {
     const sections = buildNav({ permissionKeys: ROLE_PERMISSIONS.MANAGEMENT!, membershipId: "m1" });
     const group = sections.find((s) => s.key === "communication")!;
     expect(group.collapsible).toBe(true);
-    expect(group.items.map((i) => i.label)).toEqual(["Conversations"]);
+    expect(group.items.map((i) => i.label)).toEqual(["Conversations", "Mail", "Chat", "Video Conference"]);
     expect(buildNav({ permissionKeys: ROLE_PERMISSIONS.MANAGEMENT!, membershipId: "m1", demoScreens: true }).find((s) => s.key === "communication")!.items.map((i) => i.path)).toEqual(["/conversations", "/mail", "/chat", "/video"]);
   });
 
-  it("Mail needs the right to send, Chat is for every member, Video Conference follows the calendar's task permission", () => {
+  it("Mail needs mail.use, Chat needs chat.view, Video Conference needs meetings.schedule (the V1.1 keys)", () => {
     const labels = (role: string) => buildNav({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1", demoScreens: true }).find((s) => s.key === "communication")?.items.map((i) => i.label) ?? [];
     expect(labels("FINANCE")).toEqual(["Chat"]);
     expect(labels("RESTRICTED_TECHNICAL")).not.toContain("Mail");

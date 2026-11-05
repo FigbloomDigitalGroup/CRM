@@ -120,3 +120,27 @@ export async function getCsvText(path: string, query?: Record<string, string | u
   }
   return response.text();
 }
+
+/**
+ * A call to an API route that is not in the frozen V1 contract (the V1.1 two-step sign-in and organisation switcher routes, see docs/TWO_STEP_SIGN_IN.md
+ * and docs/MULTI_ORGANISATION.md). Until `npm run contract:update` adds them to the typed client they are called here, with the same error envelope as
+ * every other call (`ApiRequestError`). It is deliberately free of the 401 "signed out" event: a wrong two-step code is an ordinary 401.
+ */
+export async function callUncontracted<T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method,
+    headers: { accept: "application/json", ...(body === undefined ? {} : { "content-type": "application/json" }) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    credentials: "same-origin",
+  });
+  if (!response.ok) {
+    let envelope: ConstructorParameters<typeof ApiRequestError>[1];
+    try {
+      envelope = (await response.json()) as typeof envelope;
+    } catch {
+      envelope = { error: response.statusText, code: "INTERNAL_ERROR", message: response.statusText, fieldErrors: [], requestId: "" };
+    }
+    throw new ApiRequestError(response.status, envelope, `${method} ${path}`);
+  }
+  return (response.status === 204 ? undefined : await response.json()) as T;
+}

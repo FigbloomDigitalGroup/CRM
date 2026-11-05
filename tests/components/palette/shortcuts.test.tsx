@@ -1,21 +1,22 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ToastProvider } from "../../../src/ui/components/toast";
-import { MemberProvider, testMember } from "../../../src/ui/data/member";
+import { renderScreen, type Handlers } from "../screens/home/harness";
 import { ToolsOverlays, ToolsTriggers, toolsEnabled, toolsPanel } from "../../../src/ui/screens/assistant/ToolsHost";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ usePathname: () => "/o/figbloom/leads/abc", useRouter: () => ({ push, refresh: vi.fn() }) }));
 
-function mount(keys: string[]) {
-  render(
-    <MemberProvider value={testMember({ permissionKeys: keys, roleName: "Sales" })}>
-      <ToastProvider>
-        <ToolsTriggers />
-        <input aria-label="A field" />
-        <ToolsOverlays />
-      </ToastProvider>
-    </MemberProvider>,
+const SETTINGS = { enabled: true, providerConfigured: true, options: {}, limits: { perUser: 15, perOrganisation: 500 }, usage: { today: 0, remaining: 15 }, canConfigure: false };
+
+function mount(keys: string[], handlers: Handlers = {}) {
+  return renderScreen(
+    <>
+      <ToolsTriggers />
+      <input aria-label="A field" />
+      <ToolsOverlays />
+    </>,
+    { getAssistantSettings: () => SETTINGS, ...handlers },
+    { permissionKeys: keys, roleName: "Sales" },
   );
 }
 
@@ -87,11 +88,32 @@ describe("global keyboard shortcuts (X3, FIG-1172)", () => {
     expect(screen.getByTestId("help-panel")).toBeInTheDocument();
   });
 
-  it("opens the assistant in its off state when the organisation switched it off", () => {
-    localStorage.setItem("figbloom-demo-ai-settings", JSON.stringify({ assist: false }));
-    mount([]);
+  it("opens the assistant in its off state when the server says the organisation switched it off", async () => {
+    mount([], { getAssistantSettings: () => ({ ...SETTINGS, enabled: false }) });
     fireEvent.click(screen.getByRole("button", { name: "Ask Figbloom assistant" }));
-    expect(screen.getByTestId("assistant-off")).toBeInTheDocument();
+    expect(await screen.findByTestId("assistant-off")).toBeInTheDocument();
+  });
+
+  it("explains an organisation that is not on V1.1 instead of failing", async () => {
+    mount([], {
+      getAssistantSettings: () => {
+        throw { status: 403, envelope: { code: "FEATURE_UNAVAILABLE", message: "x", requestId: "r", fieldErrors: [] } };
+      },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Ask Figbloom assistant" }));
+    expect(await screen.findByTestId("assistant-unavailable")).toHaveTextContent("switched off for your organisation");
+  });
+
+  it("Help shows the role-filtered tips and release notes from the API", async () => {
+    mount([], {
+      getHelp: () => ({ items: [], tips: { title: "Leads", tips: ["Server tip for this role."] } }),
+      getWhatsNew: () => ({ release: "v1.1", items: [{ id: "n1", release: "v1.1", date: "2026-11-01", title: "Server note", detail: "From the API." }] }),
+      getCommands: () => ({ commands: [], search: {}, shortcuts: [{ label: "Server shortcut", keys: "Z" }] }),
+    });
+    fireEvent.keyDown(window, { key: "?" });
+    expect(await screen.findByText("Server tip for this role.")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Server note")).toBeInTheDocument());
+    expect(screen.getByText("Server shortcut")).toBeInTheDocument();
   });
 
   it("is off in a production build unless demo screens are switched on", () => {

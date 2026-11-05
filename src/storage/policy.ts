@@ -92,6 +92,18 @@ export function checkFileName(raw: string): NameCheck {
   return { ok: true, name };
 }
 
+/** A file name made safe to place in a header or a download name: no control characters, quotes, line or bidi separators. */
+export function sanitiseFileName(raw: string): string {
+  // eslint-disable-next-line no-control-regex
+  const cleaned = raw.normalize("NFC").replace(/[\u0000-\u001f\u007f"\\\u2028\u2029\u200b-\u200f\u202a-\u202e\u2066-\u2069]/g, "_").trim();
+  return cleaned.length > 0 ? cleaned.slice(0, 255) : "file";
+}
+
+/** A media type is `type/subtype` made of token characters only; anything else is sent as an opaque download. */
+export function safeMimeType(raw: string): string {
+  return /^[a-z0-9][a-z0-9!#$&^_.+-]{0,63}\/[a-z0-9][a-z0-9!#$&^_.+-]{0,63}$/i.test(raw) ? raw.toLowerCase() : "application/octet-stream";
+}
+
 export function findAllowedType(policy: FilePolicy, mime: string, extension: string): AllowedType | undefined {
   return policy.types.find((t) => t.mime === mime.toLowerCase() && t.extensions.includes(extension));
 }

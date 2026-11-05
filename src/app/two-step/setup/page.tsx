@@ -1,9 +1,6 @@
-import { notFound } from "next/navigation";
-import { demoScreensEnabled } from "@/ui/demo/enabled";
 import { SetupForm } from "./SetupForm";
 
-/** Two-step enrolment (FIG-1167), a new route on demo data until B6.02. */
+/** Two-step enrolment (FIG-1167): at sign-in when the organisation requires it, or from Settings. A new route. */
 export default function TwoStepSetupPage() {
-  if (!demoScreensEnabled()) notFound();
   return <SetupForm />;
 }

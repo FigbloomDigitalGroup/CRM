@@ -48,3 +48,10 @@ Stays: leads and deals that referred to them (unlinked), invoices and payments, 
 
 `POST /privacy/organisation-requests` records a request to export or delete the whole organisation and audits it; the platform team carries it out with two-person approval (B6.09, V1.1).
 Nothing is exported or deleted by the call.
+
+## Chat (FIG-1385)
+
+- Retention: `chatMessages` in the retention settings (days, 30 to 3650, kept until set). The daily `privacy.retention` job deletes older messages with their reactions, mentions and chat-only files, audits the count, and does nothing under a legal hold.
+- Export: the organisation export includes `chat_channels`, `chat_members`, `chat_messages`, `chat_reactions`, `chat_mentions` and `chat_attachments`, from that organisation only. Mail is in `communications.csv`.
+- Erasing a member (`eraseMemberChat`, called by the offboarding workflow): messages are anonymised (text and author removed, the message stays as "removed"), or deleted under the `DELETE` policy; reactions, mentions, memberships, read markers and presence are removed, their files deleted, and `@Their Name` in other messages is blanked. Audit entry `chat.member_erased` with counts only.
+- Erasing a customer contact also removes the text of chat messages naming them by email, phone or full name.

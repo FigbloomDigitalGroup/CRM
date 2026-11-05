@@ -60,6 +60,8 @@ export interface WebsiteLeadInput {
   service?: string;
   message?: string;
   utm?: Record<string, string>;
+  /** Set when the lead comes from a web form (FIG-1151): stamped on the lead so it can be traced to the form. */
+  webForm?: { id: string; name: string };
 }
 
 export interface WebsiteLeadResult {
@@ -315,8 +317,16 @@ export async function ingestWebsiteLead(
         ownerMembershipId,
         notes: input.message,
         qualificationData: {
-          source: "website_form",
+          source: input.webForm ? "web_form" : "website_form",
           utm: input.utm ?? {},
+          ...(input.webForm
+            ? {
+                formId: input.webForm.id,
+                formName: input.webForm.name,
+                // A warning for staff, never shown to the person who submitted the form.
+                duplicateWarning: { contact: contactMatched, company: companyMatched },
+              }
+            : {}),
           ...(input.service && !serviceInterestId
             ? { unmatchedService: input.service }
             : {}),

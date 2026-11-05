@@ -5,7 +5,8 @@ import { parseJsonBody } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { DealSchema, toDealDto } from "@/api/dto/deals";
 import { respond } from "@/api/respond";
-import { getDeal, updateDeal } from "@/services/dealService";
+import { getDeal } from "@/services/dealService";
+import { updateDealChecked } from "@/services/dealRuleService";
 
 const UpdateDealSchema = z.object({
   /** Organisation-defined custom field values (FIG-803); a field sent as null is cleared. */
@@ -52,6 +53,6 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const { orgSlug, dealId } = await params;
     const ctx = await resolveRequestContext(orgSlug);
     const body = await parseJsonBody(request, UpdateDealSchema);
-    return updateDeal(ctx, dealId, body);
+    return updateDealChecked(ctx, dealId, body);
   });
 }

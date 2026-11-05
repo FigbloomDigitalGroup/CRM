@@ -1,8 +1,9 @@
 import "@/ui/ui.css";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { UnauthorizedError } from "@/auth/errors";
+import { OrganizationUnavailableError, UnauthorizedError } from "@/auth/errors";
 import { resolveRequestContext, resolveUserContext } from "@/auth/requestContext";
+import { unauthenticatedLanding } from "@/auth/twoStep/pending";
 import { getMemberContext } from "@/services/meContextService";
 import { MemberProvider } from "@/ui/data/member";
 import { AppShell } from "@/ui/shell/AppShell";
@@ -43,7 +44,19 @@ export default async function OrgLayout({
     me = await getMemberContext({ userId: identity.userId, session: identity.session, orgSlug });
   } catch (err) {
     if (err instanceof UnauthorizedError) {
-      redirect("/login");
+      // A password-verified sign-in waiting for its second step goes to /two-step (FIG-1134); everyone else to sign-in.
+      redirect(unauthenticatedLanding(await cookies()));
+    }
+    // B6.05: the platform has suspended or is offboarding this organisation. Nothing of the app is served, whatever page was asked for.
+    if (err instanceof OrganizationUnavailableError) {
+      return (
+        <ThemeProvider initialLook={defaultLook()} initialDensity={null}>
+          <NoFlashScript />
+          <ApiProvider>
+            <SuspendedScreen organisation={err.organizationName} />
+          </ApiProvider>
+        </ThemeProvider>
+      );
     }
     return (
       <div className="auth-shell">
@@ -57,10 +70,11 @@ export default async function OrgLayout({
   // OS1 (FIG-1166): a suspended organisation gets the paused screen instead of the shell, whatever page was asked for. Demo cookie until B6.05.
   const demoScreens = demoScreensEnabled();
   const demoCookies = await cookies();
-  // Banners and the organisation switcher are opt-in demo states (a platform announcement, a person in several organisations), so the
-  // default shell is the design's single-organisation one. Switch on with `document.cookie = "fb_demo_banners=1; path=/"` (or `fb_demo_multiorg=1`).
+  // Banners and the organisation switcher are opt-in demo states (a platform announcement), so the
+  // default shell is the design's single-organisation one. Switch on with `document.cookie = "fb_demo_banners=1; path=/"` .
   const demoBanners = demoScreens && demoCookies.get("fb_demo_banners")?.value === "1";
-  const demoMultiOrg = demoScreens && demoCookies.get("fb_demo_multiorg")?.value === "1";
+  // The switcher is real (FIG-1133): shown to anyone who belongs to more than one organisation.
+  const multiOrg = me.organisations.length > 1;
   if (demoScreens && demoCookies.get("fb_demo_suspended")?.value === "1") {
     return (
       <ThemeProvider initialLook={defaultLook()} initialDensity={me.preferences?.density}>
@@ -128,7 +142,7 @@ export default async function OrgLayout({
         session={session}
         search={<GlobalSearch />}
         bell={<NotificationBell />}
-        organisationSwitcher={demoMultiOrg ? <OrgSwitcher /> : undefined}
+        organisationSwitcher={multiOrg ? <OrgSwitcher /> : undefined}
         banners={demoBanners ? <OrgBanners /> : undefined}
         identity={{
           name: me.user.name,

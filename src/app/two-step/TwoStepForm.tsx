@@ -1,56 +1,120 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { callUncontracted } from "@/ui/data/client";
+import { describeError } from "@/ui/errors";
 
 /**
- * A5, the two-step code screen (FIG-1167): a new page that comes after the frozen sign-in, only when two-step sign-in is on for the
- * organisation. It is not part of the frozen pages and does not touch them. Demo until B6.02: any 6 digits other than 000000 pass, any
- * XXXX-XXXX backup code passes, and five wrong tries lock the step for 30 minutes (as the design shows).
+ * A5, the two-step code screen (FIG-1167, wired to FIG-1134): a new page that comes after the frozen sign-in, only when two-step sign-in is needed.
+ * It is not part of the frozen pages and does not touch them. The password step left a ten-minute pending cookie; this page asks the API which
+ * second step it needs (`GET /api/auth/two-step/challenge`), sends the code (`POST /api/auth/two-step/verify`) and opens the organisation. Five wrong
+ * codes end the challenge, so the person signs in again (or uses a backup code, or asks Management for a reset).
  */
-const MAX_ATTEMPTS = 5;
+interface Landing {
+  organizationSlug: string;
+  awaitingAccess?: boolean;
+}
 
-export function TwoStepForm({ next = "/" }: { next?: string }) {
+export function landingFor(done: Landing): string {
+  return done.awaitingAccess || done.organizationSlug === "account" ? "/" : `/o/${done.organizationSlug}`;
+}
+
+export function TwoStepForm() {
+  const [phase, setPhase] = useState<"loading" | "ready" | "expired" | "failed">("loading");
   const [code, setCode] = useState("");
   const [useBackup, setUseBackup] = useState(false);
   const [remember, setRemember] = useState(true);
-  const [attempts, setAttempts] = useState(MAX_ATTEMPTS);
+  const [attempts, setAttempts] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
 
-  const locked = attempts <= 0;
+  useEffect(() => {
+    let alive = true;
+    callUncontracted<{ purpose: "VERIFY" | "ENROL"; attemptsLeft: number }>("GET", "/api/auth/two-step/challenge")
+      .then((c) => {
+        if (!alive) return;
+        if (c.purpose === "ENROL") {
+          window.location.assign("/two-step/setup");
+          return;
+        }
+        setAttempts(c.attemptsLeft);
+        setPhase("ready");
+      })
+      .catch((e) => {
+        if (alive) setPhase((e as { status?: number }).status === 401 ? "expired" : "failed");
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
-  function verify(e: React.FormEvent) {
+  const locked = attempts !== null && attempts <= 0;
+
+  async function verify(e: React.FormEvent) {
     e.preventDefault();
-    const c = code.replace(/\s/g, "");
-    const ok = useBackup ? /^[A-Z0-9]{4}-?[A-Z0-9]{4}$/i.test(c) : /^\d{6}$/.test(c) && c !== "000000";
+    const c = code.trim();
     if (!c) {
       setError(useBackup ? "Enter one of your backup codes." : "Enter the 6 digits from your app.");
       return;
     }
-    if (!ok) {
-      const left = attempts - 1;
-      setAttempts(left);
-      setError(left > 0 ? `That code didn’t work. ${left} attempt${left === 1 ? "" : "s"} left.` : "");
-      return;
-    }
+    setBusy(true);
     setError("");
-    setDone(true);
-    window.setTimeout(() => window.location.assign(next), 600);
+    try {
+      const result = await callUncontracted<Landing>("POST", "/api/auth/two-step/verify", { code: c, rememberDevice: useBackup ? undefined : remember });
+      setDone(true);
+      window.setTimeout(() => window.location.assign(landingFor(result)), 400);
+    } catch (err) {
+      const status = (err as { status?: number }).status;
+      if (status === 401) {
+        const left = Math.max(0, (attempts ?? 5) - 1);
+        setAttempts(left);
+        setError(left > 0 ? `That code didn’t work. ${left} attempt${left === 1 ? "" : "s"} left.` : "");
+      } else if (status === 429) {
+        setError("Too many tries. Wait a moment and try again.");
+      } else {
+        setError(describeError(err).body);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (phase === "loading" || phase === "expired" || phase === "failed") {
+    return (
+      <div className="auth-shell">
+        <div className="auth-card" data-screen-label="A5 Two-step sign-in" style={{ maxWidth: 440 }}>
+          <h1 style={{ fontSize: 24, margin: "0 0 8px" }}>{phase === "loading" ? "One moment" : phase === "expired" ? "Sign in again" : "Something went wrong"}</h1>
+          <p style={{ marginTop: 0 }} role={phase === "loading" ? "status" : undefined}>
+            {phase === "loading"
+              ? "Checking your sign-in…"
+              : phase === "expired"
+                ? "This sign-in step has expired or was already used. Sign in with your password again to get a new one."
+                : "We couldn’t check your sign-in. Check your connection and reload the page."}
+          </p>
+          {phase === "loading" ? null : (
+            <p style={{ fontSize: 13, marginBottom: 0 }}>
+              <a href="/login">Back to sign-in</a>
+            </p>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="auth-shell">
       <div className="auth-card" data-screen-label="A5 Two-step sign-in" style={{ maxWidth: 440 }}>
         <span style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#e8f0fa", color: "#1f5fa8", display: "inline-block", marginBottom: 12 }}>
-          Two-step sign-in · V1.1
+          Two-step sign-in
         </span>
         <h1 style={{ fontSize: 24, margin: "0 0 8px" }}>{locked ? "Too many wrong codes" : useBackup ? "Enter a backup code" : "Enter your 6-digit code"}</h1>
         <p style={{ marginTop: 0 }}>
           {locked
-            ? "Too many wrong codes. Sign-in is locked for 30 minutes and Management was told. Ask Management to reset two-step sign-in if you lost your phone."
+            ? "Too many wrong codes. This sign-in has ended and Management was told. Sign in again, or ask Management to reset two-step sign-in if you lost your phone."
             : useBackup
               ? "Each backup code works once. Lost them all? Ask Management to reset two-step sign-in."
-              : "Open your authenticator app and type the code for Figbloom CRM. This step appears after the sign-in page, only when two-step sign-in is on for your organisation."}
+              : "Open your authenticator app and type the code for Figbloom CRM. This step appears after the sign-in page, only when two-step sign-in is on for you."}
         </p>
         {locked ? null : (
           <form onSubmit={verify} noValidate>
@@ -80,7 +144,7 @@ export function TwoStepForm({ next = "/" }: { next?: string }) {
                 Remember this device for 30 days
               </label>
             )}
-            <button type="submit" disabled={done} style={{ width: "100%", marginTop: 8 }}>
+            <button type="submit" disabled={busy || done} style={{ width: "100%", marginTop: 8 }}>
               {done ? "Signed in…" : "Verify and continue"}
             </button>
           </form>

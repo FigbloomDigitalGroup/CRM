@@ -23,3 +23,8 @@ export function limitInboundEmail(ipAddress: string | null, orgSlug: string) {
     { scope: "org", key: orgSlug.slice(0, 100), windowMs: WINDOW_MS, max: 3000 },
   ]);
 }
+
+/** Opening a quote link (FIG-1144): a person reads a link a few times; a flood of guesses is cut off per address. */
+export function limitQuoteView(ipAddress: string | null) {
+  return enforceRateLimit("QUOTE_VIEW", [{ scope: "ip", key: ipAddress, windowMs: WINDOW_MS, max: 120 }]);
+}

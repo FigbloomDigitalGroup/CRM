@@ -27,6 +27,16 @@ export interface CreateCommunicationInput {
 }
 
 export async function createCommunication(input: CreateCommunicationInput) {
+  const created = await createCommunicationRow(input);
+  // FIG-1150: a reply pauses the follow-up sequences running on that record. Best effort: it never stops a message being logged.
+  if (input.direction === "INBOUND" && (input.leadId || input.dealId || input.contactId)) {
+    const { pauseEnrollmentsForReply } = await import("./followUps");
+    await pauseEnrollmentsForReply(input.organizationId, { leadId: input.leadId ?? null, dealId: input.dealId ?? null, contactId: input.contactId ?? null, occurredAt: created.occurredAt }).catch(() => undefined);
+  }
+  return created;
+}
+
+async function createCommunicationRow(input: CreateCommunicationInput) {
   return withOrgContext(input.organizationId, (tx) =>
     tx.communication.create({
       data: {

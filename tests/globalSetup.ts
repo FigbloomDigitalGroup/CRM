@@ -30,6 +30,19 @@ export default async function globalSetup(): Promise<void> {
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
   process.env.APP_DATABASE_URL = process.env.TEST_APP_DATABASE_URL;
 
+  // FIG-1135: the platform role. Test-only default: the same server and test
+  // database as TEST_DATABASE_URL, user figbloom_platform, so an existing .env
+  // or CI job keeps working without a new variable.
+  process.env.PLATFORM_DB_PASSWORD ??= "figbloom_platform_local_dev_only";
+  if (process.env.TEST_PLATFORM_DATABASE_URL) {
+    process.env.PLATFORM_DATABASE_URL = process.env.TEST_PLATFORM_DATABASE_URL;
+  } else {
+    const u = new URL(process.env.TEST_DATABASE_URL);
+    u.username = "figbloom_platform";
+    u.password = process.env.PLATFORM_DB_PASSWORD;
+    process.env.PLATFORM_DATABASE_URL = u.toString();
+  }
+
   const env = { ...process.env };
 
   // Fail loudly, with the fix, if Postgres is unreachable (B0.02). Without

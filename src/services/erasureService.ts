@@ -5,6 +5,7 @@ import { withOrgContext } from "../db/orgScopedClient";
 import { normalizeEmail, phoneTail } from "../lib/matching";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { getStorageDriver } from "../storage";
+import { eraseChatMessagesNaming } from "./chatPrivacyService";
 
 /**
  * Erasing one person (FIG-1062, B4.05, Kenya DPA): the Contact is a natural person; everything that is about them goes, and what the
@@ -24,7 +25,7 @@ import { getStorageDriver } from "../storage";
 export interface ErasureResult {
   contactsErased: number;
   unlinked: { leads: number; deals: number };
-  deleted: { activities: number; tasks: number; communications: number; attachments: number; tagLinks: number; notifications: number; recentSearches: number };
+  deleted: { activities: number; tasks: number; communications: number; attachments: number; tagLinks: number; notifications: number; recentSearches: number; chatMessages: number };
   scrubbed: { auditEvents: number; mergeRecords: number };
   reviewNeeded: { leads: number; deals: number; companies: number; tasks: number };
   proof: { emailHash: string | null; phoneHash: string | null };
@@ -61,7 +62,7 @@ export async function eraseContactData(input: { organizationId: string; contactI
   const result: ErasureResult = {
     contactsErased: ids.length,
     unlinked: { leads: 0, deals: 0 },
-    deleted: { activities: 0, tasks: 0, communications: 0, attachments: 0, tagLinks: 0, notifications: 0, recentSearches: 0 },
+    deleted: { activities: 0, tasks: 0, communications: 0, attachments: 0, tagLinks: 0, notifications: 0, recentSearches: 0, chatMessages: 0 },
     scrubbed: { auditEvents: 0, mergeRecords: 0 },
     reviewNeeded: { leads: 0, deals: 0, companies: 0, tasks: 0 },
     proof: { emailHash: hash(organizationId, [...emails][0] ? (normalizeEmail([...emails][0]!) ?? [...emails][0]!) : null), phoneHash: hash(organizationId, [...tails][0] ?? null) },
@@ -122,6 +123,9 @@ export async function eraseContactData(input: { organizationId: string; contactI
     },
     { timeoutMs: 60_000 },
   );
+
+  // Chat messages that name them (by email, phone or full name) lose their text (FIG-1385).
+  result.deleted.chatMessages = await eraseChatMessagesNaming(organizationId, needles);
 
   // Personal data inside the audit trail and the merge snapshots about them. The rows stay (who did what, when); the content goes.
   // Done as the schema owner: the application role cannot update the append-only audit table, by design.

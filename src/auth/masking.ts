@@ -76,7 +76,7 @@ const VALUE_KEYS = new Set(["value", "amount", "total", "subtotal", "price", "di
 const MARGIN_KEYS = new Set(["margin", "cost", "costPrice"]);
 
 /** Entity types whose audit snapshots can hold a deal-derived money field. */
-const MONEY_ENTITIES = new Set(["Deal", "ProposalReference", "Quote", "QuoteLine", "Payment", "RecurringService"]);
+const MONEY_ENTITIES = new Set(["Deal", "ProposalReference", "Quote", "QuoteLine", "CatalogueItem", "ApprovalRequest", "Payment", "RecurringService"]);
 
 /** Entity types that hold payments; their audit snapshots are for Finance and Management only (finance.view.payments). */
 export const PAYMENT_ENTITIES: ReadonlySet<string> = new Set(["Invoice", "PaymentRecord", "DealPaymentNote"]);

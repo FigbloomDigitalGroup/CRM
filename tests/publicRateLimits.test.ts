@@ -6,6 +6,9 @@ import { POST as acceptInvite } from "../src/app/api/auth/accept-invite/route";
 import { POST as confirmReset } from "../src/app/api/auth/password-reset/confirm/route";
 import { POST as inboundEmail } from "../src/app/api/public/orgs/[orgSlug]/communications/inbound/route";
 
+// One trusted proxy in front: the last X-Forwarded-For entry is the client (src/app/api/_lib/clientRequest.ts).
+process.env.TRUSTED_PROXY_HOPS = "1";
+
 /** G1.05: the public endpoints that take a token (invite, reset confirmation, inbound email) are rate limited like login and sign-up. */
 
 const post = (ip: string, body: unknown = {}) =>

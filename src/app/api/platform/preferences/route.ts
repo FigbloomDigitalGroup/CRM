@@ -3,7 +3,7 @@ import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
 import { NotFoundError } from "@/auth/errors";
-import { resolveDevPlatformIdentity } from "@/auth/platformIdentity";
+import { resolvePlatformContext } from "@/auth/platformSession";
 import { getPlatformPreferences, updatePlatformPreferences } from "@/services/platformPreferenceService";
 
 /**
@@ -12,9 +12,9 @@ import { getPlatformPreferences, updatePlatformPreferences } from "@/services/pl
  * else this is a 404.
  */
 async function identityOr404() {
-  const identity = await resolveDevPlatformIdentity(await cookies());
-  if (!identity) throw new NotFoundError("Platform identity", "current");
-  return identity;
+  const context = await resolvePlatformContext(await cookies());
+  if (!context || !context.permissions.has("platform.preferences.manage")) throw new NotFoundError("Platform identity", "current");
+  return { id: context.identityId };
 }
 
 export async function GET() {

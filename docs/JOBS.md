@@ -12,7 +12,8 @@ build ad hoc schedulers.
 | Job catalogue: one `registerJob` per type | `src/jobs/definitions.ts` |
 | Runner: `runDueJobs`, `enqueueJobFor`, `enqueueAndRunNow`, schedules, missed-run check | `src/jobs/runner.ts` |
 | Worker process | `npm run jobs:worker` (`scripts/jobs-worker.ts`) |
-| Cron entry for serverless hosting | `GET /api/cron/jobs` |
+| Cron entry for serverless hosting | `GET /api/cron/jobs`, every 5 minutes or less (see "Scheduled work" in `docs/DEPLOYMENT.md`) |
+| Platform maintenance (belongs to no organisation, so not a job) | `GET /api/cron/platform-maintenance`, daily |
 | Status API for Management | `GET /api/orgs/{org}/jobs`, `/jobs/{id}`, `/retry`, `/cancel`, `/schedules` |
 
 ## How a job behaves
@@ -25,9 +26,11 @@ build ad hoc schedulers.
 
 ## Job types
 
+The scheduler call `/api/cron/jobs` must fire **every 5 minutes or less**: `mail.sync` runs every 5 minutes, and queued jobs (`mail.send_scheduled`, `chat.notify`, `platform.org_export`) start late by up to the interval between calls. A 15 to 30 minute interval is not enough.
+
 | Type | What | Schedule |
 |---|---|---|
-| `notifications.sweep` | Due and overdue task notifications, delivery retries | every few minutes |
+| `notifications.sweep` | Due and overdue task notifications, delivery retries | every 5 minutes or less (the interval of the `/api/cron/jobs` call, not 15 to 30) |
 | `notifications.expire` | Removes read notifications older than 90 days (unread are kept) | daily |
 | `scores.recompute` | Lead scores and customer health | daily |
 | `signals.refresh` | Adoption, stalled deals, overdue tasks for the dashboards | daily |

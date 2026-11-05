@@ -41,6 +41,7 @@ export const REJECTION_EXPLANATIONS: Record<string, string> = {
   VALIDATION_FAILED: "The submission was missing a required field or was not valid.",
   HONEYPOT_TRIGGERED: "A hidden field was filled in, which is what a bot does. It was discarded.",
   CAPTCHA_FAILED: "The captcha check failed or was missing.",
+  SPAM_CONTENT: "A web form submission held too many links to be a real enquiry.",
 };
 
 /**

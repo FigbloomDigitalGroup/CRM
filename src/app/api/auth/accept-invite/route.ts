@@ -1,4 +1,7 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { setPendingTwoStepCookie } from "@/app/api/_lib/twoStepCookies";
+import { TRUSTED_DEVICE_COOKIE_NAME } from "@/services/twoStepService";
 import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
@@ -19,13 +22,29 @@ export async function POST(request: Request) {
     const client = getClientInfo(request);
     await limitInviteAccept(client.ipAddress);
     const body = await parseJsonBody(request, AcceptInviteSchema);
-    const { token, expiresAt, userId, organizationSlug } = await acceptMembershipInvite(
+    const trusted = (await cookies()).get(TRUSTED_DEVICE_COOKIE_NAME)?.value;
+    const result = await acceptMembershipInvite(
       body.token,
       body.password,
       client.userAgent,
       client.ipAddress,
       client.place,
+      trusted,
     );
+
+    if ("twoStepRequired" in result) {
+      // Same handoff as password sign-in: no session until the second step is done.
+      const pending = NextResponse.json({
+        userId: result.userId,
+        organizationSlug: result.organizationSlug,
+        twoStepRequired: true,
+        twoStepPurpose: result.purpose,
+        twoStepUrl: "/two-step",
+      });
+      setPendingTwoStepCookie(pending, result.challengeToken, result.challengeExpiresAt);
+      return pending;
+    }
+    const { token, expiresAt, userId, organizationSlug } = result;
 
     const response = NextResponse.json({ userId, organizationSlug });
     setSessionCookie(response, token, expiresAt);

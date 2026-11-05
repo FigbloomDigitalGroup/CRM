@@ -2,7 +2,21 @@
 
 import { Search } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { buildPaletteItems, type PaletteItem } from "./items";
+import { useApiQuery } from "../../data/hooks";
+import { resultHref } from "../home/Search";
+import { buildPaletteItems, type ApiCommand, type PaletteItem } from "./items";
+
+type SearchType = "leads" | "companies" | "contacts" | "deals" | "tasks";
+const KIND: Record<SearchType, string> = { leads: "Lead", companies: "Company", contacts: "Contact", deals: "Deal", tasks: "Task" };
+
+function useDebounced<T>(value: T, ms: number): T {
+  const [v, setV] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return v;
+}
 
 export interface CommandPaletteProps {
   open: boolean;
@@ -25,7 +39,18 @@ export function CommandPalette({ open, onClose, orgSlug, permissionKeys, onNavig
   const root = useRef<HTMLDivElement>(null);
   const listId = useId();
 
-  const groups = useMemo(() => buildPaletteItems({ orgSlug, permissionKeys, query }), [orgSlug, permissionKeys, query]);
+  // The server's index of what this role may do (only while the palette is open); records come from the same search the top bar uses.
+  const cmdIndex = useApiQuery("getCommands", { params: { orgSlug } }, { enabled: open, retry: false, staleTime: 60_000 });
+  const commands = (cmdIndex.data as { commands?: ApiCommand[] } | undefined)?.commands ?? null;
+  const term = useDebounced(query.trim(), 200);
+  const searching = open && term.length >= 2;
+  const found = useApiQuery("search", { params: { orgSlug }, query: { q: term, pageSize: "3" } }, { enabled: searching, retry: false, staleTime: 15_000 });
+  const records = useMemo<PaletteItem[]>(() => {
+    if (!searching) return [];
+    const groups = ((found.data as { groups?: { type: SearchType; items: { id: string; label: string; sublabel: string | null }[] }[] } | undefined)?.groups ?? []);
+    return groups.flatMap((g) => g.items.map((h) => ({ id: `rec-${g.type}-${h.id}`, group: "RECORDS" as const, title: h.label, sub: [KIND[g.type], h.sublabel].filter(Boolean).join(" · "), href: resultHref(orgSlug, g.type, h.id) })));
+  }, [found.data, searching, orgSlug]);
+  const groups = useMemo(() => buildPaletteItems({ orgSlug, permissionKeys, query, commands, records }), [orgSlug, permissionKeys, query, commands, records]);
   const flat = useMemo(() => groups.flatMap((g) => g.items), [groups]);
 
   useEffect(() => {
@@ -125,7 +150,17 @@ export function CommandPalette({ open, onClose, orgSlug, permissionKeys, onNavig
               })}
             </div>
           ))}
-          {flat.length === 0 ? (
+          {searching && found.isFetching ? (
+            <div className="fb-pal__empty" role="status">
+              Searching…
+            </div>
+          ) : null}
+          {searching && found.isError ? (
+            <div className="fb-pal__empty" role="status">
+              Records could not be searched just now. Pages and actions still work.
+            </div>
+          ) : null}
+          {flat.length === 0 && !(searching && found.isFetching) ? (
             <div className="fb-pal__empty" role="status">
               Nothing matches. Try a company name or “new lead”.
             </div>

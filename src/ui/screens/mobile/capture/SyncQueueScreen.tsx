@@ -4,17 +4,30 @@ import { useState, useSyncExternalStore } from "react";
 import { connectivity } from "../../../data/connectivity";
 import { Icon } from "../../leads/icons";
 import { useQueue, useSyncNow } from "../data";
-import { discardPhoto, retryPhotos, usePhotos } from "./photos";
+import { useToast } from "../../../components/toast";
+import { describeError } from "../../../errors";
+import { discardPhoto, usePhotos } from "./photos";
+import { usePhotoUpload } from "./photoApi";
 
 /**
  * Waiting to sync (M4, FIG-1177), as a page: everything saved on this phone that has not reached the server yet, in the order it was made,
- * with Retry. Changes (notes, calls, captures) come from the real offline queue; photos are the demo's. When nothing is waiting it says the
+ * with Retry. Changes (notes, calls, captures) come from the real offline queue; photos waiting on this device are sent through the attachment upload. When nothing is waiting it says the
  * phone is fully synced. A failed entry is explained and never overwritten: Send again or Discard, the person decides.
  */
 export function SyncQueueScreen() {
   const { queue, items } = useQueue();
   const photos = usePhotos();
   const sync = useSyncNow();
+  const { sendWaiting } = usePhotoUpload();
+  const toast = useToast();
+  const sendPhotos = async (only?: string) => {
+    try {
+      const r = await sendWaiting(only);
+      if (r.lost) toast.show({ tone: "danger", message: "A photo could not be sent because the page was reloaded. Take it again." });
+    } catch (e) {
+      toast.show({ tone: "danger", message: `A photo was not sent. ${describeError(e).body}` });
+    }
+  };
   const conn = useSyncExternalStore(connectivity.subscribe, connectivity.getSnapshot, connectivity.getServerSnapshot);
   const [busy, setBusy] = useState(false);
 
@@ -24,7 +37,7 @@ export function SyncQueueScreen() {
   async function sendAll() {
     setBusy(true);
     try {
-      retryPhotos(conn.online);
+      if (conn.online) await sendPhotos();
       await sync();
     } finally {
       setBusy(false);
@@ -71,7 +84,7 @@ export function SyncQueueScreen() {
                 {conn.online ? "Waiting to send" : "Waiting for a connection"} · {p.size}
               </div>
               <div className="fb-m-q__acts">
-                <button type="button" className="fb-m-btn" aria-disabled={!conn.online || undefined} title={!conn.online ? "You are offline" : undefined} onClick={() => retryPhotos(conn.online, p.id)}>
+                <button type="button" className="fb-m-btn" aria-disabled={!conn.online || undefined} title={!conn.online ? "You are offline" : undefined} onClick={() => conn.online && void sendPhotos(p.id)}>
                   <Icon name="refresh" size={15} /> Retry
                 </button>
                 <button type="button" className="fb-m-btn" onClick={() => discardPhoto(p.id)}>

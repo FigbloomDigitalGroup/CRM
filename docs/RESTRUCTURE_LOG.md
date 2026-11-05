@@ -60,33 +60,34 @@ The dates are my proposal to fit the fixed 22 Nov date; they are not signed off.
 
 | Screen | Issue | Built on demo data | Wired to real API |
 |---|---|---|---|
-| Platform shell and home | FIG-1160 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no |
-| Organisations list, provisioning, detail, suspend | FIG-1161 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no |
-| Offboarding, data requests, platform audit, health | FIG-1162 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no |
-| Platform admins, security, verify, not-found | FIG-1163 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no |
-| Platform mobile | FIG-1164 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no |
-| Platform support access, flags and limits, announcements (PL7, PL12, PL13; platform half) | FIG-1192 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no |
-| Customer Support workspace (tickets, detail, satisfaction, role-limited customer) | FIG-1178 | yes (`src/ui/screens/support/demo/`) | no |
-| Organisation switcher (TB4) | FIG-1165 | yes (`src/ui/screens/orgside/demo/`) | no |
-| Suspended screen (OS1), Settings › Data requests (OS6) | FIG-1166 | yes (`orgside/demo/`; demo cookie `fb_demo_suspended`) | no |
-| Two-step code screen (A5), enrolment, Settings › Two-step sign-in (S7#2) | FIG-1167 | yes (`orgside/demo/`, `src/app/two-step/`) | no |
+| Platform shell and home | FIG-1160 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | wired 5 Nov 2026 (lane W1, `src/ui/screens/platform/api.ts`, `/api/platform/*`): home, organisation search, data-requests badge; trends and the release switch are not API data |
+| Organisations list, provisioning, detail, suspend | FIG-1161 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | wired 5 Nov 2026 (lane W1, `src/ui/screens/platform/api.ts`, `/api/platform/*`); wizard sends name, slug and first admin only (no region, currency, keys or list edits); detail shows counts, owner, status history, no member list |
+| Offboarding, data requests, platform audit, health | FIG-1162 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | wired 5 Nov 2026 (lane W1, `src/ui/screens/platform/api.ts`, `/api/platform/*`); approve, reject, cancel, retry export, run deletion, certificate, audit filter/export/verify, health and incidents; no 8-day timelines, no evidence-notes editing |
+| Platform admins, security, verify, not-found | FIG-1163 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | wired 5 Nov 2026 (lane W1, `src/ui/screens/platform/api.ts`, `/api/platform/*`): roster, invite, remove, lost device, withdraw invite, real security settings, on-demand "Verify it's you"; the stand-alone verify page (VerifyPage) still demo until the real platform sign-in page exists |
+| Platform mobile | FIG-1164 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | wired 5 Nov 2026 (lane W1, `src/ui/screens/platform/api.ts`, `/api/platform/*`) |
+| Platform sign-in and identity (the real API behind the console door) | FIG-1135 | n/a (backend) | identity, sessions, role and counts built 4 Nov 2026 (`docs/PLATFORM_IDENTITY.md`); the console screens still read demo data, and real sign-in waits for B6.02 |
+| Platform support access, flags and limits, announcements (PL7, PL12, PL13; platform half) | FIG-1192 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no: no platform API; kept in memory over the real organisations (`platform/demo/local.ts`) |
+| Customer Support workspace (tickets, detail, satisfaction, role-limited customer) | FIG-1178 | yes (`src/ui/screens/support/demo/`) | yes, 5 Nov 2026 (W6): tickets, ticket detail, role-limited customer, surveys and the Support home read `/tickets`, `/surveys`, `/support/customers`; `support/demo/` deleted; FEATURE_UNAVAILABLE explained; survey scores are 1 to 5 |
+| Organisation switcher (TB4) | FIG-1165 | yes (`src/ui/screens/orgside/demo/`) | yes, 5 Nov 2026 (W6): `GET /api/me/organizations`, `POST .../switch`; layout shows it when the person has more than one organisation (demo cookie `fb_demo_multiorg` removed) |
+| Suspended screen (OS1), Settings › Data requests (OS6) | FIG-1166 | yes (`orgside/demo/`; demo cookie `fb_demo_suspended`) | partly: OS1 is real since M13 (organisation status); the Settings › Data requests half (OS6) and the demo preview cookie `fb_demo_suspended` are still demo |
+| Two-step code screen (A5), enrolment, Settings › Two-step sign-in (S7#2) | FIG-1167 | yes (`orgside/demo/`, `src/app/two-step/`) | partly, 5 Nov 2026 (W6): A5 code step, enrolment (sign-in and Settings) and Settings › Two-step policy and trusted devices are on the real routes; no QR image (key and otpauth link only); the unusual-activity list is removed (no API) |
 | Support access approval card, banner, history, announcement banner (OS2, OS3, OS5; organisation side) | FIG-1192 | yes (`orgside/demo/`) | no |
-| Ask Figbloom assistant panel (X2) | FIG-1171 | yes (`src/ui/screens/assistant/demo/`) | no |
-| Command palette records, Help centre and What's new (X3) | FIG-1172 | palette records are demo (`assistant/demo/data.ts`); help copy is static | no |
-| Saved views (X4) | FIG-1173 | yes (device storage, `src/ui/screens/views/store.ts`; sharing simulated) | no |
-| Settings › Email and calendar, AI assistant (S7#2) | FIG-1175 | yes (`assistant/settings/`, device storage) | no |
+| Ask Figbloom assistant panel (X2) | FIG-1171 | demo built 29 Oct 2026 | **yes, 5 Nov 2026 (lane W5)**: `/assistant/ask`, `/assistant/settings`, confirm, dismiss and feedback (`assistant/api.ts`); the demo folder is deleted. Confirm creates the task on the server and the card says Done only after it answers |
+| Command palette records, Help centre and What's new (X3) | FIG-1172 | demo built 29 Oct 2026 | **yes, 5 Nov 2026 (lane W5)**: `/commands` (with the role's own tables as fallback when the organisation is not on V1.1), `/search` for records, `/help`, `/help/{slug}`, `/whats-new`; the RECENT group is gone (no recent-records API) |
+| Saved views (X4) | FIG-1173 | demo built 29 Oct 2026 | **yes, 5 Nov 2026 (lane W5)**: `/views` and the pin and pinned-order routes (`views/store.ts`); sharing is real; reordering applies to pinned views only |
+| Settings › Email and calendar, AI assistant (S7#2) | FIG-1175 | demo built 29 Oct 2026 | AI assistant: **yes, 5 Nov 2026 (lane W5)**, `/assistant/settings` (Management only to change). Email and calendar (`Connections.tsx`): no, still device storage, belongs to the communication lane |
 | Your own colours (AP4) | FIG-1176 | no: uses the real preferences API (`ownColours`) | yes |
-| Mobile camera photos, business-card scan, sync queue page (M4) | FIG-1177 | photos and card reading are demo (`mobile/capture/`); changes use the real offline queue | partly |
-| Quote builder, document preview, versions (Q1) | FIG-1168 | yes (`src/ui/screens/commercial/demo/`, in-memory store) | no |
-| Approvals inbox (Q3) | FIG-1169 | yes (`commercial/demo/`) | no |
-| Forecast and targets (Q4) | FIG-1170 | yes (`commercial/demo/`) | no |
-| Settings: catalogue, pipelines and stage rules, sequences, web forms, approval rules (S6#2) | FIG-1174 | yes (`src/ui/screens/settingsplus/demo/`) | no |
+| Mobile camera photos, business-card scan, sync queue page (M4) | FIG-1177 | demo built 29 Oct 2026 | **yes, 5 Nov 2026 (lane W5)**: card scan uses start, upload, extract and confirm (Save confirms the capture and attaches the photo); photos upload to the record's attachments. Gap: no offline queue entry for photos or cards, so a photo waiting on the phone is held in memory and a card needs a connection |
+| Quote builder, document preview, versions (Q1) | FIG-1168 | built on demo data | **yes, wired 5 Nov 2026 (W3)**: `commercial/api.ts`, `GET/POST /deals/{id}/quote`, quote versions, preview, send, request-approval, response, apply-to-deal. Client e-signature preview and deposit request dropped from the page (no API, V2) |
+| Approvals inbox (Q3) | FIG-1169 | built on demo data | **yes, wired 5 Nov 2026 (W3)**: `GET /approvals`, decision, cancel |
+| Forecast and targets (Q4) | FIG-1170 | built on demo data | **yes (W4, 5 Nov 2026)**: `GET /forecast`, `GET/PUT /forecast/targets`, open deals from `GET /deals`; per-deal probability override dropped (the API has stage probabilities only) |
+| Settings: catalogue, pipelines and stage rules, sequences, web forms, approval rules (S6#2) | FIG-1174 | built on demo data | **partly (W3, 5 Nov 2026)**: catalogue, pipelines and stage rules, approval rules wired (`GET/POST/PATCH /catalogue`, `/pipelines`, `/approval-rules`); sequences (`GET/POST/PATCH /sequences`) and web forms (`GET/POST/PATCH /web-forms`, rotate-key, submissions) wired by W4, 5 Nov 2026; Settings › Sequences and Web forms no longer need demo screens enabled |
 | E-signature page and deposit request (Q2) | FIG-1193 | yes (`src/app/sign/[token]/demoSigning.ts`, tokens `demo-unsigned`, `demo-signed`, `demo-deposit`) | no |
 | Settings: roles and field access, developers (S8#2) | FIG-1194 | yes (`settingsplus/demo/`) | no |
-| Communication group in the sidebar (Conversations moved in, not duplicated) | FIG-1378 | built 29 Oct 2026; the group is real navigation, the Mail, Chat and Video links are demo-only (`src/ui/shell/navigation.ts`, see docs/M10_COMMUNICATION.md) | no |
-| Chat workspace | FIG-1379 | yes (`src/ui/screens/communication/demo/`) | no (B6.24 to B6.27) |
-| Mail workspace | FIG-1380 | yes (`communication/demo/`) | no (FIG-806, FIG-807, FIG-1153) |
-| Video Conference | FIG-1381 | yes (`communication/demo/`) | no (FIG-808, FIG-1153) |
+| Communication group in the sidebar (Conversations moved in, not duplicated) | FIG-1378 | built 29 Oct 2026; the group is real navigation, the Mail, Chat and Video links are demo-only (`src/ui/shell/navigation.ts`, see docs/M10_COMMUNICATION.md) | Mail, Chat and Video links are real now (keys `mail.use`, `chat.view`, `meetings.schedule`, no demo flag) |
+| Chat workspace | FIG-1379 | yes (demo store removed) | wired 5 Nov 2026 to `/chat/*` (`src/ui/screens/communication/api.ts`, polling); gaps: no mute, no unread badge in the sidebar yet; needs test against a live database |
+| Mail workspace | FIG-1380 | yes (demo store removed) | wired 5 Nov 2026: Conversations (EMAIL), Needs linking, drafts, send, reply, connection status; gaps: only a 240-character preview of received mail, no read flag, no templates or attachments, no automation-draft marker |
+| Video Conference | FIG-1381 | yes (demo store removed) | wired 5 Nov 2026: meetings from `GET /calendar`, schedule, reschedule, cancel, connection status; gaps: list has no join link, attendees or cancelled state (shown only for meetings scheduled in this session) |
 
 ### Scope added on 29 Oct 2026: the Communication group
 
@@ -111,3 +112,55 @@ Given added a sidebar dropdown "Communication" (Mail, Chat, Video Conference) an
 ## How to undo this restructure
 
 Linear milestone descriptions keep the original text after "Original text:" and the previous due dates are in the table above. To go back: set the old dates, rename the milestones back using the table above, move FIG-1192 to FIG-1194 back to the V2 milestone, and set the nine V1 QA issues to In Progress again if wanted.
+
+## Platform console backend (M13, 5 Nov 2026): screens still to wire
+
+The backend for the platform console exists (`docs/PLATFORM_CONSOLE_API.md`); these screens still read `src/ui/screens/platform/demo/` and are not wired yet (M14).
+
+| Screen | Issue | Backend now | Screen state |
+|---|---|---|---|
+| Home and health (PL1, PL9) | FIG-1139 | `GET /api/platform/home`, `/health`, `/health/incidents` | demo data; swap the demo module for these |
+| Organisations list, provisioning, detail (PL2 to PL4) | FIG-1136 | `/api/platform/organizations` (+ `slug-check`, `defaults-preview`, `{id}`) | demo data |
+| Suspend, reactivate, offboard (PL5, OS1) | FIG-1137 | `POST /api/platform/organizations/{id}/status`; the suspended screen (OS1) now shows from the real organisation status | platform half demo; OS1 is real |
+| Audit log (PL8) | FIG-1138 | `/api/platform/audit`, `/export`, `/verify` | demo data |
+| Data requests and offboarding (PL6, OS6) | FIG-1141 | `/api/platform/data-requests/*`; org side `/privacy/organisation-requests` (+ `/{id}/download`) | demo data |
+
+## M13 close-out (4 Nov 2026)
+
+The V1.1 backend is built and committed on `makeover/m13-backend-v11` (`bbdc883`). The table lists which backend issues exist for each demo-screen row above. **The "Wired to real API" column of the table above is unchanged: nothing is wired yet** (that is M14). Checks and gaps found: `docs/M13_CLOSEOUT.md`.
+
+| Demo-screen row (issue) | Backend issues built in M13 | Not covered by the backend yet |
+|---|---|---|
+| Platform shell and home (FIG-1160) | FIG-1135, FIG-1139 | none |
+| Organisations list, provisioning, detail, suspend (FIG-1161) | FIG-1136, FIG-1137 | none |
+| Offboarding, data requests, audit, health (FIG-1162) | FIG-1137, FIG-1138, FIG-1139, FIG-1141 | none |
+| Platform admins, security, verify (FIG-1163) | FIG-1134, FIG-1140 | none |
+| Platform mobile (FIG-1164) | same routes as FIG-1160 to FIG-1163 | none |
+| Platform support access, flags, announcements (FIG-1192, platform half) | none | whole backend (support access, flags and limits, announcements) |
+| Customer Support workspace (FIG-1178) | FIG-1155 | no SLA clocks, no outbound reply email, no public survey page |
+| Organisation switcher (FIG-1165) | FIG-1133 | none |
+| Suspended screen, Settings data requests (FIG-1166) | FIG-1137, FIG-1141 | "notify the organisation" switch on suspend |
+| Two-step code, enrolment, Settings two-step (FIG-1167) | FIG-1134 | in-app alert notification |
+| Support access card, banner, history, announcements (FIG-1192, organisation side) | none | whole backend |
+| Ask Figbloom panel (FIG-1171) | FIG-1152 | summaries, scoring, churn options, history |
+| Command palette, Help, What's new (FIG-1172) | FIG-1149 | recent records |
+| Saved views (FIG-1173) | FIG-1148 | none |
+| Settings: email and calendar, AI assistant (FIG-1175) | FIG-1153, FIG-807, FIG-808, FIG-1152 | none |
+| Mobile camera photos, card scan (FIG-1177) | FIG-1154 | offline queue entry for photos |
+| Quote builder, document, versions (FIG-1168) | FIG-1142, FIG-1143, FIG-1144 | PDF output, a viewer page for the quote link |
+| Approvals inbox (FIG-1169) | FIG-1145 | none |
+| Forecast and targets (FIG-1170) | FIG-1146 | none |
+| Settings: catalogue, pipelines, sequences, web forms, approval rules (FIG-1174) | FIG-1142, FIG-1147, FIG-1150, FIG-1151, FIG-1145 | none |
+| E-signature and deposit request (FIG-1193) | none | V2 backend (M16) |
+| Settings: roles and field access, developers (FIG-1194) | none | V2 backend (M16) |
+| Communication group (FIG-1378) | FIG-1384 (`communication.group` toggle and keys) | none |
+| Chat workspace (FIG-1379) | FIG-1382 to FIG-1385 | none |
+| Mail workspace (FIG-1380) | FIG-807, FIG-1153 | none |
+| Video Conference (FIG-1381) | FIG-808, FIG-1153 | none |
+
+### W3 wiring notes (5 Nov 2026)
+
+- Deals board: a Pipeline switcher appears when the organisation has more than one active pipeline (`GET /pipelines`, V1.1); `GET /deals` has no pipeline filter, so the board filters client-side by the chosen pipeline's stage ids.
+- Contract gaps (response types are `unknown` and bodies of PUT version, send, request-approval and response are untyped in `openapi.v1.json` 1.1.0): the shapes are declared in `src/ui/screens/commercial/api.ts`. Not changed in the contract.
+- Pipelines editor switches the quote and approval rules per stage; new pipelines are created with three starter stages (no service picker yet, no stage reorder or add UI).
+- `commercial/demo/store.ts` and `demo/data.ts` stay: Forecast and `settingsplus/demo/data.ts` (sequences, web forms) still import them.

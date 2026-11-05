@@ -8,7 +8,12 @@ import { raiseStalledDealAlerts } from "../services/stalledDealAlerts";
 import { MIGRATION_JOB } from "../services/migrationConstants";
 import { runRetentionSweep } from "../services/privacyService";
 import { runMigrationJob } from "../services/migrationService";
+import { CHAT_NOTIFY_JOB, deliverChatNotifications } from "../services/chatService";
+import { ORG_EXPORT_JOB } from "./offboardingJobs";
+import { runOrganisationExportJob } from "../services/platformDataRequestService";
+import { runDueSequences } from "../sequences/engine";
 import { registerJob } from "./registry";
+import "./integrationJobs";
 import { FILES_PURGE_JOB_TYPE, purgeOrganizationFiles } from "./handlers/filePurge";
 import {
   NOTIFICATIONS_SWEEP_JOB_TYPE,
@@ -187,5 +192,44 @@ registerJob({
     const result = await runRetentionSweep(ctx.organizationId);
     ctx.log.info({ ...result }, "Retention sweep done");
     return JSON.parse(JSON.stringify(result));
+  },
+});
+
+/**
+ * Chat mentions and direct messages (FIG-1383, B6.25): one job per message, queued when it is posted. It notifies (and pushes to) each
+ * person mentioned, and the other person in a direct message, but only where they may see the record the message names. Safe to repeat.
+ */
+registerJob<{ messageId: string }>({
+  type: CHAT_NOTIFY_JOB,
+  timeoutMs: 60_000,
+  maxAttempts: 3,
+  concurrency: 4,
+  handler: async (ctx) => deliverChatNotifications(ctx.organizationId, ctx.payload.messageId),
+});
+
+/** B6.09: packages an organisation's data for an approved export or deletion request. The only job that runs while an organisation is offboarding. */
+registerJob<{ requestId: string }>({
+  type: ORG_EXPORT_JOB,
+  timeoutMs: 15 * 60_000,
+  maxAttempts: 3,
+  concurrency: 1,
+  handler: async (ctx) => {
+    const result = await runOrganisationExportJob(ctx.organizationId, ctx.payload.requestId);
+    ctx.log.info(result, "Organisation export packaged");
+    return result;
+  },
+});
+
+/** Follow-up sequences (FIG-1150): runs the steps that have come due and pauses enrolments whose person replied. Safe to repeat: each step is claimed once. */
+registerJob({
+  type: "sequences.run",
+  schedule: { everyMs: 15 * 60_000 },
+  timeoutMs: 5 * 60_000,
+  maxAttempts: 3,
+  concurrency: 2,
+  handler: async (ctx) => {
+    const result = await runDueSequences({ organizationId: ctx.organizationId });
+    if (result.enrollments > 0) ctx.log.info(result, "Follow-up sequences: due enrolments processed");
+    return result;
   },
 });

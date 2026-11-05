@@ -36,6 +36,7 @@ import { listContacts } from "../src/repositories/contacts";
 import { listDeals } from "../src/repositories/deals";
 import { listLeads } from "../src/repositories/leads";
 import { listTasks } from "../src/repositories/tasks";
+import { exportOrganisationChat } from "../src/services/chatPrivacyService";
 import { getStorageDriver } from "../src/storage";
 import { FILE_POLICIES } from "../src/storage/policy";
 
@@ -105,6 +106,14 @@ async function writeAttachments(outDir: string, organizationId: string): Promise
   return rows.length;
 }
 
+/** Chat (FIG-1385): channels, members, messages, reactions, mentions and attachment records of this organisation only. Mail is in communications.csv. */
+async function writeChat(outDir: string, organizationId: string): Promise<Record<string, number>> {
+  const chat = await exportOrganisationChat(organizationId);
+  const counts: Record<string, number> = {};
+  for (const [name, rows] of Object.entries(chat)) counts[`chat_${name}`] = await writeEntityCsv(outDir, `chat_${name}`, rows);
+  return counts;
+}
+
 async function main(): Promise<void> {
   const { orgSlug, outDir: outDirArg } = parseArgs(process.argv.slice(2));
   if (!orgSlug) {
@@ -152,6 +161,7 @@ async function main(): Promise<void> {
     attachments: await writeAttachments(outDir, org.id),
     // Comments (FIG-1044); deleted ones are exported as deleted, without text.
     comments: await writeEntityCsv(outDir, "comments", await adminDb.comment.findMany({ where: { organizationId: org.id } })),
+    ...(await writeChat(outDir, org.id)),
   };
 
   await recordAuditEvent({

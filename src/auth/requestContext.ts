@@ -141,10 +141,16 @@ export async function resolveMemberUserContext(
 export async function resolveRequestContext(
   orgSlug: string,
   cookieStoreOverride?: CookieReader,
+  options: { allowOffboarding?: boolean } = {},
 ): Promise<AuthContext> {
   // The real cookie jar is resolved once per page render (the frame and the page both ask); tests with their own jar always do the full work.
-  return cookieStoreOverride
-    ? resolveRequestContextUncached(orgSlug, () => resolveUserId(cookieStoreOverride))
+  // The per-render memo is keyed by organisation only, so a call that passes `allowOffboarding` (the data-request routes, B6.05) never uses it:
+  // it must not be answered from, or leave behind, a result computed for an ordinary call.
+  if (cookieStoreOverride) {
+    return resolveRequestContextUncached(orgSlug, () => resolveUserId(cookieStoreOverride), options);
+  }
+  return options.allowOffboarding
+    ? resolveRequestContextUncached(orgSlug, async () => (await resolveIdentityForRequest())?.userId ?? null, options)
     : resolveRequestContextForRequest(orgSlug);
 }
 
@@ -155,6 +161,7 @@ const resolveRequestContextForRequest = cache(async (orgSlug: string): Promise<A
 async function resolveRequestContextUncached(
   orgSlug: string,
   findUserId: () => Promise<string | null>,
+  options: { allowOffboarding?: boolean } = {},
 ): Promise<AuthContext> {
   // The organisation lookup needs only the slug, so it runs while the session is being checked. Errors keep their order: no identity is
   // reported before the organisation is, exactly as before.
@@ -171,7 +178,7 @@ async function resolveRequestContextUncached(
     throw new NotFoundError("Organization", orgSlug);
   }
 
-  const membership = await resolveActiveMembership(userId, organization.id);
+  const membership = await resolveActiveMembership(userId, organization.id, options);
   if (!membership) {
     throw new NoActiveMembershipError(orgSlug);
   }

@@ -1,121 +1,168 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { useState } from "react";
-import { PageHead } from "./kit";
-import { canRemoveAdmin, initials, MIN_ADMINS } from "./logic";
+import { fetchSecurity } from "./api";
+import { dateShort, PageHead, SliceGate, StatusPill } from "./kit";
+import { adminEmailOk, canRemoveAdmin, initials, MIN_ADMINS, nameFromEmail } from "./logic";
 import { usePlatform } from "./store";
-import { VerifyDialog } from "./Verify";
 
-type Pending = { kind: "remove"; id: string } | { kind: "invite" } | null;
-
-/** PL10 Platform admins: at least two, always. Removing or inviting an admin asks "Verify it's you" first (PL14). */
+/**
+ * PL10 Platform admins (GET /api/platform/admins): at least two active, always (the API refuses to go below). Inviting, removing and recovering ask
+ * "Verify it's you" (PL14) whenever the last verification is older than the platform's verification window.
+ */
 export function PlatformAdmins() {
-  const { state, dispatch, toast } = usePlatform();
+  const { state, actions, toast, slices, can } = usePlatform();
   const [email, setEmail] = useState("");
-  const [pending, setPending] = useState<Pending>(null);
-  const atMinimum = state.admins.length <= MIN_ADMINS;
+  const [name, setName] = useState("");
+  const manage = can("platform.admins.manage");
+  const active = state.admins.filter((a) => a.status === "ACTIVE").length;
+  const atMinimum = active <= MIN_ADMINS;
 
-  function askRemove(id: string) {
+  async function askRemove(id: string) {
     const c = canRemoveAdmin(state.admins, state.me, id);
     if (!c.ok) return toast(c.reason);
-    setPending({ kind: "remove", id });
+    await actions.removeAdmin(id);
   }
-  const verified = () => {
-    if (pending?.kind === "remove") dispatch({ type: "admin-remove", id: pending.id });
-    if (pending?.kind === "invite") {
-      const res = dispatch({ type: "admin-invite", email });
-      if (res.ok) setEmail("");
-    }
-    setPending(null);
-  };
 
   return (
     <>
       <PageHead title="Platform admins" sub="At least two admins are always required, so one can approve the other and recover a lost device.">
-        <form className="fb-pl-row" style={{ border: 0, padding: 0 }} onSubmit={(e) => { e.preventDefault(); setPending({ kind: "invite" }); }}>
-          <input className="fb-pl-input" style={{ width: 280 }} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@platform.figbloom.co.ke" aria-label="New admin’s email" />
-          <button type="submit" className="fb-pl-btn fb-pl-btn--primary">Invite admin</button>
-        </form>
+        {manage ? (
+          <form
+            className="fb-pl-row"
+            style={{ border: 0, padding: 0 }}
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!adminEmailOk(email)) return toast("Enter a valid email address.");
+              const res = await actions.inviteAdmin(email, name.trim() || nameFromEmail(email));
+              if (res.ok) {
+                setEmail("");
+                setName("");
+              }
+            }}
+          >
+            <input className="fb-pl-input" style={{ width: 180 }} value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="New admin’s name" />
+            <input className="fb-pl-input" style={{ width: 260 }} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@platform.figbloom.co.ke" aria-label="New admin’s email" />
+            <button type="submit" className="fb-pl-btn fb-pl-btn--primary">Invite admin</button>
+          </form>
+        ) : null}
       </PageHead>
-      
-      <section className="fb-pl-card fb-pl-card--flush" aria-label="Platform admins">
-        {state.admins.map((a) => (
-          <div key={a.id} className="fb-pl-admin">
-            <span className="fb-pl-admin-av" aria-hidden="true">{initials(a.name)}</span>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontWeight: 700 }}>
-                {a.name}
-                {a.id === state.me ? <span className="fb-pl-muted" style={{ fontWeight: 500 }}> (you)</span> : null}
+      <SliceGate slice={slices.admins} area="Platform admins">
+        <section className="fb-pl-card fb-pl-card--flush" aria-label="Platform admins">
+          {state.admins.map((a) => (
+            <div key={a.id} className="fb-pl-admin">
+              <span className="fb-pl-admin-av" aria-hidden="true">{initials(a.name)}</span>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontWeight: 700 }}>
+                  {a.name}
+                  {a.isYou ? <span className="fb-pl-muted" style={{ fontWeight: 500 }}> (you)</span> : null}
+                  {a.status !== "ACTIVE" ? <span style={{ marginLeft: 8 }}><StatusPill status={a.status === "SUSPENDED" ? "Suspended" : a.status} /></span> : null}
+                  {a.locked ? <span style={{ marginLeft: 8 }}><StatusPill status="Down" label="Locked" /></span> : null}
+                </div>
+                <div className="fb-pl-muted fb-pl-small">{a.email}</div>
               </div>
-              <div className="fb-pl-muted fb-pl-small">{a.email} · added by {a.by}</div>
+              <span className="fb-pl-pill" style={{ background: "var(--pl-primary-soft)", color: "var(--pl-primary-text)", fontWeight: 600 }}>2FA {a.tfa}</span>
+              <span className="fb-pl-muted2 fb-pl-small" style={{ width: 140 }}>Last sign-in {a.last}</span>
+              {manage ? (
+                <>
+                  <button type="button" className="fb-pl-btn fb-pl-btn--sm" aria-disabled={a.isYou || undefined} disabled={a.isYou} title={a.isYou ? "Ask another admin to recover you" : undefined} onClick={() => void actions.resetTwoStep(a.id)}>Lost device</button>
+                  <button type="button" className="fb-pl-btn fb-pl-btn--sm fb-pl-btn--outline-danger" aria-disabled={atMinimum || a.isYou || undefined} onClick={() => void askRemove(a.id)}>Remove</button>
+                </>
+              ) : null}
             </div>
-            <span className="fb-pl-pill" style={{ background: "var(--pl-primary-soft)", color: "var(--pl-primary-text)", fontWeight: 600 }}>2FA {a.tfa}</span>
-            <span className="fb-pl-muted2 fb-pl-small" style={{ width: 140 }}>Last sign-in {a.last}</span>
-            <button type="button" className="fb-pl-btn fb-pl-btn--sm" onClick={() => dispatch({ type: "admin-recover", id: a.id })}>Lost device</button>
-            <button type="button" className="fb-pl-btn fb-pl-btn--sm fb-pl-btn--outline-danger" aria-disabled={atMinimum || undefined} onClick={() => askRemove(a.id)}>Remove</button>
+          ))}
+          {!state.admins.length ? <div className="fb-pl-muted2" style={{ padding: 24, textAlign: "center" }}>No platform admins yet.</div> : null}
+        </section>
+        {state.invitations.length ? (
+          <section className="fb-pl-card fb-pl-card--flush" aria-label="Open invitations">
+            <div className="fb-pl-card-h"><h2>Open invitations</h2></div>
+            {state.invitations.map((i) => (
+              <div key={i.id} className="fb-pl-row" style={{ padding: "10px 18px" }}>
+                <span className="fb-pl-grow">{i.email}</span>
+                <span className="fb-pl-muted fb-pl-small">expires {dateShort(i.expiresAt)}</span>
+                {manage ? <button type="button" className="fb-pl-btn fb-pl-btn--sm" onClick={() => void actions.revokeInvite(i.id)}>Withdraw</button> : null}
+              </div>
+            ))}
+          </section>
+        ) : null}
+        {atMinimum && state.admins.length ? (
+          <div role="alert" className="fb-pl-warn">
+            <AlertTriangle size={16} aria-hidden="true" />
+            Only two active admins left. Removing either is blocked until another admin accepts an invite.
           </div>
-        ))}
-      </section>
-      {atMinimum ? (
-        <div role="alert" className="fb-pl-warn">
-          <AlertTriangle size={16} aria-hidden="true" />
-          Only two admins left. Removing either is blocked until another admin accepts an invite.
-        </div>
-      ) : null}
-      <VerifyDialog open={pending !== null} onClose={() => setPending(null)} onVerified={verified} action={pending?.kind === "invite" ? "Inviting a platform admin" : "Removing a platform admin"} />
+        ) : null}
+      </SliceGate>
     </>
   );
 }
 
-const SECURITY_ROWS = [
-  { key: "verify", label: "Verification required at every sign-in", d: "Authenticator code or backup code. Trusted devices are not offered for platform admins.", locked: true },
-  { key: "ip", label: "IP allowlist", d: "Only allow platform sign-in from these addresses." },
-  { key: "newdev", label: "Alert on sign-in from a new device", d: "All platform admins get an email." },
-  { key: "failed", label: "Alert after 3 failed sign-ins", d: "The account locks for 30 minutes." },
-] as const;
+const FIELDS = ["idleHours", "absoluteHours", "reverifyMinutes", "maxFailedAttempts", "lockoutMinutes"] as const;
+const HELP: Record<string, string> = {
+  idleHours: "Signed out after this long without activity.",
+  absoluteHours: "A session never lasts longer than this. Idle can’t exceed it.",
+  reverifyMinutes: "Sensitive changes need a code newer than this.",
+  maxFailedAttempts: "Wrong passwords or codes before the account locks.",
+  lockoutMinutes: "How long a locked account stays locked.",
+};
 
-/** PL11 Platform security: verification is locked on; the rest are switches that are written to the platform audit log. */
+/** PL11 Platform security: verification is locked on; the rest are the real settings (GET/PATCH /api/platform/security/settings), each change audited. */
 export function PlatformSecurity() {
-  const { state, dispatch } = usePlatform();
-  const sec = state.security;
+  const { actions, call, can } = usePlatform();
+  const q = useQuery({ queryKey: ["platform", "security"], queryFn: () => fetchSecurity(call) });
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const manage = can("platform.security.manage");
+  const settings = q.data?.settings ?? {};
+  const value = (k: string) => draft[k] ?? String(settings[k] ?? "");
+  const changed = Object.fromEntries(FIELDS.filter((k) => draft[k] !== undefined && Number(draft[k]) !== settings[k]).map((k) => [k, Number(draft[k])]));
+  const dirty = Object.keys(changed).length > 0;
+
   return (
     <>
       <PageHead title="Platform security" />
-      
-      <section className="fb-pl-card" style={{ maxWidth: 780, display: "flex", flexDirection: "column", gap: 4 }} aria-label="Platform security">
-        {SECURITY_ROWS.map((r) => {
-          const on = r.key === "verify" ? true : sec[r.key];
-          const locked = "locked" in r && r.locked;
-          return (
-            <div key={r.key} className="fb-pl-sec-row">
-              <input
-                type="checkbox"
-                checked={on}
-                disabled={locked}
-                aria-label={r.label}
-                onChange={() => r.key !== "verify" && dispatch({ type: "security", key: r.key, label: r.label })}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>
-                  {r.label}
-                  {locked ? <span className="fb-pl-muted" style={{ fontSize: 11.5 }}> · locked on</span> : null}
-                </div>
-                <div className="fb-pl-muted2 fb-pl-small">{r.d}</div>
-                {r.key === "ip" && sec.ip ? <input className="fb-pl-input fb-pl-mono" style={{ marginTop: 8, height: 36, background: "var(--pl-surface-2)", fontSize: 12 }} readOnly value="41.90.64.0/24, 105.163.2.8" aria-label="Allowed addresses" /> : null}
-              </div>
+      <SliceGate slice={{ loading: q.isLoading, error: q.error, refetch: () => void q.refetch() }} area="Platform security">
+        <section className="fb-pl-card" style={{ maxWidth: 780, display: "flex", flexDirection: "column", gap: 4 }} aria-label="Platform security">
+          <div className="fb-pl-sec-row">
+            <input type="checkbox" checked disabled aria-label="Verification required at every sign-in" />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>Verification required at every sign-in <span className="fb-pl-muted" style={{ fontSize: 11.5 }}> · locked on</span></div>
+              <div className="fb-pl-muted2 fb-pl-small">Authenticator code or backup code. Trusted devices are not offered for platform admins.</div>
             </div>
-          );
-        })}
-        <label style={{ display: "flex", gap: 10, alignItems: "center", padding: "12px 0", fontSize: 14, fontWeight: 600 }}>
-          Session length
-          <select className="fb-pl-select" style={{ width: "auto", height: 34, fontWeight: 500 }} value={sec.sessLen} onChange={(e) => dispatch({ type: "session-length", value: e.target.value })}>
-            <option value="30">30 minutes idle</option>
-            <option value="60">1 hour idle</option>
-            <option value="240">4 hours max</option>
-          </select>
-        </label>
-      </section>
+          </div>
+          {FIELDS.map((k) => {
+            const lim = q.data?.limits[k];
+            return (
+              <label key={k} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 0", fontSize: 14 }}>
+                <span style={{ flex: 1 }}>
+                  <span style={{ display: "block", fontWeight: 600 }}>{lim?.label ?? k}</span>
+                  <span className="fb-pl-muted2 fb-pl-small">{HELP[k]}{lim ? ` (${lim.min} to ${lim.max})` : ""}</span>
+                </span>
+                <input className="fb-pl-input" style={{ width: 90, height: 36 }} type="number" min={lim?.min} max={lim?.max} disabled={!manage} aria-label={lim?.label ?? k} value={value(k)} onChange={(e) => setDraft({ ...draft, [k]: e.target.value })} />
+              </label>
+            );
+          })}
+          <div className="fb-pl-muted2 fb-pl-small">An IP allowlist and sign-in alerts are not part of the platform API yet.</div>
+          {manage ? (
+            <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 8 }}>
+              <button
+                type="button"
+                className="fb-pl-btn fb-pl-btn--primary"
+                disabled={!dirty}
+                onClick={async () => {
+                  const res = await actions.updateSecurity(changed);
+                  if (res.ok) {
+                    setDraft({});
+                    void q.refetch();
+                  }
+                }}
+              >
+                Save changes
+              </button>
+            </div>
+          ) : null}
+        </section>
+      </SliceGate>
     </>
   );
 }

@@ -83,7 +83,8 @@ export function EditorFrame({
   dirty: boolean;
   errors: string[];
   impact: string[];
-  onSave: () => void;
+  /** May be async; returning `false` means the save failed (the editor already said why), so no success toast is shown. */
+  onSave: () => void | boolean | Promise<void | boolean>;
   onDiscard: () => void;
   actions?: ReactNode;
   confirmTitle?: string;
@@ -130,10 +131,10 @@ export function EditorFrame({
           </>
         }
         confirmLabel="Save"
-        onConfirm={() => {
-          onSave();
+        onConfirm={async () => {
+          const result = await onSave();
           setConfirming(false);
-          toast.show({ message: `${title} saved`, tone: "success" });
+          if (result !== false) toast.show({ message: `${title} saved`, tone: "success" });
         }}
       />
       <AuditTrail area={area} />

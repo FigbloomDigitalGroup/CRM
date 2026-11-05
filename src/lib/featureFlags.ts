@@ -117,6 +117,12 @@ export const TOGGLES: readonly ToggleDef[] = [
     minRelease: "v1.1",
   },
   {
+    key: "communication.group",
+    description: "The Communication group: Chat, Mail and Meetings (FIG-1384).",
+    defaultValue: true,
+    minRelease: "v1.1",
+  },
+  {
     key: "customer_support.role",
     description: "The Customer Support role (decision-gated).",
     defaultValue: false,

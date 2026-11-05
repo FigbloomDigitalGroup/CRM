@@ -92,3 +92,29 @@ describe("sendMembershipInviteEmail", () => {
     ).resolves.toBeUndefined();
   });
 });
+
+describe("deliverOrLog without SMTP", () => {
+  it("logs the link outside production (dev and tests read it from the log)", async () => {
+    delete process.env.SMTP_HOST;
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await sendPasswordResetEmail("x@example.test", "https://example.test/reset-password?token=devtoken");
+    expect(log.mock.calls.flat().join("\n")).toContain("devtoken");
+    log.mockRestore();
+  });
+
+  it("never writes the body or link to any log in production", async () => {
+    delete process.env.SMTP_HOST;
+    vi.stubEnv("NODE_ENV", "production");
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await sendPasswordResetEmail("x@example.test", "https://example.test/reset-password?token=secrettoken");
+    const all = [...log.mock.calls, ...err.mock.calls, ...warn.mock.calls].flat().join("\n");
+    expect(all).not.toContain("secrettoken");
+    expect(all).toContain("x@example.test");
+    log.mockRestore();
+    err.mockRestore();
+    warn.mockRestore();
+    vi.unstubAllEnvs();
+  });
+});

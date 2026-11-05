@@ -1,110 +1,104 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { Approvals } from "../../../src/ui/screens/commercial/Approvals";
 import { Forecast } from "../../../src/ui/screens/commercial/Forecast";
-import { QuoteBuilder } from "../../../src/ui/screens/commercial/QuoteBuilder";
-import { DELIVERY, MANAGEMENT, renderAs, SALES } from "./helpers";
+import { monthName, targetNote, weightedOf } from "../../../src/ui/screens/commercial/forecastMath";
+import { REFERENCE, STAGES, apiError, deal, page, renderScreen, stubClient } from "../screens/deals/harness";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/o/figbloom/quotes", useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/o/figbloom/forecast", useRouter: () => ({ push: vi.fn() }), useSearchParams: () => new URLSearchParams() }));
 
-describe("quote builder (Q1, FIG-1168)", () => {
-  it("shows margin (the column and the summary row) only to a role with deals.margin", () => {
-    const { unmount } = renderAs(<QuoteBuilder dealId="d1" />, MANAGEMENT);
-    expect(screen.getByRole("columnheader", { name: "Margin" })).toBeInTheDocument();
-    expect(screen.getByText(/Margin \(Management only\)/)).toBeInTheDocument();
-    unmount();
-
-    renderAs(<QuoteBuilder dealId="d1" />, SALES);
-    expect(screen.queryByRole("columnheader", { name: "Margin" })).not.toBeInTheDocument();
-    expect(screen.queryByText(/Margin/)).not.toBeInTheDocument();
-  });
-
-  it("the client document never carries cost or margin, even for Management", async () => {
-    renderAs(<QuoteBuilder dealId="d1" />, MANAGEMENT);
-    await userEvent.click(screen.getByRole("button", { name: /Preview document/ }));
-    const doc = screen.getByRole("region", { name: /document preview/ });
-    expect(within(doc).queryByText(/margin|cost/i)).not.toBeInTheDocument();
-    expect(within(doc).getByText("Total (incl. VAT)")).toBeInTheDocument();
-  });
-
-  it("a sent version is read-only, and New version starts a draft while the history keeps the sent one", async () => {
-    renderAs(<QuoteBuilder dealId="d1" />, SALES);
-    expect(screen.getByLabelText(/Quantity for CCTV camera/)).toHaveAttribute("readonly");
-    expect(screen.getByText(/cannot be changed/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /New version/ }));
-    expect(screen.getByText("Version 2")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Quantity for CCTV camera/)).not.toHaveAttribute("readonly");
-    expect(screen.getByText("New version from v1")).toBeInTheDocument();
-    expect(screen.getByText(/Sent to Amara Osei with a signing link/)).toBeInTheDocument();
-  });
-
-  it("a discount above the limit goes to Management instead of being sent, and the request lands in the approvals inbox", async () => {
-    renderAs(<QuoteBuilder dealId="d6" />, SALES);
-    await userEvent.selectOptions(screen.getByLabelText("Add a catalogue item"), "cat4");
-    const discount = screen.getByLabelText(/Discount %/);
-    await userEvent.clear(discount);
-    await userEvent.type(discount, "12");
-    await userEvent.click(screen.getByRole("button", { name: /Request approval/ }));
-    expect(await screen.findByText("Waiting for Management.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Send quote/ })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /New version/ })).toBeInTheDocument();
-  });
-
-  it("a role with neither quote permission gets the explained no-access, not a blank page", () => {
-    renderAs(<QuoteBuilder dealId="d1" />, DELIVERY);
-    expect(screen.getByText(/Quotes/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Preview document/ })).not.toBeInTheDocument();
-  });
+const money = (count: number, full: number | null, weighted: number | null) => ({ count, full, weighted });
+const person = (over: Record<string, unknown> = {}) => ({
+  membershipId: "m-1", name: "Dev Sales", openDeals: 1, wonDeals: 1, state: "on-track", target: 500000, won: 200000, weighted: 300000, forecast: 500000, shortBy: 0, attainmentPercent: 40, ...over,
 });
-
-describe("approvals inbox (Q3, FIG-1169)", () => {
-  it("declining needs a reason, and the reason is what the requester then sees", async () => {
-    renderAs(<Approvals />, MANAGEMENT);
-    const card = screen.getByRole("heading", { name: /Mwangaza Schools · Q-2026-032 v2/ }).closest("li")!;
-    await userEvent.click(within(card).getByRole("button", { name: "Decline" }));
-    expect(within(card).getByRole("alert")).toHaveTextContent(/Say why/);
-    await userEvent.type(within(card).getByPlaceholderText(/Reason/), "Try 5%");
-    await userEvent.click(within(card).getByRole("button", { name: "Decline" }));
-    await userEvent.click(screen.getByRole("tab", { name: /Decided/ }));
-    expect(screen.getByText(/Declined · Try 5%/)).toBeInTheDocument();
-  });
-
-  it("approving moves the request to Decided immediately", async () => {
-    renderAs(<Approvals />, MANAGEMENT);
-    const before = screen.getByRole("tab", { name: /Waiting/ }).textContent;
-    await userEvent.click(within(screen.getByRole("heading", { name: /Leads export/ }).closest("li")!).getByRole("button", { name: "Approve" }));
-    await waitFor(() => expect(screen.getByRole("tab", { name: /Waiting/ }).textContent).not.toBe(before));
-  });
-
-  it("a requester sees only their own requests, read-only, with no way to decide", () => {
-    renderAs(<Approvals />, SALES);
-    expect(screen.getByRole("heading", { name: /Mwangaza Schools/ })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: /Leads export/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
-    expect(screen.getByText(/Waiting for Management/)).toBeInTheDocument();
-  });
+const forecast = (over: Record<string, unknown> = {}) => ({
+  scope: "team", month: "2026-11", months: 2, asOf: "2026-11-05T08:00:00.000Z", currency: "KES", valueMasked: false,
+  stages: [{ id: "st-2", key: "PROPOSAL_SENT", name: "Proposal Sent", probability: 50, probabilitySet: true, ...money(1, 450000, 225000) }],
+  pipeline: money(1, 450000, 225000),
+  buckets: [{ month: "2026-11", ...money(0, 0, 0) }, { month: "2026-12", ...money(1, 450000, 225000) }],
+  earlier: money(0, 0, 0), later: money(0, 0, 0), unscheduled: money(0, 0, 0),
+  won: { count: 1, total: 200000 }, people: [person()], team: { state: "on-track", target: 500000, won: 200000, weighted: 300000, forecast: 500000, shortBy: 0, attainmentPercent: 40, targetSource: "sum-of-people" },
+  ...over,
 });
+const DEAL = deal({ id: "d1", company: "Kijani Foods", stage: STAGES[1]! });
+const handlers = (f: unknown, extra: Record<string, () => unknown> = {}) => ({
+  getForecast: () => f,
+  getDeals: () => page([DEAL, deal({ id: "d2", company: "Savannah Logistics", stage: STAGES[1]!, ownerMembershipId: "m-2", value: null, valueMasked: true })]),
+  getReferenceData: () => REFERENCE,
+  ...extra,
+});
+const MANAGER = ["forecast.view.all", "targets.manage", "deals.view.value"];
 
-describe("forecast and targets (Q4, FIG-1170)", () => {
-  it("Management sees the team, values and editable targets; the chart has a text description and a table", async () => {
-    renderAs(<Forecast />, MANAGEMENT);
-    expect(screen.getByRole("img", { name: /Weighted closes: OCT/ })).toBeInTheDocument();
-    expect(screen.getByLabelText("Target for Dev Sales")).toBeInTheDocument();
+describe("forecast and targets read the real API (FIG-1170)", () => {
+  it("draws the totals, buckets and targets from the API and asks for the team scope", async () => {
+    const stub = stubClient(handlers(forecast()));
+    renderScreen(<Forecast />, stub.client, { permissionKeys: MANAGER, membershipId: "m-mg" });
+    expect(await screen.findByRole("img", { name: /Weighted closes: NOV .*DEC KES 225K/ })).toBeInTheDocument();
+    expect(stub.calls.find((c) => c.id === "getForecast")?.args.query).toEqual({ scope: "team" });
+    expect(screen.getByText("Won in November")).toBeInTheDocument();
+    expect(screen.getByLabelText("Target for Dev Sales")).toHaveValue(500000);
     await userEvent.click(screen.getByRole("button", { name: "Table" }));
     expect(screen.getByRole("table", { name: "Expected closes by month" })).toBeInTheDocument();
+    expect(screen.getByText("Kijani Foods")).toBeInTheDocument();
   });
 
-  it("Sales sees only their own deals; other people's deals and values are not in the page at all", () => {
-    renderAs(<Forecast />, SALES);
-    expect(screen.queryByText("Savannah Logistics")).not.toBeInTheDocument(); // Dev Sales Two's deal
-    expect(screen.getByText("Kijani Foods Ltd")).toBeInTheDocument();
+  it("saves an edited target with PUT /forecast/targets", async () => {
+    const put = vi.fn(() => ({ id: "t1" }));
+    const stub = stubClient(handlers(forecast(), { putForecastTargets: put }));
+    renderScreen(<Forecast />, stub.client, { permissionKeys: MANAGER, membershipId: "m-mg" });
+    const input = await screen.findByLabelText("Target for Dev Sales");
+    await userEvent.clear(input);
+    await userEvent.type(input, "600000");
+    await userEvent.tab();
+    await waitFor(() => expect(stub.calls.some((c) => c.id === "putForecastTargets")).toBe(true));
+    expect(stub.calls.find((c) => c.id === "putForecastTargets")?.args.body).toEqual({ month: "2026-11", membershipId: "m-1", amount: 600000 });
+  });
+
+  it("renders masked money as masked, never a number, and shows counts in the chart", async () => {
+    const f = forecast({
+      valueMasked: true, pipeline: money(2, null, null), buckets: [{ month: "2026-11", ...money(0, null, null) }, { month: "2026-12", ...money(2, null, null) }],
+      won: { count: 1, total: null }, team: { state: "masked", target: 500000, won: null, weighted: null, forecast: null, shortBy: null, attainmentPercent: null, targetSource: "team" },
+      people: [person({ membershipId: "m-2", name: "Dev Sales Two", state: "masked", won: null, weighted: null, forecast: null, shortBy: null, attainmentPercent: null })],
+    });
+    const stub = stubClient(handlers(f));
+    renderScreen(<Forecast />, stub.client, { permissionKeys: ["forecast.view.all"], membershipId: "m-mg" });
+    expect(await screen.findByRole("img", { name: /DEC 2 deals/ })).toBeInTheDocument();
+    expect(screen.getAllByRole("note").length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(/Target for/)).not.toBeInTheDocument();
+  });
+
+  it("a Sales member asks for their own scope and cannot edit targets", async () => {
+    const stub = stubClient(handlers(forecast({ scope: "mine", team: null })));
+    renderScreen(<Forecast />, stub.client, { permissionKeys: ["deals.view.own", "reporting.view.own"], membershipId: "m-1" });
+    expect(await screen.findByRole("img", { name: /Weighted closes/ })).toBeInTheDocument();
+    expect(stub.calls.find((c) => c.id === "getForecast")?.args.query).toEqual({ scope: "mine" });
     expect(screen.queryByRole("button", { name: "Team" })).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/Target for/)).not.toBeInTheDocument(); // cannot edit targets
+    expect(screen.queryByLabelText(/Target for/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Savannah Logistics")).not.toBeInTheDocument();
   });
 
-  it("flags a close date that has passed", () => {
-    renderAs(<Forecast />, MANAGEMENT);
-    expect(screen.getByText(/close date passed/)).toBeInTheDocument(); // Pwani Hotels, 22 Oct
+  it("explains a V1 organisation (FEATURE_UNAVAILABLE) instead of failing", async () => {
+    const unavailable = apiError(403, "Forecast arrives with V1.1.", { code: "FEATURE_UNAVAILABLE", feature: { key: "release.v11", reason: "release", availableIn: "V1.1" } });
+    const stub = stubClient({ getForecast: () => unavailable });
+    renderScreen(<Forecast />, stub.client, { permissionKeys: MANAGER });
+    expect(await screen.findByText("Forecast is not available yet")).toBeInTheDocument();
+  });
+
+  it("a role with no forecast permission gets the explained no-access without calling the API", () => {
+    const stub = stubClient({});
+    renderScreen(<Forecast />, stub.client, { permissionKeys: [] });
+    expect(screen.getByText(/access/i)).toBeInTheDocument();
+    expect(stub.calls).toHaveLength(0);
+  });
+});
+
+describe("forecast display helpers", () => {
+  it("names months, rounds a weighted value to the cent, and words the target state", () => {
+    expect(monthName("2026-11")).toBe("November");
+    expect(monthName("2026-01", true)).toBe("JAN");
+    expect(weightedOf("450000", 50)).toBe(225000);
+    expect(weightedOf(null, 50)).toBeNull();
+    expect(targetNote("no-target", null, String)).toMatch(/set a target/);
+    expect(targetNote("short", 1000, (n) => `K${n}`)).toContain("K1000 short");
   });
 });

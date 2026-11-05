@@ -4,19 +4,31 @@ import { AlertTriangle, ArrowRight, CheckCircle2, KeyRound, Shield } from "lucid
 import Link from "next/link";
 import { useState } from "react";
 import { PlDialog } from "./kit";
-import { VERIFY_ATTEMPTS, verifyCode } from "./logic";
+import { VERIFY_ATTEMPTS, verifyCode, verifyShapeOk } from "./logic";
+import { usePlatform } from "./store";
 
 /** The state of one "Verify it's you" attempt series: five tries, then a 30-minute lock (PL14). */
-export function useVerifyAttempts(onVerified: () => void) {
+export function useVerifyAttempts(onVerified: () => void, check?: (code: string) => Promise<string | null>) {
   const [attempts, setAttempts] = useState(VERIFY_ATTEMPTS);
   const [backup, setBackup] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
 
+  const [busy, setBusy] = useState(false);
   const locked = attempts <= 0;
-  function submit() {
-    if (locked) return;
-    if (verifyCode(code, backup)) {
+  async function submit() {
+    if (locked || busy) return;
+    let ok: boolean;
+    if (check) {
+      // The real check: the API decides. A badly formed code is not sent.
+      if (!verifyShapeOk(code, backup)) ok = false;
+      else {
+        setBusy(true);
+        ok = (await check(code.replace(/\s/g, ""))) === null;
+        setBusy(false);
+      }
+    } else ok = verifyCode(code, backup);
+    if (ok) {
       setError("");
       onVerified();
       return;
@@ -30,7 +42,7 @@ export function useVerifyAttempts(onVerified: () => void) {
     setError("");
     setCode("");
   }
-  return { attempts, backup, code, setCode, error, locked, submit, toggleBackup };
+  return { attempts, backup, code, setCode, error, locked, busy, submit: () => void submit(), toggleBackup };
 }
 
 const BODY = {
@@ -120,15 +132,32 @@ function VerifyFields({ v }: { v: ReturnType<typeof useVerifyAttempts> }) {
  * The same step as a dialog, for a sensitive action once signed in (removing an admin, approving a deletion from a phone). It confirms who is
  * acting before the action runs; nothing runs on a wrong code.
  */
-export function VerifyDialog({ open, onClose, onVerified, action }: { open: boolean; onClose: () => void; onVerified: () => void; action: string }) {
-  return open ? <VerifyDialogBody onClose={onClose} onVerified={onVerified} action={action} /> : null;
+export function VerifyDialog({ open, onClose, onVerified, action, check }: { open: boolean; onClose: () => void; onVerified: () => void; action: string; check?: (code: string) => Promise<string | null> }) {
+  return open ? <VerifyDialogBody onClose={onClose} onVerified={onVerified} action={action} check={check} /> : null;
 }
 
-function VerifyDialogBody({ onClose, onVerified, action }: { onClose: () => void; onVerified: () => void; action: string }) {
+/**
+ * Shows the "Verify it's you" dialog when the API asks for a fresh check before a sensitive change (the store raises it, see `actions` in store.tsx).
+ * A right code renews the verification on the session and the change is tried again; Cancel leaves the change undone.
+ */
+export function ReverifyHost() {
+  const { verification, actions } = usePlatform();
+  return (
+    <VerifyDialog
+      open={verification !== null}
+      action={verification?.action ?? "This change"}
+      check={actions.reverify}
+      onVerified={() => actions.finishVerification(true)}
+      onClose={() => actions.finishVerification(false)}
+    />
+  );
+}
+
+function VerifyDialogBody({ onClose, onVerified, action, check }: { onClose: () => void; onVerified: () => void; action: string; check?: (code: string) => Promise<string | null> }) {
   const v = useVerifyAttempts(() => {
     onVerified();
     onClose();
-  });
+  }, check);
   return (
     <PlDialog open onClose={onClose} title="Verify it’s you" label="PL14 Verify it’s you">
       <p className="fb-pl-muted2" style={{ margin: 0, fontSize: 13.5 }}>

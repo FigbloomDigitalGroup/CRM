@@ -8,7 +8,6 @@ import { describeError } from "../../errors";
 import { NoAccess } from "../../components/states";
 import { useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
-import { demoScreensEnabledClient } from "../../demo/enabled";
 import { SupportHome } from "./SupportHome";
 import { HCols, HIcon, KpiGrid, Panel, SectionFailed, type KpiDef } from "./kit";
 import { NewLeadsPanel, MovingAndStalled, PipelineByStage, TodoPanel, useLastVisit, useNewLeads } from "./blocks";
@@ -30,6 +29,7 @@ import {
 } from "./roles";
 import type { DeliveryData, FinanceData, ManagementData, SalesTodayData, SectionAnswer, TechnicalData } from "./dash";
 import { LoaderBlock } from "../../components/loader";
+import { demoScreensEnabledClient } from "../../demo/enabled";
 
 type Kind = "management" | "sales" | "delivery" | "finance" | "technical" | "support";
 
@@ -120,7 +120,7 @@ export function HomeScreen() {
   if (supportToTasks) return <LoaderBlock label="Opening your tasks" />;
 
   // The proposed Customer Support role: tickets, no leads. It has its own home (the design's "Support"), which does not wait for the dashboard call.
-  if (demoScreensEnabledClient() && m.can("tickets.manage") && !m.can("leads.view.own") && !m.can("leads.view.all")) {
+  if (m.can("tickets.manage") && !m.can("leads.view.own") && !m.can("leads.view.all")) {
     return (
       <div className="fb-home">
         <Header kind="support" timeZone={m.timeZone} quick={quickFor("support", m.orgSlug, m.can)} />

@@ -20,6 +20,7 @@
     "seed:dev": "tsx prisma/seedDev.ts",
     "db:bootstrap-role": "tsx scripts/db-admin.ts bootstrap-role",
     "db:grant-role": "tsx scripts/db-admin.ts grant-role",
+    "platform:bootstrap-admin": "tsx scripts/platform-bootstrap-admin.ts",
     "smoke:prod": "playwright test -c e2e/smoke/playwright.smoke.config.ts --grep @smoke",
     "backup:drill": "tsx scripts/backup-drill.ts",
     "reconcile:counts": "tsx scripts/reconcile-counts.ts",

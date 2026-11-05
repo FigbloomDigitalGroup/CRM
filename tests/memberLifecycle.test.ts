@@ -660,7 +660,7 @@ describe("membership states and invites (B1.12)", () => {
     expect((await adminDb.membership.findUniqueOrThrow({ where: { id: membershipId } })).status).toBe("ACTIVE");
     expect((await adminDb.membership.count({ where: { userId: user.id, status: "ACTIVE" } }))).toBe(2);
     // The accept signed them in under the inviting organisation, and logged it for that organisation.
-    const session = await lookupSession(accepted.token);
+    const session = await lookupSession((accepted as { token: string }).token);
     if (session.state !== "active") throw new Error("expected active");
     expect(session.session.organizationId).toBe(orgB.id);
     const events = await signInEvents.listSignInEvents(mgmtB, { membershipId });

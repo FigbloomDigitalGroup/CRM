@@ -18,6 +18,10 @@ import { recordAuditEvent } from "../repositories/auditEvents";
 import { boardColumns, getDealById, updateDeal as updateDealRecord, type ListDealsFilters } from "../repositories/deals";
 import { createDealMove, getDealMove, latestOpenMove, markMoveUndone } from "../repositories/dealMoves";
 import { getDeal, listDeals, updateDeal } from "./dealService";
+import { consumeMoveGrant, approvalGateBlocker } from "./approvalGateService";
+import { stageRuleBlockers } from "./pipelineService";
+import { isFeatureEnabled } from "./featureService";
+import type { UpdateDealServiceInput } from "./dealService";
 
 /**
  * Deal rules (FIG-1035, B2.06). Stalled thresholds per stage with an
@@ -129,6 +133,8 @@ export async function updateDealRules(ctx: AuthContext, input: { defaultStalledD
 
 export interface MoveInput {
   pipelineStageId: string;
+  /** Moving into a stage of another pipeline (B6.15). */
+  changePipeline?: boolean;
   lostReasonId?: string | null;
   handoff?: { deliveryOwnerMembershipId?: string };
 }
@@ -142,6 +148,10 @@ export interface MoveCheck {
   handoffPrompt: boolean;
   /** Moving a closed deal back to an open stage. */
   reopens: boolean;
+}
+
+function grantActor(ctx: AuthContext) {
+  return { membershipId: ctx.membershipId, canEditAll: hasPermission(ctx, "deals.edit.all") };
 }
 
 async function evaluateMove(ctx: AuthContext, dealId: string, input: MoveInput) {
@@ -163,6 +173,17 @@ async function evaluateMove(ctx: AuthContext, dealId: string, input: MoveInput) 
     lostReasonId: input.lostReasonId,
     lostReasonKnown: lostReason !== null,
   });
+  // B6.15: a stage of another pipeline is a pipeline change, which the caller has to say it means.
+  if (to && blockers.length === 0 && to.pipelineId !== from.pipelineId && !input.changePipeline) {
+    blockers.push({ code: "WRONG_PIPELINE", message: `${to.name} belongs to another pipeline. Change the deal's pipeline on purpose, or choose a stage of its own pipeline.`, field: "pipelineStageId" });
+  }
+  // B6.11, B6.13, B6.15: the rules on the target stage (valid quote, required fields, approval) and the large-deal rule. Every
+  // reason is returned at once. A rule blocks and explains; it never moves the deal (hard rule 9).
+  if (to && blockers.length === 0 && to.id !== from.id) {
+    for (const r of await stageRuleBlockers(ctx.organizationId, dealId, to.id)) blockers.push({ code: r.code, message: r.message, field: "pipelineStageId", ...(r.fields ? { fields: r.fields } : {}) });
+    const approval = await approvalGateBlocker(ctx.organizationId, dealId, to, new Date(), grantActor(ctx));
+    if (approval) blockers.push({ code: approval.code, message: approval.message, field: "pipelineStageId" });
+  }
   const check: MoveCheck = {
     allowed: blockers.length === 0,
     blockers,
@@ -205,6 +226,7 @@ export async function moveDeal(ctx: AuthContext, dealId: string, input: MoveInpu
     undoExpiresAt: new Date(Date.now() + MOVE_UNDO_WINDOW_MS),
     previous: JSON.parse(JSON.stringify(previous)),
   });
+  await consumeMoveGrant(ctx.organizationId, dealId, to!.id, new Date(), grantActor(ctx));
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,
@@ -216,6 +238,24 @@ export async function moveDeal(ctx: AuthContext, dealId: string, input: MoveInpu
     metadata: { moveId: move.id, lostReasonId: input.lostReasonId ?? null },
   });
   return { deal: updated, move: { id: move.id, undoExpiresAt: move.undoExpiresAt, undoable: !to!.isWon } };
+}
+
+/**
+ * PATCH /deals/{id} (review finding 1). A change of stage goes through `moveDeal`, so every move gate applies (valid quote, approval,
+ * required fields, wrong pipeline, lost reason, reopen permission) with the same error codes and the same move record and audit
+ * event as the /move endpoint. The other fields are saved first so the gates see the value the person is asking to move with.
+ * A request that does not change the stage, and every request in a V1 organisation (which has no gates), is a plain update.
+ */
+export async function updateDealChecked(ctx: AuthContext, dealId: string, input: UpdateDealServiceInput) {
+  if (!input.pipelineStageId) return updateDeal(ctx, dealId, input);
+  const current = await getDeal(ctx, dealId);
+  if (current.pipelineStageId === input.pipelineStageId || !(await isFeatureEnabled(ctx.organizationId, "release.v11"))) return updateDeal(ctx, dealId, input);
+
+  const { pipelineStageId, lostReasonId, handoff, ...fields } = input;
+  const hasFields = Object.values(fields).some((v) => v !== undefined);
+  if (hasFields) await updateDeal(ctx, dealId, fields);
+  const moved = await moveDeal(ctx, dealId, { pipelineStageId, lostReasonId, handoff: handoff as MoveInput["handoff"] });
+  return moved.deal;
 }
 
 function requireEdit(ctx: AuthContext, ownerMembershipId: string) {
@@ -292,11 +332,15 @@ export interface BoardColumn {
  * own deals); otherwise the key is left out entirely, so there is nothing to
  * infer from. Counts are always shown.
  */
-export async function getBoard(ctx: AuthContext, filters: ListDealsFilters = {}) {
+export async function getBoard(ctx: AuthContext, filters: ListDealsFilters = {}, pipelineId?: string) {
   // Reuses the list service's scoping by asking it for the filters it would apply.
   const scoped = await scopeFor(ctx, filters);
   const [stages, rules, columns] = await Promise.all([
-    adminDb.pipelineStage.findMany({ where: { organizationId: ctx.organizationId, isActive: true }, orderBy: { sequence: "asc" } }),
+    // One pipeline at a time (B6.15): the one asked for, else the default (which holds every stage of an organisation with one pipeline).
+    adminDb.pipelineStage.findMany({
+      where: { organizationId: ctx.organizationId, isActive: true, ...(pipelineId ? { pipelineId } : { pipelineId: (await adminDb.pipeline.findFirst({ where: { organizationId: ctx.organizationId, isDefault: true }, select: { id: true } }))?.id }) },
+      orderBy: { sequence: "asc" },
+    }),
     loadStageRules(ctx.organizationId),
     boardColumns(ctx.organizationId, { ...scoped.filters, outcome: undefined }),
   ]);
