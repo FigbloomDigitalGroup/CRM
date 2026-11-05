@@ -1,63 +1,85 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
-import type { SavedView } from "./model";
+import { useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useApi, useApiQuery } from "../../data/hooks";
+import { useMember } from "../../data/member";
+import type { SavedView, ViewPage } from "./model";
 
 /**
- * Where saved views are kept for the demo: this device's storage, per organisation. Sharing is therefore simulated (a shared view is simply one
- * flagged shared, and a seeded colleague's view shows how it appears). B6.16 replaces this module with the API; the model and screens stay.
- * Demo data: docs/RESTRUCTURE_LOG.md.
+ * Saved views on the real API (FIG-1148, docs/SAVED_VIEWS.md): `/views` for the list and the writes, `/views/{id}/pin` and `/views/pinned-order` for
+ * the person's own sidebar. The server decides who sees a view, removes parts a role may not use and answers 404 for the rest; this module only maps
+ * its answers to the shapes the bar draws (`model.ts` keeps the pure rules).
  */
 
-const key = (org: string) => `figbloom-saved-views:${org}`;
-const EVENT = "figbloom-saved-views";
-
-const SEED = (): SavedView[] => [
-  { id: "demo-sv1", page: "leads", name: "Hot, not yet contacted", state: { tab: "all", filters: { temp: "HOT" } }, shared: true, pinned: false, by: "demo-colleague", byName: "Wanjiru", order: 1 },
-];
-
-const cache = new Map<string, { raw: string | null; value: SavedView[] }>();
-
-export function readViews(org: string): SavedView[] {
-  let raw: string | null = null;
-  try {
-    raw = localStorage.getItem(key(org));
-  } catch {
-    /* blocked storage: show the seeded demo view only */
-  }
-  const hit = cache.get(org);
-  if (hit && hit.raw === raw) return hit.value;
-  let value: SavedView[];
-  try {
-    value = raw ? (JSON.parse(raw) as SavedView[]) : SEED();
-  } catch {
-    value = SEED();
-  }
-  cache.set(org, { raw, value });
-  return value;
+export interface ViewDto {
+  id: string;
+  entity: string;
+  name: string;
+  scope: "PERSONAL" | "SHARED";
+  filters?: Record<string, string | number | boolean | null | (string | number | boolean)[]>;
+  hiddenParts?: unknown[];
+  mine: boolean;
+  ownerName: string | null;
+  canEdit: boolean;
+  pinned: boolean;
+  pinPosition: number | null;
 }
 
-export function writeViews(org: string, views: SavedView[]): void {
-  try {
-    localStorage.setItem(key(org), JSON.stringify(views));
-  } catch {
-    cache.set(org, { raw: null, value: views });
-  }
-  window.dispatchEvent(new Event(EVENT));
+/** What goes to the server for a list set-up: the tab and the filters that are set (an empty filter is not stored). */
+export function toFilters(state: SavedView["state"]): Record<string, string> {
+  const out: Record<string, string> = { tab: state.tab };
+  for (const [k, v] of Object.entries(state.filters)) if (v !== "" && v !== undefined && k !== "tab") out[k] = v;
+  return out;
 }
 
-const EMPTY: SavedView[] = [];
+export function fromDto(v: ViewDto, membershipId: string, index: number): SavedView {
+  const { tab, ...rest } = (v.filters ?? {}) as Record<string, unknown>;
+  const filters: Record<string, string> = {};
+  for (const [k, val] of Object.entries(rest)) if (typeof val === "string") filters[k] = val;
+  return {
+    id: v.id,
+    page: v.entity as ViewPage,
+    name: v.name,
+    state: { tab: typeof tab === "string" ? tab : "all", filters },
+    shared: v.scope === "SHARED",
+    pinned: v.pinned,
+    by: v.mine ? membershipId : `other:${v.ownerName ?? "colleague"}`,
+    byName: v.ownerName ?? "A colleague",
+    order: v.pinPosition ?? 1000 + index,
+  };
+}
 
-export function useSavedViews(org: string): [SavedView[], (next: SavedView[]) => void] {
-  const subscribe = useCallback((cb: () => void) => {
-    window.addEventListener(EVENT, cb);
-    window.addEventListener("storage", cb);
-    return () => {
-      window.removeEventListener(EVENT, cb);
-      window.removeEventListener("storage", cb);
-    };
-  }, []);
-  const views = useSyncExternalStore(subscribe, () => readViews(org), () => EMPTY);
-  const set = useCallback((next: SavedView[]) => writeViews(org, next), [org]);
-  return [views, set];
+/** The views this person may use for one list (or only the pinned ones, for the sidebar). */
+export function useSavedViews(options: { entity?: string; pinned?: boolean; enabled?: boolean } = {}) {
+  const member = useMember();
+  const q = useApiQuery(
+    "getViews",
+    { params: { orgSlug: member.orgSlug }, query: { ...(options.entity ? { entity: options.entity } : {}), ...(options.pinned ? { pinned: "true" as const } : {}) } },
+    { enabled: options.enabled ?? true, retry: false, staleTime: 15_000 },
+  );
+  const views = useMemo(() => ((q.data as { items?: ViewDto[] } | undefined)?.items ?? []).map((v, i) => fromDto(v, member.membershipId, i)), [q.data, member.membershipId]);
+  return { views, query: q };
+}
+
+/** The writes. Each resolves when the server has answered and refreshes every view list; each throws the API's error (a taken name, a hidden part, no right to share). */
+export function useViewActions() {
+  const { orgSlug } = useMember();
+  const api = useApi();
+  const qc = useQueryClient();
+  const done = async <T,>(p: Promise<T>) => {
+    const r = await p;
+    await qc.invalidateQueries({ queryKey: ["getViews"] });
+    return r;
+  };
+  const params = (viewId: string) => ({ orgSlug, viewId });
+  return {
+    create: (input: { page: ViewPage; name: string; state: SavedView["state"] }) =>
+      done(api.call("postViews", { params: { orgSlug }, body: { entity: input.page, name: input.name.trim(), filters: toFilters(input.state) } as never })),
+    rename: (id: string, name: string) => done(api.call("patchViewsByViewId", { params: params(id), body: { name: name.trim() } as never })),
+    setShared: (id: string, shared: boolean) => done(api.call("patchViewsByViewId", { params: params(id), body: { scope: shared ? "SHARED" : "PERSONAL" } as never })),
+    setPinned: (id: string, pinned: boolean) => done(api.call("putViewsByViewIdPin", { params: params(id), body: { pinned } as never })),
+    remove: (id: string) => done(api.call("deleteViewsByViewId", { params: params(id) })),
+    reorderPinned: (ids: string[]) => done(api.call("putViewsPinnedOrder", { params: { orgSlug }, body: { ids } as never })),
+  };
 }

@@ -1,5 +1,5 @@
 /**
- * Help centre copy (X3, FIG-1172): tips by page, what's new and the keyboard shortcuts, from the design's help panel. Static text, not demo data.
+ * Help centre copy (X3, FIG-1172): tips by page, what's new and the keyboard shortcuts, from the design's help panel. The Help panel and Help centre read the role-filtered copy from the API (`/help`, `/whats-new`, `/commands`) and fall back to this text only when the API cannot answer (an organisation not on V1.1, or offline).
  * Wording lives here so it can be translated with the rest of the copy.
  */
 
@@ -13,10 +13,15 @@ export const TIPS: Record<string, { title: string; tips: string[] }> = {
   settings: { title: "Settings", tips: ["Changes are recorded in the audit log.", "Each editor says what a change affects before you save."] },
 };
 
-export function tipsFor(pathname: string, orgSlug: string): { title: string; tips: string[] } {
+/** The key of the page's tips (`/help?page=`): home, leads, deals, tasks, companies, reports or settings. */
+export function pageKey(pathname: string, orgSlug: string): string {
   const rest = pathname.replace(`/o/${orgSlug}`, "").split("/").filter(Boolean)[0] ?? "";
   const key = rest === "" ? "home" : rest === "calendar" ? "tasks" : rest;
-  return TIPS[key] ?? TIPS.home!;
+  return key in TIPS ? key : "home";
+}
+
+export function tipsFor(pathname: string, orgSlug: string): { title: string; tips: string[] } {
+  return TIPS[pageKey(pathname, orgSlug)]!;
 }
 
 export interface NewsItem {

@@ -174,10 +174,12 @@ export function PlatformShell({ identity, signOut, children }: { identity: Platf
             ) : null}
           </div>
         </header>
-        <div className="fb-pl-devstrip" role="status">
-          <AlertTriangle size={14} aria-hidden="true" />
-          Dev only: verification skipped. Real platform sign-in always asks for a code.
-        </div>
+        {identity.name.startsWith("Dev ") ? (
+          <div className="fb-pl-devstrip" role="status">
+            <AlertTriangle size={14} aria-hidden="true" />
+            Dev only: verification skipped. Real platform sign-in always asks for a code.
+          </div>
+        ) : null}
         <main className={cx("fb-pl-main")}>
           <div className="fb-pl-page">{children}</div>
         </main>

@@ -15,7 +15,7 @@ import { usePlatform } from "./store";
 export function SupportAccess() {
   const { state, now, dispatch, toast } = usePlatform();
   const params = useSearchParams();
-  const [form, setForm] = useState({ org: params?.get("org") ?? state.orgs[0]!.id, reason: "", ticket: "", mins: "60", scope: SUPPORT_SCOPES[0]!, mask: true });
+  const [form, setForm] = useState({ org: params?.get("org") ?? state.orgs[0]?.id ?? "", reason: "", ticket: "", mins: "60", scope: SUPPORT_SCOPES[0]!, mask: true });
   const orgName = (id: string) => state.orgs.find((o) => o.id === id)?.name ?? "—";
   const adminName = (id: string) => state.admins.find((a) => a.id === id)?.name ?? "admin";
   const active = state.support.find((s) => s.id === state.activeSupport);

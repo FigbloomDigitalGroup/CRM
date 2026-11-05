@@ -1,39 +1,81 @@
-import { STAGE_PROBABILITY, type DemoDeal } from "./demo/data";
+/**
+ * Forecast display helpers (Q4, FIG-1170). The arithmetic itself (probabilities, weighted values, buckets, target progress) is done by the API
+ * (`src/lib/forecast.ts`, `GET /api/orgs/{org}/forecast`); the screen only formats what it returns and never recomputes a total.
+ */
 
-/** Forecast arithmetic (Q4, FIG-1170), pure so the numbers can be tested against the rules the screen explains. */
+export type TargetState = "no-target" | "achieved" | "on-track" | "short" | "masked";
 
-export const probabilityOf = (d: DemoDeal): number => d.prob ?? STAGE_PROBABILITY[d.stage] ?? 0;
-export const weightedValue = (d: DemoDeal): number => d.value * probabilityOf(d);
-
-export const isOpen = (d: DemoDeal) => d.stage !== "Closed Won" && d.stage in STAGE_PROBABILITY;
-
-export interface MonthBucket {
-  label: string;
-  full: number;
-  weighted: number;
+export interface Money {
+  count: number;
+  full: number | null;
+  weighted: number | null;
 }
 
-/** Expected closes by calendar month, in the order given (`[monthIndex, label]`), weighted by stage probability. */
-export function monthBuckets(open: readonly DemoDeal[], months: readonly (readonly [number, string])[]): MonthBucket[] {
-  return months.map(([m, label]) => {
-    const ds = open.filter((d) => new Date(d.close).getMonth() === m);
-    return { label, full: ds.reduce((a, d) => a + d.value, 0), weighted: ds.reduce((a, d) => a + weightedValue(d), 0) };
-  });
-}
-
-export type TargetState = "no-target" | "on-track" | "short";
-
-export interface TargetProgress {
+export interface ForecastPerson {
+  membershipId: string;
+  name: string;
+  openDeals: number;
+  wonDeals: number;
   state: TargetState;
-  won: number;
-  forecast: number;
-  target: number;
-  shortBy: number;
+  target: number | null;
+  won: number | null;
+  weighted: number | null;
+  forecast: number | null;
+  shortBy: number | null;
+  attainmentPercent: number | null;
 }
 
-/** Whether won plus this month's weighted closes reaches the target. A person with no target is never "short". */
-export function targetProgress(won: number, forecast: number, target: number): TargetProgress {
-  if (!target) return { state: "no-target", won, forecast, target: 0, shortBy: 0 };
-  const reached = won + forecast >= target;
-  return { state: reached ? "on-track" : "short", won, forecast, target, shortBy: reached ? 0 : target - won - forecast };
+export interface ForecastTeam extends Omit<ForecastPerson, "membershipId" | "name" | "openDeals" | "wonDeals"> {
+  targetSource: "team" | "sum-of-people" | "none";
+}
+
+/** `GET /forecast` as the API answers it (the contract types it as `unknown`; shape from docs/FORECAST.md). */
+export interface ForecastResponse {
+  scope: "mine" | "team";
+  month: string;
+  months: number;
+  asOf: string;
+  currency: string;
+  valueMasked: boolean;
+  stages: (Money & { id: string; key: string; name: string; probability: number; probabilitySet: boolean })[];
+  pipeline: Money;
+  buckets: (Money & { month: string })[];
+  earlier: Money;
+  later: Money;
+  unscheduled: Money;
+  won: { count: number; total: number | null };
+  people: ForecastPerson[];
+  team: ForecastTeam | null;
+}
+
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** "2026-11" to "November" (or "NOV" when short). */
+export function monthName(key: string, short = false): string {
+  const n = Number(key.slice(5, 7));
+  const name = MONTH_NAMES[n - 1] ?? key;
+  return short ? name.slice(0, 3).toUpperCase() : name;
+}
+
+/** The weighted value of one deal from its stage percent, rounded to the cent like the server does. Null when the value is masked. */
+export function weightedOf(value: string | number | null | undefined, percent: number): number | null {
+  if (value === null || value === undefined) return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.round(n * percent) / 100 : null;
+}
+
+/** How a target row reads: the plain-words note under the progress bar. */
+export function targetNote(state: TargetState, shortBy: number | null, short: (n: number) => string): string {
+  switch (state) {
+    case "no-target":
+      return "Ask Management to set a target";
+    case "achieved":
+      return "Target reached";
+    case "on-track":
+      return "On track if this month’s deals close";
+    case "short":
+      return `${short(shortBy ?? 0)} short even if this month’s deals close`;
+    default:
+      return "You can’t see this person’s figures.";
+  }
 }

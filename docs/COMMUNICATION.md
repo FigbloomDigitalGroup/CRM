@@ -36,7 +36,7 @@ Polling with a cursor, plus an optional long poll (`waitSeconds` up to 20). It n
 
 See `docs/PRIVACY.md` (chat section): retention setting `chatMessages`, organisation export (`scripts/export-organization.ts` writes `chat_*.csv`), member erasure (`eraseMemberChat`, default anonymise, policy `DELETE` available), contact erasure scrubs chat text that names the person.
 
-## To wire the Chat screen (not done: the M10 demo screens still run on `demo/store.ts`)
+## Chat screen: wired on 5 Nov 2026 (`src/ui/screens/communication/api.ts`); still to do: pass the unread total as `badges.chat` from the layout
 
 Replace `demo/store.ts` with hooks on the routes above, swap the nav stand-in keys for `chat.view`, `mail.use` and `meetings.schedule` (the Video Conference entry follows the task permission today, which Restricted Technical has; the decision gives that role no meetings key, so its menu changes), pass `unread` as `badges.chat`, remove `demo: true` and the `demoScreensEnabled()` checks, and update the table in `docs/RESTRUCTURE_LOG.md`.
 

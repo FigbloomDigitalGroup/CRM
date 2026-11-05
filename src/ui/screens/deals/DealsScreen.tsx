@@ -6,6 +6,7 @@ import { useState, type DragEvent, type ReactNode } from "react";
 import { useMember } from "../../data/member";
 import { ErrorState } from "../../components/states";
 import { useToast } from "../../components/toast";
+import { usePipelines } from "../commercial/api";
 import { useAllDeals, useHandoffStatuses, useMemberName, useRefData } from "./data";
 import { NewDealDrawer } from "./NewDealDrawer";
 import { dateLong, dealTitle, dealValue, flagsFor, initials, isMasked, kes, ago, num, stageTone, type DealItem, type Flag, type Stage } from "./model";
@@ -39,7 +40,13 @@ export function DealsScreen() {
   const handoffs = useHandoffStatuses(true);
   const mover = useDealMover(ref.data);
 
-  const items = deals.data?.items ?? [];
+  // Pipeline switching (V1.1, B6.15): with more than one active pipeline the board and list show one at a time; with one (or before V1.1) nothing changes.
+  const pipes = usePipelines(orgSlug);
+  const activePipes = (pipes.data?.items ?? []).filter((p) => p.isActive);
+  const [pipelineId, setPipelineId] = useState<string | null>(null);
+  const chosenPipe = activePipes.length > 1 ? (activePipes.find((p) => p.id === pipelineId) ?? activePipes.find((p) => p.isDefault) ?? activePipes[0]!) : null;
+  const pipeStageIds = chosenPipe ? new Set(chosenPipe.stages.map((s) => s.id)) : null;
+  const items = (deals.data?.items ?? []).filter((d) => !pipeStageIds || pipeStageIds.has(d.pipelineStageId));
   const lostName = (d: DealItem) => (d.lostReasonId ? ref.data?.lostReasons.find((r) => r.id === d.lostReasonId)?.name : undefined);
 
   const canMove = (d: DealItem) => !d.archivedAt && (can("deals.edit.all") || (can("deals.edit.own") && d.ownerMembershipId === member.membershipId));
@@ -70,7 +77,7 @@ export function DealsScreen() {
     return isMasked(d) ? "Values hidden" : v === null ? "No value yet" : kes(v, d.currency);
   }
 
-  const stages = ref.data?.stages ?? [];
+  const stages = (ref.data?.stages ?? []).filter((s) => !pipeStageIds || pipeStageIds.has(s.id));
   const groups: { label: string; tip?: string; cols: { stage: Stage; list: DealItem[]; emptyText: string }[] }[] = readOnly
     ? [
         {
@@ -131,6 +138,16 @@ export function DealsScreen() {
               List
             </button>
           </div>
+          {chosenPipe ? (
+            <label className="fb-dtool">
+              <span className="fb-sr-only">Pipeline</span>
+              <select aria-label="Pipeline" value={chosenPipe.id} onChange={(e) => setPipelineId(e.target.value)}>
+                {activePipes.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <label className="fb-dtool fb-dtool--check">
             <input type="checkbox" checked={archived} onChange={(e) => setArchived(e.target.checked)} />
             Show archived

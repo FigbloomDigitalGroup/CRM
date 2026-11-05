@@ -21,7 +21,7 @@ Not gated by the release flag (the list for one organisation is harmless); two-s
 
 ## To wire
 
-`src/ui/screens/orgside/OrgSwitcher.tsx` and `demo/` (cookie `fb_demo_multiorg`): replace the demo list with `GET /api/me/organizations` and the switch with the POST, then navigate to `/o/<slug>`. Not wired here.
+Wired on 5 Nov 2026 (M14, W6): `OrgSwitcher.tsx` uses both routes and opens `/o/<slug>`; the layout mounts it when the person has more than one organisation.
 
 ## Tests
 

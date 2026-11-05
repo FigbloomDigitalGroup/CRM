@@ -1,95 +1,226 @@
 "use client";
 
-import { ArrowLeft, CheckCircle2, Clock, Copy, FileText, Send, X } from "lucide-react";
+import { ArrowLeft, Clock, Copy, FileText, Send, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Banner, Button, EmptyState, IconButton, Input, NoAccess, ReleaseTag, Select, Textarea, useMember, useToast } from "@/ui";
-import { deals as demoDeals } from "./demo/data";
-import { ensureQuote, quoteActions, requestApproval, requestDeposit, setDealValue, useDemoStore } from "./demo/store";
-import { MAX_DISCOUNT, formatKes, isLocked, needsApproval, quoteTotals, type QuoteStatus } from "./quoteMath";
+import { useState } from "react";
+import { ApiRequestError } from "@/api-client";
+import { Banner, Button, EmptyState, IconButton, Input, LoadingState, NoAccess, ReleaseTag, Select, Textarea, useApiQuery, useMember, useToast } from "@/ui";
+import { QueryFailure } from "../../featureUnavailable";
+import {
+  STATUS_LABEL,
+  dateLabel,
+  describeError,
+  estimateTotals,
+  historyOf,
+  kes,
+  useApplyToDeal,
+  useCatalogue,
+  useCreateQuote,
+  useDealQuote,
+  useNewVersion,
+  useQuoteActivity,
+  useQuoteVersion,
+  useRecordResponse,
+  useRequestQuoteApproval,
+  useSaveVersion,
+  useSendQuote,
+  whenLabel,
+  type QuoteStatus,
+  type QuoteVersionView,
+} from "./api";
 import { QuoteDocument } from "./QuoteDocument";
-import { SignPreviewDialog } from "./SignPreviewDialog";
 
 /**
- * Quote builder, document preview and versions (Q1, FIG-1168; design-spec/CrmGrowth.dc.html). A quote is built from the service catalogue,
- * priced with a discount that goes to Management above the limit, previewed as the document the client gets, and versioned: a sent, signed or
- * waiting version is read-only and "New version" starts a draft while every earlier version stays in the history.
+ * Quote builder, document preview and versions (Q1, FIG-1168), on the real quote API (docs/QUOTES_AND_APPROVALS.md). A quote is built from the
+ * catalogue, discounted (above the limit it goes to Management), previewed as the document the client gets, and versioned: a version that was
+ * submitted or sent is locked by the database and "New version" starts a draft while earlier versions stay in the history.
  *
- * Margin is shown only with `deals.margin` (Management): the column, the summary row and the figure are not rendered for anyone else, not merely
- * hidden. Runs on demo data (docs/RESTRUCTURE_LOG.md) until B6.11 and B6.12 are wired.
+ * Money, cost and margin are rendered as the API returns them: masked fields arrive as null and are shown as hidden, never rebuilt.
  */
 
-const TONE: Record<QuoteStatus, string> = { Draft: "neutral", "Pending approval": "warn", Approved: "info", Sent: "info", Signed: "ok" };
+const TONE: Record<QuoteStatus, string> = { DRAFT: "neutral", PENDING_APPROVAL: "warn", APPROVED: "info", REJECTED: "bad", SENT: "info", ACCEPTED: "ok", DECLINED: "bad" };
 
 export function QuoteStatusPill({ status }: { status: QuoteStatus }) {
-  return <span className={`fb-com-pill fb-com-pill--${TONE[status]}`}>{status}</span>;
+  return <span className={`fb-com-pill fb-com-pill--${TONE[status]}`}>{STATUS_LABEL[status]}</span>;
 }
 
-const dateLabel = (iso: string) => new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" });
-const whenLabel = (iso: string) => new Date(iso).toLocaleString("en-KE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+interface DraftLine {
+  key: string;
+  lineId?: string;
+  catalogueItemId: string | null;
+  description: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number | null;
+  unitCost: number | null;
+}
+interface Draft {
+  lines: DraftLine[];
+  discount: string;
+  terms: string;
+}
+
+const fromVersion = (v: QuoteVersionView): Draft => ({
+  lines: v.lines.map((l) => ({ key: l.id, lineId: l.id, catalogueItemId: l.catalogueItemId, description: l.description, unit: l.unit, quantity: l.quantity, unitPrice: l.unitPrice, unitCost: l.unitCost })),
+  discount: String(v.discountPercent),
+  terms: v.terms ?? "",
+});
+
+interface DealView {
+  id: string;
+  value?: string | number | null;
+  valueMasked?: boolean;
+  currency?: string;
+  notes?: string | null;
+  company: { name: string };
+  service?: { name?: string } | null;
+}
 
 export function QuoteBuilder({ dealId }: { dealId: string }) {
-  const { orgSlug, can, userName, roleName } = useMember();
-  const toast = useToast();
-  const store = useDemoStore();
-  const [previewing, setPreviewing] = useState(false);
-  const [signing, setSigning] = useState(false);
+  const { orgSlug, can, roleName } = useMember();
+  const allowed = can("quotes.create") || can("quotes.approve");
+  const deal = useApiQuery("getDeal", { params: { orgSlug, dealId } }, { enabled: allowed, retry: false });
+  const quote = useDealQuote(orgSlug, dealId);
+  const noQuote = quote.error instanceof ApiRequestError && quote.error.status === 404;
 
-  const deal = demoDeals.find((d) => d.id === dealId);
+  if (!allowed) return <NoAccess area="Quotes" denial={{ yourRole: roleName, ownerRoles: ["Management", "Sales"], whoToAsk: ["Management"] }} />;
+  if (deal.error) return <QueryFailure error={deal.error} area="This deal" onRetry={() => void deal.refetch()} />;
+  const d = deal.data as unknown as DealView | undefined;
+  if (!d || quote.isLoading) return <LoadingState label="Loading the quote" />;
+  if (noQuote) return <StartQuote dealId={dealId} deal={d} />;
+  if (quote.error || !quote.data) return <QueryFailure error={quote.error} area="Quotes" onRetry={() => void quote.refetch()} />;
+  return <Builder deal={d} quoteId={quote.data.id} number={quote.data.number} current={quote.data.currentVersion ?? 1} />;
+}
+
+function StartQuote({ dealId, deal }: { dealId: string; deal: DealView }) {
+  const { orgSlug, can } = useMember();
+  const toast = useToast();
+  const create = useCreateQuote();
+  if (!can("quotes.create")) {
+    return <EmptyState title="No quote on this deal yet" body="Sales builds the quote; it appears here once it is sent for approval." action={<Link href={`/o/${orgSlug}/approvals`}>Back to approvals</Link>} />;
+  }
+  return (
+    <div className="fb-com" data-screen-label="Quote builder">
+      <Link href={`/o/${orgSlug}/quotes`} className="fb-com-back">
+        <ArrowLeft size={15} aria-hidden="true" /> {deal.company.name} deal
+      </Link>
+      <EmptyState
+        title="No quote on this deal yet"
+        body="Start a draft, then add items from the catalogue."
+        action={
+          <Button
+            variant="primary"
+            disabled={create.isPending}
+            onClick={() =>
+              create.mutateAsync({ params: { orgSlug, dealId }, body: {} }).then(
+                () => toast.show({ message: "Draft quote created", tone: "success" }),
+                (e) => toast.show({ message: describeError(e).body, tone: "danger" }),
+              )
+            }
+          >
+            Start a quote
+          </Button>
+        }
+      />
+    </div>
+  );
+}
+
+function Builder({ deal, quoteId, number, current }: { deal: DealView; quoteId: string; number: string; current: number }) {
+  const { orgSlug, can } = useMember();
+  const toast = useToast();
   const mayBuild = can("quotes.create");
   const mayApprove = can("quotes.approve");
-  const has = store.quotes.some((x) => x.dealId === dealId);
-  useEffect(() => {
-    if (deal && mayBuild && !has) ensureQuote(deal.id, deal.title, userName);
-  }, [deal, mayBuild, has, userName]);
-  if (!mayBuild && !mayApprove) return <NoAccess area="Quotes" denial={{ yourRole: roleName, ownerRoles: ["Management", "Sales"], whoToAsk: ["Management"] }} />;
-  if (!deal) return <EmptyState title="This deal was not found" body="Open a quote from the Quotes list." action={<Link href={`/o/${orgSlug}/quotes`}>Back to quotes</Link>} />;
+  const [previewing, setPreviewing] = useState(false);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [picked, setPicked] = useState(0);
 
-  const q = store.quotes.find((x) => x.dealId === deal.id);
-  if (!q) return mayBuild ? null : <EmptyState title="No quote on this deal yet" body="Sales builds the quote; it appears here once it is sent for approval." action={<Link href={`/o/${orgSlug}/approvals`}>Back to approvals</Link>} />;
-  const showMargin = can("deals.margin");
-  const totals = quoteTotals(q.lines, store.catalogue, q.discount);
-  const locked = isLocked(q.status);
+  const versionQ = useQuoteVersion(orgSlug, quoteId, current);
+  const quoteQ = useDealQuote(orgSlug, deal.id);
+  const catalogue = useCatalogue(orgSlug, mayBuild);
+  const activity = useQuoteActivity(orgSlug, quoteId, current);
+  const save = useSaveVersion();
+  const newVersion = useNewVersion();
+  const send = useSendQuote();
+  const ask = useRequestQuoteApproval();
+  const respond = useRecordResponse();
+  const apply = useApplyToDeal();
+
+  const v = versionQ.data;
+  if (!v) return versionQ.error ? <QueryFailure error={versionQ.error} area="This quote" onRetry={() => void versionQ.refetch()} /> : <LoadingState label="Loading the quote" />;
+
+  const fail = (e: unknown) => toast.show({ message: describeError(e).body, tone: "danger" });
+  const params = { orgSlug, quoteId, version: String(v.version) };
+  const locked = v.locked || v.status !== "DRAFT";
   const canEdit = mayBuild && !locked;
-  const waiting = q.status === "Pending approval";
-  const v2 = true; // the e-signature panel shows whatever the release allows; this screen is V2-enabled (FIG-1193)
-  const dealValue = store.dealValues[deal.id] ?? deal.value;
-  const differs = totals.total > 0 && Math.abs(totals.total - dealValue) > 1 && mayBuild;
-  const signed = q.status === "Signed";
+  const rows = (draft ?? fromVersion(v)).lines;
+  const dirty = draft !== null;
+  const discountNum = Number(draft?.discount ?? v.discountPercent);
+  const catItems = catalogue.data?.items ?? [];
+  const estimate = dirty && !v.amountMasked ? estimateTotals(rows, Number.isFinite(discountNum) ? discountNum : 0) : null;
+  const subtotal = estimate ? estimate.subtotal : v.subtotal;
+  const discountAmt = estimate ? estimate.discount : v.discountAmount;
+  const total = estimate ? estimate.total : v.total;
+  const showMargin = !v.marginMasked;
+  const dealTitle = deal.notes?.split(/\r?\n/)[0] || deal.service?.name || "Deal";
+  const edit = (next: Partial<Draft>) => setDraft({ ...(draft ?? fromVersion(v)), ...next });
+  const history = historyOf(quoteQ.data?.versions ?? [v]);
+  const views = (activity.data?.events ?? []).filter((e) => e.type === "VIEWED").length;
+  const differs = v.total !== null && ["APPROVED", "SENT", "ACCEPTED"].includes(v.status) && mayBuild && !deal.valueMasked && Math.abs(v.total - Number(deal.value ?? 0)) > 0.5;
+  const approvalNeeded = v.approvalRequired === true && v.status === "DRAFT";
 
-  const send = () => {
-    if (!q.lines.length) return toast.show({ message: "Add at least one line item first", tone: "danger" });
-    if (needsApproval(q.discount, q.status, store.discountLimit)) {
-      quoteActions.setStatus(deal!.id, "Pending approval", userName, `${q.discount}% discount · sent for approval`);
-      requestApproval({ kind: "Discount", target: `${deal!.company} · ${q.no} v${q.version}`, detail: `${q.discount}% discount. Rule: above ${store.discountLimit}% needs Management.`, by: userName, quoteDealId: deal!.id });
-      return toast.show({ message: "Sent to Management for approval", tone: "success" });
+  const saveDraft = async (): Promise<boolean> => {
+    if (!dirty) return true;
+    try {
+      await save.mutateAsync({
+        params,
+        body: {
+          lines: rows.map((l) => (l.lineId ? { lineId: l.lineId, quantity: l.quantity } : { catalogueItemId: l.catalogueItemId, quantity: l.quantity })),
+          discountPercent: discountNum,
+          terms: draft?.terms ?? v.terms ?? "",
+        },
+      });
+      setDraft(null);
+      return true;
+    } catch (e) {
+      fail(e);
+      return false;
     }
-    quoteActions.setStatus(deal!.id, "Sent", userName, `Sent to ${deal!.contact.split(",")[0]}${v2 ? " with a signing link" : " by email"}`);
-    toast.show({ message: "Quote sent. A follow-up task was added for 3 days from now", tone: "success" });
   };
 
-  const approveHere = () => {
-    quoteActions.setStatus(deal!.id, "Approved", userName, "Discount approved");
-    toast.show({ message: "Approved. Sales can send it now.", tone: "success" });
+  const onSend = async () => {
+    if (!rows.length) return toast.show({ message: "Add at least one line item first", tone: "danger" });
+    if (!(await saveDraft())) return;
+    try {
+      if (approvalNeeded) {
+        await ask.mutateAsync({ params });
+        toast.show({ message: "Sent to Management for approval", tone: "success" });
+      } else {
+        await send.mutateAsync({ params });
+        toast.show({ message: "Quote sent with a secure link", tone: "success" });
+      }
+    } catch (e) {
+      fail(e);
+    }
   };
 
   return (
     <div className="fb-com" data-screen-label="Quote builder">
-      
       <Link href={`/o/${orgSlug}/quotes`} className="fb-com-back">
-        <ArrowLeft size={15} aria-hidden="true" /> {deal.company} deal
+        <ArrowLeft size={15} aria-hidden="true" /> {deal.company.name} deal
       </Link>
 
       <header className="fb-com-head">
         <div>
           <div className="fb-com-titlerow">
-            <h1 className="fb-com__title">Quote {q.no}</h1>
-            <span className="fb-com-pill fb-com-pill--neutral">Version {q.version}</span>
-            <QuoteStatusPill status={q.status} />
+            <h1 className="fb-com__title">Quote {number}</h1>
+            <span className="fb-com-pill fb-com-pill--neutral">Version {v.version}</span>
+            <QuoteStatusPill status={v.status} />
+            {v.expired ? <span className="fb-com-pill fb-com-pill--warn">Expired</span> : null}
             <ReleaseTag release="v1.1" />
           </div>
           <p className="fb-com__sub">
-            {deal.company} · {deal.title} · valid until {dateLabel(q.validUntil)}
+            {deal.company.name} · {dealTitle} · valid until {dateLabel(v.validUntil)}
           </p>
         </div>
         <div className="fb-com-actions">
@@ -98,30 +229,38 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
           </Button>
           {mayBuild && locked ? (
             <Button
-              onClick={() => {
-                quoteActions.newVersion(deal.id, userName);
-                toast.show({ message: `Version ${q.version + 1} created. Earlier versions stay in history.`, tone: "success" });
-              }}
+              disabled={newVersion.isPending}
+              onClick={() =>
+                newVersion.mutateAsync({ params: { orgSlug, quoteId }, body: {} }).then(
+                  (r) => toast.show({ message: `Version ${r.version} created. Earlier versions stay in history.`, tone: "success" }),
+                  fail,
+                )
+              }
             >
               <Copy size={15} aria-hidden="true" /> New version
             </Button>
           ) : null}
-          {mayBuild && (q.status === "Draft" || q.status === "Approved") ? (
-            <Button variant="primary" onClick={send}>
-              <Send size={15} aria-hidden="true" /> {needsApproval(q.discount, q.status, store.discountLimit) ? "Request approval" : "Send quote"}
+          {dirty && canEdit ? (
+            <Button disabled={save.isPending} onClick={() => void saveDraft().then((ok) => ok && toast.show({ message: "Draft saved", tone: "success" }))}>
+              Save draft
+            </Button>
+          ) : null}
+          {mayBuild && (v.status === "DRAFT" || v.status === "APPROVED") ? (
+            <Button variant="primary" disabled={send.isPending || ask.isPending} onClick={() => void onSend()}>
+              <Send size={15} aria-hidden="true" /> {approvalNeeded ? "Request approval" : "Send quote"}
             </Button>
           ) : null}
         </div>
       </header>
 
-      {waiting ? (
-        <Banner
-          tone="warning"
-          icon={<Clock size={16} />}
-          title="Waiting for Management."
-          action={mayApprove ? <Button size="sm" variant="primary" onClick={approveHere}>Approve</Button> : undefined}
-        >
-          A {q.discount}% discount is above the {store.discountLimit}% limit, so this version can’t be sent until it’s approved. You’ll be notified.
+      {v.status === "PENDING_APPROVAL" ? (
+        <Banner tone="warning" icon={<Clock size={16} />} title="Waiting for Management." action={mayApprove ? <Link className="fb-btn fb-btn--secondary" href={`/o/${orgSlug}/approvals`}>Open approvals</Link> : undefined}>
+          A {v.discountPercent}% discount is above the limit, so this version can’t be sent until it’s approved. You’ll be notified.
+        </Banner>
+      ) : null}
+      {v.status === "REJECTED" ? (
+        <Banner tone="warning" title="Not approved.">
+          {v.decisionReason ? `Reason: ${v.decisionReason}. ` : ""}Use “New version” to change the discount and ask again.
         </Banner>
       ) : null}
 
@@ -134,7 +273,7 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
                   <h2>Line items</h2>
                   <span className="fb-com-muted">Prices from the service catalogue</span>
                 </div>
-                {q.lines.length === 0 ? (
+                {rows.length === 0 ? (
                   <p className="fb-com-empty">No line items yet. Add one from the catalogue below.</p>
                 ) : (
                   <div className="fb-com-tablewrap">
@@ -151,41 +290,35 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {q.lines.map((l) => {
-                          const item = store.catalogue.find((c) => c.id === l.cat);
-                          if (!item) return null;
-                          const price = l.price ?? item.price;
-                          const cost = l.cost ?? item.cost;
-                          return (
-                            <tr key={l.cat}>
-                              <td>
-                                <div className="fb-com-strong">{item.name}</div>
-                                <div className="fb-com-muted">per {item.unit}</div>
-                              </td>
-                              <td className="fb-com-num">
-                                <input
-                                  className="fb-input fb-com-qty"
-                                  type="number"
-                                  min={0}
-                                  value={l.qty}
-                                  readOnly={!canEdit}
-                                  aria-label={`Quantity for ${item.name}`}
-                                  onChange={(e) => quoteActions.setQty(deal.id, l.cat, Number(e.target.value))}
-                                />
-                              </td>
-                              <td className="fb-com-num">{formatKes(price)}</td>
-                              {showMargin ? <td className="fb-com-num">{cost ? `${Math.round(((price - cost) / price) * 100)}%` : "—"}</td> : null}
-                              <td className="fb-com-num fb-com-strong">{formatKes(price * l.qty)}</td>
-                              <td>
-                                {canEdit ? (
-                                  <IconButton label={`Remove ${item.name}`} onClick={() => quoteActions.removeLine(deal.id, l.cat)}>
-                                    <X size={14} aria-hidden="true" />
-                                  </IconButton>
-                                ) : null}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {rows.map((l) => (
+                          <tr key={l.key}>
+                            <td>
+                              <div className="fb-com-strong">{l.description}</div>
+                              <div className="fb-com-muted">per {l.unit}</div>
+                            </td>
+                            <td className="fb-com-num">
+                              <input
+                                className="fb-input fb-com-qty"
+                                type="number"
+                                min={1}
+                                value={l.quantity}
+                                readOnly={!canEdit}
+                                aria-label={`Quantity for ${l.description}`}
+                                onChange={(e) => edit({ lines: rows.map((x) => (x.key === l.key ? { ...x, quantity: Number(e.target.value) } : x)) })}
+                              />
+                            </td>
+                            <td className="fb-com-num">{kes(l.unitPrice, v.currency)}</td>
+                            {showMargin ? <td className="fb-com-num">{l.unitCost !== null && l.unitPrice ? `${Math.round(((l.unitPrice - l.unitCost) / l.unitPrice) * 100)}%` : "—"}</td> : null}
+                            <td className="fb-com-num fb-com-strong">{l.unitPrice === null ? "Hidden" : kes(l.unitPrice * l.quantity, v.currency)}</td>
+                            <td>
+                              {canEdit ? (
+                                <IconButton label={`Remove ${l.description}`} onClick={() => edit({ lines: rows.filter((x) => x.key !== l.key) })}>
+                                  <X size={14} aria-hidden="true" />
+                                </IconButton>
+                              ) : null}
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -193,11 +326,22 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
                 {canEdit ? (
                   <div className="fb-com-add">
                     <Select
+                      key={picked}
                       label="Add a catalogue item"
                       value=""
                       placeholder="+ Add from catalogue…"
-                      options={store.catalogue.map((c) => ({ value: c.id, label: `${c.name} · ${formatKes(c.price)}` }))}
-                      onChange={(e) => e.target.value && quoteActions.addLine(deal.id, e.target.value)}
+                      options={catItems.map((c) => ({ value: c.id, label: `${c.name} · ${kes(c.price, c.currency)}` }))}
+                      onChange={(e) => {
+                        const item = catItems.find((c) => c.id === e.target.value);
+                        if (!item) return;
+                        const has = rows.find((x) => x.catalogueItemId === item.id && !x.lineId);
+                        edit({
+                          lines: has
+                            ? rows.map((x) => (x === has ? { ...x, quantity: x.quantity + 1 } : x))
+                            : [...rows, { key: `new-${picked}-${rows.length}`, catalogueItemId: item.id, description: item.name, unit: item.unit, quantity: 1, unitPrice: item.price, unitCost: item.cost }],
+                        });
+                        setPicked((n) => n + 1);
+                      }}
                     />
                   </div>
                 ) : null}
@@ -208,18 +352,19 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
                   label="Discount %"
                   type="number"
                   min={0}
-                  max={MAX_DISCOUNT}
-                  value={q.discount}
+                  max={30}
+                  value={draft?.discount ?? String(v.discountPercent)}
                   readOnly={!canEdit}
-                  help={`Above ${store.discountLimit}% goes to Management for approval.`}
-                  onChange={(e) => quoteActions.setDiscount(deal.id, Number(e.target.value))}
+                  help="Above the approval limit, the quote goes to Management first."
+                  onChange={(e) => edit({ discount: e.target.value })}
                 />
-                <Textarea label="Terms" rows={2} value={q.terms} readOnly={!canEdit} onChange={(e) => quoteActions.setTerms(deal.id, e.target.value)} />
-                {locked ? <p className="fb-com-muted">This version is {q.status === "Pending approval" ? "waiting for a decision" : q.status.toLowerCase()} and cannot be changed. Use “New version” to edit.</p> : null}
+                <Textarea label="Terms" rows={2} value={draft?.terms ?? v.terms ?? ""} readOnly={!canEdit} onChange={(e) => edit({ terms: e.target.value })} />
+                {locked ? <p className="fb-com-muted">This version is {v.status === "PENDING_APPROVAL" ? "waiting for a decision" : STATUS_LABEL[v.status].toLowerCase()} and cannot be changed. Use “New version” to edit.</p> : null}
+                {dirty ? <p className="fb-com-muted" role="status">Unsaved changes. Totals are final once you save.</p> : null}
               </section>
             </>
           ) : (
-            <QuoteDocument quote={q} company={deal.company} contact={deal.contact} catalogue={store.catalogue} />
+            <QuoteDocument orgSlug={orgSlug} quoteId={quoteId} version={v.version} number={number} />
           )}
         </div>
 
@@ -227,17 +372,18 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
           <section className="fb-com-card">
             <h2>Summary</h2>
             <dl className="fb-com-sum">
-              <div><dt>Subtotal</dt><dd>{formatKes(totals.subtotal)}</dd></div>
-              <div><dt>Discount {q.discount}%</dt><dd>−{formatKes(totals.discount)}</dd></div>
-              <div className="fb-com-sum__total"><dt>Total</dt><dd>{formatKes(totals.total)}</dd></div>
-              {showMargin ? (
-                <div><dt>Margin (Management only)</dt><dd className={totals.marginPct < 25 ? "fb-com-bad" : undefined}>{totals.marginPct}%</dd></div>
+              <div><dt>Subtotal</dt><dd>{kes(subtotal, v.currency)}</dd></div>
+              <div><dt>Discount {Number.isFinite(discountNum) ? discountNum : v.discountPercent}%</dt><dd>{discountAmt === null ? "Hidden" : `−${kes(discountAmt, v.currency)}`}</dd></div>
+              <div className="fb-com-sum__total"><dt>Total</dt><dd>{kes(total, v.currency)}</dd></div>
+              {showMargin && v.marginPct !== null ? (
+                <div><dt>Margin (Management only)</dt><dd className={v.marginPct < 25 ? "fb-com-bad" : undefined}>{v.marginPct}%</dd></div>
               ) : null}
             </dl>
+            {v.amountMasked ? <p className="fb-com-note">Amounts are hidden for your role.</p> : null}
             {differs ? (
               <p className="fb-com-note">
-                Deal value is {formatKes(dealValue)}.{" "}
-                <button type="button" className="fb-com-linkbtn" onClick={() => { setDealValue(deal.id, totals.total); toast.show({ message: "Deal value updated", tone: "success" }); }}>
+                Deal value is {kes(Number(deal.value), deal.currency)}.{" "}
+                <button type="button" className="fb-com-linkbtn" onClick={() => apply.mutateAsync({ params }).then(() => toast.show({ message: "Deal value updated", tone: "success" }), fail)}>
                   Use the quote total
                 </button>
               </p>
@@ -245,39 +391,33 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
           </section>
 
           <section className="fb-com-card">
-            <div className="fb-com-card__head"><h2>Client signature</h2><span className="fb-com-tag">V2</span></div>
-            {signed ? (
-              <p className="fb-com-ok"><CheckCircle2 size={16} aria-hidden="true" /> Signed {q.signedAt ? whenLabel(q.signedAt) : ""} by {q.signer}</p>
-            ) : (
+            <h2>Client response</h2>
+            {v.status === "SENT" ? (
               <>
-                <p className="fb-com-muted">Send a signing link with the quote. The client signs in the browser; nothing to install.</p>
-                <Button disabledReason={q.status === "Sent" ? undefined : "Send the quote first"} onClick={() => setSigning(true)}>Preview client signing</Button>
+                <p className="fb-com-muted">The client opens a secure link{views ? ` (opened ${views} time${views === 1 ? "" : "s"})` : ""}. Record their answer here when you hear back.</p>
+                {mayBuild ? (
+                  <div className="fb-com-actions">
+                    <Button onClick={() => respond.mutateAsync({ params, body: { outcome: "ACCEPTED" } }).then(() => toast.show({ message: "Marked accepted. The deal stays where it is until you mark it won.", tone: "success" }), fail)}>Mark accepted</Button>
+                    <Button onClick={() => respond.mutateAsync({ params, body: { outcome: "DECLINED" } }).then(() => toast.show({ message: "Marked declined", tone: "info" }), fail)}>Mark declined</Button>
+                  </div>
+                ) : null}
               </>
+            ) : v.status === "ACCEPTED" || v.status === "DECLINED" ? (
+              <p className="fb-com-ok">{STATUS_LABEL[v.status]}{v.respondedAt ? ` · ${whenLabel(v.respondedAt)}` : ""}</p>
+            ) : (
+              <p className="fb-com-muted">Send the quote first. E-signature in the browser arrives with V2.</p>
             )}
-          </section>
-
-          <section className="fb-com-card">
-            <div className="fb-com-card__head"><h2>Deposit request</h2><span className="fb-com-tag fb-com-tag--warn">Open decision</span></div>
-            <p className="fb-com-muted">
-              The MVP excludes payment processing. This sends an M-Pesa / bank request through your payment provider; the CRM only records the status. Needs Michael’s decision before it’s built.
-            </p>
-            <Button
-              disabledReason={!signed ? "Available once the quote is signed" : store.deposit[q.id] ? "Already requested" : undefined}
-              onClick={() => { requestDeposit(q.id); toast.show({ message: "Deposit request sent. Finance sees its status.", tone: "success" }); }}
-            >
-              {store.deposit[q.id] ? "Deposit requested · awaiting payment" : signed ? `Request 50% deposit (${formatKes(Math.round(totals.total / 2))})` : "Available once signed"}
-            </Button>
           </section>
 
           <section className="fb-com-card">
             <h2>Version history</h2>
             <ol className="fb-com-history">
-              {[...q.history].reverse().map((h, i) => (
-                <li key={`${h.at}-${i}`}>
+              {[...history].reverse().map((h) => (
+                <li key={h.key}>
                   <span className="fb-com-pill fb-com-pill--neutral">v{h.v}</span>
                   <div>
                     <div className="fb-com-strong">{h.note}</div>
-                    <div className="fb-com-muted">{h.by} · {whenLabel(h.at)}</div>
+                    <div className="fb-com-muted">{whenLabel(h.at)}</div>
                   </div>
                 </li>
               ))}
@@ -285,20 +425,6 @@ export function QuoteBuilder({ dealId }: { dealId: string }) {
           </section>
         </aside>
       </div>
-
-      <SignPreviewDialog
-        open={signing}
-        onClose={() => setSigning(false)}
-        quoteNo={q.no}
-        total={formatKes(totals.total)}
-        defaultName={deal.contact.split(",")[0] ?? ""}
-        onSign={(name) => {
-          quoteActions.sign(deal.id, name);
-          setSigning(false);
-          setPreviewing(true);
-          toast.show({ message: `Signed. The deal stays in ${deal.stage} until you mark it won.`, tone: "success" });
-        }}
-      />
     </div>
   );
 }

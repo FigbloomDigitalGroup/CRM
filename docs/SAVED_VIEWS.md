@@ -2,8 +2,7 @@
 
 V1.1. Code: `src/lib/savedViews.ts` (pure rules), `src/services/savedViewService.ts`, `src/repositories/savedViews.ts`,
 migration `20261108134200_saved_views` (tables `saved_views`, `saved_view_pins`, both with RLS).
-The screens (`src/ui/screens/views/`) still keep views in the browser (`store.ts`); wire them to these routes in M14 (the model
-and the bar stay, only `store.ts` is replaced).
+The screens (`src/ui/screens/views/`) read and write these routes (wired 5 Nov 2026, `store.ts`); the pure model stays. Only the Leads list saves views so far.
 
 ## Routes (outside the frozen V1 contract; create accepts `Idempotency-Key`)
 

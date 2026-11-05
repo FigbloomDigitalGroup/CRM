@@ -40,7 +40,7 @@ The framework behind mail sync (`docs/MAIL_AND_CALENDAR_SYNC.md`) and meeting li
 
 ## Screen to wire
 
-`src/ui/screens/assistant/settings/Connections.tsx` (Settings, Email & calendar) is still on demo data: replace its simulated steps with `start` (open the returned address), the status call and `DELETE`. Mail and Video (`src/ui/screens/communication/demo/`) read the status for their disconnected state. Not wired in this issue (the issue scope is the framework).
+`src/ui/screens/assistant/settings/Connections.tsx` (Settings, Email & calendar) is still on demo data: replace its simulated steps with `start` (open the returned address), the status call and `DELETE`. Mail and Video (`src/ui/screens/communication/api.ts`, `useConnection`) read the status and start the connection. Not wired in this issue (the issue scope is the framework).
 
 ## Tests
 

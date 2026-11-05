@@ -2,7 +2,7 @@
 
 V1.1. Code: `src/lib/commandIndex.ts` (the commands, pure), `src/lib/helpContent.ts` (articles, tips, release notes), `src/services/helpService.ts`.
 No database table: the content is written in code, reviewed with the rest of the wording, and carries no record, value or person.
-The screens (`src/ui/screens/palette/`) still build their list from the demo records in `items.ts`; wire them to these routes in M14.
+The screens (`src/ui/screens/palette/`) are wired (5 Nov 2026): the palette reads `/commands` and `/search`, the Help panel and Help centre read `/help`, `/help/{slug}` and `/whats-new`. Where the API answers FEATURE_UNAVAILABLE (organisation not on V1.1) the palette falls back to the same permission rules held in `items.ts` and the Help panel to the written copy in `helpContent.ts`.
 
 ## Routes (outside the frozen V1 contract; all GET, all need release V1.1)
 

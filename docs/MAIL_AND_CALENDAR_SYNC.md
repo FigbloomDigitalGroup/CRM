@@ -29,7 +29,7 @@ Backend of the Mail workspace (F6.22) and Video Conference (F6.23), on the OAuth
 
 ## Known gaps
 
-Task events edited in the calendar move the task's due time but do not create tasks from calendar events. Calendar and mail sync poll (no provider push). Gmail replies thread by headers only (no `threadId`). Mail and calendar screens (`src/ui/screens/communication/demo/`, `.../assistant/settings/Connections.tsx`) are not yet wired to these routes.
+Task events edited in the calendar move the task's due time but do not create tasks from calendar events. Calendar and mail sync poll (no provider push). Gmail replies thread by headers only (no `threadId`). The Mail and Video screens (`src/ui/screens/communication/`) are wired to these routes (5 Nov 2026); `.../assistant/settings/Connections.tsx` is not.
 
 ## Tests
 

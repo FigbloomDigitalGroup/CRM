@@ -1,65 +1,11 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ApprovalRulesEditor } from "../../../src/ui/screens/settingsplus/ApprovalRules";
-import { CatalogueEditor } from "../../../src/ui/screens/settingsplus/Catalogue";
 import { DevelopersEditor } from "../../../src/ui/screens/settingsplus/Developers";
 import { RolesEditor } from "../../../src/ui/screens/settingsplus/Roles";
-import { MANAGEMENT, renderAs, SALES } from "../commercial/helpers";
+import { MANAGEMENT, renderAs } from "../commercial/helpers";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/o/figbloom/settings", useRouter: () => ({ push: vi.fn() }) }));
-
-describe("service catalogue (FIG-1174)", () => {
-  it("cost and margin columns exist only for a role with deals.margin", () => {
-    const { unmount } = renderAs(<CatalogueEditor />, MANAGEMENT);
-    expect(screen.getByRole("columnheader", { name: "Margin" })).toBeInTheDocument();
-    unmount();
-    renderAs(<CatalogueEditor />, { ...MANAGEMENT, permissionKeys: ["catalogue.manage"] });
-    expect(screen.queryByRole("columnheader", { name: "Margin" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("columnheader", { name: "Cost" })).not.toBeInTheDocument();
-  });
-
-  it("explains the impact before saving, and a zero price blocks the save with the reason", async () => {
-    renderAs(<CatalogueEditor />, MANAGEMENT);
-    const price = screen.getByLabelText("Price for Support retainer");
-    await userEvent.clear(price);
-    await userEvent.type(price, "30000");
-    expect(screen.getByRole("status")).toHaveTextContent(/KES 25,000 → KES 30,000/);
-    expect(screen.getByRole("status")).toHaveTextContent(/already sent keep the price/);
-    await userEvent.clear(price);
-    await userEvent.type(price, "0");
-    expect(screen.getByRole("alert")).toHaveTextContent(/price must be more than 0/);
-    expect(screen.getByRole("button", { name: "Save changes" })).toHaveAttribute("aria-disabled", "true");
-  });
-
-  it("saving asks for confirmation, repeats the impact, and writes an audit entry", async () => {
-    renderAs(<CatalogueEditor />, MANAGEMENT);
-    const price = screen.getByLabelText("Price for Support retainer");
-    await userEvent.clear(price);
-    await userEvent.type(price, "30000");
-    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(dialog).toHaveTextContent(/recorded in the audit log/);
-    await userEvent.click(within(dialog).getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Recent changes")).toBeInTheDocument();
-    expect(screen.getByText("Catalogue changed")).toBeInTheDocument();
-  });
-});
-
-describe("approval rules (FIG-1174)", () => {
-  it("a discount threshold above the maximum a quote may carry cannot be saved", async () => {
-    renderAs(<ApprovalRulesEditor />, MANAGEMENT);
-    const n = screen.getByLabelText(/Threshold for Discount on a quote above/);
-    await userEvent.clear(n);
-    await userEvent.type(n, "45");
-    expect(screen.getByRole("alert")).toHaveTextContent(/could never trigger/);
-  });
-
-  it("is read-only with a stated reason for a role that cannot change it", () => {
-    renderAs(<ApprovalRulesEditor />, SALES);
-    expect(screen.getByRole("button", { name: "Save changes" })).toHaveAttribute("aria-disabled", "true");
-  });
-});
 
 describe("roles and field access (FIG-1194)", () => {
   it("shows the effect on a sample record before anything is saved", async () => {

@@ -137,6 +137,27 @@ export function CaptureSheet({ onClose }: { onClose: () => void }) {
     ...(remind ? { followUp: { title: `Follow up with ${name.trim()}`, dueOn: dayOffset(1) } } : {}),
   });
 
+  /** A scanned card is saved through its capture, so the photo is attached to the lead. The person has just checked every field on this form. */
+  async function confirmScanned(captureId: string, decision?: { duplicateDecision: "OPEN_EXISTING" | "CREATE_ANYWAY" | "MERGE"; duplicateId?: string }): Promise<CaptureAnswer> {
+    const b = base();
+    const answer = (await api.call("postQuickCaptureCardsByCaptureIdConfirm", {
+      params: { orgSlug, captureId },
+      body: {
+        confirmed: true,
+        fields: { name: b.name, ...(b.phone ? { phone: b.phone } : {}), ...(b.email ? { email: b.email } : {}), ...(b.note ? { note: b.note } : {}) },
+        ...(b.serviceId ? { serviceId: b.serviceId } : {}),
+        ...(b.sourceId ? { sourceId: b.sourceId } : {}),
+        ...(decision ?? {}),
+      } as never,
+      idempotencyKey: key.current,
+    })) as unknown as { status: string; duplicates?: Candidate[]; hiddenDuplicates?: number; existing?: { type: string; id: string }; result?: CaptureAnswer; capture?: { leadId?: string | null } };
+    if (answer.status === "DUPLICATE_WARNING") return { status: "DUPLICATE_WARNING", duplicates: answer.duplicates ?? [], hiddenDuplicates: answer.hiddenDuplicates };
+    if (answer.status === "OPENED_EXISTING" && answer.existing) return { status: "OPENED_EXISTING", existing: answer.existing };
+    if (answer.status === "ALREADY_CONFIRMED" && answer.capture?.leadId) return { status: "CREATED", lead: { id: answer.capture.leadId } };
+    if (answer.result && (answer.result.status === "CREATED" || answer.result.status === "MERGED")) return answer.result;
+    throw new Error("Unexpected answer from the card capture.");
+  }
+
   async function save(decision?: { duplicateDecision: "OPEN_EXISTING" | "CREATE_ANYWAY" | "MERGE"; duplicateId?: string }) {
     if (!ready || busy) return;
     setBusy(true);
@@ -145,7 +166,7 @@ export function CaptureSheet({ onClose }: { onClose: () => void }) {
     if (decision) key.current = newIdempotencyKey();
     try {
       if (typeof navigator !== "undefined" && navigator.onLine === false) throw Object.assign(new TypeError("offline"), { name: "TypeError" });
-      const res = (await api.call("quickCapture", { params: { orgSlug }, body: body as never, idempotencyKey: key.current })) as unknown as CaptureAnswer;
+      const res = scanned?.captureId ? await confirmScanned(scanned.captureId, decision) : ((await api.call("quickCapture", { params: { orgSlug }, body: body as never, idempotencyKey: key.current })) as unknown as CaptureAnswer);
       if (res.status === "DUPLICATE_WARNING") {
         setDupes(res.duplicates ?? []);
         return;
@@ -234,9 +255,9 @@ export function CaptureSheet({ onClose }: { onClose: () => void }) {
           <textarea className="fb-m-textarea" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="One line is fine." maxLength={2000} />
         </label>
         <div className="fb-m-chips">
-          <button type="button" className="fb-m-chip" aria-pressed={remind} onClick={() => setRemind((v) => !v)}>
+          {scanned?.captureId ? null : <button type="button" className="fb-m-chip" aria-pressed={remind} onClick={() => setRemind((v) => !v)}>
             Remind me to follow up tomorrow
-          </button>
+          </button>}
         </div>
 
         {dupes ? (

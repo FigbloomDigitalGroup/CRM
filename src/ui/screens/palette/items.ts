@@ -1,12 +1,10 @@
-import { DEMO_RECORDS } from "../assistant/demo/data";
-
 /**
  * What the command palette (X3, FIG-1172) lists. A pure function of the person's permission keys, so "only permitted actions" is a unit test:
  * a link or action the role cannot use is not in the list at all (hard rule: hiding is a courtesy, every page and route still checks).
  * The keys mirror `src/ui/shell/navigation.ts`.
  */
 
-export type PaletteGroupId = "RECORDS" | "RECENT" | "ACTIONS" | "GO TO";
+export type PaletteGroupId = "RECORDS" | "ACTIONS" | "GO TO";
 
 export interface PaletteItem {
   id: string;
@@ -55,39 +53,52 @@ export const ACTIONS: { id: string; label: string; path?: string; run?: PaletteI
   { id: "help", label: "Help and what’s new", run: "help", hint: "?", allowed: () => true },
 ];
 
-const canOpen = (keys: readonly string[], kind: "lead" | "deal" | "company") =>
-  kind === "lead" ? GOTO[1]!.allowed(keys) : kind === "deal" ? GOTO[2]!.allowed(keys) : GOTO[5]!.allowed(keys);
+/** A command as `GET /commands` returns it (docs/HELP_AND_PALETTE.md): the server already left out what the role may not do. */
+export interface ApiCommand {
+  id: string;
+  kind: "navigate" | "create" | "assistant" | "help";
+  title: string;
+  path: string | null;
+  hint: string | null;
+}
 
-const PLURAL = { lead: "leads", deal: "deals", company: "companies" } as const;
-
-export function buildPaletteItems(input: { orgSlug: string; permissionKeys: readonly string[]; query: string }): PaletteGroup[] {
+/**
+ * The list for the box. `commands` is the server's index; without it (the call has not answered, or the organisation is not on V1.1) the same
+ * rules from this file's own tables apply, so a role never sees something it cannot use. `records` are search hits for the typed text.
+ */
+export function buildPaletteItems(input: { orgSlug: string; permissionKeys: readonly string[]; query: string; commands?: readonly ApiCommand[] | null; records?: PaletteItem[] }): PaletteGroup[] {
   const { orgSlug, permissionKeys: keys } = input;
   const base = `/o/${orgSlug}`;
   const q = input.query.trim().toLowerCase();
 
-  const records: PaletteItem[] = DEMO_RECORDS.filter((r) => canOpen(keys, r.kind))
-    .filter((r) => (q ? r.name.toLowerCase().includes(q) : false))
-    .slice(0, 6)
-    .map((r) => ({ id: `rec-${r.id}`, group: "RECORDS", title: r.name, sub: r.sub, href: `${base}/${PLURAL[r.kind]}` }));
+  const records: PaletteItem[] = q ? (input.records ?? []).slice(0, 8) : [];
 
-  const recent: PaletteItem[] = q
-    ? []
-    : DEMO_RECORDS.filter((r) => canOpen(keys, r.kind))
-        .filter((_, i) => i === 0 || i === 4)
-        .slice(0, 2)
-        .map((r) => ({ id: `recent-${r.id}`, group: "RECENT", title: r.name, sub: `${r.sub} · recently opened`, href: `${base}/${PLURAL[r.kind]}` }));
-
-  const actions: PaletteItem[] = ACTIONS.filter((a) => a.allowed(keys))
-    .filter((a) => !q || a.label.toLowerCase().includes(q) || (a.id === "new-lead" && "new lead".includes(q)))
-    .map((a) => ({ id: a.id, group: "ACTIONS", title: a.label, href: a.path ? `${base}${a.path}` : undefined, run: a.run, hint: a.hint }));
-
-  const goto: PaletteItem[] = GOTO.filter((g) => g.allowed(keys))
-    .filter((g) => !q || `go to ${g.label}`.toLowerCase().includes(q) || g.label.toLowerCase().includes(q))
-    .map((g) => ({ id: `go-${g.id}`, group: "GO TO", title: `Go to ${g.label}`, href: `${base}${g.path}`, hint: g.shortcut ? `G ${g.shortcut}` : undefined }));
+  let actions: PaletteItem[];
+  let goto: PaletteItem[];
+  if (input.commands) {
+    const mapped = input.commands.map<PaletteItem & { navigate: boolean }>((c) => ({
+      id: c.id,
+      group: c.kind === "navigate" ? "GO TO" : "ACTIONS",
+      navigate: c.kind === "navigate",
+      title: c.title,
+      href: c.path !== null ? `${base}${c.path}` : undefined,
+      run: c.kind === "assistant" ? "assistant" : c.kind === "help" ? "help" : undefined,
+      hint: c.hint ?? undefined,
+    }));
+    const match = (i: PaletteItem) => !q || i.title.toLowerCase().includes(q);
+    actions = mapped.filter((i) => !i.navigate && match(i));
+    goto = mapped.filter((i) => i.navigate && match(i));
+  } else {
+    actions = ACTIONS.filter((a) => a.allowed(keys))
+      .filter((a) => !q || a.label.toLowerCase().includes(q) || (a.id === "new-lead" && "new lead".includes(q)))
+      .map((a) => ({ id: a.id, group: "ACTIONS", title: a.label, href: a.path ? `${base}${a.path}` : undefined, run: a.run, hint: a.hint }));
+    goto = GOTO.filter((g) => g.allowed(keys))
+      .filter((g) => !q || `go to ${g.label}`.toLowerCase().includes(q) || g.label.toLowerCase().includes(q))
+      .map((g) => ({ id: `go-${g.id}`, group: "GO TO", title: `Go to ${g.label}`, href: `${base}${g.path}`, hint: g.shortcut ? `G ${g.shortcut}` : undefined }));
+  }
 
   return ([
     { id: "RECORDS", items: records },
-    { id: "RECENT", items: recent },
     { id: "ACTIONS", items: actions },
     { id: "GO TO", items: goto },
   ] as PaletteGroup[]).filter((g) => g.items.length > 0);

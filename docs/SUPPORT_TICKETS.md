@@ -19,7 +19,7 @@ Statuses and priorities as the design's demo; no SLA clocks, no customer-facing 
 
 ## To wire
 
-`src/ui/screens/support/demo/` (store.ts, data.ts) and `SupportWorkspace.tsx` to the routes above.
+Wired on 5 Nov 2026 (M14, lane W6): `src/ui/screens/support/api.ts` and the screens read the routes above; the demo folder is gone.
 
 ## Tests
 

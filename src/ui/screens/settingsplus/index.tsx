@@ -17,10 +17,10 @@ function Demo({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-export const CatalogueSection = () => <Demo><CatalogueEditor /></Demo>;
-export const PipelinesSection = () => <Demo><PipelinesEditor /></Demo>;
-export const SequencesSection = () => <Demo><SequencesEditor /></Demo>;
-export const WebFormsSection = () => <Demo><WebFormsEditor /></Demo>;
-export const ApprovalRulesSection = () => <Demo><ApprovalRulesEditor /></Demo>;
+export const CatalogueSection = () => <CatalogueEditor />;
+export const PipelinesSection = () => <PipelinesEditor />;
+export const SequencesSection = () => <SequencesEditor />;
+export const WebFormsSection = () => <WebFormsEditor />;
+export const ApprovalRulesSection = () => <ApprovalRulesEditor />;
 export const RolesSection = () => <Demo><RolesEditor /></Demo>;
 export const DevelopersSection = () => <Demo><DevelopersEditor /></Demo>;

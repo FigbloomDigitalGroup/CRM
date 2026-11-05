@@ -41,7 +41,7 @@ Default: Claude through `@anthropic-ai/sdk`, loaded only when `ANTHROPIC_API_KEY
 
 ## Known gaps
 
-The "summaries", "scoring" and "churn" options are stored but have no backend yet (only Ask and drafts exist). Streaming answers and conversation history are not built (each question stands alone, which also keeps the context small). Screens to wire: `src/ui/screens/assistant/AssistantPanel.tsx` (swap `demoRespond` for `/assistant/ask` and the confirm/dismiss routes) and `.../settings/AiAssistantSettings.tsx` (the `/assistant/settings` routes).
+The "summaries", "scoring" and "churn" options are stored but have no backend yet (only Ask and drafts exist). Streaming answers and conversation history are not built (each question stands alone, which also keeps the context small). Screens: `src/ui/screens/assistant/AssistantPanel.tsx` and `.../settings/AiAssistantSettings.tsx` are wired (5 Nov 2026, `assistant/api.ts`): ask, confirm, dismiss, feedback and settings all go through the typed client. The three "summaries / scoring / churn" switches are saved but the screen says they are not built yet.
 
 ## Tests
 

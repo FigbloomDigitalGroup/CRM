@@ -3,9 +3,10 @@
 import { useCallback, useSyncExternalStore } from "react";
 
 /**
- * Photos taken on the phone (M4, FIG-1177): the demo's own list of attachments per record, with the "waiting to sync" state while the phone is
- * offline. Demo data (docs/RESTRUCTURE_LOG.md): nothing is uploaded; B6.22 (M13) swaps this module for the attachment upload and the offline
- * queue entry. A photo taken offline stays waiting until Retry or the next time the phone is online.
+ * Photos taken on the phone (M4, FIG-1177): this device's list of photos per record, with the "waiting to sync" state. Online, a photo goes straight
+ * to the record's attachments through the API (`photoApi.ts`); one taken offline (or that failed to send) waits here, with its bytes held in memory,
+ * until Retry or the next time the phone is online. There is no offline-queue entry for photos in the API yet (docs/CARD_CAPTURE.md), so a waiting
+ * photo does not survive a page reload; the person is told to take it again.
  */
 
 export type PhotoState = "WAITING" | "SENT";
@@ -50,14 +51,18 @@ function write(next: Photo[]) {
   window.dispatchEvent(new Event(EVENT));
 }
 
+const blobs = new Map<string, Blob>();
+export const photoBlob = (id: string): Blob | undefined => blobs.get(id);
+
 const online = () => typeof navigator === "undefined" || navigator.onLine !== false;
 
 export function formatSize(bytes: number): string {
   return bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1000))} KB`;
 }
 
-export function addPhoto(record: string, file: { name: string; size: number }, isOnline = online()): Photo {
+export function addPhoto(record: string, file: { name: string; size: number }, isOnline = online(), bytes?: Blob): Photo {
   const photo: Photo = { id: `ph-${Date.now().toString(36)}-${readPhotos().length}`, record, name: file.name || "Photo.jpg", size: formatSize(file.size), state: isOnline ? "SENT" : "WAITING", takenAt: new Date().toISOString() };
+  if (bytes && !isOnline) blobs.set(photo.id, bytes);
   write([...readPhotos(), photo]);
   return photo;
 }
@@ -78,7 +83,16 @@ export function retryPhotos(isOnline = online(), only?: string): number {
   return n;
 }
 
-export const discardPhoto = (id: string) => write(readPhotos().filter((p) => p.id !== id));
+/** Marks one waiting photo as sent, after the API accepted it. */
+export function markPhotoSent(id: string) {
+  blobs.delete(id);
+  write(readPhotos().map((p) => (p.id === id ? { ...p, state: "SENT" as const } : p)));
+}
+
+export const discardPhoto = (id: string) => {
+  blobs.delete(id);
+  write(readPhotos().filter((p) => p.id !== id));
+};
 
 export function usePhotos(): Photo[] {
   const subscribe = useCallback((cb: () => void) => {

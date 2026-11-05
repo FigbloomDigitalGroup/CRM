@@ -2,20 +2,21 @@
 
 import { Command, HelpCircle, Sparkles } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
 import { CommandPalette } from "../palette/CommandPalette";
 import { gotoShortcut } from "../palette/items";
 import { HelpPanel } from "../palette/HelpPanel";
 import { AssistantPanel } from "./AssistantPanel";
-import { readAiSettings } from "./demo/data";
+import { describeError } from "../../errors";
+import { explainAssistantError, useAssistantActions, useAssistantSettings, type AssistantSettingsDto } from "./api";
 import type { AskContext, ProposedAction } from "./types";
 
 /**
  * The V1.1 tools in the shell (X2 Ask Figbloom, X3 command palette and help): three buttons in the top bar and the panels they open.
- * Reachable outside production, or where `NEXT_PUBLIC_DEMO_SCREENS=true`, until the tools are wired to the real API (docs/RESTRUCTURE_LOG.md);
- * the release flag check joins it then. One panel is open at a time, and Escape closes it.
+ * Wired to the real API (docs/RESTRUCTURE_LOG.md): the server answers FEATURE_UNAVAILABLE for an organisation not on V1.1, and the panels explain it.
+ * Still reachable only outside production, or where `NEXT_PUBLIC_DEMO_SCREENS=true`, so a V1 production shell does not show them (a product call, see the W5 report). One panel is open at a time, and Escape closes it.
  */
 export function toolsEnabled(env: Record<string, string | undefined> = process.env): boolean {
   return env.NODE_ENV !== "production" || env.NEXT_PUBLIC_DEMO_SCREENS === "true";
@@ -70,7 +71,7 @@ function recordFrom(pathname: string, orgSlug: string): AskContext["record"] {
   const m = pathname.replace(`/o/${orgSlug}`, "").match(/^\/(leads|deals|companies)\/[^/]+/);
   if (!m) return null;
   const kind = m[1] === "leads" ? "lead" : m[1] === "deals" ? "deal" : "company";
-  return { kind, name: `this ${kind}` };
+  return { kind, name: `this ${kind}`, id: m[0].split("/")[2] };
 }
 
 /** Ask Figbloom's round button, fixed at the bottom right of the page (design X2). Hidden while its panel is open; when the organisation switched the assistant off it still opens, and says so. */
@@ -91,15 +92,10 @@ export function ToolsOverlays() {
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const toast = useToast();
-  const [aiOn, setAiOn] = useState(true);
   const enabled = toolsEnabled();
-
-  useEffect(() => {
-    const read = () => setAiOn(readAiSettings().assist);
-    read();
-    window.addEventListener("figbloom-ai-settings", read);
-    return () => window.removeEventListener("figbloom-ai-settings", read);
-  }, []);
+  const settingsQuery = useAssistantSettings(enabled && panel === "assistant");
+  const settings = settingsQuery.data as AssistantSettingsDto | undefined;
+  const actions = useAssistantActions();
 
   const keys = member.permissionKeys;
   const orgSlug = member.orgSlug;
@@ -142,20 +138,17 @@ export function ToolsOverlays() {
 
   const ctx: AskContext = useMemo(() => ({ orgSlug, roleName: member.roleName, permissionKeys: keys, record: recordFrom(pathname, orgSlug) }), [orgSlug, member.roleName, keys, pathname]);
 
-  // Demo: the confirmed task is kept on this device; the real call replaces it in M13.
   const confirmAction = useCallback(
-    (action: ProposedAction) => {
-      try {
-        const k = `figbloom-demo-assistant-tasks:${orgSlug}`;
-        const list = JSON.parse(localStorage.getItem(k) ?? "[]") as ProposedAction[];
-        localStorage.setItem(k, JSON.stringify([...list, action]));
-      } catch {
-        /* blocked storage: the demo task is simply not remembered */
-      }
+    async (action: ProposedAction) => {
+      await actions.confirm(action);
       toast.show({ message: `Task created: ${action.title}` });
     },
-    [orgSlug, toast],
+    [actions, toast],
   );
+
+  let unavailable: string | null = null;
+  if (settingsQuery.error) unavailable = describeError(settingsQuery.error).kind === "noAccess" ? explainAssistantError(settingsQuery.error).text : "We could not check the assistant just now. Try again in a moment.";
+  else if (settings && !settings.providerConfigured && settings.enabled) unavailable = "It is switched on, but this deployment has no assistant model connected yet. Ask whoever runs Figbloom to set it up.";
 
   if (!enabled) return null;
   return (
@@ -169,7 +162,7 @@ export function ToolsOverlays() {
         onNavigate={go}
         onRun={(run) => store.set(run === "assistant" ? "assistant" : "help")}
       />
-      <AssistantPanel open={panel === "assistant"} onClose={() => store.set(null)} enabled={aiOn} ctx={ctx} onConfirmAction={confirmAction} settingsHref={member.can("configuration.manage") ? `/o/${orgSlug}/settings?tab=ai` : undefined} />
+      <AssistantPanel open={panel === "assistant"} onClose={() => store.set(null)} enabled={settings?.enabled ?? false} ctx={ctx} respond={actions.respond} onConfirmAction={confirmAction} onDismissAction={actions.dismiss} onFeedback={actions.feedback} usage={settings ? { today: settings.usage.today, limit: settings.limits.perUser } : null} unavailable={unavailable} loading={settingsQuery.isLoading} settingsHref={member.can("configuration.manage") ? `/o/${orgSlug}/settings?tab=ai` : undefined} />
       <HelpPanel open={panel === "help"} onClose={() => store.set(null)} pathname={pathname} orgSlug={orgSlug} />
     </>
   );

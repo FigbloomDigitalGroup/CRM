@@ -1,13 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { seedPlatform } from "../../../src/ui/screens/platform/demo/data";
+import { emptyLocal } from "../../../src/ui/screens/platform/demo/local";
+import { mapAdmin, mapOrg, mapRequest, mapAudit, type RawRequest } from "../../../src/ui/screens/platform/api";
 import {
-  apply, applyWizardField, attentionItems, awaitingSecond, canApprove, canRemoveAdmin, dialogValid, EMPTY_WIZARD, filterOrgs, hasTwoApprovals, slugState, slugify,
-  stepLocked, verifyCode, wizardStepError, type Action,
+  apply, applyWizardField, attentionItems, awaitingApproval, canApprove, canRemoveAdmin, canRunDeletion, dialogValid, EMPTY_WIZARD, filterOrgs, homeTiles, nameFromEmail,
+  slugState, slugify, verifyCode, wizardStepError, type Action,
 } from "../../../src/ui/screens/platform/logic";
+import type { PlatformState } from "../../../src/ui/screens/platform/model";
+import { fixtures, NOW } from "./fakePlatform";
 
-const NOW = new Date("2026-10-30T12:00:00Z");
-const fresh = () => seedPlatform(NOW);
-const run = (s: ReturnType<typeof fresh>, a: Action) => apply(s, a, NOW);
+const orgs = fixtures.orgs.map((o) => mapOrg(o));
+const requests = fixtures.requests.map((r) => mapRequest(r as RawRequest, NOW));
+const base = (): PlatformState => {
+  const l = emptyLocal(NOW);
+  return {
+    orgs, requests, admins: fixtures.admins.items.map(mapAdmin), invitations: [], home: fixtures.home, me: "pa", release: l.release,
+    support: l.support, announcement: { ...l.announcement, title: "Maintenance", orgs: ["o1"] }, flagHistory: l.flagHistory, activeSupport: null,
+  };
+};
+const run = (s: PlatformState, a: Action) => apply(s, a, NOW);
 
 describe("provisioning wizard rules (PL3)", () => {
   it("builds the slug from the name until the slug is edited by hand", () => {
@@ -21,180 +31,143 @@ describe("provisioning wizard rules (PL3)", () => {
   it("checks the slug: empty, invalid, taken, ok", () => {
     expect(slugState("")).toBe("empty");
     expect(slugState("Ab")).toBe("invalid");
-    expect(slugState("figbloom")).toBe("taken");
-    expect(slugState("kilimani")).toBe("ok");
+    expect(slugState("figbloom", ["figbloom"])).toBe("taken");
+    expect(slugState("kilimani", ["figbloom"])).toBe("ok");
     expect(slugify("  Cafe & Co. ")).toBe("cafe-co");
   });
 
   it("explains why a step cannot continue, in the design wording", () => {
     expect(wizardStepError(0, EMPTY_WIZARD)).toBe("Give the organisation a name.");
     expect(wizardStepError(0, { ...EMPTY_WIZARD, name: "X", slug: "x" })).toMatch(/Slugs use lowercase/);
-    expect(wizardStepError(0, { ...EMPTY_WIZARD, name: "Figbloom", slug: "figbloom" })).toBe("That slug is taken. Choose another.");
-    expect(wizardStepError(2, { ...EMPTY_WIZARD, email: "nope" })).toMatch(/Enter the first admin/);
-    expect(wizardStepError(2, { ...EMPTY_WIZARD, email: "Amina@WestlandsClinics.co.ke" })).toMatch(/already has a pending invite/);
-    expect(wizardStepError(2, { ...EMPTY_WIZARD, email: "new@company.co.ke" })).toBe("");
+    expect(wizardStepError(0, { ...EMPTY_WIZARD, name: "Figbloom", slug: "figbloom" }, ["figbloom"])).toBe("That slug is taken. Choose another.");
+    expect(wizardStepError(1, { ...EMPTY_WIZARD, email: "a@b.co" })).toMatch(/Enter the first admin’s name/);
+    expect(wizardStepError(1, { ...EMPTY_WIZARD, ownerName: "A", email: "nope" })).toMatch(/Enter the first admin’s email/);
+    expect(wizardStepError(1, { ...EMPTY_WIZARD, ownerName: "A", email: "new@company.co.ke" })).toBe("");
+  });
+});
+
+describe("mapping the API's records", () => {
+  it("maps an organisation's counts and status", () => {
+    expect(orgs[2]).toMatchObject({ status: "Offboarding", members: 3, companies: 4, deals: 2 });
   });
 
-  it("provisions an Active organisation with a pending Management invite, and audits it", () => {
-    const form = { ...EMPTY_WIZARD, name: "Kilimani Property Group", slug: "kilimani", email: "boss@kilimani.co.ke" };
-    const { state, result } = run(fresh(), { type: "provision", form, lists: {}, keys: { web: true, mail: false } });
-    expect(result.ok).toBe(true);
-    const org = state.orgs.find((o) => o.slug === "kilimani")!;
-    expect(org.status).toBe("Active");
-    expect(org.people[0]).toEqual(["Invite pending", "boss@kilimani.co.ke", "Management"]);
-    expect(state.audit[0]).toMatchObject({ action: "Organisation provisioned", org: "Kilimani Property Group" });
+  it("maps a deletion request: two approvals needed, one given, steps derived from the facts", () => {
+    const r = requests[0]!;
+    expect(r).toMatchObject({ kind: "offboard", status: "In review", approvalsRequired: 2, approvals: ["pg"], type: "Organisation deletion" });
+    expect(r.steps.map(([, done]) => done)).toEqual([true, true, false, false, false, false, false]);
+    expect(requests[1]).toMatchObject({ kind: "export", status: "Received", approvalsRequired: 1 });
   });
 
-  it("refuses a taken slug even if the screen let it through", () => {
-    const form = { ...EMPTY_WIZARD, name: "Dup", slug: "figbloom", email: "a@b.co" };
-    const { result } = run(fresh(), { type: "provision", form, lists: {}, keys: { web: false, mail: false } });
-    expect(result).toMatchObject({ ok: false, message: "That slug is taken. Choose another." });
+  it("maps admins and audit events", () => {
+    expect(mapAdmin(fixtures.admins.items[2]!)).toMatchObject({ tfa: "Not set up", last: "Never" });
+    const a = mapAudit({ seq: 1, id: "x", occurredAt: NOW.toISOString(), actorIdentityId: "pa", actorLabel: "a@p.test", action: "organization.provisioned", targetType: "Organization", targetId: null, organizationId: "o1", organizationSlug: "figbloom", reason: null, metadata: { name: "N" }, requestId: "r1" });
+    expect(a).toMatchObject({ action: "Organisation provisioned", org: "figbloom", detail: "name: N" });
+  });
+});
+
+describe("the approval rule (FIG-1162)", () => {
+  it("lets a different admin approve, not the same one twice, and nobody once it is fully approved", () => {
+    const r = requests[0]!;
+    expect(canApprove(r, "pa")).toEqual({ ok: true });
+    expect(canApprove(r, "pg")).toMatchObject({ ok: false, reason: expect.stringMatching(/already approved/) });
+    expect(canApprove({ ...r, approvals: ["pg", "pa"] }, "pm")).toMatchObject({ ok: false });
+    expect(canApprove({ ...r, status: "Rejected" }, "pa")).toMatchObject({ ok: false });
+  });
+
+  it("an export needs one approval, a deletion two", () => {
+    expect(awaitingApproval(requests[1]!)).toBe(true);
+    expect(awaitingApproval({ ...requests[1]!, approvals: ["pa"] })).toBe(false);
+    expect(awaitingApproval(requests[0]!)).toBe(true);
+  });
+
+  it("deletion can run only when approved, the retention period is over and the export is packaged", () => {
+    const r = { ...requests[0]!, status: "Approved" as const, due: new Date(NOW.getTime() + 864e5), exportStatus: "READY" as const };
+    expect(canRunDeletion(r, NOW)).toMatchObject({ ok: false, reason: expect.stringMatching(/Retention/) });
+    expect(canRunDeletion({ ...r, due: new Date(NOW.getTime() - 1) }, NOW)).toEqual({ ok: true });
+    expect(canRunDeletion({ ...r, due: null, exportStatus: "PACKAGING" }, NOW)).toMatchObject({ ok: false });
   });
 });
 
 describe("minimum two platform admins (FIG-1163)", () => {
-  it("allows a removal while three admins exist, then blocks the second-last", () => {
-    const s0 = fresh();
-    expect(s0.admins).toHaveLength(3);
-    const first = run(s0, { type: "admin-remove", id: "pm" });
-    expect(first.result.ok).toBe(true);
-    expect(first.state.admins.map((a) => a.id)).toEqual(["pa", "pg"]);
-    const second = run(first.state, { type: "admin-remove", id: "pg" });
-    expect(second.result).toMatchObject({ ok: false, message: "Blocked: at least two platform admins are required." });
-    expect(second.state.admins).toHaveLength(2);
+  it("allows a removal while three are active, blocks the second-last, and blocks removing yourself", () => {
+    const admins = base().admins;
+    expect(canRemoveAdmin(admins, "pa", "pm")).toEqual({ ok: true });
+    expect(canRemoveAdmin(admins.slice(0, 2), "pa", "pg")).toMatchObject({ ok: false, reason: "Blocked: at least two platform admins are required." });
+    expect(canRemoveAdmin(admins, "pa", "pa")).toMatchObject({ ok: false, reason: "Ask another admin to remove you." });
   });
 
-  it("never removes the signed-in admin, even above the minimum", () => {
-    expect(canRemoveAdmin(fresh().admins, "pa", "pa")).toEqual({ ok: false, reason: "Ask another admin to remove you." });
-  });
-
-  it("only invites platform.figbloom.co.ke addresses, once", () => {
-    const bad = run(fresh(), { type: "admin-invite", email: "x@gmail.com" });
-    expect(bad.result.ok).toBe(false);
-    const ok = run(fresh(), { type: "admin-invite", email: "new@platform.figbloom.co.ke" });
-    expect(ok.state.admins).toHaveLength(4);
-    expect(run(ok.state, { type: "admin-invite", email: "new@platform.figbloom.co.ke" }).result.ok).toBe(false);
+  it("derives a name for an invite from the email", () => {
+    expect(nameFromEmail("sam.new@platform.test")).toBe("Sam New");
   });
 });
 
-describe("two-person approval of deletions (FIG-1162)", () => {
-  it("the same admin cannot approve twice; a different admin completes it; the delete step unlocks", () => {
-    const s0 = fresh();
-    const offboard = s0.requests.find((r) => r.id === "dr1")!;
-    expect(offboard.approvals).toEqual(["pa"]);
-    expect(awaitingSecond(offboard)).toBe(true);
-    expect(canApprove(offboard, "pa")).toMatchObject({ ok: false });
-    expect(run(s0, { type: "request-approve", id: "dr1" }).result.ok).toBe(false);
-
-    const del = offboard.steps.findIndex(([l]) => /Delete organisation data/.test(l));
-    expect(stepLocked(offboard, offboard.steps[del]![0], false)).toBe(true);
-    expect(run(s0, { type: "request-step", id: "dr1", index: del }).result.ok).toBe(false);
-
-    const after = run(s0, { type: "request-approve", id: "dr1", as: "pg" });
-    expect(after.result.ok).toBe(true);
-    const r = after.state.requests.find((x) => x.id === "dr1")!;
-    expect(hasTwoApprovals(r)).toBe(true);
-    expect(run(after.state, { type: "request-step", id: "dr1", index: del }).result.ok).toBe(true);
-  });
-
-  it("completes a request when every step is ticked", () => {
-    let s = run(fresh(), { type: "request-approve", id: "dr1", as: "pg" }).state;
-    const n = s.requests.find((x) => x.id === "dr1")!.steps.length;
-    for (let i = 0; i < n; i++) if (!s.requests.find((x) => x.id === "dr1")!.steps[i]![1]) s = run(s, { type: "request-step", id: "dr1", index: i }).state;
-    expect(s.requests.find((x) => x.id === "dr1")!.status).toBe("Completed");
-  });
-
-  it("exports never need a second admin", () => {
-    expect(awaitingSecond(fresh().requests.find((r) => r.kind === "export")!)).toBe(false);
+describe("the organisation dialog (PL5)", () => {
+  it("needs a reason of 5 to 500 characters and the exact name typed back", () => {
+    expect(dialogValid("", "X", "X")).toBe(false);
+    expect(dialogValid("abc", "X", "X")).toBe(false);
+    expect(dialogValid("Abuse report", "x", "X")).toBe(false);
+    expect(dialogValid("Abuse report", "X", "X")).toBe(true);
+    expect(dialogValid("a".repeat(501), "X", "X")).toBe(false);
   });
 });
 
-describe("suspend, reactivate and offboard (PL5)", () => {
-  it("needs a reason and the exact organisation name", () => {
-    expect(dialogValid("", "Figbloom Sandbox", "Figbloom Sandbox")).toBe(false);
-    expect(dialogValid("Non-payment", "figbloom sandbox", "Figbloom Sandbox")).toBe(false);
-    expect(dialogValid("Non-payment", "Figbloom Sandbox", "Figbloom Sandbox")).toBe(true);
-  });
-
-  it("suspends and reactivates, and writes the audit log", () => {
-    const sus = run(fresh(), { type: "org-status", id: "o2", kind: "suspend", reason: "Abuse report", notify: true });
-    expect(sus.state.orgs.find((o) => o.id === "o2")!.status).toBe("Suspended");
-    expect(sus.result).toMatchObject({ ok: true, message: "Figbloom Sandbox is now Suspended. Management was emailed." });
-    const re = run(sus.state, { type: "org-status", id: "o2", kind: "reactivate", reason: "Resolved", notify: false });
-    expect(re.state.orgs.find((o) => o.id === "o2")!.status).toBe("Active");
-    expect(re.state.audit.slice(0, 2).map((a) => a.action)).toEqual(["Reactivate", "Suspend organisation"]);
-  });
-
-  it("starting offboarding opens a data request that needs two admins", () => {
-    const { state } = run(fresh(), { type: "org-status", id: "o1", kind: "offboard", reason: "Contract ended", notify: true });
-    const req = state.requests[0]!;
-    expect(req).toMatchObject({ type: "Tenant offboarding", org: "o1", approvals: [], status: "Received" });
-    expect(awaitingSecond(req)).toBe(true);
-  });
-
-  it("refuses to offboard twice and to act without a reason", () => {
-    expect(run(fresh(), { type: "org-status", id: "o3", kind: "offboard", reason: "x", notify: false }).result.ok).toBe(false);
-    expect(run(fresh(), { type: "org-status", id: "o2", kind: "suspend", reason: "  ", notify: false }).result.ok).toBe(false);
-  });
-});
-
-describe("support access (V2)", () => {
+describe("support access (V2, in memory)", () => {
   const req: Action = { type: "support-request", org: "o2", reason: "Check import", ticket: "FIG-1", mins: 30, scope: "Leads (read-only)", mask: true };
 
   it("is requested, approved by the organisation, runs for its time, ends on its own or by the admin", () => {
-    let { state } = run(fresh(), req);
+    let { state } = run(base(), req);
     const pending = state.support[0]!;
     expect(pending.status).toBe("Pending organisation approval");
-    expect(state.activeSupport).toBeNull();
     state = run(state, { type: "support-approve", id: pending.id }).state;
     expect(state.activeSupport).toBe(pending.id);
     expect(state.support[0]!.endsAt!.getTime()).toBe(NOW.getTime() + 30 * 60000);
-    const ended = run(state, { type: "support-end", id: pending.id }).state;
-    expect(ended.activeSupport).toBeNull();
-    expect(ended.support[0]).toMatchObject({ status: "Ended", endedBy: "Dev Super Admin" });
-    const expired = run(state, { type: "support-expire", id: pending.id }).state;
-    expect(expired.support[0]!.status).toBe("Expired");
+    expect(run(state, { type: "support-end", id: pending.id }).state.activeSupport).toBeNull();
+    expect(run(state, { type: "support-expire", id: pending.id }).state.support[0]!.status).toBe("Expired");
   });
 
   it("needs a reason", () => {
-    expect(run(fresh(), { ...req, reason: " " }).result.ok).toBe(false);
+    expect(run(base(), { ...req, reason: " " }).result.ok).toBe(false);
   });
 });
 
-describe("flags, limits and announcements (V2)", () => {
-  it("records each flag and limit change in the history and the audit log", () => {
-    const f = run(fresh(), { type: "flag", org: "o2", flag: "assistant" });
-    expect(f.state.orgs.find((o) => o.id === "o2")!.flags.assistant).toBe(true);
-    expect(f.state.flagHistory[0]).toEqual(["Just now", "Dev Super Admin", "Figbloom Sandbox", "Assistant", "Off → On"]);
+describe("flags, limits and announcements (V2, in memory)", () => {
+  it("records each flag and limit change in the history", () => {
+    const f = run(base(), { type: "flag", org: "o2", flag: "assistant" });
+    expect(f.state.orgs.find((o) => o.id === "o2")!.flags.assistant).toBe(false);
+    expect(f.state.flagHistory[0]).toEqual(["Just now", "You", "Figbloom Sandbox", "Assistant", "On → Off"]);
     const l = run(f.state, { type: "limit", org: "o2", limit: "seats", value: 9 });
     expect(l.state.flagHistory[0]![4]).toBe("5 → 9");
-    expect(l.state.audit[0]!.action).toBe("Flag changed");
-    expect(run(l.state, { type: "limit", org: "o2", limit: "seats", value: 9 }).state.flagHistory).toHaveLength(l.state.flagHistory.length);
   });
 
   it("publishes and expires an announcement, needing an audience", () => {
-    const s = fresh();
-    const noAudience = run(run(s, { type: "announcement", patch: { orgs: [] } }).state, { type: "announcement-publish" });
-    expect(noAudience.result.ok).toBe(false);
+    const s = base();
+    expect(run(run(s, { type: "announcement", patch: { orgs: [] } }).state, { type: "announcement-publish" }).result.ok).toBe(false);
     const live = run(s, { type: "announcement-publish" });
     expect(live.state.announcement.status).toBe("Live");
     expect(run(live.state, { type: "announcement-expire" }).state.announcement.status).toBe("Expired");
   });
 });
 
-describe("list, search, home and verify (PL1, PL2, PL14)", () => {
+describe("list, home and verify (PL1, PL2, PL14)", () => {
   it("filters and sorts organisations", () => {
-    const orgs = fresh().orgs;
-    expect(filterOrgs(orgs, "west", "", "last").map((o) => o.slug)).toEqual(["westlands-pilot"]);
+    expect(filterOrgs(orgs, "west", "", "name").map((o) => o.slug)).toEqual(["westlands-pilot"]);
     expect(filterOrgs(orgs, "", "Active", "name").map((o) => o.name)).toEqual(["FigBloom Digital Group", "Figbloom Sandbox"]);
-    expect(filterOrgs(orgs, "zzz", "", "last")).toEqual([]);
+    expect(filterOrgs(orgs, "", "", "members")[0]!.slug).toBe("figbloom");
+    expect(filterOrgs(orgs, "zzz", "", "name")).toEqual([]);
   });
 
-  it("lists what needs attention: degraded health, deletions waiting for a second admin, support pending", () => {
-    expect(attentionItems(fresh(), NOW).map((a) => a.key)).toEqual(["h-web", "r-dr1", "s-ss2"]);
+  it("lists what needs attention: degraded components, open incidents, requests waiting for approval", () => {
+    expect(attentionItems(base()).map((a) => a.key)).toEqual(["h-EMAIL", "incidents", "r-dr1", "r-dr2"]);
   });
 
-  it("accepts a 6-digit code or an XXXX-XXXX backup code, and rejects 000000", () => {
+  it("builds the home tiles from the API's numbers", () => {
+    const tiles = homeTiles(base());
+    expect(tiles.find((t) => t.key === "orgs")).toMatchObject({ v: "3" });
+    expect(tiles.find((t) => t.key === "health")).toMatchObject({ v: "Degraded", warn: true });
+    expect(homeTiles({ ...base(), home: null })).toEqual([]);
+  });
+
+  it("the stand-alone verify page accepts a 6-digit code or an XXXX-XXXX backup code, and rejects 000000", () => {
     expect(verifyCode("123 456", false)).toBe(true);
     expect(verifyCode("000000", false)).toBe(false);
     expect(verifyCode("12345", false)).toBe(false);
@@ -203,10 +176,10 @@ describe("list, search, home and verify (PL1, PL2, PL14)", () => {
   });
 
   it("never mutates the state it was given", () => {
-    const s = fresh();
+    const s = base();
     const before = JSON.stringify(s);
-    run(s, { type: "org-status", id: "o2", kind: "suspend", reason: "r", notify: false });
-    run(s, { type: "admin-remove", id: "pm" });
+    run(s, { type: "flag", org: "o2", flag: "assistant" });
+    run(s, { type: "support-request", org: "o2", reason: "r", ticket: "", mins: 30, scope: "x", mask: true });
     expect(JSON.stringify(s)).toBe(before);
   });
 });

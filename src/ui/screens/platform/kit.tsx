@@ -2,8 +2,11 @@
 
 import { X } from "lucide-react";
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { AlertTriangle } from "lucide-react";
+import { describeError } from "@/ui/errors";
+import { featureNotice } from "@/ui/featureUnavailable";
 import { tone } from "./logic";
-import { usePlatform } from "./store";
+import { usePlatform, type Slice } from "./store";
 
 /** Small pieces shared by the console's screens. The console has its own look (see platform.css), so these are not the tenant app's `@/ui` components. */
 
@@ -118,4 +121,45 @@ export function agoLabel(d: Date, now: Date): string {
   if (h < 24) return `${h} h ago`;
   const days = Math.round(h / 24);
   return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+/** The words for a failed platform read: an explained "no access", the not-available explanation, a signed-out message, or the generic error. */
+export function failureText(error: unknown, area: string): { title: string; body: string; retry: boolean } {
+  const feature = featureNotice(error);
+  if (feature) return { title: `${area} is not available yet`, body: feature.reason === "toggle" ? "This feature is switched off for the platform." : `This arrives with ${feature.availableIn ?? "a later release"}.`, retry: false };
+  const d = describeError(error);
+  if (d.kind === "noAccess") return { title: `You can’t open ${area.toLowerCase()}`, body: "Your platform role doesn’t include this. Ask another platform admin who holds the permission.", retry: false };
+  if (d.kind === "signedOut") return { title: "Your platform session ended", body: "Sign in again to continue.", retry: false };
+  return { title: `${area} didn’t load`, body: "The rest of the console keeps working. Try again in a moment.", retry: true };
+}
+
+/** Shows what a platform read is doing: a loading state, the failure with Retry, or the screen. */
+export function SliceGate({ slice, area, children }: { slice: Slice; area: string; children: ReactNode }) {
+  if (slice.error) {
+    const f = failureText(slice.error, area);
+    return (
+      <div role="alert" className="fb-pl-errbox">
+        <div style={{ color: "var(--pl-red)", display: "flex", justifyContent: "center" }}>
+          <AlertTriangle size={24} aria-hidden="true" />
+        </div>
+        <div style={{ fontWeight: 700, marginTop: 8 }}>{f.title}</div>
+        <div className="fb-pl-sub">{f.body}</div>
+        {f.retry ? (
+          <button type="button" className="fb-pl-btn fb-pl-btn--primary" style={{ marginTop: 12, height: 38 }} onClick={slice.refetch}>
+            Retry
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+  if (slice.loading) {
+    return (
+      <div className="fb-pl-tiles" role="status" aria-label={`Loading ${area.toLowerCase()}`}>
+        {[1, 2, 3, 4].map((k) => (
+          <div key={k} className="fb-pl-skel" />
+        ))}
+      </div>
+    );
+  }
+  return <>{children}</>;
 }

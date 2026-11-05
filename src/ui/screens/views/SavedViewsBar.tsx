@@ -8,8 +8,15 @@ import { Dialog } from "../../components/overlays";
 import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
 import { toolsEnabled } from "../assistant/ToolsHost";
-import { addView, mayEdit, moveView, nameProblem, removeView, renameView, setPinned, setShared, visibleViews, type SavedView, type ViewPage } from "./model";
-import { useSavedViews } from "./store";
+import { describeError } from "../../errors";
+import { mayEdit, nameProblem, visibleViews, type SavedView, type ViewPage } from "./model";
+import { useSavedViews, useViewActions } from "./store";
+
+/** The API's sentence where it is written for people (a taken name, a part this role may not save), the copy deck's otherwise. */
+const why = (e: unknown) => {
+  const d = describeError(e);
+  return d.kind === "validation" || d.kind === "conflict" ? d.body : d.kind === "noAccess" ? "Your role cannot do that. Only the person who made a view can change it." : d.body;
+};
 
 export interface ViewState {
   tab: string;
@@ -24,7 +31,8 @@ export interface ViewState {
 export function SavedViewsBar({ page, current, onApply }: { page: ViewPage; current: ViewState; onApply: (state: ViewState) => void }) {
   const member = useMember();
   const me = { membershipId: member.membershipId, permissionKeys: member.permissionKeys };
-  const [views, setViews] = useSavedViews(member.orgSlug);
+  const { views, query } = useSavedViews({ entity: page, enabled: toolsEnabled() });
+  const actions = useViewActions();
   const toast = useToast();
   const router = useRouter();
   const pathname = usePathname() ?? "";
@@ -52,15 +60,30 @@ export function SavedViewsBar({ page, current, onApply }: { page: ViewPage; curr
 
   const nameError = naming !== null && naming !== "" ? nameProblem(naming, views.filter((v) => v.by === me.membershipId)) : null;
 
-  function save() {
+  async function save() {
     if (naming === null) return;
     try {
-      setViews(addView(views, { name: naming, page, state: current, by: me.membershipId, byName: member.userName }));
+      await actions.create({ name: naming, page, state: current });
       toast.show({ message: `Saved the view “${naming.trim()}”. Pin it to keep it in your sidebar.` });
       setNaming(null);
     } catch (e) {
-      toast.show({ tone: "danger", message: (e as Error).message });
+      toast.show({ tone: "danger", message: why(e) });
     }
+  }
+
+  if (query.error) {
+    const d = describeError(query.error);
+    // An organisation not on V1.1 has no saved views yet: say so quietly instead of an error banner on every list.
+    return (
+      <div className="fb-sv" role="group" aria-label="Saved views" data-testid="saved-views-bar">
+        <span className="fb-sv__label">
+          <Bookmark size={14} aria-hidden="true" /> Views
+        </span>
+        <span className="fb-sv__empty" role="status">
+          {d.kind === "noAccess" ? "Saved views are not available for your organisation or role yet." : "Saved views could not be loaded. Reload the page to try again."}
+        </span>
+      </div>
+    );
   }
 
   return (
@@ -88,7 +111,7 @@ export function SavedViewsBar({ page, current, onApply }: { page: ViewPage; curr
           className="fb-sv__form"
           onSubmit={(e) => {
             e.preventDefault();
-            save();
+            void save();
           }}
         >
           <input aria-label="Name for this view" placeholder="Name this view" value={naming} autoFocus aria-invalid={Boolean(nameError) || undefined} onChange={(e) => setNaming(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setNaming(null)} />
@@ -106,21 +129,42 @@ export function SavedViewsBar({ page, current, onApply }: { page: ViewPage; curr
       
 
       <Dialog open={managing} onClose={() => setManaging(false)} title="Manage views" actions={<Button onClick={() => setManaging(false)}>Done</Button>}>
-        <ManageList views={views} me={me} onChange={setViews} toast={(m) => toast.show({ message: m })} page={page} />
+        <ManageList views={views} me={me} actions={actions} toast={(m, tone) => toast.show({ message: m, ...(tone ? { tone } : {}) })} page={page} />
       </Dialog>
     </div>
   );
 }
 
-function ManageList({ views, me, onChange, toast, page }: { views: SavedView[]; me: { membershipId: string; permissionKeys: readonly string[] }; onChange: (v: SavedView[]) => void; toast: (m: string) => void; page: ViewPage }) {
+function ManageList({ views, me, actions, toast, page }: { views: SavedView[]; me: { membershipId: string; permissionKeys: readonly string[] }; actions: ReturnType<typeof useViewActions>; toast: (m: string, tone?: "danger") => void; page: ViewPage }) {
   const list = visibleViews(views, me, page);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const run = async (what: () => Promise<unknown>, ok?: string) => {
+    try {
+      await what();
+      if (ok) toast(ok);
+      return true;
+    } catch (e) {
+      toast(why(e), "danger");
+      return false;
+    }
+  };
+  // Order applies to the views the person pinned: the server keeps one order per person for their sidebar.
+  const pinned = list.filter((v) => v.pinned).sort((a, b) => a.order - b.order);
+  const move = (id: string, delta: -1 | 1) => {
+    const ids = pinned.map((v) => v.id);
+    const from = ids.indexOf(id);
+    const to = from + delta;
+    if (from < 0 || to < 0 || to >= ids.length) return;
+    [ids[from], ids[to]] = [ids[to]!, ids[from]!];
+    void run(() => actions.reorderPinned(ids));
+  };
   if (list.length === 0) return <p className="fb-sv__empty">You have no saved views yet. Set up the list how you like it, then choose Save as view.</p>;
   return (
     <ul className="fb-sv__list">
-      {list.map((v, i) => {
+      {list.map((v) => {
         const own = mayEdit(v, me.membershipId);
+        const pi = pinned.findIndex((x) => x.id === v.id);
         return (
           <li key={v.id} className="fb-sv__row">
             <div className="fb-sv__rowmain">
@@ -128,14 +172,14 @@ function ManageList({ views, me, onChange, toast, page }: { views: SavedView[]; 
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    try {
-                      onChange(renameView(views, v.id, editing.name));
-                      setEditing(null);
-                      setError(null);
-                      toast("View renamed.");
-                    } catch (err) {
-                      setError((err as Error).message);
-                    }
+                    const problem = nameProblem(editing.name, views.filter((x) => x.by === v.by), v.id);
+                    if (problem) return setError(problem);
+                    void run(() => actions.rename(v.id, editing.name), "View renamed.").then((ok) => {
+                      if (ok) {
+                        setEditing(null);
+                        setError(null);
+                      }
+                    });
                   }}
                 >
                   <input aria-label={`New name for ${v.name}`} value={editing.name} autoFocus aria-invalid={Boolean(error) || undefined} onChange={(e) => setEditing({ id: v.id, name: e.target.value })} />
@@ -153,19 +197,23 @@ function ManageList({ views, me, onChange, toast, page }: { views: SavedView[]; 
               <Button size="sm" disabled={!own} disabledReason={!own ? `Only ${v.byName} can rename this view.` : undefined} onClick={() => setEditing({ id: v.id, name: v.name })}>
                 Rename
               </Button>
-              <Button size="sm" aria-pressed={v.shared} disabledReason={!own ? `Only ${v.byName} can change sharing.` : undefined} onClick={() => onChange(setShared(views, v.id, !v.shared))}>
+              <Button size="sm" aria-pressed={v.shared} disabled={!own} disabledReason={!own ? `Only ${v.byName} can change sharing.` : undefined} onClick={() => void run(() => actions.setShared(v.id, !v.shared))}>
                 <Share2 size={13} aria-hidden="true" /> {v.shared ? "Stop sharing" : "Share"}
               </Button>
-              <Button size="sm" aria-pressed={v.pinned} disabledReason={!own ? `Only ${v.byName} can pin this view.` : undefined} onClick={() => onChange(setPinned(views, v.id, !v.pinned))}>
+              <Button size="sm" aria-pressed={v.pinned} onClick={() => void run(() => actions.setPinned(v.id, !v.pinned))}>
                 {v.pinned ? <PinOff size={13} aria-hidden="true" /> : <Pin size={13} aria-hidden="true" />} {v.pinned ? "Unpin" : "Pin to sidebar"}
               </Button>
-              <button type="button" className="fb-sv__icon" aria-label={`Move ${v.name} up`} aria-disabled={i === 0 || undefined} onClick={() => i > 0 && onChange(moveView(views, v.id, -1, me))}>
-                <ChevronUp size={16} aria-hidden="true" />
-              </button>
-              <button type="button" className="fb-sv__icon" aria-label={`Move ${v.name} down`} aria-disabled={i === list.length - 1 || undefined} onClick={() => i < list.length - 1 && onChange(moveView(views, v.id, 1, me))}>
-                <ChevronDown size={16} aria-hidden="true" />
-              </button>
-              <button type="button" className="fb-sv__icon" aria-label={`Delete ${v.name}`} aria-disabled={!own || undefined} title={!own ? `Only ${v.byName} can delete this view.` : undefined} onClick={() => own && onChange(removeView(views, v.id))}>
+              {v.pinned ? (
+                <>
+                  <button type="button" className="fb-sv__icon" aria-label={`Move ${v.name} up`} aria-disabled={pi === 0 || undefined} onClick={() => pi > 0 && move(v.id, -1)}>
+                    <ChevronUp size={16} aria-hidden="true" />
+                  </button>
+                  <button type="button" className="fb-sv__icon" aria-label={`Move ${v.name} down`} aria-disabled={pi === pinned.length - 1 || undefined} onClick={() => pi < pinned.length - 1 && move(v.id, 1)}>
+                    <ChevronDown size={16} aria-hidden="true" />
+                  </button>
+                </>
+              ) : null}
+              <button type="button" className="fb-sv__icon" aria-label={`Delete ${v.name}`} aria-disabled={!own || undefined} title={!own ? `Only ${v.byName} can delete this view.` : undefined} onClick={() => own && void run(() => actions.remove(v.id), "View deleted.")}>
                 <Trash2 size={15} aria-hidden="true" />
               </button>
             </div>

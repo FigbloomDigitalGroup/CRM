@@ -31,7 +31,7 @@ A phone photo on a lead, deal, contact, company or task uses the existing attach
 
 ## Screens to wire
 
-`src/ui/screens/mobile/capture/cardExtract.ts` and `ScanCard.tsx` (swap the sample reader for start, upload, extract; Save calls confirm) and `photos.ts` (swap for the attachment upload). Not wired in this issue.
+Wired 5 Nov 2026: `cardExtract.ts` and `ScanCard.tsx` (start, upload, extract), `Sheets.tsx` (Save calls confirm for a scanned card, so the photo is attached; the "remind me" chip is hidden for a scanned card because confirm has no follow-up field), `photoApi.ts` and `PhotoAttach.tsx` (photos go to the record's attachments). There is no offline queue entry for cards or photos: scanning needs a connection, and a photo taken offline waits in memory only until the page is reloaded.
 
 ## Tests
 

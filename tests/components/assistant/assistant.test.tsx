@@ -1,120 +1,146 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AssistantPanel } from "../../../src/ui/screens/assistant/AssistantPanel";
-import { demoRespond } from "../../../src/ui/screens/assistant/demo/respond";
+import { useAssistantActions } from "../../../src/ui/screens/assistant/api";
 import type { AskContext } from "../../../src/ui/screens/assistant/types";
+import { apiError, renderScreen, type Handlers } from "../screens/home/harness";
 
 const sales: AskContext = { orgSlug: "figbloom", roleName: "Sales", permissionKeys: ["leads.view.own", "deals.view.own", "tasks.view.own"] };
-const management: AskContext = { ...sales, roleName: "Management", permissionKeys: [...sales.permissionKeys, "deals.view.all", "deals.view.value", "leads.view.all"] };
-const finance: AskContext = { orgSlug: "figbloom", roleName: "Finance", permissionKeys: ["finance.view.payments"] };
 
-beforeEach(() => localStorage.clear());
+const ACTION = { proposalId: "p1", kind: "task" as const, title: "Follow up on the proposal to Sarova", forWhom: "You", due: "Tomorrow", about: "Sarova · deal" };
+const ANSWER = { requestId: "r1", message: { who: "ai", text: "1 proposal is waiting.", basis: "Based on Sales access · 3 leads, 2 deals", action: ACTION, actionState: "pending" }, usage: { today: 1, limit: 15 } };
 
-function panel(over: Partial<React.ComponentProps<typeof AssistantPanel>> = {}) {
-  const props = { open: true, onClose: vi.fn(), enabled: true, ctx: sales, ...over };
-  render(<AssistantPanel {...props} />);
-  return { ...props, user: userEvent.setup() };
+/** The panel wired to the real hooks, against a stand-in API. */
+function Wired(props: Partial<React.ComponentProps<typeof AssistantPanel>>) {
+  const a = useAssistantActions();
+  return <AssistantPanel open onClose={vi.fn()} enabled ctx={sales} respond={a.respond} onConfirmAction={a.confirm} onDismissAction={a.dismiss} onFeedback={a.feedback} usage={{ today: 0, limit: 15 }} {...props} />;
 }
 
-describe("Ask Figbloom: nothing acts without confirmation (X2, FIG-1171)", () => {
-  it("shows a proposed task as a card and does nothing until Confirm is pressed", async () => {
-    const onConfirmAction = vi.fn();
-    const { user } = panel({ onConfirmAction });
-    await user.click(screen.getByRole("button", { name: /proposals have no reply/i }));
-    const card = await screen.findByRole("group", { name: "Proposed action" });
+function mount(handlers: Handlers, props: Partial<React.ComponentProps<typeof AssistantPanel>> = {}) {
+  const view = renderScreen(<Wired {...props} />, { postAssistantAsk: () => ANSWER, ...handlers });
+  return { ...view, user: userEvent.setup() };
+}
+
+async function ask(user: ReturnType<typeof userEvent.setup>, text = "proposals with no reply") {
+  await user.type(screen.getByRole("textbox", { name: "Ask a question" }), `${text}{Enter}`);
+  return screen.findByRole("group", { name: "Proposed action" });
+}
+
+describe("Ask Figbloom on the real API: nothing acts without confirmation (X2, FIG-1171)", () => {
+  it("asks /assistant/ask and shows the proposed task as a card; the confirm route is not called until Confirm is pressed", async () => {
+    const confirm = vi.fn(() => ({ status: "CONFIRMED" }));
+    const { user, count, last } = mount({ postAssistantProposalsByProposalIdConfirm: confirm });
+    const card = await ask(user);
+    expect(last("postAssistantAsk")?.body).toEqual({ question: "proposals with no reply" });
     expect(card).toHaveTextContent("NOTHING HAPPENS UNTIL YOU CONFIRM");
-    expect(onConfirmAction).not.toHaveBeenCalled();
+    expect(count("postAssistantProposalsByProposalIdConfirm")).toBe(0);
 
     await user.click(screen.getByRole("button", { name: "Confirm" }));
-    expect(onConfirmAction).toHaveBeenCalledTimes(1);
-    expect(onConfirmAction.mock.calls[0]![0]).toMatchObject({ kind: "task" });
-    expect(card).toHaveTextContent("Task created");
+    await waitFor(() => expect(card).toHaveTextContent("Task created"));
+    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(last("postAssistantProposalsByProposalIdConfirm")?.params).toMatchObject({ proposalId: "p1" });
   });
 
-  it("Not now removes the card and never runs the action", async () => {
-    const onConfirmAction = vi.fn();
-    const { user } = panel({ onConfirmAction });
-    await user.click(screen.getByRole("button", { name: /proposals have no reply/i }));
-    await screen.findByRole("group", { name: "Proposed action" });
+  it("Not now tells the server the suggestion was declined and never confirms", async () => {
+    const { user, count } = mount({ postAssistantProposalsByProposalIdDismiss: () => ({ status: "DISMISSED" }) });
+    await ask(user);
     await user.click(screen.getByRole("button", { name: "Not now" }));
     expect(screen.queryByRole("group", { name: "Proposed action" })).toBeNull();
-    expect(onConfirmAction).not.toHaveBeenCalled();
+    await waitFor(() => expect(count("postAssistantProposalsByProposalIdDismiss")).toBe(1));
+    expect(count("postAssistantProposalsByProposalIdConfirm")).toBe(0);
   });
 
-  it("every answer the demo gives leaves any action pending", async () => {
-    for (const q of ["proposals with no reply", "hot leads with no task", "overdue", "pipeline worth", "something else"]) {
-      for (const ctx of [sales, management, finance]) {
-        const out = await demoRespond(q, ctx);
-        expect(out.filter((m) => m.actionState && m.actionState !== "pending")).toEqual([]);
-      }
-    }
+  it("a confirmation the server refuses (expired) leaves the card pending and says why", async () => {
+    const expired = { status: 422, envelope: { code: "VALIDATION_FAILED", message: "This suggestion has expired. Ask again.", requestId: "x", fieldErrors: [{ path: "expiresAt", message: "Expired.", code: "PROPOSAL_EXPIRED" }] } };
+    const { user } = mount({
+      postAssistantProposalsByProposalIdConfirm: () => {
+        throw expired;
+      },
+    });
+    const card = await ask(user);
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(card).toHaveTextContent("has expired"));
+    expect(card).not.toHaveTextContent("Task created");
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeEnabled();
   });
 
-  it("a draft can be edited and is never sent from the panel", async () => {
-    const { user } = panel({ ctx: { ...sales, record: { kind: "lead", name: "this lead" } } });
+  it("sends the record the person is looking at, and a draft stays editable and unsent", async () => {
+    const { user, last } = mount(
+      { postAssistantAsk: () => ({ requestId: "r2", message: { who: "ai", text: "Here is a draft.", draft: "Hi, thanks for your time." }, usage: { today: 1, limit: 15 } }) },
+      { ctx: { ...sales, record: { kind: "lead", name: "this lead", id: "lead-9" } } },
+    );
     await user.click(screen.getByRole("button", { name: "Draft a follow-up" }));
     const box = await screen.findByRole("textbox", { name: "Draft message" });
+    expect(last("postAssistantAsk")?.body).toMatchObject({ record: { kind: "lead", id: "lead-9" } });
     await user.type(box, " Thanks!");
     expect((box as HTMLTextAreaElement).value).toMatch(/Thanks!$/);
     expect(screen.queryByRole("button", { name: /^send$/i })).toBeNull();
   });
-});
 
-describe("Ask Figbloom: what it may say (hard rule 7)", () => {
-  it("does not say a deal value to a role without deals.view.value", async () => {
-    const out = await demoRespond("What is my open pipeline worth?", sales);
-    expect(out.map((m) => m.text + (m.items ?? []).map((i) => i.sub).join(" ")).join(" ")).not.toMatch(/KES/);
-    expect(out.at(-1)!.text).toMatch(/hidden for your role/);
-  });
-
-  it("does not put a value in a list item for a role without it, but does for one with it", async () => {
-    const hidden = await demoRespond("proposals with no reply", sales);
-    expect(JSON.stringify(hidden)).not.toMatch(/KES/);
-    const shown = await demoRespond("proposals with no reply", management);
-    expect(JSON.stringify(shown)).toMatch(/KES/);
-  });
-
-  it("explains instead of answering about records the role cannot open", async () => {
-    const out = await demoRespond("show hot leads with no task", finance);
-    expect(out.at(-1)!.text).toMatch(/can’t open leads/);
-    expect(out.at(-1)!.items).toBeUndefined();
-  });
-
-  it("says what the answer was based on", async () => {
-    const out = await demoRespond("overdue", sales);
-    expect(out.at(-1)!.basis).toMatch(/Based on Sales access/);
+  it("feedback goes to the server for that answer", async () => {
+    const { user, last } = mount({ postAssistantRequestsByRequestIdFeedback: () => ({ requestId: "r1", feedback: "up" }) });
+    await ask(user);
+    await user.click(screen.getByRole("button", { name: "Helpful" }));
+    await waitFor(() => expect(last("postAssistantRequestsByRequestIdFeedback")?.body).toEqual({ value: "up" }));
   });
 });
 
-describe("Ask Figbloom: off, limits and errors", () => {
+describe("Ask Figbloom: what the server says, the panel shows", () => {
+  it("shows the answer's basis, and masked answers arrive masked (the server filters; the panel adds nothing)", async () => {
+    const { user } = mount({ postAssistantAsk: () => ({ requestId: "r3", message: { who: "ai", text: "Open pipeline: [value hidden]", basis: "Based on Sales access · 3 leads, 2 deals" }, usage: { today: 1, limit: 15 } }) });
+    await user.type(screen.getByRole("textbox", { name: "Ask a question" }), "pipeline{Enter}");
+    expect(await screen.findByText(/value hidden/)).toBeInTheDocument();
+    expect(screen.getByText(/Based on Sales access/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/KES/);
+  });
+
   it("when the organisation switches it off, says so and offers no input", () => {
-    panel({ enabled: false });
+    mount({}, { enabled: false });
     expect(screen.getByTestId("assistant-off")).toHaveTextContent("The assistant is switched off");
     expect(screen.queryByRole("textbox", { name: "Ask a question" })).toBeNull();
   });
 
-  it("stops at the daily limit and says when it resets", async () => {
-    const { user } = panel({ limit: 1 });
-    await user.type(screen.getByRole("textbox", { name: "Ask a question" }), "overdue{Enter}");
-    await screen.findByTestId("assistant-limit");
-    expect(screen.getByRole("textbox", { name: "Ask a question" })).toBeDisabled();
-    expect(screen.getByTestId("assistant-limit")).toHaveTextContent("resets tomorrow");
+  it("an unavailable assistant (not on V1.1, no role) is explained with no input", () => {
+    mount({}, { unavailable: "Your role is not allowed to use the assistant." });
+    expect(screen.getByTestId("assistant-unavailable")).toHaveTextContent("not allowed");
+    expect(screen.queryByRole("textbox", { name: "Ask a question" })).toBeNull();
   });
 
-  it("shows an error, changes nothing and offers Try again", async () => {
-    const respond = vi.fn().mockRejectedValueOnce(new Error("down")).mockResolvedValueOnce([{ id: "1", who: "ai", text: "Back again" }]);
-    const { user } = panel({ respond });
+  it("stops at the daily limit the server reports and says when it resets", () => {
+    mount({}, { usage: { today: 15, limit: 15 } });
+    expect(screen.getByTestId("assistant-limit")).toHaveTextContent("resets tomorrow");
+    expect(screen.getByRole("textbox", { name: "Ask a question" })).toBeDisabled();
+  });
+
+  it("a 429 shows the API's sentence and no Try again", async () => {
+    const { user } = mount({
+      postAssistantAsk: () => {
+        throw apiError(429, { message: "You have used your 15 questions for today. The limit resets tomorrow." });
+      },
+    });
+    await user.type(screen.getByRole("textbox", { name: "Ask a question" }), "overdue{Enter}");
+    await screen.findByText(/used your 15 questions/);
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("a server failure shows a plain error, changes nothing and offers Try again", async () => {
+    let calls = 0;
+    const { user } = mount({
+      postAssistantAsk: () => {
+        if (++calls === 1) throw apiError(500);
+        return { requestId: "r4", message: { who: "ai", text: "Back again" }, usage: { today: 1, limit: 15 } };
+      },
+    });
     await user.type(screen.getByRole("textbox", { name: "Ask a question" }), "overdue{Enter}");
     await screen.findByText(/couldn’t answer that just now/);
     await user.click(screen.getByRole("button", { name: "Try again" }));
     await waitFor(() => expect(screen.getByText("Back again")).toBeInTheDocument());
     expect(screen.queryByText(/couldn’t answer/)).toBeNull();
-    expect(respond).toHaveBeenCalledTimes(2);
   });
 
   it("renders nothing when closed", () => {
-    panel({ open: false });
+    mount({}, { open: false });
     expect(screen.queryByTestId("assistant-panel")).toBeNull();
   });
 });

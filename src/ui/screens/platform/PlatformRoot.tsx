@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Toasts } from "./kit";
+import { ReverifyHost } from "./Verify";
+import type { CsvCall, PlatformCall } from "./api";
 import { PlatformStoreProvider } from "./store";
 
 const KEY = "figbloom-platform-theme";
@@ -14,10 +16,10 @@ const ThemeCtx = createContext<ThemeApi>({ theme: "light", toggle: () => {} });
 export const usePlatformTheme = () => useContext(ThemeCtx);
 
 /**
- * The console's root: its own look (light or dark, remembered on this device only), the demo store and the toast area. Everything under
+ * The console's root: its own look (light or dark, remembered on this device only), the platform store (reads from /api/platform) and the toast area. Everything under
  * /platform sits inside it, the sign-in step and platform mobile included. It never loads the tenant stylesheet or theme.
  */
-export function PlatformRoot({ children }: { children: ReactNode }) {
+export function PlatformRoot({ children, call, csv }: { children: ReactNode; call?: PlatformCall; csv?: CsvCall }) {
   const [theme, setTheme] = useState<"light" | "dark">("light");
   useEffect(() => {
     try {
@@ -40,10 +42,11 @@ export function PlatformRoot({ children }: { children: ReactNode }) {
   }, []);
   return (
     <ThemeCtx.Provider value={{ theme, toggle }}>
-      <PlatformStoreProvider>
+      <PlatformStoreProvider call={call} csv={csv}>
         <div className="fb-pl" data-pl-theme={theme}>
           {children}
           <Toasts />
+          <ReverifyHost />
         </div>
       </PlatformStoreProvider>
     </ThemeCtx.Provider>

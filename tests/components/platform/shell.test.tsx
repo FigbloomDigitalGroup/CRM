@@ -1,7 +1,7 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { seedPlatform } from "../../../src/ui/screens/platform/demo/data";
+import { makeCall } from "./fakePlatform";
 import { PlatformRoot } from "../../../src/ui/screens/platform/PlatformRoot";
 import { PlatformShell } from "../../../src/ui/screens/platform/PlatformShell";
 
@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 
 function shell() {
   return render(
-    <PlatformRoot>
+    <PlatformRoot call={makeCall().call}>
       <PlatformShell identity={{ name: "Dev Super Admin", email: "superadmin@platform.figbloom.co.ke" }} signOut={<button type="button">Sign out</button>}>
         <p>page body</p>
       </PlatformShell>
@@ -42,14 +42,14 @@ describe("Platform console shell (PL1, TB6)", () => {
     await user.selectOptions(screen.getByLabelText("Release shown in the console"), "v11");
     expect(screen.queryByRole("link", { name: /Flags and limits/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /Announcements/ })).toBeNull();
-    const seeded = seedPlatform();
-    const waiting = seeded.requests.filter((r) => ["Received", "In review", "Approved"].includes(r.status)).length;
-    expect(screen.getByRole("link", { name: /Data requests/ }).textContent).toContain(String(waiting));
+    await waitFor(() => expect(screen.getByRole("link", { name: /Data requests/ }).textContent).toContain("2"));
   });
 
   it("searches organisation names only, and says so when nothing matches", async () => {
     const user = userEvent.setup();
     shell();
+    await screen.findByLabelText("Search organisations");
+    await waitFor(() => expect(screen.getByRole("link", { name: /Data requests/ }).textContent).toContain("2"));
     await user.type(screen.getByLabelText("Search organisations"), "sandbox");
     expect(screen.getByRole("link", { name: /Figbloom Sandbox/ }).getAttribute("href")).toBe("/platform/organisations/o2");
     await user.clear(screen.getByLabelText("Search organisations"));

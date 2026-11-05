@@ -40,7 +40,7 @@ How the hand-off works without touching the page: the login page POSTs to `/api/
 
 ## To wire (frontend)
 
-`src/app/two-step/` (A5) and `src/app/two-step/setup`, the S7 #2 policy toggle and trusted-device list in `src/ui/screens/orgside/demo/`, the platform sign-in and PL10 to PL14 screens in `src/ui/screens/platform/demo/`. Not wired in this issue.
+A5, enrolment, the S7 #2 policy toggle and trusted devices are wired (M14, W6, 5 Nov 2026). The platform sign-in and PL10 to PL14 screens are not (platform lane).
 
 ## Tests
 

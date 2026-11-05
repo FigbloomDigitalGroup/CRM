@@ -76,16 +76,16 @@ const DEFS: Def[] = [
   { section: "communication", key: "conversations", label: () => "Conversations", path: "/conversations", icon: "conversations", tint: "o", allowed: (c) => has(c, "communications.view"), built: true },
   // Mail needs the right to send (communications.create), so read-only roles are not offered a screen they cannot use; Chat is for every member of the organisation (a platform identity has no keys);
   // meetings follow the calendar's task permission. B6.26 (FIG-1384) replaces these with their own permission keys when the API lands.
-  { section: "communication", key: "mail", label: () => "Mail", path: "/mail", icon: "mail", tint: "o", allowed: (c) => has(c, "communications.create"), built: true, demo: true },
-  { section: "communication", key: "chat", label: () => "Chat", path: "/chat", icon: "chat", tint: "o", allowed: (c) => c.permissionKeys.length > 0, built: true, demo: true },
-  { section: "communication", key: "video", label: () => "Video Conference", path: "/video", icon: "video", tint: "o", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true, demo: true },
+  { section: "communication", key: "mail", label: () => "Mail", path: "/mail", icon: "mail", tint: "o", allowed: (c) => has(c, "mail.use"), built: true },
+  { section: "communication", key: "chat", label: () => "Chat", path: "/chat", icon: "chat", tint: "o", allowed: (c) => has(c, "chat.view"), built: true },
+  { section: "communication", key: "video", label: () => "Video Conference", path: "/video", icon: "video", tint: "o", allowed: (c) => has(c, "meetings.schedule"), built: true },
   // Customer Support workspace (FIG-1178, demo data): only the proposed role's ticket permission shows it.
   { section: "after-sale", key: "handoffs", label: () => "Handoffs", path: "/handoffs", icon: "handoffs", tint: "o", allowed: (c) => any(c, "handoff.manage", "deals.handoff"), built: true },
   { section: "after-sale", key: "renewals", label: () => "Renewals", path: "/renewals", icon: "renewals", tint: "o", allowed: (c) => has(c, "company_services.manage"), built: true },
   { section: "after-sale", key: "payments", label: () => "Payments", path: "/payments", icon: "payments", tint: "o", allowed: (c) => has(c, "finance.view.payments"), built: true },
-  { section: "insights", key: "forecast", label: () => "Forecast & targets", path: "/forecast", icon: "reports", tint: "o", allowed: (c) => any(c, "forecast.view.all", "quotes.create", "reporting.view.own", "reporting.view.all"), built: true, demo: true },
+  { section: "insights", key: "forecast", label: () => "Forecast & targets", path: "/forecast", icon: "reports", tint: "o", allowed: (c) => any(c, "forecast.view.all", "quotes.create", "reporting.view.own", "reporting.view.all"), built: true },
   // The design lists Approvals for people who approve quotes only; quotes themselves are reached from a deal, so they have no sidebar link.
-  { section: "insights", key: "approvals", label: () => "Approvals", path: "/approvals", icon: "handoffs", tint: "o", allowed: (c) => has(c, "quotes.approve"), built: true, demo: true },
+  { section: "insights", key: "approvals", label: () => "Approvals", path: "/approvals", icon: "handoffs", tint: "o", allowed: (c) => has(c, "quotes.approve"), built: true },
   {
     section: "insights",
     key: "reports",

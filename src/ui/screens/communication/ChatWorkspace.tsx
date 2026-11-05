@@ -1,72 +1,85 @@
 "use client";
 
-import { AtSign, ArrowLeft, Bell, BellOff, Hash, Link2, Lock, MessagesSquare, Paperclip, Plus, Search, Send, Smile, SmilePlus, Users } from "lucide-react";
+import { ArrowLeft, AtSign, Hash, Link2, Lock, MessagesSquare, Paperclip, Plus, Search, Send, Smile, SmilePlus, Trash2, Users } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { Avatar, Badge, Button, IconButton } from "../../components/basics";
+import { Avatar, Badge, Banner, Button, IconButton } from "../../components/basics";
 import { Checkbox, Input } from "../../components/forms";
 import { Dialog, Menu } from "../../components/overlays";
-import { EmptyState, MaskedValue, NoAccess } from "../../components/states";
+import { EmptyState, LoadingState, MaskedValue, NoAccess } from "../../components/states";
 import { useToast } from "../../components/toast";
+import { newIdempotencyKey, putSignedUpload } from "../../data/client";
+import { useApi } from "../../data/hooks";
 import { useMember } from "../../data/member";
-import { DEMO_CARDS, DEMO_PEOPLE, EMOJI, ME, formatKes, isLimitedMember, mentionQuery, mentionsIn, viewCard, type DemoChannel, type DemoMessage, type DemoPerson, type RecordCard } from "./demo/data";
-import { chatDemo, useChat } from "./demo/store";
+import { describeError } from "../../errors";
+import { QueryFailure } from "../../featureUnavailable";
+import { EMOJI, channelTitle, formatKes, mentionQuery, mentionsIn, useChannelMembers, useChannels, useChatActions, useMessages, usePeople, type CardView, type ChannelItem, type MessageItem, type PersonItem, type RecordRef } from "./api";
+import { RecordPicker } from "./RecordPicker";
 
-const personById = (id: string) => DEMO_PEOPLE.find((p) => p.id === id);
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-/** Who may see a channel: everyone for an open channel, the permission for a gated one, and for a limited member (Restricted Technical) only the channels they were added to. */
-function channelVisible(c: DemoChannel, can: (key: string) => boolean): boolean {
-  if (isLimitedMember(can)) return Boolean(c.addedLimited);
-  return !c.requires || can(c.requires);
-}
+const dayOf = (iso: string) => {
+  const d = new Date(iso);
+  const key = (x: Date) => x.toDateString();
+  if (key(d) === key(new Date())) return "Today";
+  if (key(d) === key(new Date(Date.now() - 86_400_000))) return "Yesterday";
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+};
+const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
 /**
- * Chat (F6.21, FIG-1379): internal team chat. Channels (public, private, and one attached to a record), direct messages, mentions, emoji, attachments
- * and record cards. A record card shows what the person LOOKING may see, not what the poster saw (hard rule 7). On demo data (`demo/`): messages live
- * in memory until B6.24 to B6.27 supply the API in M13.
+ * Chat (F6.21, FIG-1379): internal team chat on the real API (docs/COMMUNICATION.md). Channels (public, private, one attached to a record), direct
+ * messages, mentions, emoji, files and record cards. Who may see a channel, and what a record card shows, is decided by the API for the person
+ * looking (hard rule 7); the screen draws what it is given. The screen polls for new messages and unread counts.
  */
 export function ChatWorkspace() {
   const { can, userName, orgSlug } = useMember();
   const toast = useToast();
-  const { channels, messages, unread, dms } = useChat();
-  const visible = useMemo(() => channels.filter((c) => channelVisible(c, can)), [channels, can]);
+  const api = useApi();
+  const { channels, isLoading, error, refetch } = useChannels(can("chat.view"));
+  const { people } = usePeople(can("chat.view"));
 
-  const [current, setCurrent] = useState<string>("general");
+  const [current, setCurrent] = useState<string | null>(null);
   const [channelQuery, setChannelQuery] = useState("");
   const [peopleQuery, setPeopleQuery] = useState("");
   const [draft, setDraft] = useState("");
-  const [files, setFiles] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [find, setFind] = useState("");
-  const [muted, setMuted] = useState<Record<string, boolean>>({});
   const [membersOpen, setMembersOpen] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [convOpen, setConvOpen] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const marked = useRef<Record<string, number>>({});
 
-  const isDm = current.startsWith("dm:");
-  const channel = visible.find((c) => c.id === current);
-  const dmPerson = isDm ? personById(current.slice(3)) : undefined;
-  const known = isDm ? Boolean(dmPerson) : Boolean(channel);
-
-  useEffect(() => {
-    if (!known && visible[0]) setCurrent(visible[0].id);
-  }, [known, visible]);
+  const rooms = useMemo(() => channels.filter((c) => c.kind !== "DIRECT" && !c.archived), [channels]);
+  const dms = useMemo(() => channels.filter((c) => c.kind === "DIRECT"), [channels]);
+  const channel = channels.find((c) => c.id === current) ?? null;
 
   useEffect(() => {
-    chatDemo.markRead(current);
-  }, [current, messages.length]);
+    if (!channel && (rooms[0] ?? dms[0])) setCurrent((rooms[0] ?? dms[0])!.id);
+  }, [channel, rooms, dms]);
 
-  const thread = useMemo(() => messages.filter((m) => m.channelId === current && (!find || m.text.toLowerCase().includes(find.toLowerCase()))), [messages, current, find]);
+  const actions = useChatActions(current);
+  const { messages, error: messagesError } = useMessages(channel ? channel.id : null);
+
+  useEffect(() => {
+    if (channel?.joined && channel.unread > 0 && (marked.current[channel.id] ?? -1) < channel.lastSeq) {
+      marked.current[channel.id] = channel.lastSeq;
+      actions.markRead(channel.lastSeq);
+    }
+  }, [channel?.id, channel?.unread, channel?.lastSeq, channel?.joined]);
+
+  const thread = useMemo(() => messages.filter((m) => !find || (m.body ?? "").toLowerCase().includes(find.toLowerCase())), [messages, find]);
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ block: "end" });
   }, [thread.length, current]);
 
-  const people = useMemo(() => [{ id: ME, name: userName }, ...DEMO_PEOPLE], [userName]);
-  const mentionRe = useMemo(() => new RegExp(`(@(?:${people.map((p) => escapeRe(p.name)).join("|")}))`, "g"), [people]);
+  const everyone = useMemo(() => people, [people]);
+  const mentionRe = useMemo(() => (everyone.length ? new RegExp(`(@(?:${everyone.map((p) => escapeRe(p.name)).join("|")}))`, "g") : null), [everyone]);
   const query = mentionQuery(draft);
-  const suggestions = query === null ? [] : DEMO_PEOPLE.filter((p) => p.name.toLowerCase().split(" ").some((w) => w.startsWith(query.toLowerCase()))).slice(0, 5);
+  const suggestions = query === null ? [] : everyone.filter((p) => !p.you && p.name.toLowerCase().split(" ").some((w) => w.startsWith(query.toLowerCase()))).slice(0, 5);
 
   function select(id: string) {
     setCurrent(id);
@@ -75,39 +88,80 @@ export function ChatWorkspace() {
     setConvOpen(true);
   }
 
-  function send() {
-    const text = draft.trim();
-    if (!text && files.length === 0) return;
-    chatDemo.post(current, text, { attachments: files.length ? files : undefined });
-    for (const id of mentionsIn(text, DEMO_PEOPLE)) {
-      // The real API notifies a mentioned person only when they may see the record the message names (B6.26); the demo says what would happen.
-      if (id) toast.show({ message: `${personById(id)?.name.split(" ")[0]} was notified`, tone: "info" });
+  async function uploadAll(): Promise<string[]> {
+    const ids: string[] = [];
+    for (const f of files) {
+      const started = (await api.call("createFileUpload", { params: { orgSlug }, body: { purpose: "ATTACHMENT", name: f.name, mimeType: f.type || "application/octet-stream", sizeBytes: f.size } as never, idempotencyKey: newIdempotencyKey() })) as unknown as { file: { id: string }; upload: { url: string; method?: string; headers?: Record<string, string> } };
+      await putSignedUpload(started.upload, f);
+      await api.call("completeFileUpload", { params: { orgSlug, fileId: started.file.id }, idempotencyKey: newIdempotencyKey() } as never);
+      ids.push(started.file.id);
     }
-    setDraft("");
-    setFiles([]);
+    return ids;
   }
 
-  function shareCard(card: RecordCard) {
-    chatDemo.post(current, `Sharing ${card.name}`, { card });
+  async function send() {
+    const text = draft.trim();
+    if ((!text && files.length === 0) || !channel || uploading) return;
+    try {
+      setUploading(true);
+      const fileIds = files.length ? await uploadAll() : undefined;
+      const mentions = mentionsIn(text, everyone);
+      actions.post({ body: text || undefined, mentions: mentions.length ? mentions : undefined, fileIds }, {
+        onSuccess: () => {
+          setDraft("");
+          setFiles([]);
+        },
+        onError: (e) => toast.show({ message: describeError(e).body, tone: "danger" }),
+      });
+    } catch (e) {
+      toast.show({ message: `The file was not sent. ${describeError(e).body}`, tone: "danger" });
+    } finally {
+      setUploading(false);
+    }
   }
 
-  const filteredChannels = visible.filter((c) => c.name.toLowerCase().includes(channelQuery.toLowerCase()));
-  const dmPeople = dms.map(personById).filter((p): p is DemoPerson => Boolean(p)).filter((p) => p.name.toLowerCase().includes(peopleQuery.toLowerCase()));
-  const startable = DEMO_PEOPLE.filter((p) => !dms.includes(p.id));
-  const channelUnread = filteredChannels.reduce((n, c) => n + (unread[c.id] ?? 0), 0);
-  const dmUnread = dms.reduce((n, id) => n + (unread[`dm:${id}`] ?? 0), 0);
+  function shareCard(r: RecordRef) {
+    if (r.kind === "contact") return;
+    actions.post({ body: `Sharing ${r.label}`, card: { type: r.kind.toUpperCase() as CardView["type"], id: r.id } }, { onError: (e) => toast.show({ message: describeError(e).body, tone: "danger" }) });
+    setShareOpen(false);
+  }
 
-  if (visible.length === 0) {
+  async function openAttachment(m: MessageItem, fileId: string) {
+    try {
+      const r = (await api.call("getChatChannelsByChannelIdMessagesByMessageIdAttachmentsByFileId", { params: { orgSlug, channelId: m.channelId, messageId: m.id, fileId } })) as { download?: { url: string } };
+      if (r.download?.url) window.open(r.download.url, "_blank", "noopener");
+    } catch (e) {
+      toast.show({ message: describeError(e).body, tone: "danger" });
+    }
+  }
+
+  const filteredRooms = rooms.filter((c) => channelTitle(c).toLowerCase().includes(channelQuery.toLowerCase()));
+  const dmList = dms.filter((c) => channelTitle(c).toLowerCase().includes(peopleQuery.toLowerCase()));
+  const dmPartners = new Set(dms.map((d) => d.partner?.membershipId));
+  const startable = people.filter((p) => !p.you && !dmPartners.has(p.membershipId));
+  const presenceOf = (id: string | undefined) => people.find((p) => p.membershipId === id)?.presence ?? "OFFLINE";
+  const roomUnread = filteredRooms.reduce((n, c) => n + c.unread, 0);
+  const dmUnread = dms.reduce((n, c) => n + c.unread, 0);
+
+  function startDm(p: PersonItem) {
+    actions.create({ kind: "DIRECT", memberIds: [p.membershipId] }, { onSuccess: (c) => select(c.id), onError: (e) => toast.show({ message: describeError(e).body, tone: "danger" }) });
+  }
+
+  if (!can("chat.view")) {
     return (
       <div className="fb-comm">
         <h1 className="fb-comm__title">Chat</h1>
-        <NoAccess area="Chat" denial={{ yourRole: "your role", ownerRoles: ["Management"], whoToAsk: ["Management"] }} />
+        <NoAccess area="Chat" denial={{ yourRole: null, ownerRoles: ["Management", "Sales", "Delivery", "Finance", "Customer Support"], whoToAsk: ["Management"] }} />
       </div>
     );
   }
+  if (isLoading) return <div className="fb-comm"><h1 className="fb-comm__title">Chat</h1><LoadingState label="Loading chat" /></div>;
+  if (error) return <div className="fb-comm"><h1 className="fb-comm__title">Chat</h1><QueryFailure error={error} area="Chat" onRetry={() => void refetch()} /></div>;
 
-  const title = isDm ? dmPerson?.name ?? "" : channel?.name ?? "";
-  const days = Array.from(new Set(thread.map((m) => m.day)));
+  const isDm = channel?.kind === "DIRECT";
+  const title = channel ? channelTitle(channel) : "";
+  const days = Array.from(new Set(thread.map((m) => dayOf(m.createdAt))));
+  const canPost = can("chat.post") && Boolean(channel?.joined);
 
   return (
     <div className="fb-comm" data-conv-open={convOpen ? "true" : undefined}>
@@ -127,7 +181,7 @@ export function ChatWorkspace() {
           <div className="fb-chat__group">
             <div className="fb-chat__grouphead">
               <span>Channels</span>
-              {channelUnread > 0 ? <span className="fb-chat__count" aria-label={`${channelUnread} unread`}>{channelUnread}</span> : null}
+              {roomUnread > 0 ? <span className="fb-chat__count" aria-label={`${roomUnread} unread`}>{roomUnread}</span> : null}
               <IconButton label="New channel" className="fb-chat__add" onClick={() => setNewOpen(true)}><Plus size={16} /></IconButton>
             </div>
             <label className="fb-chat__search">
@@ -135,13 +189,13 @@ export function ChatWorkspace() {
               <input type="search" placeholder="Search channels..." aria-label="Search channels" value={channelQuery} onChange={(e) => setChannelQuery(e.target.value)} />
             </label>
             <ul className="fb-chat__list">
-              {filteredChannels.length === 0 ? <li className="fb-chat__none">No channels match.</li> : null}
-              {filteredChannels.map((c) => (
+              {filteredRooms.length === 0 ? <li className="fb-chat__none">{rooms.length === 0 ? "No channels yet. Create the first one with the plus button." : "No channels match."}</li> : null}
+              {filteredRooms.map((c) => (
                 <li key={c.id}>
                   <button type="button" className="fb-chat__item" aria-current={current === c.id ? "true" : undefined} onClick={() => select(c.id)}>
-                    <span className="fb-chat__icon" aria-hidden="true">{c.kind === "record" ? <Link2 size={14} /> : c.private ? <Lock size={14} /> : <Hash size={14} />}</span>
-                    <span className="fb-chat__name">{c.name}</span>
-                    {unread[c.id] ? <span className="fb-chat__count" aria-label={`${unread[c.id]} unread`}>{unread[c.id]}</span> : null}
+                    <span className="fb-chat__icon" aria-hidden="true">{c.kind === "RECORD" ? <Link2 size={14} /> : c.private ? <Lock size={14} /> : <Hash size={14} />}</span>
+                    <span className="fb-chat__name">{channelTitle(c)}</span>
+                    {c.unread ? <span className="fb-chat__count" aria-label={`${c.unread} unread`}>{c.unread}</span> : null}
                   </button>
                 </li>
               ))}
@@ -158,8 +212,8 @@ export function ChatWorkspace() {
                 align="end"
                 items={
                   startable.length
-                    ? startable.map((p) => ({ key: p.id, label: `${p.name} · ${p.title}`, onSelect: () => { chatDemo.startDm(p.id); select(`dm:${p.id}`); } }))
-                    : [{ key: "none", label: "You already talk to everyone", disabledReason: "Everyone in the demo team is already in your list." }]
+                    ? startable.map((p) => ({ key: p.membershipId, label: `${p.name} · ${p.roleName}`, onSelect: () => startDm(p), disabledReason: can("chat.post") ? undefined : "Your role can read chat but not post." }))
+                    : [{ key: "none", label: "You already talk to everyone", disabledReason: "Everyone in your organisation is already in your list." }]
                 }
               />
             </div>
@@ -167,17 +221,17 @@ export function ChatWorkspace() {
               <Search size={14} aria-hidden="true" />
               <input type="search" placeholder="Search people..." aria-label="Search people" value={peopleQuery} onChange={(e) => setPeopleQuery(e.target.value)} />
             </label>
-            {dmPeople.length === 0 ? (
+            {dmList.length === 0 ? (
               <p className="fb-chat__none">No direct messages. Start a conversation with the plus button.</p>
             ) : (
               <ul className="fb-chat__list">
-                {dmPeople.map((p) => (
-                  <li key={p.id}>
-                    <button type="button" className="fb-chat__item" aria-current={current === `dm:${p.id}` ? "true" : undefined} onClick={() => select(`dm:${p.id}`)}>
-                      <span className="fb-chat__avatar"><Avatar name={p.name} size={24} /><i className="fb-chat__dot" data-presence={p.presence} aria-hidden="true" /></span>
-                      <span className="fb-chat__name">{p.name}</span>
-                      <span className="fb-sr-only">{p.presence}</span>
-                      {unread[`dm:${p.id}`] ? <span className="fb-chat__count" aria-label={`${unread[`dm:${p.id}`]} unread`}>{unread[`dm:${p.id}`]}</span> : null}
+                {dmList.map((c) => (
+                  <li key={c.id}>
+                    <button type="button" className="fb-chat__item" aria-current={current === c.id ? "true" : undefined} onClick={() => select(c.id)}>
+                      <span className="fb-chat__avatar"><Avatar name={channelTitle(c)} size={24} /><i className="fb-chat__dot" data-presence={presenceOf(c.partner?.membershipId).toLowerCase()} aria-hidden="true" /></span>
+                      <span className="fb-chat__name">{channelTitle(c)}</span>
+                      <span className="fb-sr-only">{presenceOf(c.partner?.membershipId).toLowerCase()}</span>
+                      {c.unread ? <span className="fb-chat__count" aria-label={`${c.unread} unread`}>{c.unread}</span> : null}
                     </button>
                   </li>
                 ))}
@@ -194,142 +248,167 @@ export function ChatWorkspace() {
         </aside>
 
         <section className="fb-chat__main" aria-label={isDm ? `Conversation with ${title}` : `Channel ${title}`}>
-          <header className="fb-chat__top">
-            <IconButton label="Back to channels" className="fb-comm__back" onClick={() => setConvOpen(false)}><ArrowLeft size={18} /></IconButton>
-            <span className="fb-chat__topicon" aria-hidden="true">{isDm ? <Avatar name={title} size={36} /> : channel?.kind === "record" ? <Link2 size={18} /> : <Hash size={18} />}</span>
-            <div className="fb-chat__topmain">
-              <h2>{isDm ? title : `# ${title}`}</h2>
-              <p>
-                {isDm
-                  ? `${dmPerson?.title} · ${dmPerson?.city} · ${dmPerson?.presence}`
-                  : `${channel?.members} members · ${channel?.private ? "Private channel" : "Public channel"}${channel?.record ? ` · attached to ${channel.record.kind} ${channel.record.name}` : ""}`}
-              </p>
-            </div>
-            <div className="fb-chat__tools">
-              <IconButton label={muted[current] ? "Turn notifications on" : "Mute notifications"} pressed={Boolean(muted[current])} onClick={() => { setMuted({ ...muted, [current]: !muted[current] }); toast.show({ message: muted[current] ? "Notifications on" : "Notifications muted", tone: "info" }); }}>
-                {muted[current] ? <BellOff size={18} /> : <Bell size={18} />}
-              </IconButton>
-              <IconButton label="Search this conversation" pressed={searching} onClick={() => { setSearching(!searching); setFind(""); }}><Search size={18} /></IconButton>
-              {isDm ? null : <IconButton label="Members" onClick={() => setMembersOpen(true)}><Users size={18} /></IconButton>}
-            </div>
-          </header>
-          {searching ? (
-            <div className="fb-chat__find">
-              <Input label="Find in this conversation" type="search" value={find} onChange={(e) => setFind(e.target.value)} autoFocus />
-            </div>
-          ) : null}
+          {!channel ? (
+            <EmptyState icon={<MessagesSquare size={22} />} title="No conversation selected" body="Create a channel or start a direct message to begin." />
+          ) : (
+            <>
+              <header className="fb-chat__top">
+                <IconButton label="Back to channels" className="fb-comm__back" onClick={() => setConvOpen(false)}><ArrowLeft size={18} /></IconButton>
+                <span className="fb-chat__topicon" aria-hidden="true">{isDm ? <Avatar name={title} size={36} /> : channel.kind === "RECORD" ? <Link2 size={18} /> : <Hash size={18} />}</span>
+                <div className="fb-chat__topmain">
+                  <h2>{isDm ? title : `# ${title}`}</h2>
+                  <p>
+                    {isDm
+                      ? presenceOf(channel.partner?.membershipId).toLowerCase()
+                      : `${channel.memberCount} members · ${channel.private ? "Private channel" : "Public channel"}${channel.record ? ` · attached to ${channel.record.type.toLowerCase()}` : ""}`}
+                  </p>
+                </div>
+                <div className="fb-chat__tools">
+                  <IconButton label="Search this conversation" pressed={searching} onClick={() => { setSearching(!searching); setFind(""); }}><Search size={18} /></IconButton>
+                  {isDm ? null : <IconButton label="Members" onClick={() => setMembersOpen(true)}><Users size={18} /></IconButton>}
+                </div>
+              </header>
+              {searching ? (
+                <div className="fb-chat__find">
+                  <Input label="Find in this conversation" type="search" value={find} onChange={(e) => setFind(e.target.value)} autoFocus />
+                </div>
+              ) : null}
+              {!channel.joined && !isDm ? (
+                <Banner tone="info" title="You are not in this channel." action={<Button size="sm" onClick={actions.join} disabledReason={can("chat.post") ? undefined : "Your role can read chat but not post."}>Join channel</Button>}>
+                  You can read it, but you need to join to post.
+                </Banner>
+              ) : null}
 
-          <div className="fb-chat__scroll" role="log" aria-live="polite" aria-label="Messages">
-            {thread.length === 0 ? (
-              <EmptyState icon={<MessagesSquare size={22} />} title={find ? "No messages match" : "No messages yet"} body={find ? "Try another word." : "Say hello. Everyone in this conversation will see it."} />
-            ) : (
-              days.map((day) => (
-                <Fragment key={day}>
-                  <div className="fb-chat__day"><span>{day}</span></div>
-                  {thread.filter((m) => m.day === day).map((m) => (
-                    <MessageRow key={m.id} message={m} me={userName} mentionRe={mentionRe} can={can} orgSlug={orgSlug} />
-                  ))}
-                </Fragment>
-              ))
-            )}
-            <div ref={endRef} />
-          </div>
-
-          <footer className="fb-chat__composer">
-            {suggestions.length ? (
-              <ul className="fb-chat__suggest" aria-label="Mention suggestions">
-                {suggestions.map((p) => (
-                  <li key={p.id}>
-                    <button type="button" onClick={() => setDraft(draft.replace(/@[A-Za-z]*$/, `@${p.name} `))}>
-                      <Avatar name={p.name} size={20} /> {p.name} <span>{p.title}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {files.length ? (
-              <div className="fb-chat__files">
-                {files.map((f) => (
-                  <span key={f} className="fb-chat__file"><Paperclip size={12} aria-hidden="true" /> {f}<button type="button" aria-label={`Remove ${f}`} onClick={() => setFiles(files.filter((x) => x !== f))}>×</button></span>
-                ))}
+              <div className="fb-chat__scroll" role="log" aria-live="polite" aria-label="Messages">
+                {messagesError ? (
+                  <QueryFailure error={messagesError} area="This conversation" />
+                ) : thread.length === 0 ? (
+                  <EmptyState icon={<MessagesSquare size={22} />} title={find ? "No messages match" : "No messages yet"} body={find ? "Try another word." : "Say hello. Everyone in this conversation will see it."} />
+                ) : (
+                  days.map((day) => (
+                    <Fragment key={day}>
+                      <div className="fb-chat__day"><span>{day}</span></div>
+                      {thread.filter((m) => dayOf(m.createdAt) === day).map((m) => (
+                        <MessageRow key={m.id} message={m} mentionRe={mentionRe} orgSlug={orgSlug} canReact={canPost} onReact={(e, mine) => actions.toggleReaction(m.id, e, mine)} onDelete={() => actions.deleteMessage(m.id)} onOpenFile={(f) => void openAttachment(m, f)} />
+                      ))}
+                    </Fragment>
+                  ))
+                )}
+                <div ref={endRef} />
               </div>
-            ) : null}
-            <textarea
-              className="fb-input fb-chat__input"
-              aria-label={`Message ${isDm ? title : `#${title}`}`}
-              placeholder={`Message ${isDm ? title : `#${title}`}`}
-              rows={2}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  send();
-                }
-              }}
-            />
-            <div className="fb-chat__actions">
-              <div className="fb-chat__tools">
-                <input ref={fileRef} type="file" multiple hidden aria-label="Attach files" onChange={(e) => { setFiles([...files, ...Array.from(e.target.files ?? []).map((f) => f.name)]); e.target.value = ""; }} />
-                <IconButton label="Attach a file" onClick={() => fileRef.current?.click()}><Paperclip size={18} /></IconButton>
-                <Menu label="Add an emoji" triggerClassName="fb-iconbtn" trigger={<Smile size={18} />} items={EMOJI.map((e) => ({ key: e, label: e, onSelect: () => setDraft(`${draft}${e}`) }))} />
-                <IconButton label="Mention someone" onClick={() => setDraft(`${draft}${draft && !draft.endsWith(" ") ? " " : ""}@`)}><AtSign size={18} /></IconButton>
-                <Menu
-                  label="Share a record"
-                  triggerClassName="fb-iconbtn"
-                  trigger={<Link2 size={18} />}
-                  items={DEMO_CARDS.map((c) => ({ key: c.id, label: `${c.kind === "deal" ? "Deal" : "Company"}: ${c.name}`, onSelect: () => shareCard(c), disabledReason: can("companies.view") ? undefined : "You do not have access to customer records." }))}
+
+              <footer className="fb-chat__composer">
+                {suggestions.length ? (
+                  <ul className="fb-chat__suggest" aria-label="Mention suggestions">
+                    {suggestions.map((p) => (
+                      <li key={p.membershipId}>
+                        <button type="button" onClick={() => setDraft(draft.replace(/@[A-Za-z]*$/, `@${p.name} `))}>
+                          <Avatar name={p.name} size={20} /> {p.name} <span>{p.roleName}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {files.length ? (
+                  <div className="fb-chat__files">
+                    {files.map((f, i) => (
+                      <span key={`${f.name}${i}`} className="fb-chat__file"><Paperclip size={12} aria-hidden="true" /> {f.name}<button type="button" aria-label={`Remove ${f.name}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}>×</button></span>
+                    ))}
+                  </div>
+                ) : null}
+                <textarea
+                  className="fb-input fb-chat__input"
+                  aria-label={`Message ${isDm ? title : `#${title}`}`}
+                  placeholder={canPost ? `Message ${isDm ? title : `#${title}`}` : "Join this channel to write a message."}
+                  rows={2}
+                  disabled={!canPost}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void send();
+                    }
+                  }}
                 />
-              </div>
-              <Button variant="primary" onClick={send} disabledReason={!draft.trim() && files.length === 0 ? "Write a message first." : undefined}>
-                <Send size={16} aria-hidden="true" /> Send
-              </Button>
-            </div>
-          </footer>
+                <div className="fb-chat__actions">
+                  <div className="fb-chat__tools">
+                    <input ref={fileRef} type="file" multiple hidden aria-label="Attach files" onChange={(e) => { setFiles([...files, ...Array.from(e.target.files ?? [])].slice(0, 10)); e.target.value = ""; }} />
+                    <IconButton label="Attach a file" onClick={() => fileRef.current?.click()} disabled={!canPost}><Paperclip size={18} /></IconButton>
+                    <Menu label="Add an emoji" triggerClassName="fb-iconbtn" trigger={<Smile size={18} />} items={EMOJI.map((e) => ({ key: e, label: e, onSelect: () => setDraft(`${draft}${e}`) }))} />
+                    <IconButton label="Mention someone" onClick={() => setDraft(`${draft}${draft && !draft.endsWith(" ") ? " " : ""}@`)} disabled={!canPost}><AtSign size={18} /></IconButton>
+                    <IconButton label="Share a record" onClick={() => setShareOpen(true)} disabled={!canPost}><Link2 size={18} /></IconButton>
+                  </div>
+                  <Button variant="primary" onClick={() => void send()} disabledReason={!canPost ? "Join this channel first." : !draft.trim() && files.length === 0 ? "Write a message first." : undefined}>
+                    <Send size={16} aria-hidden="true" /> {uploading || actions.posting ? "Sending" : "Send"}
+                  </Button>
+                </div>
+              </footer>
+            </>
+          )}
         </section>
       </div>
 
-      <Dialog open={membersOpen} onClose={() => setMembersOpen(false)} title={`Members of #${title}`} actions={<Button onClick={() => setMembersOpen(false)}>Close</Button>}>
-        <ul className="fb-chat__members">
-          {[{ id: ME, name: userName, title: "You", city: "", presence: "online" as const }, ...DEMO_PEOPLE].slice(0, Math.max(2, Math.min(channel?.members ?? 2, 7))).map((p) => (
-            <li key={p.id}>
-              <Avatar name={p.name} size={28} /> <strong>{p.name}</strong> <span>{p.title}</span> <Badge tone={p.presence === "online" ? "success" : "neutral"}>{p.presence}</Badge>
-            </li>
-          ))}
-        </ul>
+      <MembersDialog open={membersOpen} onClose={() => setMembersOpen(false)} title={title} channelId={current} />
+      <Dialog open={shareOpen} onClose={() => setShareOpen(false)} title="Share a record" actions={<Button onClick={() => setShareOpen(false)}>Cancel</Button>}>
+        <RecordPicker label="Record" value={null} onChange={(r) => r && shareCard(r)} kinds={["deal", "company", "lead"]} help="The card shows each person only what their role may see." />
       </Dialog>
-      <NewChannel open={newOpen} onClose={() => setNewOpen(false)} existing={channels.map((c) => c.name)} onCreate={(id) => { select(id); toast.show({ message: "Channel created", tone: "success" }); }} />
+      <NewChannel
+        open={newOpen}
+        onClose={() => setNewOpen(false)}
+        disabledReason={can("chat.channels.manage") || can("chat.post") ? undefined : "Your role cannot create channels."}
+        onCreate={(body, h) => actions.create(body, { onSuccess: (c: ChannelItem) => { select(c.id); toast.show({ message: "Channel created", tone: "success" }); h.ok(); }, onError: (e) => h.fail(describeError(e).body) })}
+      />
     </div>
   );
 }
 
-function MessageRow({ message, me, mentionRe, can, orgSlug }: { message: DemoMessage; me: string; mentionRe: RegExp; can: (key: string) => boolean; orgSlug: string }) {
-  const author = message.authorId === ME ? { name: me, city: "" } : personById(message.authorId);
-  const name = author?.name ?? "Former member";
-  const mine = message.authorId === ME;
-  const parts = message.text.split(mentionRe);
+function MembersDialog({ open, onClose, title, channelId }: { open: boolean; onClose: () => void; title: string; channelId: string | null }) {
+  const { members, isLoading, error } = useChannelMembers(channelId, open);
   return (
-    <article className="fb-chat__msg" data-mine={mine ? "true" : undefined} aria-label={`${name} at ${message.time}`}>
+    <Dialog open={open} onClose={onClose} title={`Members of #${title}`} actions={<Button onClick={onClose}>Close</Button>}>
+      {isLoading ? <LoadingState label="Loading members" lines={2} /> : error ? <QueryFailure error={error} area="Members" /> : (
+        <ul className="fb-chat__members">
+          {members.map((p) => (
+            <li key={p.membershipId}>
+              <Avatar name={p.name} size={28} /> <strong>{p.name}</strong> <span>{p.role === "OWNER" ? "Owner" : "Member"}</span> <Badge tone={p.presence === "ONLINE" ? "success" : "neutral"}>{p.presence.toLowerCase()}</Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Dialog>
+  );
+}
+
+function MessageRow({ message, mentionRe, orgSlug, canReact, onReact, onDelete, onOpenFile }: { message: MessageItem; mentionRe: RegExp | null; orgSlug: string; canReact: boolean; onReact: (emoji: string, mine: boolean) => void; onDelete: () => void; onOpenFile: (fileId: string) => void }) {
+  const name = message.authorName ?? "Former member";
+  const time = timeOf(message.createdAt);
+  if (message.deleted || message.erased) {
+    return <article className="fb-chat__msg" aria-label={`${name} at ${time}`}><Avatar name={name} size={32} /><div className="fb-chat__bubble"><p><em>{message.erased ? "This message was removed." : "This message was deleted."}</em></p></div></article>;
+  }
+  const parts = mentionRe && message.body ? message.body.split(mentionRe) : [message.body ?? ""];
+  return (
+    <article className="fb-chat__msg" aria-label={`${name} at ${time}`}>
       <Avatar name={name} size={32} />
       <div className="fb-chat__bubble">
         <div className="fb-chat__who">
           <strong>{name}</strong>
-          {author && "city" in author && author.city ? <span className="fb-chat__city">{author.city}</span> : null}
-          <time>{message.time}</time>
-          <Menu label={`React to the message from ${name}`} triggerClassName="fb-iconbtn fb-chat__react" trigger={<SmilePlus size={14} />} align="end" items={EMOJI.map((e) => ({ key: e, label: e, onSelect: () => chatDemo.react(message.id, e) }))} />
+          <time>{time}</time>
+          {canReact ? <Menu label={`React to the message from ${name}`} triggerClassName="fb-iconbtn fb-chat__react" trigger={<SmilePlus size={14} />} align="end" items={EMOJI.map((e) => ({ key: e, label: e, onSelect: () => onReact(e, message.reactions.some((r) => r.emoji === e && r.mine)) }))} /> : null}
+          {message.canDelete ? <IconButton label={`Delete the message from ${name}`} onClick={onDelete}><Trash2 size={14} /></IconButton> : null}
         </div>
-        {message.text ? <p>{parts.map((part, i) => (i % 2 === 1 ? <span key={i} className="fb-chat__mention">{part}</span> : <Fragment key={i}>{part}</Fragment>))}</p> : null}
-        {message.card ? <RecordCardView card={message.card} can={can} orgSlug={orgSlug} /> : null}
-        {message.attachments?.length ? (
+        {message.body ? <p>{parts.map((part, i) => (i % 2 === 1 ? <span key={i} className="fb-chat__mention">{part}</span> : <Fragment key={i}>{part}</Fragment>))}</p> : null}
+        {message.card ? <RecordCardView card={message.card} orgSlug={orgSlug} /> : null}
+        {message.attachments.length ? (
           <div className="fb-chat__files">
-            {message.attachments.map((f) => <span key={f} className="fb-chat__file"><Paperclip size={12} aria-hidden="true" /> {f}</span>)}
+            {message.attachments.map((f) => <button key={f.fileId} type="button" className="fb-chat__file" onClick={() => onOpenFile(f.fileId)}><Paperclip size={12} aria-hidden="true" /> {f.name}</button>)}
           </div>
         ) : null}
-        {Object.keys(message.reactions).length ? (
+        {message.reactions.length ? (
           <div className="fb-chat__reactions">
-            {Object.entries(message.reactions).map(([emoji, who]) => (
-              <button key={emoji} type="button" className="fb-chat__reaction" aria-pressed={who.includes(ME)} aria-label={`${emoji} ${who.length}`} onClick={() => chatDemo.react(message.id, emoji)}>
-                {emoji} {who.length}
+            {message.reactions.map((r) => (
+              <button key={r.emoji} type="button" className="fb-chat__reaction" aria-pressed={r.mine} aria-label={`${r.emoji} ${r.count}`} disabled={!canReact} onClick={() => onReact(r.emoji, r.mine)}>
+                {r.emoji} {r.count}
               </button>
             ))}
           </div>
@@ -339,34 +418,34 @@ function MessageRow({ message, me, mentionRe, can, orgSlug }: { message: DemoMes
   );
 }
 
-/** A record shared in chat. Each figure is drawn from `viewCard`, which masks by the viewer's permissions; a person who cannot open customer records gets the explained "no access". */
-function RecordCardView({ card, can, orgSlug }: { card: RecordCard; can: (key: string) => boolean; orgSlug: string }) {
-  if (!can("companies.view")) {
+const CARD_PATH: Record<CardView["type"], string> = { DEAL: "deals", COMPANY: "companies", LEAD: "leads", INVOICE: "payments" };
+
+/** A record shared in chat, as the API drew it for this viewer: a masked figure is `null`, and a record the viewer cannot open carries no name. */
+function RecordCardView({ card, orgSlug }: { card: CardView; orgSlug: string }) {
+  if (card.noAccess) {
     return (
       <div className="fb-chat__card" data-denied="true">
         <strong>Record not available</strong>
-        <span>This message shares a customer record. Your role does not have access to customer records, so nothing from it is shown.</span>
+        <span>This message shares a record your role cannot open, so nothing from it is shown.</span>
       </div>
     );
   }
-  const v = viewCard(card, can);
   return (
     <div className="fb-chat__card">
       <div className="fb-chat__cardhead">
-        <Badge tone="info">{v.kind === "deal" ? "Deal" : "Company"}</Badge>
-        <a href={`/o/${orgSlug}/${v.kind === "deal" ? "deals" : "companies"}`}>{v.name}</a>
+        <Badge tone="info">{card.type === "DEAL" ? "Deal" : card.type === "COMPANY" ? "Company" : card.type === "LEAD" ? "Lead" : "Invoice"}</Badge>
+        <a href={`/o/${orgSlug}/${CARD_PATH[card.type]}${card.type === "INVOICE" ? "" : `/${card.id}`}`}>{card.name}</a>
       </div>
       <dl>
-        {v.stage ? (<><dt>Stage</dt><dd>{v.stage}</dd></>) : null}
-        {v.value !== undefined ? (<><dt>Value</dt><dd>{v.value === null ? <MaskedValue /> : formatKes(v.value)}</dd></>) : null}
-        {v.margin !== undefined ? (<><dt>Margin</dt><dd>{v.margin === null ? <MaskedValue /> : `${v.margin}%`}</dd></>) : null}
-        {v.paymentDue !== undefined ? (<><dt>Payment due</dt><dd>{v.paymentDue === null ? <MaskedValue reason="Payments are visible only to Finance and Management." /> : formatKes(v.paymentDue)}</dd></>) : null}
+        {card.stage ? (<><dt>Stage</dt><dd>{card.stage}</dd></>) : null}
+        {card.value !== undefined ? (<><dt>Value</dt><dd>{card.value === null ? <MaskedValue /> : formatKes(card.value)}</dd></>) : null}
+        {card.paymentDue !== undefined ? (<><dt>Payment due</dt><dd>{card.paymentDue === null ? <MaskedValue reason="Payments are visible only to Finance and Management." /> : formatKes(card.paymentDue)}</dd></>) : null}
       </dl>
     </div>
   );
 }
 
-function NewChannel({ open, onClose, existing, onCreate }: { open: boolean; onClose: () => void; existing: string[]; onCreate: (id: string) => void }) {
+function NewChannel({ open, onClose, onCreate, disabledReason }: { open: boolean; onClose: () => void; onCreate: (body: { kind: "PUBLIC" | "PRIVATE"; name: string; description?: string }, h: { ok: () => void; fail: (m: string) => void }) => void; disabledReason?: string }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isPrivate, setPrivate] = useState(false);
@@ -375,14 +454,10 @@ function NewChannel({ open, onClose, existing, onCreate }: { open: boolean; onCl
   function create() {
     const clean = name.trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
     if (clean.length < 2) return setError("Use at least two letters or numbers.");
-    if (existing.includes(clean)) return setError("A channel with this name already exists.");
-    const ch = chatDemo.createChannel(clean, isPrivate, description);
-    setName("");
-    setDescription("");
-    setPrivate(false);
-    setError(null);
-    onClose();
-    onCreate(ch.id);
+    onCreate({ kind: isPrivate ? "PRIVATE" : "PUBLIC", name: clean, description: description.trim() || undefined }, {
+      ok: () => { setName(""); setDescription(""); setPrivate(false); setError(null); onClose(); },
+      fail: setError,
+    });
   }
 
   return (
@@ -393,7 +468,7 @@ function NewChannel({ open, onClose, existing, onCreate }: { open: boolean; onCl
       actions={
         <>
           <Button onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={create}>Create channel</Button>
+          <Button variant="primary" onClick={create} disabledReason={disabledReason}>Create channel</Button>
         </>
       }
     >
