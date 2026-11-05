@@ -9,12 +9,14 @@ import type { JsonSchema } from "./jsonSchema";
  *   /api/dev-session, /api/dev-sentry-test   development only; closed unless NODE_ENV=development and ALLOW_DEV_ACCOUNTS=true
  *   /api/platform/preferences                Platform Super Admin identity, V1.1 (and dev-only until then)
  *   /api/openapi.json                        serves this document, outside production only
+ *   /api/metrics                             operations endpoint for the metrics scraper (METRICS_TOKEN), not product API
  */
 export const NOT_IN_V1_CONTRACT: Record<string, string> = {
   "/api/dev-session": "development only (CLAUDE.md rule 10)",
   "/api/dev-sentry-test": "development only",
   "/api/platform/preferences": "Platform Super Admin, V1.1",
   "/api/openapi.json": "serves this document, outside production only",
+  "/api/metrics": "operations endpoint for the metrics scraper (Prometheus text, METRICS_TOKEN), not part of the product API; docs/OBSERVABILITY.md",
 };
 
 type Security = "none" | "sessionCookie" | "websiteApiKey" | "inboundEmailKey" | "signedToken" | "cronSecret";
