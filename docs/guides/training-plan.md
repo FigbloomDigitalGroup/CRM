@@ -58,12 +58,30 @@ Do this with a test organisation before real training. It is the test for FIG-11
 | 4 | New user | Open the phone page and install it | Icon on the home screen | |
 | 5 | New user | Follow the "first 10 minutes" in the Sales guide | Each step possible without help | |
 | 6 | New user | Open Payments and Settings | Explained no-access, says who to ask | |
-| 7 | New user | Open a deal that is not theirs | Value shows Hidden | |
+| 7 | New user | Open a deal that is not theirs | A Sales user cannot open it at all (not found); a role that may see the deal but not its value (for example Delivery) sees the value Hidden | |
 | 8 | Management | Settings, Audit log | Invite and role are listed | |
 | 9 | Management | Change role to Delivery | The new user's menu changes to Delivery's | |
 | 10 | Management | Deactivate the test user | Their sign-in stops, records stay | |
 
 Repeat steps 1 to 6 with a Finance and a Delivery role. Write problems in `docs/QA_DEFECTS.md`.
+
+### Dry-run result, 5 Nov 2026 (automated, through the API)
+
+Run by Claude Code for Given against a **scratch copy of staging** (a temporary app container on the production image, the invite email read from the Mailpit sandbox, everything removed afterwards; the shared staging was not touched). Management invited a new person, who accepted the invite from the email link and signed in. **33 of 33 checks passed**:
+
+| Step | Result |
+|---|---|
+| 1 Invite with the Sales role | Row shows Pending / invited with role Sales |
+| 2 Open the email, set a password | Invite email arrived with a link; accept-invite 200; signed in; context loads |
+| 3 Change the look | Saved (theme MIDNIGHT) and still set after signing out and in again |
+| 6 No access explained | Sales, Delivery and Restricted Technical: Payments and Members answer 403 with a message naming the missing permission; Finance sees Payments (200) and gets 403 on Members |
+| 7 A deal that is not theirs | Sales: 404 (the deal is not visible to them) |
+| 8 Audit log | The invite event is listed |
+| 9 Role change to Delivery | Accepted; the user's permissions changed |
+| 10 Deactivate | Accepted; the old session answers 401, a new sign-in 403, the membership record is kept |
+| Steps 1 to 3 and 6 repeated | Finance, Delivery and Restricted Technical: all pass |
+
+**Not covered by this run (a person must do them, with a real inbox and a phone):** step 4 (install on the phone home screen); step 5 (following the "first 10 minutes" list in a role guide: does a new person manage without help?); the wording of the no-access message **on screen** (the API message is a permission key such as `finance.view.payments`; whether the screen adds "who to ask" is not checked here); step 7 for a role that sees a deal with its value hidden (only the Sales case was run); the look actually changing on screen. The fix made: the expected result of step 7 now describes what happens for Sales.
 
 ## Attendance sheet (copy for each session)
 
