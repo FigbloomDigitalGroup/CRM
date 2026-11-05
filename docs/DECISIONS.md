@@ -97,6 +97,12 @@ These were taken while building the V1.1 backend so work could continue. Each ca
 | 9 | A dedicated `ORGANIZATION_SUSPENDED` error code is added in contract 1.1.0 (today the suspended error keeps `FORBIDDEN` with an `organization` block). | Decided, reversible |
 | 10 | The privacy organisation-request download route stays ungated because that workflow is platform-level. | Decided, reversible |
 
+### 5.0 Decision taken by Given on Michael's behalf (5 Nov 2026)
+
+| # | Decision | Status |
+|---|---|---|
+| 11 | The **Customer Support role** (B6.23, FIG-1155; tickets and satisfaction surveys) is **approved**, given by Given on Michael's behalf. The role stays behind its existing flag and sees only the customer and ticket data the permission matrix allows. | Approved, recorded 5 Nov 2026 |
+
 ### 5.1 Decisions the build lanes recorded in `IMPLEMENTATION_NOTES.md` ("taken without being asked")
 
 All have the status "Taken by Claude, reversible". Full wording is in the Stage 13 section of the source issue.
