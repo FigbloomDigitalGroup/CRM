@@ -103,13 +103,10 @@ test.describe("commercial screens on demo data", () => {
   });
 });
 
-test("without demo screens enabled the commercial pages do not exist", async ({ page }) => {
+test("without demo screens enabled the client signing page (demo tokens) does not exist", async ({ page }) => {
   test.skip(enabled, "only meaningful on a server without DEMO_SCREENS");
   await loginAs(page, "dev.management@figbloom.local");
-  // The organisation pages stream behind the "Getting things ready" loader, so a not-found raised inside a page arrives as the not-found page with a 200
-  // (the status is sent before the page renders). What matters is that the page does not exist: the status is 404 or the page says "We cannot find that".
-  const res = await page.goto(`/o/${ORG_SLUG}/approvals`);
-  if (res?.status() !== 404) await expect(page.getByRole("heading", { name: "We cannot find that" })).toBeVisible();
+  // Approvals is wired to the real API (M13) and no longer demo-only; only the signing page on demo tokens is still behind the switch.
   const sign = await page.goto("/sign/demo-unsigned");
   expect(sign?.status()).toBe(404);
 });

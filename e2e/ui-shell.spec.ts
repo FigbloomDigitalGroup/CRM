@@ -8,11 +8,11 @@ import { gotoAndSettle, loginAs, ORG_SLUG } from "./helpers";
 
 /** What each seeded role sees in the sidebar: written by hand from the design's navigation map and the signed permission model. */
 const NAV: { email: string; label: string; links: string[] }[] = [
-  { email: "dev.management@figbloom.local", label: "Management", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Handoffs", "Renewals", "Payments", "Reports", "Preferences", "Settings"] },
-  { email: "dev.sales@figbloom.local", label: "Sales", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Handoffs", "Renewals", "My metrics", "Preferences"] },
-  { email: "dev.delivery@figbloom.local", label: "Delivery", links: ["Dashboard", "Won deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Handoffs", "My metrics", "Preferences"] },
-  { email: "dev.finance@figbloom.local", label: "Finance", links: ["Dashboard", "Won deals", "Companies", "Contacts", "Payments", "My metrics", "Preferences"] },
-  { email: "dev.tech@figbloom.local", label: "Restricted Technical", links: ["My work", "Tasks", "Calendar", "Conversations", "Preferences"] },
+  { email: "dev.management@figbloom.local", label: "Management", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Mail", "Chat", "Video Conference", "Handoffs", "Renewals", "Payments", "Forecast & targets", "Approvals", "Reports", "Preferences", "Settings"] },
+  { email: "dev.sales@figbloom.local", label: "Sales", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Mail", "Chat", "Video Conference", "Handoffs", "Renewals", "Forecast & targets", "My metrics", "Preferences"] },
+  { email: "dev.delivery@figbloom.local", label: "Delivery", links: ["Dashboard", "Won deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Mail", "Chat", "Video Conference", "Handoffs", "Forecast & targets", "My metrics", "Preferences"] },
+  { email: "dev.finance@figbloom.local", label: "Finance", links: ["Dashboard", "Won deals", "Companies", "Contacts", "Chat", "Payments", "Forecast & targets", "My metrics", "Preferences"] },
+  { email: "dev.tech@figbloom.local", label: "Restricted Technical", links: ["My work", "Tasks", "Calendar", "Conversations", "Chat", "Preferences"] },
 ];
 
 async function sidebarLinks(page: Page): Promise<string[]> {
