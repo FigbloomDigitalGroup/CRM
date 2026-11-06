@@ -1,7 +1,7 @@
 /**
  * G1.02 (FIG-1069) and the recording side of G1.06 (FIG-1073): one generated walk over every organisation route, as each role.
  *
- * Every route handler on disk is called as Management, Sales, Delivery, Finance, Restricted Technical and Customer Support against
+ * Every route handler on disk is called as Management, Sales, Delivery, Finance, and Restricted Technical against
  * one seeded organisation (tests/helpers/world.ts), with a request built from the route's own schema. Each answer becomes one
  * letter, and the six letters per route are the permission matrix:
  *
@@ -56,7 +56,7 @@ const EXAMPLES = "src/api/contract/examples.json";
 const UPDATE = process.env.UPDATE_API_SNAPSHOTS === "1";
 
 /** Roles with nothing to lose go first, so a mutation by a role that is allowed cannot change what a refused role would have seen. */
-const WALK_ORDER: RoleKey[] = ["RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT", "DELIVERY", "FINANCE", "SALES", "MANAGEMENT"];
+const WALK_ORDER: RoleKey[] = ["RESTRICTED_TECHNICAL", "DELIVERY", "FINANCE", "SALES", "MANAGEMENT"];
 
 function letter(status: number): string {
   if (status === 401) return "U";
@@ -247,12 +247,6 @@ describe("generated authorization matrix (G1.02)", () => {
       const locked = rows().filter(([key, row]) => row[0] === "D" && !(key in MANAGEMENT_EXCLUDED) && !walked.unavailable.has(key)).map(([key]) => key);
       expect(locked).toEqual([]);
     });
-
-    it("leaves Customer Support with only what every member has in V1 (the role is behind a flag that is off)", () => {
-      // Covered by the role-families check above; this one names the rule so a failure reads as what it is.
-      const open = rows().filter(([key, row]) => reached(row[5]!) && !ROLE_FAMILIES.CUSTOMER_SUPPORT.some((re) => re.test(key))).map(([key]) => key);
-      expect(open).toEqual([]);
-    });
   });
 
   describe("signed out", () => {
@@ -272,7 +266,7 @@ describe("generated authorization matrix (G1.02)", () => {
 });
 
 function writeReport(cells: Record<string, string>) {
-  const short: Record<string, string> = { MANAGEMENT: "Mgmt", SALES: "Sales", DELIVERY: "Deliv", FINANCE: "Fin", RESTRICTED_TECHNICAL: "RT", CUSTOMER_SUPPORT: "CS" };
+  const short: Record<string, string> = { MANAGEMENT: "Mgmt", SALES: "Sales", DELIVERY: "Deliv", FINANCE: "Fin", RESTRICTED_TECHNICAL: "RT" };
   const lines = [
     "# Permission matrix report (G1.02)",
     "",
@@ -285,8 +279,6 @@ function writeReport(cells: Record<string, string>) {
     "| D | Refused with 403 and an explained no-access envelope (your role, the roles that own the area, who to ask). |",
     "| H | 404: the record exists but this role may not open it, so it is hidden rather than refused. |",
     "| V | 400 after a valid-shaped request: the request failed a rule before access could be judged. |",
-    "",
-    "Customer Support is the proposed sixth role, off until the organisation switches it on, so it has no access in V1.",
     "",
     `| Route | ${ROLE_KEYS.map((r) => short[r]).join(" | ")} |`,
     `|---|${ROLE_KEYS.map(() => ":-:").join("|")}|`,

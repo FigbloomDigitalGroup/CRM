@@ -40,7 +40,7 @@ const MANAGE = "membership.manage";
 const ASSIGN_ROLE = "role.assign";
 
 /**
- * A flag-gated role (Customer Support, B1.01) cannot be given to anyone until
+ * A flag-gated role (B1.01; none exists today) cannot be given to anyone until
  * the organisation switches its feature on: a member holding it would carry
  * no permissions at all, which is a trap, not a role.
  */

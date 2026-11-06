@@ -39,7 +39,7 @@ import { toRecurringView } from "./recurringServiceService";
  *   `ok`            the data, with the scope it covers (organisation, own, read-only)
  *   `no_access`     the role may know the section exists but may not read it: what is needed, who owns it, and
  *                   why, instead of the section silently going missing (S4)
- *   `not_available` the feature is not in this release (tickets and the survey arrive with Customer Support)
+ *   `not_available` the feature is not in this release (support tickets are raised by email to Figbloom, not held in the CRM)
  *
  * Masking: Delivery and Technical never receive deal values or payments; Finance gets payments; Sales sees a deal's value
  * only for deals they own (`maskDeal`). A message or note linked to a record the caller could not open is left out of the
@@ -292,7 +292,7 @@ async function paymentsSection(env: Environment): Promise<SectionResult> {
 }
 
 function ticketsSection(): SectionResult {
-  return { status: "not_available", reason: "Tickets and the satisfaction survey arrive with the Customer Support role (V1.1)." };
+  return { status: "not_available", reason: "Support tickets are raised by email to Figbloom support and are not held in the CRM." };
 }
 
 async function nextFollowUpSection(env: Environment): Promise<SectionResult> {

@@ -74,7 +74,7 @@ export function VideoConference() {
     return (
       <div className="fb-comm">
         <h1 className="fb-comm__title">Video Conference</h1>
-        <NoAccess area="Video Conference" denial={{ yourRole: roleName, ownerRoles: ["Management", "Sales", "Delivery", "Customer Support"], whoToAsk: ["Management"] }} />
+        <NoAccess area="Video Conference" denial={{ yourRole: roleName, ownerRoles: ["Management", "Sales", "Delivery"], whoToAsk: ["Management"] }} />
       </div>
     );
   }

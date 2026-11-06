@@ -23,7 +23,7 @@ import { API_VERSION, buildOpenApiDocument } from "../src/api/openapi";
 import { buildReferenceMarkdown } from "../src/api/referenceDoc";
 
 const FROZEN = "src/api/contract/openapi.v1.json";
-const ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"];
+const ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"];
 
 function routeFiles(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {

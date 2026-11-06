@@ -136,7 +136,7 @@ describe("what applies to each role", () => {
     expect(finance).not.toContain("LEAD_ASSIGNED");
     expect(finance).toContain("MENTION");
     // Nobody is offered something they can never receive.
-    for (const role of ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"]) {
+    for (const role of ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"]) {
       expect(await types(role), role).not.toContain("SUPPORT_ACCESS_REQUEST");
     }
     expect(await types("RESTRICTED_TECHNICAL")).not.toContain("LEAD_ASSIGNED");

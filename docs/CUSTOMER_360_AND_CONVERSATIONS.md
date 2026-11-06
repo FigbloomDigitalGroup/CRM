@@ -10,7 +10,7 @@ One call, independently loadable sections (`?sections=payments,deals`; all when 
 
 - `ok`: the data and its `scope` (`organisation`, `own`, `read-only`);
 - `no_access`: what is required, which roles own the area, and why, instead of the section going missing (screen S4);
-- `not_available`: not in this release (tickets and the survey arrive with Customer Support, V1.1).
+- `not_available`: not in this release (support tickets are raised by email to Figbloom and are not held in the CRM, decision 12).
 
 | Role | Sees |
 |---|---|

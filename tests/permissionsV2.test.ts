@@ -2,22 +2,21 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ownerRoleNamesForKeys } from "../src/auth/areaOwners";
-import { ForbiddenError, NotFoundError, ValidationError } from "../src/auth/errors";
+import { ForbiddenError, NotFoundError } from "../src/auth/errors";
 import {
   DEPARTURES,
   canView,
   effectivePermissionKeys,
   resolveScope,
-  roleIsAvailable,
 } from "../src/auth/permissions";
 import { adminDb } from "../src/db/adminClient";
 import { buildErrorResponse } from "../src/lib/apiErrors";
-import type { FeatureConfig } from "../src/lib/featureFlags";
+import { findToggle, type FeatureConfig } from "../src/lib/featureFlags";
 import { PERMISSIONS, ROLES, ROLE_PERMISSIONS } from "../prisma/seedData";
 import { seedRolesAndPermissions } from "../prisma/seedReference";
 import { createCompany } from "../src/services/companyService";
 import * as dealService from "../src/services/dealService";
-import { setOrganizationRelease, updateFeatureToggles } from "../src/services/featureService";
+import { updateFeatureToggles } from "../src/services/featureService";
 import * as leadService from "../src/services/leadService";
 import { changeMemberRole, inviteMember } from "../src/services/membershipService";
 import * as searchService from "../src/services/searchService";
@@ -128,18 +127,12 @@ describe("permission matrix (seeded roles, release v1, defaults)", () => {
     expect(covered).toEqual(seeded);
   });
 
-  it("has six roles, the sixth being Customer Support behind customer_support.role", () => {
-    expect(ROLES.map((r) => r.key)).toEqual([
-      "MANAGEMENT",
-      "SALES",
-      "DELIVERY",
-      "FINANCE",
-      "RESTRICTED_TECHNICAL",
-      "CUSTOMER_SUPPORT",
-    ]);
-    expect(ROLES.find((r) => r.key === "CUSTOMER_SUPPORT")?.requiredFeature).toBe(
-      "customer_support.role",
-    );
+  it("has five roles: there is no Customer Support role (decision 12: support tickets go to Figbloom by email)", () => {
+    expect(ROLES.map((r) => r.key)).toEqual(["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"]);
+    expect(ROLES.filter((r) => r.requiredFeature)).toEqual([]);
+    expect(PERMISSIONS.map((p) => p.key)).not.toContain("tickets.manage");
+    expect(Object.keys(ROLE_PERMISSIONS)).not.toContain("CUSTOMER_SUPPORT");
+    expect(findToggle("customer_support.role")).toBeUndefined();
   });
 
   it("gives every role only keys that exist in the catalogue, and Management every V1 key", () => {
@@ -149,7 +142,7 @@ describe("permission matrix (seeded roles, release v1, defaults)", () => {
     }
   });
 
-  it("includes the 19 new design keys in the catalogue", () => {
+  it("includes the 18 new design keys in the catalogue", () => {
     const keys = new Set(PERMISSIONS.map((p) => p.key));
     for (const key of [
       "attachments.manage",
@@ -170,7 +163,6 @@ describe("permission matrix (seeded roles, release v1, defaults)", () => {
       "security.manage",
       "deals.margin",
       "payments.manage",
-      "tickets.manage",
     ]) {
       expect(keys.has(key), key).toBe(true);
     }
@@ -180,7 +172,7 @@ describe("permission matrix (seeded roles, release v1, defaults)", () => {
 describe("release gating of keys", () => {
   it("keeps V1.1 and V2 keys inert until the release flag is on", () => {
     const v1 = keysFor("MANAGEMENT").permissionKeys;
-    for (const inert of ["quotes.approve", "ai.configure", "api_tokens.manage", "webhooks.manage", "tickets.manage"]) {
+    for (const inert of ["quotes.approve", "ai.configure", "api_tokens.manage", "webhooks.manage"]) {
       expect(v1).not.toContain(inert);
     }
     expect(v1).toContain("attachments.manage");
@@ -322,13 +314,6 @@ describe("departures: effective keys, flag on and off", () => {
     }
   });
 
-  it("Customer Support carries nothing until its flag is on, then its catalogue keys", () => {
-    expect(roleIsAvailable("CUSTOMER_SUPPORT", V1)).toBe(false);
-    expect(keysFor("CUSTOMER_SUPPORT").permissionKeys).toEqual([]);
-    const on: FeatureConfig = { release: "v1.1", toggles: { "customer_support.role": true } };
-    expect(roleIsAvailable("CUSTOMER_SUPPORT", on)).toBe(true);
-    expect(keysFor("CUSTOMER_SUPPORT", on).permissionKeys).toContain("contacts.view");
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -454,31 +439,25 @@ describe("record visibility: 404 for the invisible, explained 403 for the role",
 });
 
 // ---------------------------------------------------------------------------
-// Customer Support role assignment
+// The removed Customer Support role (decision 12)
 // ---------------------------------------------------------------------------
 
-describe("Customer Support behind its flag", () => {
-  it("cannot be invited or assigned until customer_support.role is on", async () => {
+describe("no Customer Support role", () => {
+  it("cannot be invited or assigned: it does not exist", async () => {
     const o = await org();
     const mgmt = await createTestContext(o.id, "MANAGEMENT", "cs.mgmt");
     const sales = await createTestContext(o.id, "SALES", "cs.sales");
-
     await expect(
       inviteMember(mgmt, { email: "cs.invite@example.test", name: "Cs Invite", roleKey: "CUSTOMER_SUPPORT" }, (t) => `http://localhost/accept/${t}`),
-    ).rejects.toThrow(ValidationError);
-    await expect(changeMemberRole(mgmt, sales.membershipId, "CUSTOMER_SUPPORT")).rejects.toThrow(ValidationError);
-
-    await setOrganizationRelease(o.id, "v1.1");
-    await updateFeatureToggles(mgmt, { "customer_support.role": true });
-    await expect(changeMemberRole(mgmt, sales.membershipId, "CUSTOMER_SUPPORT")).resolves.toBeTruthy();
-    const support = await createTestContext(o.id, "CUSTOMER_SUPPORT", "cs.support");
-    expect(support.permissionKeys).toContain("contacts.view");
+    ).rejects.toThrow();
+    await expect(changeMemberRole(mgmt, sales.membershipId, "CUSTOMER_SUPPORT")).rejects.toThrow();
   });
 
-  it("a Customer Support member carries no permissions while the flag is off", async () => {
-    const o = await org();
-    const support = await createTestContext(o.id, "CUSTOMER_SUPPORT", "cs.off");
-    expect(support.permissionKeys).toEqual([]);
+  it("is gone from the database, with its ticket permission and its flag (migration 20261120090000)", async () => {
+    expect(await adminDb.role.findUnique({ where: { key: "CUSTOMER_SUPPORT" } })).toBeNull();
+    expect(await adminDb.permission.findUnique({ where: { key: "tickets.manage" } })).toBeNull();
+    const tables = await adminDb.$queryRaw<{ name: string }[]>`select table_name as name from information_schema.tables where table_schema = 'public' and table_name in ('tickets', 'ticket_messages', 'satisfaction_surveys')`;
+    expect(tables).toEqual([]);
   });
 });
 
@@ -510,10 +489,8 @@ describe("role catalogue sync", () => {
     expect(again.changes).toEqual({});
   });
 
-  it("stores the required feature on the role row", async () => {
-    const role = await adminDb.role.findUniqueOrThrow({ where: { key: "CUSTOMER_SUPPORT" } });
-    expect(role.requiredFeature).toBe("customer_support.role");
-    expect((await adminDb.role.findUniqueOrThrow({ where: { key: "SALES" } })).requiredFeature).toBeNull();
+  it("leaves no role row with a required feature", async () => {
+    expect(await adminDb.role.count({ where: { requiredFeature: { not: null } } })).toBe(0);
   });
 });
 
@@ -572,11 +549,8 @@ describe("explained denial envelope", () => {
     void mgmt;
   });
 
-  it("leaves Customer Support out of the owner roles until its flag is on", () => {
-    expect(ownerRoleNamesForKeys(["tickets.manage"], V1)).toEqual(["Management"]);
-    const on: FeatureConfig = { release: "v1.1", toggles: { "customer_support.role": true } };
-    // tickets.manage is a V2 key, but owner derivation reads the catalogue.
-    expect(ownerRoleNamesForKeys(["tickets.manage"], on)).toEqual(["Customer Support", "Management"]);
+  it("names only Management as the owner of an area only Management holds", () => {
+    expect(ownerRoleNamesForKeys(["security.manage"], V1)).toEqual(["Management"]);
   });
 });
 

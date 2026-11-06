@@ -55,7 +55,7 @@ export function MailWorkspace() {
     return (
       <div className="fb-comm">
         <h1 className="fb-comm__title">Mail</h1>
-        <NoAccess area="Mail" denial={{ yourRole: roleName, ownerRoles: ["Management", "Sales", "Delivery", "Customer Support"], whoToAsk: ["Management"] }} />
+        <NoAccess area="Mail" denial={{ yourRole: roleName, ownerRoles: ["Management", "Sales", "Delivery"], whoToAsk: ["Management"] }} />
       </div>
     );
   }

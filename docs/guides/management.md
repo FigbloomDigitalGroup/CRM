@@ -31,4 +31,4 @@ You run the organisation in the CRM. You see everything, so you also carry the d
 - You cannot act on your own membership (for example deactivate yourself).
 - You cannot remove a person who still owns open records until you hand those over.
 - Automations never move a deal stage, set a discount or approve anything for you. They assign, remind and draft only.
-- Customer Support is not offered when you invite or change a role, because the role is switched off.
+- There are five roles. Members who need help use Help, then Contact support.

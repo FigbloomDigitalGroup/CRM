@@ -38,7 +38,7 @@ export const SENTINEL_PATTERNS = {
   invoiceNumber: /INV-SENTINEL/,
 };
 
-export const ROLE_KEYS = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"] as const;
+export const ROLE_KEYS = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"] as const;
 export type RoleKey = (typeof ROLE_KEYS)[number];
 
 export interface World {

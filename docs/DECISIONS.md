@@ -32,7 +32,7 @@ changes are written into `design-brief/03-SCREEN-INVENTORY-AND-ROLE-MATRIX.md`
 | 2.1 | **Sprint 5 in-flight issues FIG-789 to FIG-794:** finish the backend half now; re-scope the UI half into the new design (F2.04, F4.10 and so on). FIG-789 (pagination) goes first because it feeds B0.06 and B3.10. | Decided |
 | 2.2 | **V1 scope line.** If time is tight, move to V1.1 in this order: E1 Conversations hub, E2 Renewals, F1 Payments tracker, S5 Automations, S7 Data migration wizard. V1 itself is never cut. Nothing is cut without Given's say-so. | Decided |
 | 2.3 | **Organisation switcher is V1.1.** V1 shows no switcher to single-organisation users. (Also answers open questions 3 and 22.) | Decided |
-| 2.4 | **Customer Support is a sixth role**, behind a feature flag and off by default. (Also answers open questions 16 and 20.) | Decided |
+| 2.4 | ~~**Customer Support is a sixth role**, behind a feature flag and off by default.~~ **Superseded on 5 Nov 2026 by decision 12 (section 5.0): there is no Customer Support role.** | Superseded |
 | 2.5 | **Deposit request on signed quotes is V2 and decision-gated.** The MVP "no payment processing" exclusion stands for V1 and V1.1. Signed quotes stay status-only. (Also answers open question 13.) | Decided |
 
 ## 3. Dates and reviews
@@ -64,7 +64,7 @@ duplicates of decisions above). Numbering follows the checklist.
 | 13 | M-Pesa deposit request on signed quotes? | **V2, decision-gated; status-only until then.** See 2.5. | Decided |
 | 14 | Swahili for the client-facing quote, signing page and web form? | **Not in V1.** English only; keep strings externalised so it can be added in V1.1. | Deferred |
 | 15 | Automation boundary: any exceptions? | **No exceptions.** Automations, sequences and the assistant may assign, remind and draft; they never move a stage, set a discount or approve. A test enforces it (CLAUDE.md rule 9). | Decided |
-| 16 | Customer Support: sixth role or Delivery with ticket access? | **Sixth role**, flagged off. See 2.4. | Decided |
+| 16 | Customer Support: sixth role or Delivery with ticket access? | ~~Sixth role, flagged off.~~ **Neither: no Customer Support role.** Tickets go to Figbloom by email (decision 12). | Superseded |
 | 17 | When is a deal "stalled"? | **10 days without activity by default**, configurable per organisation. Per-stage thresholds are V1.1. | Decided |
 | 18 | Should Sales see deal values on deals they don't own, in a shared company? | **No.** Values stay masked; Sales sees a value only on deals they own (CLAUDE.md rule 7). | Decided |
 | 19 | Who may mark a handoff Delivered? | **Delivery and Management**, not Sales. Delivered moves the company to Active Customer. | Decided |
@@ -130,7 +130,8 @@ These were taken while building the V1.1 backend so work could continue. Each ca
 
 | # | Decision | Status |
 |---|---|---|
-| 11 | The **Customer Support role** (B6.23, FIG-1155; tickets and satisfaction surveys) is **approved**, given by Given on Michael's behalf. The role stays behind its existing flag and sees only the customer and ticket data the permission matrix allows. | Approved, recorded 5 Nov 2026 |
+| 11 | ~~The **Customer Support role** (B6.23, FIG-1155; tickets and satisfaction surveys) is **approved**, given by Given on Michael's behalf.~~ **Superseded the same day by decision 12.** | Superseded, 5 Nov 2026 |
+| 12 | **No Customer Support role in the CRM.** Michael has a platform console for all Figbloom systems, and every customer support ticket goes there. Tenants raise tickets **by email**, sent through **Resend**; the ticket then lives in the platform console. Michael will send the Resend API key once Resend is set up. The role, `tickets.manage`, the `customer_support.role` flag, the dev support account, the ticket and survey tables and the Support screens are removed. FIG-1155 (B6.23) and FIG-1178 (F6.19) are replaced by the email-support issues. See `docs/SUPPORT_BY_EMAIL.md`. | Decided by Michael, relayed by Given, 5 Nov 2026 |
 
 ### 5.1 Decisions the build lanes recorded in `IMPLEMENTATION_NOTES.md` ("taken without being asked")
 

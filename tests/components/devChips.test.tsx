@@ -17,7 +17,6 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh }) }));
 const SEEDED = [
   { email: "dev.sales@figbloom.local", name: "Dev Sales", memberships: [{ role: { key: "SALES", name: "Sales", requiredFeature: null } }] },
   { email: "dev.management@figbloom.local", name: "Dev Management", memberships: [{ role: { key: "MANAGEMENT", name: "Management", requiredFeature: null } }] },
-  { email: "dev.support@figbloom.local", name: "Dev Support", memberships: [{ role: { key: "CUSTOMER_SUPPORT", name: "Customer Support", requiredFeature: "customer_support.role" } }] },
   { email: "someone@real-company.com", name: "A real person", memberships: [] },
 ];
 const PLATFORM = [{ email: "dev.superadmin@platform.figbloom.local", name: "Dev Super Admin" }];
@@ -73,10 +72,8 @@ describe("dev sign-in chips", () => {
     expect(chips.map((c) => c.title)).toEqual([
       "dev.management@figbloom.local",
       "dev.sales@figbloom.local",
-      "dev.support@figbloom.local",
       "dev.superadmin@platform.figbloom.local",
     ]);
-    expect(container).toHaveTextContent("Customer Support (behind flag customer_support.role)");
     expect(container).toHaveTextContent("Platform Super Admin (V1.1, dev only)");
     expect(container).not.toHaveTextContent("real-company");
   });

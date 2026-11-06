@@ -113,12 +113,6 @@ export const NOT_IN_V1_CONTRACT: Record<string, string> = {
   "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/{stageId}": "Pipelines and stage rules, V1.1 (B6.15)",
   "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/{stageId}/rules": "Pipelines and stage rules, V1.1 (B6.15)",
   "/api/public/quotes/{token}": "Public quote link (token is the secret), V1.1 (B6.12)",
-  "/api/orgs/{orgSlug}/tickets": "Customer Support tickets and surveys, V1.1 (B6.23, decision-gated)",
-  "/api/orgs/{orgSlug}/tickets/{ticketId}": "Customer Support tickets and surveys, V1.1 (B6.23, decision-gated)",
-  "/api/orgs/{orgSlug}/tickets/{ticketId}/messages": "Customer Support tickets and surveys, V1.1 (B6.23, decision-gated)",
-  "/api/orgs/{orgSlug}/surveys": "Customer Support tickets and surveys, V1.1 (B6.23, decision-gated)",
-  "/api/orgs/{orgSlug}/support/customers/{companyId}": "Customer Support tickets and surveys, V1.1 (B6.23, decision-gated)",
-  "/api/public/surveys/{token}": "Customer Support tickets and surveys, V1.1 (B6.23, decision-gated)",
   "/api/openapi.json": "serves this document, outside production only",
   "/api/integrations/oauth/callback": "V1.1 OAuth connections (B6.21, FIG-1153): the fixed provider redirect address",
   "/api/orgs/{orgSlug}/integrations/connections": "V1.1 OAuth connections (B6.21, FIG-1153)",
@@ -172,7 +166,7 @@ export const NOT_IN_V1_CONTRACT: Record<string, string> = {
   "/api/metrics": "operations endpoint for the metrics scraper (Prometheus text, METRICS_TOKEN), not part of the product API; docs/OBSERVABILITY.md",
 };
 
-type Security = "none" | "sessionCookie" | "websiteApiKey" | "inboundEmailKey" | "signedToken" | "cronSecret";
+type Security = "none" | "sessionCookie" | "websiteApiKey" | "inboundEmailKey" | "mailgunSignature" | "signedToken" | "cronSecret";
 
 export interface AccountOperation {
   method: "get" | "post" | "put" | "patch" | "delete";
@@ -209,6 +203,8 @@ export const ACCOUNT_OPERATIONS: AccountOperation[] = [
   { method: "delete", path: "/api/me/sessions/{sessionId}", operationId: "revokeMySession", summary: "Sign out one device.", tag: "Me", security: "sessionCookie", response: loose, errors: [401, 404] },
   { method: "get", path: "/api/me/sign-in-events", operationId: "listMySignInEvents", summary: "The person's recent sign-ins and failed attempts.", tag: "Me", security: "sessionCookie", response: loose, errors: [401] },
   { method: "post", path: "/api/public/orgs/{orgSlug}/leads", operationId: "submitWebsiteLead", summary: "Website lead capture. Authenticated by the organisation's website key in `x-figbloom-api-key`; rate limited per IP and per key; optional origin allow-list, honeypot and captcha.", tag: "Public", security: "websiteApiKey", body: { type: "object", additionalProperties: true, description: "Contact and enquiry fields; see docs/DEPLOYMENT.md for the accepted set." }, response: loose, errors: [400, 401, 403, 413, 429], rateLimited: true },
+  { method: "post", path: "/api/public/inbound/mailgun", operationId: "ingestMailgunInbound", summary: "Mailgun inbound route (BCC-to-CRM). Mailgun forwards the received email as a form; the signature is verified and the organisation is found from the recipient BCC address.", tag: "Public", security: "mailgunSignature", body: obj({ recipient: str, sender: str, from: str, subject: str, "body-plain": str, "stripped-text": str, "Message-Id": str, timestamp: str, token: str, signature: str }, ["recipient", "timestamp", "token", "signature"]), response: loose, errors: [401, 404, 429], rateLimited: true },
+  { method: "post", path: "/api/orgs/{orgSlug}/support-requests", operationId: "createSupportRequest", summary: "Ask Figbloom for help by email (V1.1). Any signed-in member of the organisation; the request is sent through Resend to Figbloom support with the member as Reply-To. Answers a reference to quote. Honours Idempotency-Key; at most 5 requests an hour per member.", tag: "Support", security: "sessionCookie", body: obj({ subject: str, message: str, category: str, urgency: str, pagePath: str }, ["subject", "message"]), response: loose, errors: [400, 401, 403, 429, 503], rateLimited: true },
   { method: "post", path: "/api/public/orgs/{orgSlug}/communications/inbound", operationId: "ingestInboundEmail", summary: "Inbound email (BCC-to-CRM) webhook. Authenticated by the organisation's inbound token in a header or the `token` query parameter.", tag: "Public", security: "inboundEmailKey", body: obj({ from: str, subject: str, text: str, messageId: str }, ["from"]), response: loose, errors: [400, 401, 429], rateLimited: true },
   { method: "get", path: "/api/storage/blob", operationId: "downloadSignedBlob", summary: "Download a file with a signed link (local storage driver only; the S3 driver links straight to the bucket).", tag: "Files", security: "signedToken", response: null, errors: [403, 404, 409] },
   { method: "put", path: "/api/storage/blob", operationId: "uploadSignedBlob", summary: "Upload a file's bytes with a signed upload link (local storage driver only).", tag: "Files", security: "signedToken", response: null, errors: [400, 403, 404] },
@@ -223,6 +219,7 @@ export const SECURITY_SCHEMES: Record<string, unknown> = {
   sessionCookie: { type: "apiKey", in: "cookie", name: "figbloom_session" },
   websiteApiKey: { type: "apiKey", in: "header", name: "x-figbloom-api-key" },
   inboundEmailKey: { type: "apiKey", in: "header", name: "x-figbloom-inbound-key", description: "Or the `token` query parameter." },
+  mailgunSignature: { type: "apiKey", in: "query", name: "signature", description: "Mailgun webhook signature: HMAC-SHA256 of timestamp+token with MAILGUN_INBOUND_SIGNING_KEY, sent in the form fields `timestamp`, `token`, `signature`." },
   signedToken: { type: "apiKey", in: "query", name: "token" },
   cronSecret: { type: "http", scheme: "bearer", description: "The shared CRON_SECRET (or the `x-cron-secret` header)." },
 };

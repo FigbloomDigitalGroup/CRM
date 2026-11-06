@@ -59,7 +59,7 @@ describe("Settings frame (S1, FIG-1106)", () => {
 describe("the role matrix data (S8, FIG-1111)", () => {
   it("has a column for every V1 role and every V1 permission, from the approved seed", () => {
     const m = buildRoleMatrix();
-    expect(m.roles.map((r) => r.key)).toEqual(ROLES.filter((r) => r.key !== "CUSTOMER_SUPPORT").map((r) => r.key));
+    expect(m.roles.map((r) => r.key)).toEqual(ROLES.map((r) => r.key));
     const rows = m.areas.flatMap((a) => a.rows);
     expect(rows.length).toBeGreaterThan(40);
     // The permissions that matter most to Settings and payments (hard rule 7: payments are Finance and Management only).

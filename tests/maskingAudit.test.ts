@@ -42,7 +42,6 @@ async function setup() {
   const finance = await createTestContext(org.id, "FINANCE");
   const delivery = await createTestContext(org.id, "DELIVERY");
   const technical = await createTestContext(org.id, "RESTRICTED_TECHNICAL");
-  const support = await createTestContext(org.id, "CUSTOMER_SUPPORT");
 
   const { company } = await companyService.createCompany(management, { name: "Sentinel Corp" });
   const openStageId = await getPipelineStageId(org.id);
@@ -69,7 +68,7 @@ async function setup() {
   await dealService.updateDeal(owner, openDeal.id, { value: OPEN_VALUE + 0.5 });
   await proposalService.createProposalReference(owner, openDeal.id, { proposalNumber: "P-1", amount: PROPOSAL_AMOUNT });
 
-  return { org, management, owner, otherSales, finance, delivery, technical, support, company, openDeal, wonDeal };
+  return { org, management, owner, otherSales, finance, delivery, technical, company, openDeal, wonDeal };
 }
 
 describe("deal value masking audit (FIG-1036, B2.07)", () => {
@@ -103,7 +102,6 @@ describe("deal value masking audit (FIG-1036, B2.07)", () => {
     const masked: [string, AuthContext][] = [
       ["DELIVERY", s.delivery],
       ["RESTRICTED_TECHNICAL", s.technical],
-      ["CUSTOMER_SUPPORT", s.support],
       ["SALES (not the owner)", s.otherSales],
     ];
 
@@ -125,7 +123,7 @@ describe("deal value masking audit (FIG-1036, B2.07)", () => {
       }
     }
     // The scan really ran against data: Delivery reaches the won deal.
-    expect(checked.length).toBeGreaterThan(20);
+    expect(checked.length).toBeGreaterThan(masked.length * 4); // the audit really ran: at least four surfaces per masked role
     expect(checked).toContain("DELIVERY/deal detail (won)");
   });
 

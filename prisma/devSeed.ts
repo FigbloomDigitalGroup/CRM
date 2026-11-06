@@ -42,9 +42,7 @@ export const DEV_USERS: readonly DevUser[] = [
   { id: "dl", email: "dev.delivery@figbloom.local", name: "Zion Suzuki", roleKey: "DELIVERY" },
   { id: "fn", email: "dev.finance@figbloom.local", name: "Zilpa Okoth", roleKey: "FINANCE" },
   { id: "tc", email: "dev.tech@figbloom.local", name: "Katam Kipkemboi", roleKey: "RESTRICTED_TECHNICAL" },
-  // The proposed sixth role, behind `customer_support.role` (docs/DECISIONS.md 2.4): the flag stays off here, so this account signs in with no
-  // permissions until the flag is turned on. With the Dev Super Admin below, that makes the eight dev accounts.
-  { id: "cs", email: "dev.support@figbloom.local", name: "Dev Customer Support", roleKey: "CUSTOMER_SUPPORT" },
+  // There is no Customer Support role (dropped 5 Nov 2026, docs/DECISIONS.md 5.0 decision 12). With the Dev Super Admin below, these are the seven dev accounts.
 ];
 
 /**
@@ -423,14 +421,6 @@ async function seedOrganization(
     create: { name: org.name, slug: org.slug },
   });
   await seedOrganizationDefaults(organization.id);
-  // The proposed Customer Support role is off until an organisation switches it on; the dev organisations have it on so the dev account works.
-  const toggles = await adminDb.organizationSetting.findUnique({ where: { organizationId_key: { organizationId: organization.id, key: "feature_toggles" } } });
-  const merged = { ...((toggles?.value as Record<string, boolean> | null) ?? {}), "customer_support.role": true };
-  await adminDb.organizationSetting.upsert({
-    where: { organizationId_key: { organizationId: organization.id, key: "feature_toggles" } },
-    update: { value: merged },
-    create: { organizationId: organization.id, key: "feature_toggles", value: merged },
-  });
 
   const members = new Map<DevUserId, string>();
   for (const id of memberUserIds) {

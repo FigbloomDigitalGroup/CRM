@@ -87,7 +87,7 @@ State of the record today (so the review does not decide twice): [DECISIONS.md](
 
 | Decision | What was decided (22 Oct) | Where the build is | Questions for the review | Outcome (blank) |
 |---|---|---|---|---|
-| Customer Support role | Sixth role, behind a feature flag, off by default (DECISIONS 2.4). The decision gate on FIG-1178 was waived for the demo only. | Role and permissions exist (`CUSTOMER_SUPPORT` in the seed); Support screens are on demo data; the invite list does not offer the role; flag `customer_support.role` is off ([FEATURE_FLAGS.md](FEATURE_FLAGS.md)). Open V1 gate item D-02 (Customer Support has no home) in [V1_QUALITY_GATE.md](V1_QUALITY_GATE.md). | Did the pilot or hypercare show a need for support staff in the CRM (volume of support questions, who answers them today)? Sixth role or Delivery with ticket access? Turn the flag on for FigBloom, and when? Build the backend in M13? | |
+| Support by email | There is no Customer Support role (decision 12, 5 Nov 2026). Members raise a request from Help, Contact support; it goes to Figbloom support through Resend (`docs/SUPPORT_BY_EMAIL.md`). | Needs the Resend key and the three support variables set in production. | Did members use Contact support, and did the answers reach them by email? |
 | Organisation switcher | V1.1 (DECISIONS 2.3); V1 shows no switcher to single-organisation users. Flag `organisation.switcher` (V1.1, on). | Switcher UI is demo-only (`src/ui/screens/orgside/`, opt-in cookie); needs a user with more than one organisation membership. | Does anyone at FigBloom belong to more than one organisation today? If not, is it still V1.1 or should it move to V2 (candidate on the cut list: not listed there, so Given decides)? | |
 | Deposit request on signed quotes | V2 and decision-gated; signed quotes stay status-only; "no payment processing" stands for V1 and V1.1 (DECISIONS 2.5). | The deposit button is always present in the quote builder on demo data and the client page shows it only for a quote that carries one ([M10_COMMERCIAL.md](M10_COMMERCIAL.md)): this looks at odds with "status-only until then". | Go or no-go on taking deposits at all? If go: M-Pesa provider, who reconciles, Finance sign-off, security review. If not decided, hide the button for the V1.1 release. | |
 
@@ -97,7 +97,6 @@ Add one row per decision at the review; copy into the FIG-1132 comment.
 
 | # | Date | Decision | Options considered | Reason and evidence (adoption number, feedback id) | Decided by (Given / Michael) | Effect on scope, order or date | Linear issues to update | Review again on |
 |---|---|---|---|---|---|---|---|---|
-| 1 | | Customer Support role | | | | | | |
 | 2 | | Organisation switcher | | | | | | |
 | 3 | | Deposit request | | | | | | |
 | 4 | | Hypercare end date | | | | | | |
@@ -109,7 +108,7 @@ FIG-1132 closing comment (post, do not change the status):
 
 ```
 Post-launch review held __ with __. Adoption: __ (weeks of data: __). Triage: __ open by severity.
-Decisions: Customer Support role __; organisation switcher __; deposit request __.
+Decisions: Support by email __; organisation switcher __; deposit request __.
 V1.1 plan: M13 __, M14 __, M15 __; V2: M16 __, M17 __. Cuts: none / __ (by Given on __).
 Not proven: A7 (three weeks) __, D1 __. Next check: __.
 ```

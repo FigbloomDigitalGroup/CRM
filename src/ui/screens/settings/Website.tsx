@@ -363,6 +363,7 @@ interface InboundStatus {
   lastReceivedAt?: string | null;
   lastError?: { at: string | null; message: string } | null;
   revoked?: boolean;
+  bccAddress?: string | null;
 }
 
 /** Inbound email (S1, FIG-1106): the forwarding address key. Shown once when made; after that only its start and when mail last arrived. */
@@ -379,7 +380,17 @@ export function InboundEmail() {
   const refresh = () => qc.invalidateQueries({ queryKey: ["getIntegrationsInboundEmailKey", { orgSlug }, null] });
   return (
     <Gate q={q} area="Inbound email">
-      <Panel title="Inbound email" description="Forward enquiries to the address built from this key. New senders become leads; known senders are added to their contact’s timeline.">
+      <Panel title="BCC to CRM" description="Add this address to Bcc when you email a customer. The message is logged on the matching contact’s timeline; senders we do not know wait in Needs linking.">
+        {s?.bccAddress ? (
+          <div className="fb-set-keyrow">
+            <code className="fb-set-code" data-testid="bcc-address">{s.bccAddress}</code>
+            <Button onClick={() => void navigator.clipboard?.writeText(s.bccAddress ?? "").then(() => report.ok("Address copied to clipboard."))}>Copy</Button>
+          </div>
+        ) : (
+          <p className="fb-set-muted" style={{ margin: 0 }}>The BCC address is not set up yet. Your administrator needs to finish the inbound email setup first.</p>
+        )}
+      </Panel>
+      <Panel title="Inbound email"description="Forward enquiries to the address built from this key. New senders become leads; known senders are added to their contact’s timeline.">
         {s?.configured && !s.revoked ? (
           <>
             <div className="fb-set-keyrow">

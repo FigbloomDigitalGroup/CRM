@@ -122,12 +122,6 @@ export const TOGGLES: readonly ToggleDef[] = [
     defaultValue: true,
     minRelease: "v1.1",
   },
-  {
-    key: "customer_support.role",
-    description: "The Customer Support role (decision-gated).",
-    defaultValue: false,
-    minRelease: "v1.1",
-  },
 ];
 
 const TOGGLE_BY_KEY = new Map(TOGGLES.map((t) => [t.key, t]));

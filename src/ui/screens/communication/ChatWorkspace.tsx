@@ -151,7 +151,7 @@ export function ChatWorkspace() {
     return (
       <div className="fb-comm">
         <h1 className="fb-comm__title">Chat</h1>
-        <NoAccess area="Chat" denial={{ yourRole: null, ownerRoles: ["Management", "Sales", "Delivery", "Finance", "Customer Support"], whoToAsk: ["Management"] }} />
+        <NoAccess area="Chat" denial={{ yourRole: null, ownerRoles: ["Management", "Sales", "Delivery", "Finance"], whoToAsk: ["Management"] }} />
       </div>
     );
   }

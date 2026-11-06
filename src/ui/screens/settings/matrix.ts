@@ -14,10 +14,9 @@ export interface MatrixData {
 /**
  * The approved permission matrix (docs/DECISIONS.md section 1) as the seed carries it: every V1 permission, grouped by area, against the roles
  * Management can hand out. Built on the server and passed to the screen, so the page shows exactly what the seed (and so every new organisation) has.
- * Customer Support is proposed and behind a flag, so it is not a column in V1.
  */
 export function buildRoleMatrix(): MatrixData {
-  const roles = ROLES.filter((r) => r.key !== "CUSTOMER_SUPPORT").map((r) => ({ key: r.key, name: r.name }));
+  const roles = ROLES.map((r) => ({ key: r.key, name: r.name }));
   const byArea = new Map<string, MatrixRow[]>();
   for (const p of PERMISSIONS) {
     if ((PERMISSION_MIN_RELEASE[p.key] ?? "v1") !== "v1") continue;

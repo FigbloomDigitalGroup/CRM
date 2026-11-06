@@ -2,13 +2,11 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { describeError } from "../../errors";
 import { NoAccess } from "../../components/states";
 import { useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
-import { SupportHome } from "./SupportHome";
 import { HCols, HIcon, KpiGrid, Panel, SectionFailed, type KpiDef } from "./kit";
 import { NewLeadsPanel, MovingAndStalled, PipelineByStage, TodoPanel, useLastVisit, useNewLeads } from "./blocks";
 import {
@@ -31,7 +29,7 @@ import type { DeliveryData, FinanceData, ManagementData, SalesTodayData, Section
 import { LoaderBlock } from "../../components/loader";
 import { demoScreensEnabledClient } from "../../demo/enabled";
 
-type Kind = "management" | "sales" | "delivery" | "finance" | "technical" | "support";
+type Kind = "management" | "sales" | "delivery" | "finance" | "technical";
 
 interface Quick {
   key: string;
@@ -47,7 +45,6 @@ const COPY: Record<Kind, { scope: string; scopeTone: "organisation" | "read-only
   delivery: { scope: "Delivery view", scopeTone: "read-only", subtitle: "Here’s the won work coming your way." },
   finance: { scope: "Finance view", scopeTone: "read-only", subtitle: "Here’s the won value and what’s still to collect." },
   technical: { scope: "Assigned to me", scopeTone: "mine", subtitle: "Here are the tasks assigned to you." },
-  support: { scope: "My work", scopeTone: "mine", subtitle: "Here are your maintenance clients and open tickets." },
 };
 
 const EMPTY: Record<Kind, { icon: string; title: string; body: string }> = {
@@ -63,7 +60,6 @@ const EMPTY: Record<Kind, { icon: string; title: string; body: string }> = {
   },
   delivery: { icon: "package", title: "No handoffs yet", body: "When Sales marks a deal won, the scope, requirements and onboarding tasks land here with a start date. Nothing to do until then." },
   finance: { icon: "wallet", title: "No won deals yet", body: "Won deals appear here with their contract amount so you can track invoices and payments. The open pipeline stays with Sales." },
-  support: { icon: "help", title: "No open tickets", body: "When a maintenance client raises a ticket, it shows here with its status." },
   technical: { icon: "tasks", title: "No work assigned yet", body: "When someone assigns you a task, it shows here with the client requirements you need. You can also add tasks for yourself." },
 };
 
@@ -108,26 +104,6 @@ export function HomeScreen() {
   }, [sections]);
 
   const retry = () => void qc.invalidateQueries({ queryKey: ["getDashboard"] });
-
-  // D-02: the proposed Customer Support role has no dashboard of its own yet; its Support workspace is on demo data and shows only where demo
-  // screens are on. Everywhere else it lands on Tasks (which the role can use) and not on "no access" at its front door.
-  const router = useRouter();
-  const supportOnly = m.can("tickets.manage") && !m.can("leads.view.own") && !m.can("leads.view.all");
-  const supportToTasks = supportOnly && !demoScreensEnabledClient() && m.can("tasks.view.own");
-  useEffect(() => {
-    if (supportToTasks) router.replace(`/o/${m.orgSlug}/tasks`);
-  }, [supportToTasks, router, m.orgSlug]);
-  if (supportToTasks) return <LoaderBlock label="Opening your tasks" />;
-
-  // The proposed Customer Support role: tickets, no leads. It has its own home (the design's "Support"), which does not wait for the dashboard call.
-  if (m.can("tickets.manage") && !m.can("leads.view.own") && !m.can("leads.view.all")) {
-    return (
-      <div className="fb-home">
-        <Header kind="support" timeZone={m.timeZone} quick={quickFor("support", m.orgSlug, m.can)} />
-        <SupportHome />
-      </div>
-    );
-  }
 
   if (dash.isError) {
     const e = describeError(dash.error);
@@ -198,7 +174,6 @@ function quickFor(kind: Kind, org: string, can: (k: string) => boolean): Quick[]
     add({ key: "note", label: "Log a note", icon: "file", href: `${base}/tasks?new=note`, primary: true }, can("activities.create"));
     add({ key: "task", label: "New task", icon: "tasks", href: `${base}/tasks?new=1` }, can("tasks.create"));
   }
-  if (kind === "support") add({ key: "note", label: "Log a note", icon: "note", href: `${base}/conversations?log=note`, primary: true }, can("activities.create"));
   if (kind === "technical") add({ key: "task", label: "New task for myself", icon: "plus", href: `${base}/tasks?new=1`, primary: true }, can("tasks.create"));
   return out;
 }

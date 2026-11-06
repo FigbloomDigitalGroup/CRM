@@ -1,4 +1,6 @@
-# M10 · Customer Support workspace and the organisation side of V1.1 / V2 (demo data)
+# M10 · The organisation side of V1.1 / V2 (demo data)
+
+> **5 Nov 2026 (decision 12):** the Customer Support workspace described in the original version of this note was removed with the Customer Support role. Support requests are now sent by email: `docs/SUPPORT_BY_EMAIL.md`.
 
 Issues: FIG-1178 (F6.19), FIG-1166 (F6.07), FIG-1167 (F6.08), FIG-1165 (F6.06) and the organisation half of FIG-1192 (F7.01). Built on demo data on 29 Oct 2026 (course change, see `docs/RESTRUCTURE_LOG.md`). **None of them is Done until it is wired to the real API and tested against it (M13/M14).**
 
@@ -6,7 +8,6 @@ Issues: FIG-1178 (F6.19), FIG-1166 (F6.07), FIG-1167 (F6.08), FIG-1165 (F6.06) a
 
 | Screen (design ID) | Where | Demo data |
 |---|---|---|
-| Customer Support workspace, ticket, customer (proposed role) | `/o/{org}/support`, `/support/{ticketId}`, `/support/customers/{id}`; `src/ui/screens/support/` | `support/demo/data.ts` through `support/demo/store.ts` |
 | Organisation switcher (TB4), Alt+O | top bar slot `organisationSwitcher`; `src/ui/screens/orgside/OrgSwitcher.tsx` | `orgside/demo/` |
 | Suspended organisation (OS1) | rendered by `src/app/o/[orgSlug]/layout.tsx` in place of the shell; `/o/{org}/suspended` redirects home when not suspended | demo cookie `fb_demo_suspended=1` |
 | Settings › Data requests (OS6) | Settings tab `datareq` | `orgside/demo/` |
@@ -19,9 +20,7 @@ Issues: FIG-1178 (F6.19), FIG-1166 (F6.07), FIG-1167 (F6.08), FIG-1165 (F6.06) a
 
 - **Frozen pages:** no file of the sign-in, sign-up, forgot, reset or accept-invite pages changed; the two-step step is a new route and uses the shared `auth-shell` styles from `globals.css` (only the organisation layout loads `ui.css`). `tests/uiGuards.test.ts` is green.
 - **Demo data:** every screen says "Demo data" and reads one `demo/` module; `demoScreensEnabled()` (`src/ui/demo/enabled.ts`) makes the pages 404 in production unless `DEMO_SCREENS=true`. The three Settings sections show "arrives with V1.1" in production.
-- **Masking (hard rule 7):** the Customer Support customer view holds no deal values, costs or payments and says so on screen. A test checks no money appears.
-- **Permissions:** the Support nav link and page need `tickets.manage` (only the proposed Customer Support role has it). The approval card and End now are for Management (`configuration.manage`); other roles see the banner but cannot end it. The organisation always sees the support banner while a session is active.
-- **Customer Support is decision-gated** (B6.23): approved for the demo only; the gate is still open (`RESTRUCTURE_LOG.md`, W4).
+- **Permissions:** the approval card and End now are for Management (`configuration.manage`); other roles see the banner but cannot end it. The organisation always sees the support banner while a session is active.
 
 ## To wire later (M13/M14)
 
@@ -29,7 +28,7 @@ Replace each `demo/` module with the API (B6.01 memberships, B6.02 two-step, B6.
 
 ## Tests
 
-`tests/components/screens/support/`, `tests/components/screens/orgside/` (Vitest, with axe on the main screens), `tests/uiNavigation.test.ts` (Customer Support now also sees Support), and `e2e/m10-support-orgside.spec.ts` (Playwright: written, to be run with `npm run e2e`).
+`tests/components/screens/orgside/` (Vitest, with axe on the main screens), `tests/uiNavigation.test.ts`, and `e2e/m10-orgside.spec.ts` (Playwright: written, to be run with `npm run e2e`).
 
 ## Differences from the design to know about
 

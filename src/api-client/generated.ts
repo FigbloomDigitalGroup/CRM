@@ -4699,6 +4699,7 @@ export interface Operations {
     body: undefined;
     response: {
       configured: boolean;
+      bccAddress?: unknown | null;
       [key: string]: unknown;
     };
   };
@@ -9038,34 +9039,19 @@ export interface Operations {
       [key: string]: unknown;
     };
   };
-  getSupportCustomersByCompanyId: {
-    params: { orgSlug: string; companyId: string };
-    query: undefined;
-    body: undefined;
-    response: unknown;
-  };
-  getSurveys: {
-    params: { orgSlug: string };
-    query: {
-      companyId?: string;
-      limit?: string;
-      cursor?: string;
-      sort?: string;
-      page?: string;
-      pageSize?: string;
-    };
-    body: undefined;
-    response: unknown;
-  };
-  postSurveys: {
+  createSupportRequest: {
     params: { orgSlug: string };
     query: undefined;
     body: {
-      ticketId?: string | null;
-      companyId?: string;
-      contactId?: string | null;
+      subject: string;
+      message: string;
+      category?: string;
+      urgency?: string;
+      pagePath?: string;
     };
-    response: unknown;
+    response: {
+      [key: string]: unknown;
+    };
   };
   applySyncBatch: {
     params: { orgSlug: string };
@@ -9529,63 +9515,6 @@ export interface Operations {
       [key: string]: unknown;
     };
   };
-  getTickets: {
-    params: { orgSlug: string };
-    query: {
-      status?: string;
-      priority?: string;
-      ownerMembershipId?: string;
-      companyId?: string;
-      q?: string;
-      limit?: string;
-      cursor?: string;
-      sort?: string;
-      page?: string;
-      pageSize?: string;
-    };
-    body: undefined;
-    response: unknown;
-  };
-  postTickets: {
-    params: { orgSlug: string };
-    query: undefined;
-    body: {
-      companyId: string;
-      contactId?: string | null;
-      title: string;
-      description?: string | null;
-      priority?: string;
-      ownerMembershipId?: string | null;
-    };
-    response: unknown;
-  };
-  getTicketsByTicketId: {
-    params: { orgSlug: string; ticketId: string };
-    query: undefined;
-    body: undefined;
-    response: unknown;
-  };
-  patchTicketsByTicketId: {
-    params: { orgSlug: string; ticketId: string };
-    query: undefined;
-    body: {
-      title?: string;
-      status?: string;
-      priority?: string;
-      ownerMembershipId?: string | null;
-    };
-    response: unknown;
-  };
-  postTicketsByTicketIdMessages: {
-    params: { orgSlug: string; ticketId: string };
-    query: undefined;
-    body: {
-      kind: string;
-      body: string;
-      authorLabel?: string | null;
-    };
-    response: unknown;
-  };
   getViews: {
     params: { orgSlug: string };
     query: {
@@ -9790,6 +9719,25 @@ export interface Operations {
     body: undefined;
     response: unknown;
   };
+  ingestMailgunInbound: {
+    params: Record<string, never>;
+    query: undefined;
+    body: {
+      recipient: string;
+      sender?: string;
+      from?: string;
+      subject?: string;
+      "body-plain"?: string;
+      "stripped-text"?: string;
+      "Message-Id"?: string;
+      timestamp: string;
+      token: string;
+      signature: string;
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
   ingestInboundEmail: {
     params: { orgSlug: string };
     query: undefined;
@@ -9878,7 +9826,7 @@ export const operations = {
   getAssistantSettings: { method: "GET", path: "/api/orgs/{orgSlug}/assistant/settings", tag: "Assistant", summary: "GET /assistant/settings", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   putAssistantSettings: { method: "PUT", path: "/api/orgs/{orgSlug}/assistant/settings", tag: "Assistant", summary: "PUT /assistant/settings", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   deleteAttachmentsByAttachmentId: { method: "DELETE", path: "/api/orgs/{orgSlug}/attachments/{attachmentId}", tag: "Attachments", summary: "DELETE /attachments/{attachmentId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
-  postAttachmentsByAttachmentIdComplete: { method: "POST", path: "/api/orgs/{orgSlug}/attachments/{attachmentId}/complete", tag: "Attachments", summary: "POST /attachments/{attachmentId}/complete", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  postAttachmentsByAttachmentIdComplete: { method: "POST", path: "/api/orgs/{orgSlug}/attachments/{attachmentId}/complete", tag: "Attachments", summary: "POST /attachments/{attachmentId}/complete", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getAttachmentsByAttachmentIdDownload: { method: "GET", path: "/api/orgs/{orgSlug}/attachments/{attachmentId}/download", tag: "Attachments", summary: "GET /attachments/{attachmentId}/download", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   getAudit: { method: "GET", path: "/api/orgs/{orgSlug}/audit", tag: "Audit", summary: "GET /audit", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   listAuditLog: { method: "GET", path: "/api/orgs/{orgSlug}/audit/events", tag: "Audit", summary: "Organisation-wide audit log: filter by actor, entity type, action (prefix with *) and dates; each row links to its record; payment entities only for readers who may see payments (audit.view)", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
@@ -9888,7 +9836,7 @@ export const operations = {
   getAutomationRule: { method: "GET", path: "/api/orgs/{orgSlug}/automations/{ruleKey}", tag: "Automations", summary: "One rule", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   updateAutomationRule: { method: "PATCH", path: "/api/orgs/{orgSlug}/automations/{ruleKey}", tag: "Automations", summary: "Switch a rule on or off, change its thresholds or audience. Audited with before and after.", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   listAutomationRuns: { method: "GET", path: "/api/orgs/{orgSlug}/automations/runs", tag: "Automations", summary: "The run log: each run with its rule, record and result", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
-  getCalendar: { method: "GET", path: "/api/orgs/{orgSlug}/calendar", tag: "Calendar", summary: "GET /calendar", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  getCalendar: { method: "GET", path: "/api/orgs/{orgSlug}/calendar", tag: "Calendar", summary: "GET /calendar", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   postCalendar: { method: "POST", path: "/api/orgs/{orgSlug}/calendar", tag: "Calendar", summary: "POST /calendar", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
   getCatalogue: { method: "GET", path: "/api/orgs/{orgSlug}/catalogue", tag: "Catalogue", summary: "GET /catalogue", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   postCatalogue: { method: "POST", path: "/api/orgs/{orgSlug}/catalogue", tag: "Catalogue", summary: "POST /catalogue", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
@@ -9996,7 +9944,7 @@ export const operations = {
   postCustomFields: { method: "POST", path: "/api/orgs/{orgSlug}/custom-fields", tag: "Custom Fields", summary: "POST /custom-fields", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   patchCustomFieldsByFieldId: { method: "PATCH", path: "/api/orgs/{orgSlug}/custom-fields/{fieldId}", tag: "Custom Fields", summary: "PATCH /custom-fields/{fieldId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getCustomFieldsByFieldIdUsage: { method: "GET", path: "/api/orgs/{orgSlug}/custom-fields/{fieldId}/usage", tag: "Custom Fields", summary: "GET /custom-fields/{fieldId}/usage", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
-  getDashboard: { method: "GET", path: "/api/orgs/{orgSlug}/dashboard", tag: "Dashboard", summary: "Role home page: the sections this role has, each loaded independently (a section the role lacks is absent)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  getDashboard: { method: "GET", path: "/api/orgs/{orgSlug}/dashboard", tag: "Dashboard", summary: "Role home page: the sections this role has, each loaded independently (a section the role lacks is absent)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getDashboardSection: { method: "GET", path: "/api/orgs/{orgSlug}/dashboard/{section}", tag: "Dashboard", summary: "One dashboard section (sales_today, management, delivery, finance, technical, my_metrics)", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   listMigrationEntities: { method: "GET", path: "/api/orgs/{orgSlug}/data-migration", tag: "Data migration", summary: "What can be migrated, each kind's fields, the seven steps", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
   listMigrationPresets: { method: "GET", path: "/api/orgs/{orgSlug}/data-migration/presets", tag: "Data migration", summary: "Saved mappings", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
@@ -10015,10 +9963,10 @@ export const operations = {
   rollbackMigration: { method: "POST", path: "/api/orgs/{orgSlug}/data-migration/sessions/{sessionId}/rollback", tag: "Data migration", summary: "Step 7: undo the whole session within its window; records changed or relied on since are kept, with the reason", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   validateMigration: { method: "POST", path: "/api/orgs/{orgSlug}/data-migration/sessions/{sessionId}/validate", tag: "Data migration", summary: "Step 4: read every row and record per-row errors and warnings (background job)", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getMigrationTemplate: { method: "GET", path: "/api/orgs/{orgSlug}/data-migration/templates/{entity}", tag: "Data migration", summary: "The fixed CSV template for one kind of record", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
-  listDataRuns: { method: "GET", path: "/api/orgs/{orgSlug}/data-runs", tag: "Import and export", summary: "Imports and exports: your own, or everyone's for Management", contentType: "json", errors: [400,401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getDataRun: { method: "GET", path: "/api/orgs/{orgSlug}/data-runs/{runId}", tag: "Import and export", summary: "Progress, counts and state of one import or export", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  cancelDataRun: { method: "POST", path: "/api/orgs/{orgSlug}/data-runs/{runId}/cancel", tag: "Import and export", summary: "Stop a running import or export at its next check; rows already imported stay", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  downloadDataRunFile: { method: "GET", path: "/api/orgs/{orgSlug}/data-runs/{runId}/download", tag: "Import and export", summary: "Short-lived signed link to the export (`which=result`) or the import error report (`which=errors`)", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  listDataRuns: { method: "GET", path: "/api/orgs/{orgSlug}/data-runs", tag: "Import and export", summary: "Imports and exports: your own, or everyone's for Management", contentType: "json", errors: [400,401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getDataRun: { method: "GET", path: "/api/orgs/{orgSlug}/data-runs/{runId}", tag: "Import and export", summary: "Progress, counts and state of one import or export", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  cancelDataRun: { method: "POST", path: "/api/orgs/{orgSlug}/data-runs/{runId}/cancel", tag: "Import and export", summary: "Stop a running import or export at its next check; rows already imported stay", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  downloadDataRunFile: { method: "GET", path: "/api/orgs/{orgSlug}/data-runs/{runId}/download", tag: "Import and export", summary: "Short-lived signed link to the export (`which=result`) or the import error report (`which=errors`)", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   postDealMovesByMoveIdUndo: { method: "POST", path: "/api/orgs/{orgSlug}/deal-moves/{moveId}/undo", tag: "Deal Moves", summary: "POST /deal-moves/{moveId}/undo", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   getDealRules: { method: "GET", path: "/api/orgs/{orgSlug}/deal-rules", tag: "Deal Rules", summary: "GET /deal-rules", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   patchDealRules: { method: "PATCH", path: "/api/orgs/{orgSlug}/deal-rules", tag: "Deal Rules", summary: "PATCH /deal-rules", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
@@ -10061,14 +10009,14 @@ export const operations = {
   patchEmailTemplatesByTemplateId: { method: "PATCH", path: "/api/orgs/{orgSlug}/email-templates/{templateId}", tag: "Email Templates", summary: "PATCH /email-templates/{templateId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postEmailTemplatesByTemplateIdRender: { method: "POST", path: "/api/orgs/{orgSlug}/email-templates/{templateId}/render", tag: "Email Templates", summary: "POST /email-templates/{templateId}/render", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
   startExport: { method: "POST", path: "/api/orgs/{orgSlug}/exports", tag: "Import and export", summary: "Start a background export of the full filtered set (over 500 rows needs export.bulk)", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
-  getFeatures: { method: "GET", path: "/api/orgs/{orgSlug}/features", tag: "Features", summary: "Release flags and organisation toggles, resolved for this organisation", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  getFeatures: { method: "GET", path: "/api/orgs/{orgSlug}/features", tag: "Features", summary: "Release flags and organisation toggles, resolved for this organisation", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   updateFeatureToggles: { method: "PATCH", path: "/api/orgs/{orgSlug}/features", tag: "Features", summary: "Switch organisation toggles (Management only; audited)", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
   createFileUpload: { method: "POST", path: "/api/orgs/{orgSlug}/files", tag: "Files", summary: "Start a file upload: returns a short-lived signed link to send the bytes to", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
-  deleteFile: { method: "DELETE", path: "/api/orgs/{orgSlug}/files/{fileId}", tag: "Files", summary: "Delete a file (kept until the retention purge removes its bytes)", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getFile: { method: "GET", path: "/api/orgs/{orgSlug}/files/{fileId}", tag: "Files", summary: "A file's metadata (404 for a file the caller may not see)", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  completeFileUpload: { method: "POST", path: "/api/orgs/{orgSlug}/files/{fileId}/complete", tag: "Files", summary: "Finish an upload: checks size, type, content and checksum, scans for malware, then makes the file ready", contentType: "json", errors: [400,401,404,409,503], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getFilesByFileIdContent: { method: "GET", path: "/api/orgs/{orgSlug}/files/{fileId}/content", tag: "Files", summary: "GET /files/{fileId}/content", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getFileDownloadLink: { method: "GET", path: "/api/orgs/{orgSlug}/files/{fileId}/download", tag: "Files", summary: "A signed download link, valid for about a minute", contentType: "json", errors: [401,404,409], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  deleteFile: { method: "DELETE", path: "/api/orgs/{orgSlug}/files/{fileId}", tag: "Files", summary: "Delete a file (kept until the retention purge removes its bytes)", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL"] },
+  getFile: { method: "GET", path: "/api/orgs/{orgSlug}/files/{fileId}", tag: "Files", summary: "A file's metadata (404 for a file the caller may not see)", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL"] },
+  completeFileUpload: { method: "POST", path: "/api/orgs/{orgSlug}/files/{fileId}/complete", tag: "Files", summary: "Finish an upload: checks size, type, content and checksum, scans for malware, then makes the file ready", contentType: "json", errors: [400,401,404,409,503], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL"] },
+  getFilesByFileIdContent: { method: "GET", path: "/api/orgs/{orgSlug}/files/{fileId}/content", tag: "Files", summary: "GET /files/{fileId}/content", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL"] },
+  getFileDownloadLink: { method: "GET", path: "/api/orgs/{orgSlug}/files/{fileId}/download", tag: "Files", summary: "A signed download link, valid for about a minute", contentType: "json", errors: [401,404,409], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL"] },
   getForecast: { method: "GET", path: "/api/orgs/{orgSlug}/forecast", tag: "Forecast", summary: "GET /forecast", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   getForecastTargets: { method: "GET", path: "/api/orgs/{orgSlug}/forecast/targets", tag: "Forecast", summary: "GET /forecast/targets", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   putForecastTargets: { method: "PUT", path: "/api/orgs/{orgSlug}/forecast/targets", tag: "Forecast", summary: "PUT /forecast/targets", contentType: "json", errors: [401,403,404], allowedRoles: [] },
@@ -10115,9 +10063,9 @@ export const operations = {
   postJobsByJobIdRetry: { method: "POST", path: "/api/orgs/{orgSlug}/jobs/{jobId}/retry", tag: "Jobs", summary: "POST /jobs/{jobId}/retry", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   getJobsSchedules: { method: "GET", path: "/api/orgs/{orgSlug}/jobs/schedules", tag: "Jobs", summary: "GET /jobs/schedules", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   getLeadPoolRequests: { method: "GET", path: "/api/orgs/{orgSlug}/lead-pool/requests", tag: "Lead Pool", summary: "GET /lead-pool/requests", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
-  postLeadPoolRequestsByRequestIdCancel: { method: "POST", path: "/api/orgs/{orgSlug}/lead-pool/requests/{requestId}/cancel", tag: "Lead Pool", summary: "POST /lead-pool/requests/{requestId}/cancel", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  postLeadPoolRequestsByRequestIdCancel: { method: "POST", path: "/api/orgs/{orgSlug}/lead-pool/requests/{requestId}/cancel", tag: "Lead Pool", summary: "POST /lead-pool/requests/{requestId}/cancel", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   postLeadPoolRequestsByRequestIdDecide: { method: "POST", path: "/api/orgs/{orgSlug}/lead-pool/requests/{requestId}/decide", tag: "Lead Pool", summary: "POST /lead-pool/requests/{requestId}/decide", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
-  getLeadPoolSettings: { method: "GET", path: "/api/orgs/{orgSlug}/lead-pool/settings", tag: "Lead Pool", summary: "GET /lead-pool/settings", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  getLeadPoolSettings: { method: "GET", path: "/api/orgs/{orgSlug}/lead-pool/settings", tag: "Lead Pool", summary: "GET /lead-pool/settings", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   patchLeadPoolSettings: { method: "PATCH", path: "/api/orgs/{orgSlug}/lead-pool/settings", tag: "Lead Pool", summary: "PATCH /lead-pool/settings", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   listLeads: { method: "GET", path: "/api/orgs/{orgSlug}/leads", tag: "Leads", summary: "List leads (paged; own or organisation scope by role)", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES"] },
   createLead: { method: "POST", path: "/api/orgs/{orgSlug}/leads", tag: "Leads", summary: "Create a lead", contentType: "json", errors: [400,401,403,409,422], allowedRoles: ["MANAGEMENT","SALES"] },
@@ -10144,18 +10092,18 @@ export const operations = {
   getLeadsExport: { method: "GET", path: "/api/orgs/{orgSlug}/leads/export", tag: "Leads", summary: "GET /leads/export", contentType: "csv", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   postLeadsImport: { method: "POST", path: "/api/orgs/{orgSlug}/leads/import", tag: "Leads", summary: "POST /leads/import", contentType: "multipart", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getLeadsPool: { method: "GET", path: "/api/orgs/{orgSlug}/leads/pool", tag: "Leads", summary: "GET /leads/pool", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
-  getOrganizationLook: { method: "GET", path: "/api/orgs/{orgSlug}/look", tag: "Organisation", summary: "How the organisation looks: name, logo, default theme and page colour (every member can read)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  getOrganizationLook: { method: "GET", path: "/api/orgs/{orgSlug}/look", tag: "Organisation", summary: "How the organisation looks: name, logo, default theme and page colour (every member can read)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   updateOrganizationLook: { method: "PATCH", path: "/api/orgs/{orgSlug}/look", tag: "Organisation", summary: "Change the organisation's look and whether members may personalise (Management only)", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
-  removeMyAvatar: { method: "DELETE", path: "/api/orgs/{orgSlug}/me/avatar", tag: "Profile", summary: "Remove the picture (initials are shown instead)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  setMyAvatar: { method: "POST", path: "/api/orgs/{orgSlug}/me/avatar", tag: "Profile", summary: "Use an uploaded picture: cropped, resized to 256px and re-encoded as WebP; the original is deleted", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getMyNotificationPreferences: { method: "GET", path: "/api/orgs/{orgSlug}/me/notification-preferences", tag: "Notifications", summary: "Notification types for the caller's role, channels, presets, quiet hours and daily email limit", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  updateMyNotificationPreferences: { method: "PATCH", path: "/api/orgs/{orgSlug}/me/notification-preferences", tag: "Notifications", summary: "Change notification preferences; overdue alerts cannot be turned off and push is not available yet", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getMyPreferences: { method: "GET", path: "/api/orgs/{orgSlug}/me/preferences", tag: "Preferences", summary: "Own preferences: appearance, start page, sidebar, date and time, with the device-only defaults", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  updateMyPreferences: { method: "PATCH", path: "/api/orgs/{orgSlug}/me/preferences", tag: "Preferences", summary: "Change own preferences; look fields are ignored (and listed in `ignored`) while the organisation has personalisation off", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  resetMyAppearance: { method: "POST", path: "/api/orgs/{orgSlug}/me/preferences/reset", tag: "Preferences", summary: "Back to Forest on White; returns a one-time undo token valid for ten minutes", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  undoMyReset: { method: "POST", path: "/api/orgs/{orgSlug}/me/preferences/undo", tag: "Preferences", summary: "Restore the look from before the last reset (single use)", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getMyProfile: { method: "GET", path: "/api/orgs/{orgSlug}/me/profile", tag: "Profile", summary: "The signed-in person's profile: name, phone, time zone and picture", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  updateMyProfile: { method: "PATCH", path: "/api/orgs/{orgSlug}/me/profile", tag: "Profile", summary: "Change own name, phone or time zone", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  removeMyAvatar: { method: "DELETE", path: "/api/orgs/{orgSlug}/me/avatar", tag: "Profile", summary: "Remove the picture (initials are shown instead)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  setMyAvatar: { method: "POST", path: "/api/orgs/{orgSlug}/me/avatar", tag: "Profile", summary: "Use an uploaded picture: cropped, resized to 256px and re-encoded as WebP; the original is deleted", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getMyNotificationPreferences: { method: "GET", path: "/api/orgs/{orgSlug}/me/notification-preferences", tag: "Notifications", summary: "Notification types for the caller's role, channels, presets, quiet hours and daily email limit", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  updateMyNotificationPreferences: { method: "PATCH", path: "/api/orgs/{orgSlug}/me/notification-preferences", tag: "Notifications", summary: "Change notification preferences; overdue alerts cannot be turned off and push is not available yet", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getMyPreferences: { method: "GET", path: "/api/orgs/{orgSlug}/me/preferences", tag: "Preferences", summary: "Own preferences: appearance, start page, sidebar, date and time, with the device-only defaults", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  updateMyPreferences: { method: "PATCH", path: "/api/orgs/{orgSlug}/me/preferences", tag: "Preferences", summary: "Change own preferences; look fields are ignored (and listed in `ignored`) while the organisation has personalisation off", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  resetMyAppearance: { method: "POST", path: "/api/orgs/{orgSlug}/me/preferences/reset", tag: "Preferences", summary: "Back to Forest on White; returns a one-time undo token valid for ten minutes", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  undoMyReset: { method: "POST", path: "/api/orgs/{orgSlug}/me/preferences/undo", tag: "Preferences", summary: "Restore the look from before the last reset (single use)", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getMyProfile: { method: "GET", path: "/api/orgs/{orgSlug}/me/profile", tag: "Profile", summary: "The signed-in person's profile: name, phone, time zone and picture", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  updateMyProfile: { method: "PATCH", path: "/api/orgs/{orgSlug}/me/profile", tag: "Profile", summary: "Change own name, phone or time zone", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getMemberships: { method: "GET", path: "/api/orgs/{orgSlug}/memberships", tag: "Memberships", summary: "GET /memberships", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   postMemberships: { method: "POST", path: "/api/orgs/{orgSlug}/memberships", tag: "Memberships", summary: "POST /memberships", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postMembershipsByMembershipIdDeactivate: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/deactivate", tag: "Memberships", summary: "POST /memberships/{membershipId}/deactivate", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
@@ -10167,16 +10115,16 @@ export const operations = {
   postMembershipsByMembershipIdRole: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/role", tag: "Memberships", summary: "POST /memberships/{membershipId}/role", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postMembershipsByMembershipIdTwoStepReset: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/two-step-reset", tag: "Memberships", summary: "POST /memberships/{membershipId}/two-step-reset", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   postMembershipsByMembershipIdUnlock: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/unlock", tag: "Memberships", summary: "POST /memberships/{membershipId}/unlock", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
-  postMergesByMergeIdUndo: { method: "POST", path: "/api/orgs/{orgSlug}/merges/{mergeId}/undo", tag: "Merges", summary: "POST /merges/{mergeId}/undo", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  postMergesByMergeIdUndo: { method: "POST", path: "/api/orgs/{orgSlug}/merges/{mergeId}/undo", tag: "Merges", summary: "POST /merges/{mergeId}/undo", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getMyWork: { method: "GET", path: "/api/orgs/{orgSlug}/my-work", tag: "My Work", summary: "GET /my-work", contentType: "json", errors: [400,401,403,404], allowedRoles: ["RESTRICTED_TECHNICAL"] },
-  getNotificationPreferences: { method: "GET", path: "/api/orgs/{orgSlug}/notification-preferences", tag: "Notification Preferences", summary: "GET /notification-preferences", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  postNotificationPreferences: { method: "POST", path: "/api/orgs/{orgSlug}/notification-preferences", tag: "Notification Preferences", summary: "POST /notification-preferences", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  listNotifications: { method: "GET", path: "/api/orgs/{orgSlug}/notifications", tag: "Notifications", summary: "Notification centre: paged, filter by type, unread and archived; never reveals a record the caller cannot open", contentType: "json", errors: [400,401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  deleteNotificationsByNotificationIdArchive: { method: "DELETE", path: "/api/orgs/{orgSlug}/notifications/{notificationId}/archive", tag: "Notifications", summary: "DELETE /notifications/{notificationId}/archive", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  archiveNotification: { method: "POST", path: "/api/orgs/{orgSlug}/notifications/{notificationId}/archive", tag: "Notifications", summary: "Archive a notification (DELETE on the same path restores it)", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  postNotificationsByNotificationIdRead: { method: "POST", path: "/api/orgs/{orgSlug}/notifications/{notificationId}/read", tag: "Notifications", summary: "POST /notifications/{notificationId}/read", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  postNotificationsMarkAllRead: { method: "POST", path: "/api/orgs/{orgSlug}/notifications/mark-all-read", tag: "Notifications", summary: "POST /notifications/mark-all-read", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getUnreadNotificationCount: { method: "GET", path: "/api/orgs/{orgSlug}/notifications/unread-count", tag: "Notifications", summary: "The bell badge: unread notifications this caller can open", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  getNotificationPreferences: { method: "GET", path: "/api/orgs/{orgSlug}/notification-preferences", tag: "Notification Preferences", summary: "GET /notification-preferences", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postNotificationPreferences: { method: "POST", path: "/api/orgs/{orgSlug}/notification-preferences", tag: "Notification Preferences", summary: "POST /notification-preferences", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  listNotifications: { method: "GET", path: "/api/orgs/{orgSlug}/notifications", tag: "Notifications", summary: "Notification centre: paged, filter by type, unread and archived; never reveals a record the caller cannot open", contentType: "json", errors: [400,401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  deleteNotificationsByNotificationIdArchive: { method: "DELETE", path: "/api/orgs/{orgSlug}/notifications/{notificationId}/archive", tag: "Notifications", summary: "DELETE /notifications/{notificationId}/archive", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  archiveNotification: { method: "POST", path: "/api/orgs/{orgSlug}/notifications/{notificationId}/archive", tag: "Notifications", summary: "Archive a notification (DELETE on the same path restores it)", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postNotificationsByNotificationIdRead: { method: "POST", path: "/api/orgs/{orgSlug}/notifications/{notificationId}/read", tag: "Notifications", summary: "POST /notifications/{notificationId}/read", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postNotificationsMarkAllRead: { method: "POST", path: "/api/orgs/{orgSlug}/notifications/mark-all-read", tag: "Notifications", summary: "POST /notifications/mark-all-read", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getUnreadNotificationCount: { method: "GET", path: "/api/orgs/{orgSlug}/notifications/unread-count", tag: "Notifications", summary: "The bell badge: unread notifications this caller can open", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   reversePayment: { method: "POST", path: "/api/orgs/{orgSlug}/payments/{paymentId}/reverse", tag: "Payments", summary: "Reverse a payment recorded by mistake, with a reason; the record stays", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","FINANCE"] },
   listWonDealPayments: { method: "GET", path: "/api/orgs/{orgSlug}/payments/deals", tag: "Payments", summary: "Won deals with invoiced and received totals and the next follow-up note", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","FINANCE"] },
   getPaymentSummary: { method: "GET", path: "/api/orgs/{orgSlug}/payments/summary", tag: "Payments", summary: "Due this week, overdue, collected this month, still owing", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","FINANCE"] },
@@ -10189,7 +10137,7 @@ export const operations = {
   putPipelinesByPipelineIdStagesByStageIdRules: { method: "PUT", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/{stageId}/rules", tag: "Pipelines", summary: "PUT /pipelines/{pipelineId}/stages/{stageId}/rules", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   putPipelinesByPipelineIdStagesReorder: { method: "PUT", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/reorder", tag: "Pipelines", summary: "PUT /pipelines/{pipelineId}/stages/reorder", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   getPrivacyOverview: { method: "GET", path: "/api/orgs/{orgSlug}/privacy", tag: "Data and privacy", summary: "Export rights, retention with documented defaults, legal hold, open requests (Management)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
-  listExportApprovals: { method: "GET", path: "/api/orgs/{orgSlug}/privacy/export-approvals", tag: "Data and privacy", summary: "Export approval requests (Management sees all; others their own)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  listExportApprovals: { method: "GET", path: "/api/orgs/{orgSlug}/privacy/export-approvals", tag: "Data and privacy", summary: "Export approval requests (Management sees all; others their own)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   requestExportApproval: { method: "POST", path: "/api/orgs/{orgSlug}/privacy/export-approvals", tag: "Data and privacy", summary: "Ask Management to approve one bulk export above the threshold", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
   decideExportApproval: { method: "POST", path: "/api/orgs/{orgSlug}/privacy/export-approvals/{approvalId}/decision", tag: "Data and privacy", summary: "Approve or reject (someone other than the requester)", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   updateExportRights: { method: "PUT", path: "/api/orgs/{orgSlug}/privacy/export-rights", tag: "Data and privacy", summary: "Who may bulk export, the row threshold that needs approval (default 500), how long an approval lasts", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
@@ -10209,12 +10157,12 @@ export const operations = {
   updateRetention: { method: "PUT", path: "/api/orgs/{orgSlug}/privacy/retention", tag: "Data and privacy", summary: "A retention period per kind of data: a number, null to keep, or \"DEFAULT\"", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
   getProfile: { method: "GET", path: "/api/orgs/{orgSlug}/profile", tag: "Profile", summary: "GET /profile", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   patchProfile: { method: "PATCH", path: "/api/orgs/{orgSlug}/profile", tag: "Profile", summary: "PATCH /profile", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
-  getPushConfig: { method: "GET", path: "/api/orgs/{orgSlug}/push/config", tag: "Push", summary: "Whether Web Push is on for this server, and the public key to subscribe with", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  listMyPushSubscriptions: { method: "GET", path: "/api/orgs/{orgSlug}/push/subscriptions", tag: "Push", summary: "The caller's registered devices", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  registerPushSubscription: { method: "POST", path: "/api/orgs/{orgSlug}/push/subscriptions", tag: "Push", summary: "Register this browser or phone for push (endpoint must be on a real push service, over https)", contentType: "json", errors: [400,401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  removeMyPushSubscription: { method: "DELETE", path: "/api/orgs/{orgSlug}/push/subscriptions/{subscriptionId}", tag: "Push", summary: "Stop sending push to one of the caller's own devices", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getPwaManifest: { method: "GET", path: "/api/orgs/{orgSlug}/pwa/manifest", tag: "PWA", summary: "The web app manifest for this organisation (its name and colours)", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getPwaVersion: { method: "GET", path: "/api/orgs/{orgSlug}/pwa/version", tag: "PWA", summary: "The cache version an installed app compares with its own, and what may be queued offline", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  getPushConfig: { method: "GET", path: "/api/orgs/{orgSlug}/push/config", tag: "Push", summary: "Whether Web Push is on for this server, and the public key to subscribe with", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  listMyPushSubscriptions: { method: "GET", path: "/api/orgs/{orgSlug}/push/subscriptions", tag: "Push", summary: "The caller's registered devices", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  registerPushSubscription: { method: "POST", path: "/api/orgs/{orgSlug}/push/subscriptions", tag: "Push", summary: "Register this browser or phone for push (endpoint must be on a real push service, over https)", contentType: "json", errors: [400,401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  removeMyPushSubscription: { method: "DELETE", path: "/api/orgs/{orgSlug}/push/subscriptions/{subscriptionId}", tag: "Push", summary: "Stop sending push to one of the caller's own devices", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getPwaManifest: { method: "GET", path: "/api/orgs/{orgSlug}/pwa/manifest", tag: "PWA", summary: "The web app manifest for this organisation (its name and colours)", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getPwaVersion: { method: "GET", path: "/api/orgs/{orgSlug}/pwa/version", tag: "PWA", summary: "The cache version an installed app compares with its own, and what may be queued offline", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   quickCapture: { method: "POST", path: "/api/orgs/{orgSlug}/quick-capture", tag: "Quick capture", summary: "Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and creates nothing; resend with duplicateDecision to open the existing record, create anyway or merge.", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   postQuickCaptureCards: { method: "POST", path: "/api/orgs/{orgSlug}/quick-capture/cards", tag: "Quick Capture", summary: "POST /quick-capture/cards", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   deleteQuickCaptureCardsByCaptureId: { method: "DELETE", path: "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}", tag: "Quick Capture", summary: "DELETE /quick-capture/cards/{captureId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
@@ -10244,7 +10192,7 @@ export const operations = {
   cancelRecurringService: { method: "POST", path: "/api/orgs/{orgSlug}/recurring-services/{serviceId}/cancel", tag: "Renewals", summary: "Cancel with a reason", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   renewRecurringService: { method: "POST", path: "/api/orgs/{orgSlug}/recurring-services/{serviceId}/renew", tag: "Renewals", summary: "Renew for the next period; optionally also create a renewal task and a draft invoice", contentType: "json", errors: [400,401,403,404,422], allowedRoles: ["MANAGEMENT","SALES"] },
   overrideRenewalState: { method: "PUT", path: "/api/orgs/{orgSlug}/recurring-services/{serviceId}/state", tag: "Renewals", summary: "Override the derived state with a reason, or send state null to hand it back to the dates", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
-  listReferenceKinds: { method: "GET", path: "/api/orgs/{orgSlug}/reference-admin", tag: "Reference data", summary: "The reference lists the caller may manage and what each allows", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  listReferenceKinds: { method: "GET", path: "/api/orgs/{orgSlug}/reference-admin", tag: "Reference data", summary: "The reference lists the caller may manage and what each allows", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   listReferenceValues: { method: "GET", path: "/api/orgs/{orgSlug}/reference-admin/{kind}", tag: "Reference data", summary: "Every value of one list, hidden ones included, with its usage count", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   createReferenceValue: { method: "POST", path: "/api/orgs/{orgSlug}/reference-admin/{kind}", tag: "Reference data", summary: "Add a value. Extras depend on the list (category, colour, subject and body, entityType and key).", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   deleteReferenceValue: { method: "DELETE", path: "/api/orgs/{orgSlug}/reference-admin/{kind}/{valueId}", tag: "Reference data", summary: "Delete an unused value. A used one is refused with the usage and the advice to hide it.", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
@@ -10256,7 +10204,7 @@ export const operations = {
   postReferenceCatalogsByCatalogKey: { method: "POST", path: "/api/orgs/{orgSlug}/reference-catalogs/{catalogKey}", tag: "Reference Catalogs", summary: "POST /reference-catalogs/{catalogKey}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postReferenceCatalogsByCatalogKeyByEntryId: { method: "POST", path: "/api/orgs/{orgSlug}/reference-catalogs/{catalogKey}/{entryId}", tag: "Reference Catalogs", summary: "POST /reference-catalogs/{catalogKey}/{entryId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postReferenceCatalogsByCatalogKeyByEntryIdMove: { method: "POST", path: "/api/orgs/{orgSlug}/reference-catalogs/{catalogKey}/{entryId}/move", tag: "Reference Catalogs", summary: "POST /reference-catalogs/{catalogKey}/{entryId}/move", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
-  getReferenceData: { method: "GET", path: "/api/orgs/{orgSlug}/reference-data", tag: "Reference Data", summary: "GET /reference-data", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  getReferenceData: { method: "GET", path: "/api/orgs/{orgSlug}/reference-data", tag: "Reference Data", summary: "GET /reference-data", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getReminderSettings: { method: "GET", path: "/api/orgs/{orgSlug}/reminder-settings", tag: "Reminders", summary: "Automatic reminders: each rule's switch and threshold (Management)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
   updateReminderSettings: { method: "PUT", path: "/api/orgs/{orgSlug}/reminder-settings", tag: "Reminders", summary: "Switch rules on or off and set their thresholds. Reminders only tell people; they never decide anything.", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
   getRenewalSettings: { method: "GET", path: "/api/orgs/{orgSlug}/renewal-settings", tag: "Renewals", summary: "The due window and the lapse grace", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
@@ -10279,10 +10227,10 @@ export const operations = {
   getRenewalsAndRetention: { method: "GET", path: "/api/orgs/{orgSlug}/retention", tag: "Renewals", summary: "Renewals and retention: LAPSED, DUE_30, UNANSWERED_PROPOSALS, GOING_QUIET, CROSS_SELL. A customer is in exactly one list; counts match the lists.", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES"] },
   getScoringWeights: { method: "GET", path: "/api/orgs/{orgSlug}/scoring/weights", tag: "Scoring", summary: "GET /scoring/weights", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   patchScoringWeights: { method: "PATCH", path: "/api/orgs/{orgSlug}/scoring/weights", tag: "Scoring", summary: "PATCH /scoring/weights", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
-  search: { method: "GET", path: "/api/orgs/{orgSlug}/search", tag: "Search", summary: "Global search: groups with totals, paged per group (`type` + `page`), archived only on request, phone numbers in any format", contentType: "json", errors: [400,401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  deleteSearchRecents: { method: "DELETE", path: "/api/orgs/{orgSlug}/search/recents", tag: "Search", summary: "DELETE /search/recents", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getSearchRecents: { method: "GET", path: "/api/orgs/{orgSlug}/search/recents", tag: "Search", summary: "GET /search/recents", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  postSearchRecents: { method: "POST", path: "/api/orgs/{orgSlug}/search/recents", tag: "Search", summary: "POST /search/recents", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  search: { method: "GET", path: "/api/orgs/{orgSlug}/search", tag: "Search", summary: "Global search: groups with totals, paged per group (`type` + `page`), archived only on request, phone numbers in any format", contentType: "json", errors: [400,401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  deleteSearchRecents: { method: "DELETE", path: "/api/orgs/{orgSlug}/search/recents", tag: "Search", summary: "DELETE /search/recents", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getSearchRecents: { method: "GET", path: "/api/orgs/{orgSlug}/search/recents", tag: "Search", summary: "GET /search/recents", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postSearchRecents: { method: "POST", path: "/api/orgs/{orgSlug}/search/recents", tag: "Search", summary: "POST /search/recents", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getSecuritySessionPolicy: { method: "GET", path: "/api/orgs/{orgSlug}/security/session-policy", tag: "Security", summary: "GET /security/session-policy", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   patchSecuritySessionPolicy: { method: "PATCH", path: "/api/orgs/{orgSlug}/security/session-policy", tag: "Security", summary: "PATCH /security/session-policy", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getSecuritySignInEvents: { method: "GET", path: "/api/orgs/{orgSlug}/security/sign-in-events", tag: "Security", summary: "GET /security/sign-in-events", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
@@ -10300,12 +10248,10 @@ export const operations = {
   patchSequencesBySequenceId: { method: "PATCH", path: "/api/orgs/{orgSlug}/sequences/{sequenceId}", tag: "Sequences", summary: "PATCH /sequences/{sequenceId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   postSequencesBySequenceIdEnrollments: { method: "POST", path: "/api/orgs/{orgSlug}/sequences/{sequenceId}/enrollments", tag: "Sequences", summary: "POST /sequences/{sequenceId}/enrollments", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   getSettingsOverview: { method: "GET", path: "/api/orgs/{orgSlug}/settings/overview", tag: "Settings", summary: "Settings landing page: profile, member counts by state, integration states (Management)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
-  getSignals: { method: "GET", path: "/api/orgs/{orgSlug}/signals", tag: "Dashboard", summary: "Adoption, stalled deals, deals past close date and overdue tasks (stored values; sections by role)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getSupportCustomersByCompanyId: { method: "GET", path: "/api/orgs/{orgSlug}/support/customers/{companyId}", tag: "Support", summary: "GET /support/customers/{companyId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getSurveys: { method: "GET", path: "/api/orgs/{orgSlug}/surveys", tag: "Surveys", summary: "GET /surveys", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postSurveys: { method: "POST", path: "/api/orgs/{orgSlug}/surveys", tag: "Surveys", summary: "POST /surveys", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  applySyncBatch: { method: "POST", path: "/api/orgs/{orgSlug}/sync/batch", tag: "Sync", summary: "The offline queue: up to 100 actions, each with a client id; answered APPLIED, DUPLICATE, CONFLICT or REJECTED per item. Replaying a batch changes nothing. Stage and ownership are server-wins.", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
-  getSyncStatus: { method: "GET", path: "/api/orgs/{orgSlug}/sync/status", tag: "Sync", summary: "The caller's queue as the server sees it: last sync, last seven days, what needs attention", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL","CUSTOMER_SUPPORT"] },
+  getSignals: { method: "GET", path: "/api/orgs/{orgSlug}/signals", tag: "Dashboard", summary: "Adoption, stalled deals, deals past close date and overdue tasks (stored values; sections by role)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  createSupportRequest: { method: "POST", path: "/api/orgs/{orgSlug}/support-requests", tag: "Support", summary: "Ask Figbloom for help by email (V1.1). Any signed-in member of the organisation; the request is sent through Resend to Figbloom support with the member as Reply-To. Answers a reference to quote. Honours Idempotency-Key; at most 5 requests an hour per member.", contentType: "json", errors: [400,401,403,429,503], allowedRoles: null },
+  applySyncBatch: { method: "POST", path: "/api/orgs/{orgSlug}/sync/batch", tag: "Sync", summary: "The offline queue: up to 100 actions, each with a client id; answered APPLIED, DUPLICATE, CONFLICT or REJECTED per item. Replaying a batch changes nothing. Stage and ownership are server-wins.", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getSyncStatus: { method: "GET", path: "/api/orgs/{orgSlug}/sync/status", tag: "Sync", summary: "The caller's queue as the server sees it: last sync, last seven days, what needs attention", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getTags: { method: "GET", path: "/api/orgs/{orgSlug}/tags", tag: "Tags", summary: "GET /tags", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postTags: { method: "POST", path: "/api/orgs/{orgSlug}/tags", tag: "Tags", summary: "POST /tags", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   deleteTagsByTagId: { method: "DELETE", path: "/api/orgs/{orgSlug}/tags/{tagId}", tag: "Tags", summary: "DELETE /tags/{tagId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
@@ -10326,11 +10272,6 @@ export const operations = {
   postTasksByTaskIdRestore: { method: "POST", path: "/api/orgs/{orgSlug}/tasks/{taskId}/restore", tag: "Tasks", summary: "POST /tasks/{taskId}/restore", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
   getTasksGroups: { method: "GET", path: "/api/orgs/{orgSlug}/tasks/groups", tag: "Tasks", summary: "GET /tasks/groups", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
   getTasksGroupsByGroup: { method: "GET", path: "/api/orgs/{orgSlug}/tasks/groups/{group}", tag: "Tasks", summary: "GET /tasks/groups/{group}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
-  getTickets: { method: "GET", path: "/api/orgs/{orgSlug}/tickets", tag: "Tickets", summary: "GET /tickets", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postTickets: { method: "POST", path: "/api/orgs/{orgSlug}/tickets", tag: "Tickets", summary: "POST /tickets", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getTicketsByTicketId: { method: "GET", path: "/api/orgs/{orgSlug}/tickets/{ticketId}", tag: "Tickets", summary: "GET /tickets/{ticketId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchTicketsByTicketId: { method: "PATCH", path: "/api/orgs/{orgSlug}/tickets/{ticketId}", tag: "Tickets", summary: "PATCH /tickets/{ticketId}", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postTicketsByTicketIdMessages: { method: "POST", path: "/api/orgs/{orgSlug}/tickets/{ticketId}/messages", tag: "Tickets", summary: "POST /tickets/{ticketId}/messages", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   getViews: { method: "GET", path: "/api/orgs/{orgSlug}/views", tag: "Views", summary: "GET /views", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   postViews: { method: "POST", path: "/api/orgs/{orgSlug}/views", tag: "Views", summary: "POST /views", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   deleteViewsByViewId: { method: "DELETE", path: "/api/orgs/{orgSlug}/views/{viewId}", tag: "Views", summary: "DELETE /views/{viewId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
@@ -10350,6 +10291,7 @@ export const operations = {
   postWebsiteLeadAssignmentRulesByRuleId: { method: "POST", path: "/api/orgs/{orgSlug}/website-lead-assignment-rules/{ruleId}", tag: "Website Lead Assignment Rules", summary: "POST /website-lead-assignment-rules/{ruleId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postWebsiteLeadAssignmentRulesByRuleIdMove: { method: "POST", path: "/api/orgs/{orgSlug}/website-lead-assignment-rules/{ruleId}/move", tag: "Website Lead Assignment Rules", summary: "POST /website-lead-assignment-rules/{ruleId}/move", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getWhatsNew: { method: "GET", path: "/api/orgs/{orgSlug}/whats-new", tag: "Whats New", summary: "GET /whats-new", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  ingestMailgunInbound: { method: "POST", path: "/api/public/inbound/mailgun", tag: "Public", summary: "Mailgun inbound route (BCC-to-CRM). Mailgun forwards the received email as a form; the signature is verified and the organisation is found from the recipient BCC address.", contentType: "json", errors: [401,404,429], allowedRoles: null },
   ingestInboundEmail: { method: "POST", path: "/api/public/orgs/{orgSlug}/communications/inbound", tag: "Public", summary: "Inbound email (BCC-to-CRM) webhook. Authenticated by the organisation's inbound token in a header or the `token` query parameter.", contentType: "json", errors: [400,401,429], allowedRoles: null },
   submitWebsiteLead: { method: "POST", path: "/api/public/orgs/{orgSlug}/leads", tag: "Public", summary: "Website lead capture. Authenticated by the organisation's website key in `x-figbloom-api-key`; rate limited per IP and per key; optional origin allow-list, honeypot and captcha.", contentType: "json", errors: [400,401,403,413,429], allowedRoles: null },
   getSession: { method: "GET", path: "/api/session", tag: "Session", summary: "The current session: who is signed in and when it expires.", contentType: "json", errors: [401], allowedRoles: null },

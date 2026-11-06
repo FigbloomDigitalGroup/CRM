@@ -10,8 +10,7 @@ import { roleIsAvailable } from "./permissions";
  * Delivery, which can only look at won deals, does not own "Deals".
  *
  * Derived from the catalogue, so it can never drift from what the roles are
- * actually granted. A role whose feature flag is off in the organisation is
- * left out (Customer Support, until it is switched on).
+ * actually granted.
  */
 const AREA_BY_KEY = new Map(PERMISSIONS.map((p) => [p.key, p.area]));
 

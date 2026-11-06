@@ -13,7 +13,7 @@ A presentation of the project in two days (about 31 Oct). Given asked for all re
 | W1 | Build the V1.1 and V2 frontend **before** the V1.1 backend gate (G2.04, FIG-1159) and before the backend exists. | CLAUDE.md: "Do not start a stage until the previous stage's exit gate is closed"; backend-first order. | Reconcile every demo screen with the real API in M13 and M14; the gate still has to close. |
 | W2 | The new screens run on **demo data**. | Real API only. | Replace demo data with the real API (see "Demo data convention"). Nothing built on demo data counts as done for acceptance until it is wired and tested against the real API. |
 | W3 | **V1 QA (now M11) and V1 production readiness and go-live (now M12) run after the presentation sprint (M10) and before the V1.1 and V2 work.** V1 go-live is no longer 8 Nov; it is now about 10 Nov. (Given first asked for them to go last; on review they were moved up so V1 ships first.) | CLAUDE.md: V1 live by 8 Nov. | Given will confirm the dates after the presentation. The final date (22 Nov 2026) is unchanged. |
-| W4 | **FIG-1178 (Customer Support workspace)** is built although it is decision-gated ("only if approved", depends on B6.23). | Decision gate DECISIONS 2.4. | Given's approval for the demo is recorded here; the gate (build for real, or cancel with a note) is still open. |
+| W4 | **FIG-1178 (Customer Support workspace)** is built although it is decision-gated ("only if approved", depends on B6.23). | Decision gate DECISIONS 2.4. | Given's approval for the demo is recorded here. **Closed 5 Nov 2026: decision 12 removed the Customer Support role and its screens; FIG-1178 and FIG-1155 are replaced by the email-support issues (`docs/SUPPORT_BY_EMAIL.md`).** |
 | W5 | The dev sign-in chips on the frozen login page now also list the Dev Super Admin (approved by Given, 29 Oct 2026). | Hard rule 1 (frozen pages). | None; hashes in `tests/uiGuards.test.ts` were updated with a note. |
 | W6 | **Database stays plain PostgreSQL, local now, AWS later** (Michael, recorded by Given on 4 Nov 2026). A hosted-database provider that was being evaluated for M12 (FIG-1255 to FIG-1258) is dropped, with no vendor-specific services. | CLAUDE.md: production host not chosen yet; `docs/DEPLOYMENT.md` platform-agnostic. | Rewrite the four M12 database issues for PostgreSQL and AWS portability (done in Linear 4 Nov); decide the AWS services and region when the move is planned. See `docs/DECISIONS.md` section 5. |
 
@@ -67,7 +67,7 @@ The dates are my proposal to fit the fixed 22 Nov date; they are not signed off.
 | Platform mobile | FIG-1164 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | wired 5 Nov 2026 (lane W1, `src/ui/screens/platform/api.ts`, `/api/platform/*`) |
 | Platform sign-in and identity (the real API behind the console door) | FIG-1135 | n/a (backend) | identity, sessions, role and counts built 4 Nov 2026 (`docs/PLATFORM_IDENTITY.md`); the console screens still read demo data, and real sign-in waits for B6.02 |
 | Platform support access, flags and limits, announcements (PL7, PL12, PL13; platform half) | FIG-1192 | built 29 Oct 2026 (`src/ui/screens/platform/demo/`, see docs/M10_PLATFORM.md) | no: no platform API; kept in memory over the real organisations (`platform/demo/local.ts`) |
-| Customer Support workspace (tickets, detail, satisfaction, role-limited customer) | FIG-1178 | yes (`src/ui/screens/support/demo/`) | yes, 5 Nov 2026 (W6): tickets, ticket detail, role-limited customer, surveys and the Support home read `/tickets`, `/surveys`, `/support/customers`; `support/demo/` deleted; FEATURE_UNAVAILABLE explained; survey scores are 1 to 5 |
+| ~~Customer Support workspace~~ **removed 5 Nov 2026 (decision 12)** | FIG-1178 | no | (was wired in W6 and then removed, with the role and the ticket tables; tickets, ticket detail, role-limited customer, surveys and the Support home read `/tickets`, `/surveys`, `/support/customers`; `support/demo/` deleted; FEATURE_UNAVAILABLE explained; survey scores are 1 to 5) |
 | Organisation switcher (TB4) | FIG-1165 | yes (`src/ui/screens/orgside/demo/`) | yes, 5 Nov 2026 (W6): `GET /api/me/organizations`, `POST .../switch`; layout shows it when the person has more than one organisation (demo cookie `fb_demo_multiorg` removed) |
 | Suspended screen (OS1), Settings › Data requests (OS6) | FIG-1166 | yes (`orgside/demo/`; demo cookie `fb_demo_suspended`) | partly: OS1 is real since M13 (organisation status); the Settings › Data requests half (OS6) and the demo preview cookie `fb_demo_suspended` are still demo |
 | Two-step code screen (A5), enrolment, Settings › Two-step sign-in (S7#2) | FIG-1167 | yes (`orgside/demo/`, `src/app/two-step/`) | partly, 5 Nov 2026 (W6): A5 code step, enrolment (sign-in and Settings) and Settings › Two-step policy and trusted devices are on the real routes; no QR image (key and otpauth link only); the unusual-activity list is removed (no API) |
@@ -98,7 +98,7 @@ Given added a sidebar dropdown "Communication" (Mail, Chat, Video Conference) an
 1. Delete the empty "D1 · UNUSED" milestone in Linear.
 2. Wire every demo screen to the real API (M13), reconcile with the contract, close the V1.1 gate G2.04 (M14).
 3. Confirm V1 QA (M11) and go-live (M12) dates; the 8 Nov date is gone.
-4. Decide FIG-1178 and B6.23 (Customer Support) properly.
+4. ~~Decide FIG-1178 and B6.23 (Customer Support) properly.~~ Decided 5 Nov 2026: no Customer Support role; tickets go to Figbloom by email (decision 12).
 5. Re-check the Linear milestone order and dates in the UI.
 6. Open items from M9, still to decide or finish:
    - The seed and login-page changes (Customer Support dev account, Super Admin chip) are **uncommitted** until a small PR is raised.
@@ -137,7 +137,7 @@ The V1.1 backend is built and committed on `makeover/m13-backend-v11` (`bbdc883`
 | Platform admins, security, verify (FIG-1163) | FIG-1134, FIG-1140 | none |
 | Platform mobile (FIG-1164) | same routes as FIG-1160 to FIG-1163 | none |
 | Platform support access, flags, announcements (FIG-1192, platform half) | none | whole backend (support access, flags and limits, announcements) |
-| Customer Support workspace (FIG-1178) | FIG-1155 | no SLA clocks, no outbound reply email, no public survey page |
+| ~~Customer Support workspace (FIG-1178)~~ removed, decision 12 | ~~FIG-1155~~ | (none: tickets are held by the platform console) |
 | Organisation switcher (FIG-1165) | FIG-1133 | none |
 | Suspended screen, Settings data requests (FIG-1166) | FIG-1137, FIG-1141 | "notify the organisation" switch on suspend |
 | Two-step code, enrolment, Settings two-step (FIG-1167) | FIG-1134 | in-app alert notification |

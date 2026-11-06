@@ -32,7 +32,7 @@ Code lives in `src/ui/screens/home/`; styles in `home.css` and `home-overlays.cs
 | Adoption: 14 daily bars, "most used page" | Four weekly bars, members active this week, share of members active in four weeks | The signal is weekly (`adoption.weeks`). |
 | Finance KPI "Collected this year" | "Collected this month" | `paymentAggregatesFor` reports the month. |
 | Delivery KPI "Onboarding tasks due" | "My onboardings" | Tasks carry no onboarding flag on the dashboard. |
-| Customer Support home (proposed role) | Not built | The API has no support section; the role gets the explained "no dashboard for your role" panel. |
+| Customer Support home | Dropped | There is no Customer Support role any more (decision 12, 5 Nov 2026). |
 | Search results page has no tabs | A tab per kind with counts | FIG-1093 asks for type tabs. |
 | First-run checklist ticks when a step is done | Ticks when the step is opened, kept on the device | The app cannot know whether a phone installed it; the design's prototype does the same. |
 

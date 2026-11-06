@@ -57,7 +57,7 @@ Behaviour is built in: focus traps that return focus, Escape, arrow keys in menu
 
 ## Dev sign-in chips (F1.07)
 
-`src/app/_dev/`, mounted from the root layout, outside the frozen pages: a small floating panel that lists every seeded account (Management, Sales, Sales Two, Delivery, Finance, Restricted Technical, Customer Support with its flag, the Dev Super Admin) and signs in with one tap through `POST /api/dev-session`. It renders only in development with `ALLOW_DEV_ACCOUNTS=true` and with the seeded organisation present; in a production build the code is not in the bundle.
+`src/app/_dev/`, mounted from the root layout, outside the frozen pages: a small floating panel that lists every seeded account (Management, Sales, Sales Two, Delivery, Finance, Restricted Technical, the Dev Super Admin) and signs in with one tap through `POST /api/dev-session`. It renders only in development with `ALLOW_DEV_ACCOUNTS=true` and with the seeded organisation present; in a production build the code is not in the bundle.
 
 ## Decisions taken without asking (change any of them by telling me)
 

@@ -19,7 +19,7 @@ export const EXPORTED_TABLES: readonly string[] = [
   "import_session_changes", "data_subject_requests", "export_approvals", "sales_targets", "catalogue_items", "saved_views",
   "saved_view_pins", "quotes", "quote_versions", "quote_lines", "calendar_event_links", "quote_shares", "quote_events", "web_forms",
   "web_form_submissions", "approval_requests", "follow_up_sequences", "follow_up_steps", "follow_up_enrollments", "follow_up_runs",
-  "pipelines", "pipeline_services", "stage_rules", "tickets", "ticket_messages", "satisfaction_surveys",
+  "pipelines", "pipeline_services", "stage_rules",
   // Chat: only channels that are public to the whole organisation, and what belongs to them.
   "chat_channels", "chat_channel_members", "chat_messages", "chat_message_mentions", "chat_message_attachments", "chat_reactions",
 ];

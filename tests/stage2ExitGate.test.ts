@@ -30,7 +30,7 @@ import { createTag, changeTags } from "../src/services/tagService";
 import { createTask, getMyWork } from "../src/services/taskService";
 import { createTestContext, createTestOrganization, getLeadStatusId, getPipelineStageId } from "./helpers/fixtures";
 
-const ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"] as const;
+const ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"] as const;
 const SENTINEL = 8123456;
 
 async function everyone() {

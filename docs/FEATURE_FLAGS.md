@@ -28,7 +28,6 @@ Code: `src/lib/featureFlags.ts` (definitions and resolution, no database), `src/
 | `assistant.enabled` | V1.1 | off | The Ask Figbloom assistant |
 | `organisation.switcher` | V1.1 | on | The multi-organisation switcher |
 | `quotes.enabled` | V1.1 | on | Quotes, approvals, forecast |
-| `customer_support.role` | V1.1 | off | The Customer Support role (decision-gated) |
 
 ## Gating a route or service
 
@@ -71,6 +70,6 @@ Each departure is effective only while both the umbrella toggle and its own togg
 
 Where a departure applies, the record payload carries `provisional: true` next to `scope` so the UI can show the "Provisional" banner; the decision reference lives with the definition in `src/auth/permissions.ts` (`DEPARTURES`).
 
-## Customer Support (B1.01)
+## Customer Support (removed)
 
-`customer_support.role` gates the sixth role. While it is off, Customer Support cannot be invited or assigned (a validation error names the flag), and a member who somehow holds it carries no permissions. Turning it on needs the organization to be on V1.1 or later.
+The `customer_support.role` flag and the role it gated were removed on 5 Nov 2026 (decision 12, `docs/DECISIONS.md` 5.0): support tickets are raised by email to Figbloom, see `docs/SUPPORT_BY_EMAIL.md`. The flag-gated role mechanism (`requiredFeature` on a role) stays in the code for a future role, and no role uses it today.

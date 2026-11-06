@@ -122,7 +122,7 @@ export function threeSixty({ role, archived = false, stateKey = "ACTIVE_CUSTOMER
           ? ok({ totals: { invoiced: "980000", received: "400000", outstanding: "580000", overdueInvoices: 1 }, items: [{ id: "i-1", number: "INV-1042", dealId: "d-won", status: "OVERDUE", amount: "580000", currency: "KES", paid: "0", balance: "580000", dueOn: "2026-10-10T00:00:00.000Z" }], followUpNotes: [{ dealId: "d-won", note: "Chase after the 30th", ownerMembershipId: "m-mg", nextOn: "2026-10-30T00:00:00.000Z" }] })
           : denied("Payments are visible to Finance and Management only.", ["Finance", "Management"], role === "delivery" ? "Delivery" : "Sales"),
       nextFollowUp: role === "finance" ? ok({ next: null }) : ok({ next: { source: "TASK", id: "t-1", title: "Send revised quote", at: "2026-10-27T09:00:00.000Z", overdue: false } }, "own"),
-      tickets: { status: "not_available" as const, reason: "Tickets and the satisfaction survey arrive with the Customer Support role (V1.1)." },
+      tickets: { status: "not_available" as const, reason: "Support tickets are raised by email to Figbloom support and are not held in the CRM." },
     },
   };
 }

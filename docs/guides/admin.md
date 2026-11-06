@@ -15,7 +15,7 @@ Open Settings from the sidebar. Each section is a tab on the left (on a phone, a
 | Remove completely | Refused while the person owns open records. The dialog lists them and lets you hand them over, then remove. |
 | Locked out | **Unlock** on their row. |
 
-You cannot act on your own membership. Customer Support is not offered in the role list (it is switched off). Someone who already has it keeps it.
+You cannot act on your own membership. There are five roles; there is no Customer Support role.
 
 ### Who sees what
 

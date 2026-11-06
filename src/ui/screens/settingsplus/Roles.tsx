@@ -50,7 +50,7 @@ export function RolesEditor() {
           <thead>
             <tr>
               <th scope="col">Field / permission</th>
-              {ROLE_KEYS.map((r) => <th key={r} scope="col">{r === "support" ? "SUPPORT*" : r.slice(0, 8).toUpperCase()}</th>)}
+              {ROLE_KEYS.map((r) => <th key={r} scope="col">{r.slice(0, 8).toUpperCase()}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -95,7 +95,7 @@ export function RolesEditor() {
         </dl>
       </section>
       <p className="fb-set-muted">
-        Custom roles start from one of the five standard roles. Customer Support is shown as a proposed sixth role. Platform Super Admins are not members of this organisation and can’t be given any of these permissions; Figbloom Support only sees inside through an approved, time-limited request. Every change is recorded in the audit log.
+        Custom roles start from one of the five standard roles. Platform Super Admins are not members of this organisation and can’t be given any of these permissions; Figbloom Support only sees inside through an approved, time-limited request. Every change is recorded in the audit log.
       </p>
     </EditorFrame>
   );

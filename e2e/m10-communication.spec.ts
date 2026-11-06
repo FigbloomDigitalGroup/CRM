@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 /**
  * M10, F6.20 to F6.23 (FIG-1378 to FIG-1381): the Communication dropdown, Chat, Mail and Video Conference on demo data. Needs the demo-screens
- * server (see m10-support-orgside.spec.ts); otherwise skipped, not failed. The dropdown and the move of Conversations are also checked on the
+ * server (see m10-orgside.spec.ts); otherwise skipped, not failed. The dropdown and the move of Conversations are also checked on the
  * normal server in ui-shell.spec.ts.
  */
 const demoServer = process.env.E2E_DEMO_SCREENS === "true";

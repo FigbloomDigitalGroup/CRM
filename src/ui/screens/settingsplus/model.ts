@@ -8,9 +8,9 @@ export type Access = "Edit" | "Own" | "View" | "Hidden";
 export const ACCESS_CYCLE: Access[] = ["Edit", "Own", "View", "Hidden"];
 export const nextAccess = (a: Access): Access => ACCESS_CYCLE[(ACCESS_CYCLE.indexOf(a) + 1) % ACCESS_CYCLE.length]!;
 
-export const ROLE_KEYS = ["management", "sales", "delivery", "finance", "technical", "support"] as const;
+export const ROLE_KEYS = ["management", "sales", "delivery", "finance", "technical"] as const;
 export type RoleKey = (typeof ROLE_KEYS)[number];
-export const ROLE_LABELS: Record<RoleKey, string> = { management: "Management", sales: "Sales", delivery: "Delivery", finance: "Finance", technical: "Restricted Technical", support: "Customer Support (proposed)" };
+export const ROLE_LABELS: Record<RoleKey, string> = { management: "Management", sales: "Sales", delivery: "Delivery", finance: "Finance", technical: "Restricted Technical" };
 
 export interface FieldRow {
   key: string;

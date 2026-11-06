@@ -97,9 +97,9 @@ describe("guards", () => {
 });
 
 describe("accounts and organizations", () => {
-  it("creates the eight dev accounts (seven tenant users and the Dev Super Admin) with the right roles and the shared dev password", async () => {
+  it("creates the seven dev accounts (six tenant users and the Dev Super Admin) with the right roles and the shared dev password", async () => {
     expect(DEV_USERS.map((u) => u.roleKey).sort()).toEqual(
-      ["CUSTOMER_SUPPORT", "DELIVERY", "FINANCE", "MANAGEMENT", "RESTRICTED_TECHNICAL", "SALES", "SALES"],
+      ["DELIVERY", "FINANCE", "MANAGEMENT", "RESTRICTED_TECHNICAL", "SALES", "SALES"],
     );
     expect(await adminDb.platformIdentity.count({ where: { isDev: true } })).toBe(1);
     for (const dev of DEV_USERS) {

@@ -25,7 +25,7 @@ export interface DataSourceInput {
 }
 
 export const DEFAULT_MOCK_URL = "http://localhost:4010";
-export const MOCK_ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"] as const;
+export const MOCK_ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"] as const;
 
 export function resolveDataSource(input: DataSourceInput): DataSource {
   const real: DataSource = { kind: "real", baseUrl: "", mockRole: null };

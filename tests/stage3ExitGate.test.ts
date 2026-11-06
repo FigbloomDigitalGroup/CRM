@@ -56,7 +56,7 @@ import { setLifecycleStateManually } from "../src/services/lifecycleService";
 import { createTestContext, createTestOrganization, getLeadStatusId, getPipelineStageId, getServiceId } from "./helpers/fixtures";
 import { createCompanyRow, createWonDeal, day, daysFrom } from "./helpers/stage3";
 
-const ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"] as const;
+const ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"] as const;
 const DEAL_VALUE = 8123456;
 const INVOICE_AMOUNT = 5551234;
 const INVOICE_NUMBER = "GATE-INV-7741";
