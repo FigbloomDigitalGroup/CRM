@@ -20,7 +20,6 @@ const BLOCKED: Record<string, string[]> = {
   delivery: ["leads", "renewals", "payments", "settings"],
   finance: ["leads", "handoffs", "tasks", "conversations", "renewals", "settings"],
   technical: ["leads", "deals", "handoffs", "companies", "contacts", "renewals", "payments", "reports", "settings"],
-  support: ["leads", "deals", "handoffs", "renewals", "payments", "settings"],
 };
 /** Screens skipped in the refusal comparison, with the defect that explains each. */
 const KNOWN_DEFECT: Record<string, string[]> = {};

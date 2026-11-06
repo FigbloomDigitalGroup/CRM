@@ -13,7 +13,6 @@ export const ROLES = [
   { key: "delivery", label: "Delivery", email: "dev.delivery@figbloom.local" },
   { key: "finance", label: "Finance", email: "dev.finance@figbloom.local" },
   { key: "technical", label: "Restricted Technical", email: "dev.tech@figbloom.local" },
-  { key: "support", label: "Customer Support", email: "dev.support@figbloom.local" },
 ] as const;
 export type RoleKey = (typeof ROLES)[number]["key"];
 
