@@ -103,7 +103,7 @@ describe("Customer 360 for Management", () => {
     expect(payments.items).toEqual([expect.objectContaining({ number: "C360-1", status: "OVERDUE", balance: "70000.00", daysOverdue: 9 })]);
     expect(payments.followUpNotes).toEqual([expect.objectContaining({ note: "Chase the balance" })]);
 
-    expect(section(r, "tickets")).toEqual({ status: "not_available", reason: expect.stringContaining("V1.1") });
+    expect(section(r, "tickets")).toEqual({ status: "not_available", reason: expect.stringContaining("raised by email") });
     expect(data(r, "nextFollowUp").next).toMatchObject({ source: "TASK", title: "Their private task" });
     expect(data(r, "comments").comments).toHaveLength(1);
     expect(data(r, "attachments").items).toEqual([]);

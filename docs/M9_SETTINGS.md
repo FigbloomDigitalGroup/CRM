@@ -51,7 +51,7 @@ Seven steps, as the API defines them (`SOURCE, UPLOAD, MAP, VALIDATE, DRY_RUN, I
 4. **Lockout and password length are stated, not editable.** The design has a lockout checkbox and a passwords checkbox; the API has only the session lifetime (`/security/session-policy`). Lockout (5 wrong passwords, 15 minutes) and the 10-character minimum are fixed in V1 and shown as a fact.
 5. **Custom fields have no per-role visibility switch.** FIG-1109 asks for "visibility per role"; the API has no such field (a field is shown to whoever may see the record). The column and control are not invented; this needs a backend decision if wanted (suggest V2's field-access editor, B7.06).
 6. **Reordering uses up and down buttons**, not drag only, so it works by keyboard and screen reader (the design's grip is decorative).
-7. **The Customer Support role is not offered** in the invite or role lists (proposed and behind a flag); a person who already has it keeps it.
+7. **There is no Customer Support role** (removed 5 Nov 2026, decision 12), so the invite and role lists offer the five standard roles.
 8. **The audit log shows the API's masked values as they come** (blank money for a role without `deals.view.value`, no payment records without payments access); the screen does no masking of its own.
 9. **Sections that belong to V1.1 and V2** (catalogue, pipelines and stage rules, sequences, web forms, approval rules, email and calendar, AI assistant, two-step sign-in, roles and field access, developers, data requests, support access history) are not in the list; they arrive with their releases.
 

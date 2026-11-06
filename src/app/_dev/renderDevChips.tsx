@@ -3,7 +3,7 @@ import { adminDb } from "@/db/adminClient";
 import { DevChipsPanel, type DevChipAccount } from "./DevChipsPanel";
 
 /** Order the chips the way the design lists the accounts. */
-const ORDER = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"];
+const ORDER = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"];
 
 export async function renderDevChips() {
   const preview = !devAccountsAllowed() && previewChipsAllowed();
@@ -26,7 +26,7 @@ export async function renderDevChips() {
         email: u.email,
         name: u.name,
         roleName: role?.name ?? "No membership",
-        note: role?.requiredFeature ? `behind flag ${role.requiredFeature}` : null,
+        note: null,
         sort: role ? ORDER.indexOf(role.key) : ORDER.length,
       };
     })

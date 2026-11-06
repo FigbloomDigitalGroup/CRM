@@ -92,7 +92,7 @@ function ExportRights({ o }: { o: Overview }) {
       <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
         <legend className="fb-label">Roles that may export</legend>
         <div className="fb-set-days" style={{ marginTop: 8 }}>
-          {ROLES.filter((r) => r.key !== "CUSTOMER_SUPPORT").map((r) => (
+          {ROLES.map((r) => (
             <Checkbox key={r.key} label={r.name} checked={roles.includes(r.key)} disabled={r.key === "MANAGEMENT"} onChange={(e) => setRoles(e.target.checked ? [...roles, r.key] : roles.filter((k) => k !== r.key))} />
           ))}
         </div>

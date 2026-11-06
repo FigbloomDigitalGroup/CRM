@@ -5,8 +5,8 @@ import { exampleFor, type JsonSchema } from "./jsonSchema";
  * The mock server (G1.06): answers every operation in the OpenAPI document, so a screen can be built with no database and no
  * running backend.
  *
- *  - The caller's role comes from the `x-mock-role` header (MANAGEMENT, SALES, DELIVERY, FINANCE, RESTRICTED_TECHNICAL,
- *    CUSTOMER_SUPPORT; `none` means signed out). Default MANAGEMENT.
+ *  - The caller's role comes from the `x-mock-role` header (MANAGEMENT, SALES, DELIVERY, FINANCE, RESTRICTED_TECHNICAL;
+ *    `none` means signed out). Default MANAGEMENT.
  *  - A role the permission matrix refuses gets the real explained 403 envelope; signed out gets 401.
  *  - Otherwise the answer is the recorded example for that role (the seeded organisation's real response, masked the way the real
  *    API masks it), falling back to the shared example, then to one built from the schema.
@@ -19,7 +19,7 @@ export interface MockOptions {
   examples: Record<string, Record<string, unknown>>;
 }
 
-const ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"];
+const ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"];
 
 /** The real explained denial names roles the way people do ("Restricted Technical"), not by key; the mock does the same so screens show the right words. */
 const ROLE_LABEL: Record<string, string> = {
@@ -28,7 +28,6 @@ const ROLE_LABEL: Record<string, string> = {
   DELIVERY: "Delivery",
   FINANCE: "Finance",
   RESTRICTED_TECHNICAL: "Restricted Technical",
-  CUSTOMER_SUPPORT: "Customer Support",
 };
 const labelOf = (key: string) => ROLE_LABEL[key] ?? key;
 

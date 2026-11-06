@@ -2177,7 +2177,9 @@ Tests: `tests/chat.test.ts`, `tests/chatRoutes.test.ts`, `tests/chatPrivacy.test
 - **Known gaps:** the switcher component (`OrgSwitcher.tsx`) is not wired; FIG-1132 (P1.10) still open.
 - **Tests:** `tests/organizationSwitcher.test.ts`.
 
-## Stage 13 (M13): FIG-1155 B6.23 Customer Support tickets and satisfaction surveys
+## Stage 13 (M13): FIG-1155 B6.23 Customer Support tickets and satisfaction surveys (SUPERSEDED, see the end of this section)
+
+> **Superseded 5 Nov 2026 (decision 12).** Michael decided there is no Customer Support role: tickets go to the Figbloom platform console and tenants raise them by email through Resend. Everything below was removed (role, `tickets.manage`, the flag, the dev account, three tables, routes, screens). Replacement: `docs/SUPPORT_BY_EMAIL.md`, `POST /api/orgs/{org}/support-requests`, migrations `20261120090000_remove_customer_support` and `20261120100000_support_request_rate_limit`. Kept below as the record of what was built.
 
 - **Built:** tickets with thread, owner, status and priority; satisfaction surveys by emailed token link with a public answer route; a role-limited customer view; three RLS tables; gate on `customer_support.role` and `tickets.manage` (now V1.1). Doc: `docs/SUPPORT_TICKETS.md`.
 - **Decisions taken without being asked (for Given):** `tickets.manage` release minimum lowered from V2 to V1.1; shared support queue; survey only for resolved tickets; staff-recorded replies only. If Michael does not approve the role, leave the toggle off (the issue says to cancel it then).
@@ -2220,3 +2222,11 @@ New routes are listed in NOT_IN_V1_CONTRACT. `tests/apiWalk.test.ts` and its mat
 - **Checks done by reading code:** `docs/M13_CLOSEOUT.md` (scheduling check and integration check). Gaps found: no configured scheduler call for `/api/cron/jobs` and `/api/cron/platform-maintenance`; the quote send uses the organisation SMTP, not the connected mailbox; `mail.use` and `meetings.schedule` are seeded but not read; the assistant default model is still Opus; several new environment variables are missing from `docs/DEPLOYMENT.md`.
 - **Decisions:** ten decisions taken on Given's behalf are in `docs/DECISIONS.md` section 5 (all reversible), with a table of the lane decisions above (5.1).
 - **Not run:** the full suite, because the database was down. The `apiWalk` snapshots still need regenerating (`UPDATE_API_SNAPSHOTS=1`) once all lanes are in.
+
+## Stage 13 (M13): FIG-806 inbound email provider (Mailgun)
+
+- **Decision (Given, reversible):** Mailgun routes. Mailgun signs every webhook (`HMAC-SHA256(key, timestamp + token)`, hex); Postmark and SendGrid inbound have no native signature.
+- **Built:** `POST /api/public/inbound/mailgun` (new, public, no session). Adapter and signature check are isolated in `src/integrations/inbound/mailgun.ts`; another provider is a sibling file plus a sibling route. Signature compare is constant time, timestamps older (or newer) than 15 minutes are refused, a token is accepted once (recorded in `auth_rate_limit_attempts` with action `INBOUND_EMAIL`, scope `mailgun-token`, only after a successful ingest so Mailgun's retry of a failed delivery works; no migration). All signature failures are one 401 with the standard envelope. Unset `MAILGUN_INBOUND_SIGNING_KEY` refuses everything in every environment.
+- **Address:** `<slug>+<token>@INBOUND_EMAIL_DOMAIN` (`src/auth/inboundBccAddress.ts`). Token = HMAC-SHA256 of the organisation id with `INBOUND_EMAIL_ADDRESS_SECRET`, 24 hex characters. No new column; changing the secret changes every address. An unknown slug, wrong token, other domain or inactive organisation all give the same 404. Shown read-only (with Copy) to Management in Settings, Inbound email, from the existing `GET /integrations/inbound-email-key` response (new field `bccAddress`).
+- **Ingestion** reuses FIG-598/FIG-1053 logic (`ingestInboundEmailForOrganization`): known sender goes on the contact's timeline, unknown goes to Needs linking, same Message-Id stored once. Attachments are not stored; the summary notes how many there were.
+- **Not done (needs Given):** the real provider account, DNS/MX and the production test email: runbook in `docs/DEPLOYMENT.md`, "Inbound email provider". Tests: `tests/inboundMailgun.test.ts`.

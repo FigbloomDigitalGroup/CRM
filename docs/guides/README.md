@@ -14,7 +14,7 @@ Plain-language guides for the people who use the CRM. They describe V1, what a p
 | Setting up the CRM for the first time | [First-run checklist](first-run-checklist.md) |
 | Planning training | [Training plan](training-plan.md) |
 
-Customer Support is a proposed role, switched off by default. It has no guide until it is switched on for an organisation.
+There is no Customer Support role. A member who needs help uses Help, then Contact support, which sends an email to Figbloom support (`docs/SUPPORT_BY_EMAIL.md`).
 
 ## Rules every guide follows
 

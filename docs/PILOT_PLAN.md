@@ -32,7 +32,7 @@ A green pilot therefore means "no blocker found in a few days with real users". 
 | Delivery (1 to 2) | | Handoffs, onboarding tasks | |
 | Finance (1) | | Payments and invoices (no real card or M-Pesa data into the CRM) | |
 | Restricted Technical (1) | | Assigned tasks and requirements only | |
-| Customer Support (0 or 1) | | Only if the `customer_support.role` flag is on for the pilot. The role is proposed and flagged off by default (DECISIONS 2.4); leave out unless Given turns it on | |
+| Customer Support | | Not a role any more: there is no Customer Support role (decision 12, 5 Nov 2026). Pilot members raise support requests by email from Help, Contact support (`docs/SUPPORT_BY_EMAIL.md`) | |
 
 Pilot lead (names and answers the daily triage): ______. Engineering contact: ______. Decision makers: Given and Michael.
 
@@ -228,7 +228,6 @@ Prepared by: __   Date: __
    Delivery |  |  |  |
    Finance |  |  |  |
    Restricted Technical |  |  |  |
-   Customer Support (if used) |  |  |  |
 
 2. Adoption (window __ days; counts from scripts/adoption-report.ts, attach the raw output)
    Measure | Threshold (FIG-444) | Actual | Met / Not met / Waived | Note
@@ -264,7 +263,7 @@ Prepared by: __   Date: __
 
 ## 10. Decisions and actions for people
 
-- **Given:** name the pilot group (section 2); confirm pilot dates against the real UAT end; decide staging or production for the pilot; decide whether Customer Support joins; say whether D2 (adoption screen) should be built or the SQL and script are enough for V1 (the usage summary has no screen today).
+- **Given:** name the pilot group (section 2); confirm pilot dates against the real UAT end; decide staging or production for the pilot; say whether D2 (adoption screen) should be built or the SQL and script are enough for V1 (the usage summary has no screen today).
 - **Given and Michael:** which of A7 and the 14-day windows are waived, and the go / no-go (section 8).
 - **Pilot users:** use the CRM for real work on the pilot days and report problems the same day.
 - **Engineering:** staging with the UAT seed, pilot accounts through invites, the report run each morning, the isolation and authorisation tests on the pilot build.

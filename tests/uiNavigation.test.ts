@@ -62,24 +62,12 @@ describe("sidebar navigation per role", () => {
     expect(menu("RESTRICTED_TECHNICAL")).toEqual(["Overview: My work", "Sales workspace: Tasks, Calendar", "Communication: Conversations, Chat", "Insights & settings: Preferences"]);
   });
 
-  it("Customer Support (behind its flag) sees customers and tasks, no pipeline", () => {
-    expect(menu("CUSTOMER_SUPPORT")).toEqual([
-      "Overview: Dashboard",
-      "Sales workspace: Tasks",
-      "Customers: Companies, Contacts",
-      "Communication: Conversations, Mail, Chat, Video Conference",
-      "Insights & settings: Forecast & targets, My metrics, Preferences",
-    ]);
-  });
-
   it("Forecast and Approvals are wired to the real API (no longer demo-only): they follow their permission keys with or without demo screens, and a role without the keys sees neither", () => {
     const labels = (role: string, demoScreens?: boolean) => buildNav({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1", demoScreens }).flatMap((s) => s.items.map((i) => i.label));
     expect(labels("MANAGEMENT")).toEqual(labels("MANAGEMENT", true));
     expect(labels("MANAGEMENT")).toContain("Forecast & targets");
     expect(labels("MANAGEMENT")).toContain("Approvals");
-    for (const role of ["CUSTOMER_SUPPORT"]) {
-      expect(labels(role), role).not.toContain("Approvals");
-    }
+    expect(labels("SALES")).not.toContain("Approvals");
   });
 
   it("Conversations lives in the Communication group only, never also under Customers (F6.20)", () => {

@@ -1883,37 +1883,6 @@
       }
     }
   },
-  "GET /api/orgs/{orgSlug}/surveys": {
-    "query": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "properties": {
-        "companyId": {
-          "type": "string"
-        },
-        "limit": {
-          "type": "string",
-          "pattern": "^\\d+$"
-        },
-        "cursor": {
-          "type": "string",
-          "maxLength": 64
-        },
-        "sort": {
-          "type": "string",
-          "maxLength": 64
-        },
-        "page": {
-          "type": "string",
-          "pattern": "^\\d+$"
-        },
-        "pageSize": {
-          "type": "string",
-          "pattern": "^\\d+$"
-        }
-      }
-    }
-  },
   "GET /api/orgs/{orgSlug}/tags": {
     "query": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -2061,49 +2030,6 @@
         "q": {
           "type": "string",
           "maxLength": 100
-        },
-        "limit": {
-          "type": "string",
-          "pattern": "^\\d+$"
-        },
-        "cursor": {
-          "type": "string",
-          "maxLength": 64
-        },
-        "sort": {
-          "type": "string",
-          "maxLength": 64
-        },
-        "page": {
-          "type": "string",
-          "pattern": "^\\d+$"
-        },
-        "pageSize": {
-          "type": "string",
-          "pattern": "^\\d+$"
-        }
-      }
-    }
-  },
-  "GET /api/orgs/{orgSlug}/tickets": {
-    "query": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "properties": {
-        "status": {
-          "type": "string"
-        },
-        "priority": {
-          "type": "string"
-        },
-        "ownerMembershipId": {
-          "type": "string"
-        },
-        "companyId": {
-          "type": "string"
-        },
-        "q": {
-          "type": "string"
         },
         "limit": {
           "type": "string",
@@ -3555,30 +3481,6 @@
           ]
         }
       }
-    }
-  },
-  "PATCH /api/orgs/{orgSlug}/tickets/{ticketId}": {
-    "body": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "properties": {
-        "title": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "priority": {
-          "type": "string"
-        },
-        "ownerMembershipId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false
     }
   },
   "PATCH /api/orgs/{orgSlug}/views/{viewId}": {
@@ -6677,30 +6579,6 @@
       "additionalProperties": false
     }
   },
-  "POST /api/orgs/{orgSlug}/surveys": {
-    "body": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "properties": {
-        "ticketId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "companyId": {
-          "type": "string"
-        },
-        "contactId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "additionalProperties": false
-    }
-  },
   "POST /api/orgs/{orgSlug}/sync/batch": {
     "body": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -6891,71 +6769,6 @@
         }
       },
       "required": [
-        "body"
-      ],
-      "additionalProperties": false
-    }
-  },
-  "POST /api/orgs/{orgSlug}/tickets": {
-    "body": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "properties": {
-        "companyId": {
-          "type": "string"
-        },
-        "contactId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "title": {
-          "type": "string"
-        },
-        "description": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "priority": {
-          "type": "string"
-        },
-        "ownerMembershipId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "companyId",
-        "title"
-      ],
-      "additionalProperties": false
-    }
-  },
-  "POST /api/orgs/{orgSlug}/tickets/{ticketId}/messages": {
-    "body": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
-      "type": "object",
-      "properties": {
-        "kind": {
-          "type": "string"
-        },
-        "body": {
-          "type": "string"
-        },
-        "authorLabel": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "kind",
         "body"
       ],
       "additionalProperties": false

@@ -3,7 +3,7 @@
  * (tests/apiWalk.test.ts) records what every route does; these lists say what it is allowed to do, so a route that opens an area to
  * the wrong role fails even if the generated matrix is regenerated to match it. They follow the signed permission model
  * (prisma/seedData.ts ROLE_PERMISSIONS, docs/DECISIONS.md): Management administers; Sales works its own leads and deals; Delivery
- * sees won deals and customer context; Finance sees payments; Restricted Technical sees its own tasks; Customer Support is off in V1.
+ * sees won deals and customer context; Finance sees payments; Restricted Technical sees its own tasks.
  *
  * Patterns match the key "METHOD /api/orgs/{orgSlug}/path". `{x}` stands for any one path parameter.
  */
@@ -133,7 +133,7 @@ const CUSTOMER_CONTEXT_READ: RegExp[] = [
   under("/reports/v2/my-metrics"),
 ];
 
-type Worker = Exclude<"SALES" | "DELIVERY" | "FINANCE" | "RESTRICTED_TECHNICAL" | "CUSTOMER_SUPPORT", "MANAGEMENT">;
+type Worker = Exclude<"SALES" | "DELIVERY" | "FINANCE" | "RESTRICTED_TECHNICAL", "MANAGEMENT">;
 
 export const ROLE_FAMILIES: Record<Worker, RegExp[]> = {
   SALES: [
@@ -205,8 +205,6 @@ export const ROLE_FAMILIES: Record<Worker, RegExp[]> = {
     key("/conversations/{conversationId}"),
     key("/my-work"),
   ],
-  // Off in V1 (customer_support.role): a person in this role keeps only what every member has.
-  CUSTOMER_SUPPORT: [...SELF_SERVICE],
 };
 
 /** Routes Management is deliberately kept out of, with the reason. */

@@ -1,12 +1,14 @@
 "use client";
 
 import { HelpCircle, Lightbulb, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ContactSupportDialog } from "./ContactSupportDialog";
 import { useHelpContent } from "./helpApi";
 
 /** The Help panel (X3): tips for the page you are on, what's new and the shortcuts. Escape closes it and focus goes back. */
 export function HelpPanel({ open, onClose, pathname, orgSlug }: { open: boolean; onClose: () => void; pathname: string; orgSlug: string }) {
   const ref = useRef<HTMLElement>(null);
+  const [contacting, setContacting] = useState(false);
   useEffect(() => {
     if (!open) return;
     const opener = document.activeElement as HTMLElement | null;
@@ -54,6 +56,10 @@ export function HelpPanel({ open, onClose, pathname, orgSlug }: { open: boolean;
       <p className="fb-help-panel__more">
         <a href={`/o/${orgSlug}/help`}>Open the Help centre</a> · <a href={`/o/${orgSlug}/help/whats-new`}>All that’s new</a>
       </p>
+      <p className="fb-help-panel__more">
+        Need a person? <button type="button" className="fb-help-panel__contact" onClick={() => setContacting(true)}>Contact support</button>
+      </p>
+      {contacting ? <ContactSupportDialog onClose={() => setContacting(false)} /> : null}
     </aside>
   );
 }

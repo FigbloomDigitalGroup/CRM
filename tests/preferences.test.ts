@@ -107,7 +107,7 @@ describe("reading and following the organisation's look", () => {
   it("returns the same shape for every role", async () => {
     const org = await createTestOrganization("PrefShape");
     const shapes: string[] = [];
-    for (const role of ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"]) {
+    for (const role of ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"]) {
       const ctx = await createTestContext(org.id, role, `shape.${role.toLowerCase()}`);
       current.ctx = ctx;
       const res = await prefsRoute.GET(new Request("http://x"), params);

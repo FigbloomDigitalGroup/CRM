@@ -240,7 +240,7 @@
       "name": "Support"
     },
     {
-      "name": "Surveys"
+      "name": "Support Requests"
     },
     {
       "name": "Sync"
@@ -250,9 +250,6 @@
     },
     {
       "name": "Tasks"
-    },
-    {
-      "name": "Tickets"
     },
     {
       "name": "Views"
@@ -2235,8 +2232,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -2451,8 +2447,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -2542,8 +2537,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -2702,8 +2696,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -2876,8 +2869,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -2975,8 +2967,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -3074,8 +3065,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -3206,8 +3196,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -3297,8 +3286,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -3388,8 +3376,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -3487,8 +3474,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -3586,8 +3572,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -3685,8 +3670,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -3776,8 +3760,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "put": {
@@ -3865,8 +3848,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -3978,8 +3960,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -4159,16 +4140,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "H",
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         }
       }
     },
@@ -4319,8 +4298,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -4461,8 +4439,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -4486,8 +4463,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -4697,8 +4673,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -4840,8 +4815,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -4926,8 +4900,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -5028,8 +5001,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -5130,8 +5102,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -5279,8 +5250,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -5676,16 +5646,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         }
       },
       "post": {
@@ -5876,8 +5844,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "A"
         }
       }
     },
@@ -6046,8 +6013,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -6206,8 +6172,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -6305,8 +6270,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -6469,8 +6433,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -6627,8 +6590,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -6788,8 +6750,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -6887,8 +6848,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "get": {
@@ -6984,8 +6944,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -7123,8 +7082,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -7222,8 +7180,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -7321,8 +7278,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -7420,8 +7376,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -7552,8 +7507,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -7659,8 +7613,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -7795,8 +7748,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -7956,8 +7908,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -8063,8 +8014,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -8178,8 +8128,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -8305,8 +8254,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -8442,8 +8390,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -8570,8 +8517,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -8669,8 +8615,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -8760,8 +8705,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -8882,8 +8826,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -9037,8 +8980,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -9157,8 +9099,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -9248,8 +9189,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -9339,8 +9279,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -9364,8 +9303,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -9652,8 +9590,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -9749,8 +9686,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -9914,8 +9850,7 @@
           "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -10005,8 +9940,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -10094,8 +10028,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -10193,8 +10126,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "get": {
@@ -10290,8 +10222,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -10387,8 +10318,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -10486,8 +10416,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -10583,8 +10512,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -10682,8 +10610,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -10773,8 +10700,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -10864,8 +10790,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -10955,8 +10880,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -11054,8 +10978,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -11151,8 +11074,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -11412,8 +11334,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -11807,8 +11728,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -12260,8 +12180,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -12622,8 +12541,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -12901,8 +12819,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -12929,8 +12846,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -13401,8 +13317,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -13517,8 +13432,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -13671,8 +13585,7 @@
           "SALES": "V",
           "DELIVERY": "V",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -13791,8 +13704,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -13983,8 +13895,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -14118,8 +14029,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -14233,8 +14143,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -14346,8 +14255,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -14494,8 +14402,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -14522,8 +14429,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -14675,8 +14581,7 @@
           "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -14820,8 +14725,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -15051,8 +14955,7 @@
           "SALES": "H",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -15153,8 +15056,7 @@
           "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -15269,8 +15171,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -15426,8 +15327,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -15573,8 +15473,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -15601,8 +15500,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -15839,8 +15737,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -16052,8 +15949,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -16233,8 +16129,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -16332,8 +16227,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -16576,8 +16470,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -16727,8 +16620,7 @@
           "SALES": "H",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -17243,8 +17135,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -17522,8 +17413,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -17902,8 +17792,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -18169,8 +18058,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -18403,8 +18291,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -18519,8 +18406,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -18673,8 +18559,7 @@
           "SALES": "V",
           "DELIVERY": "V",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -18793,8 +18678,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -18985,8 +18869,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -19120,8 +19003,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -19235,8 +19117,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -19348,8 +19229,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -19493,8 +19373,7 @@
           "SALES": "H",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -19595,8 +19474,7 @@
           "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -19711,8 +19589,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -19868,8 +19745,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -19896,8 +19772,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -20162,8 +20037,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -20397,8 +20271,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -20578,8 +20451,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -20606,8 +20478,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -20917,8 +20788,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -21136,8 +21006,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         },
         "parameters": [
           {
@@ -21297,8 +21166,7 @@
           "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -21450,8 +21318,7 @@
           "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -21653,8 +21520,7 @@
           "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -21864,8 +21730,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -22309,8 +22174,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -22509,8 +22373,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -22760,8 +22623,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -22872,8 +22734,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -22894,16 +22755,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -23046,8 +22905,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -23173,8 +23031,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -23259,8 +23116,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -23373,8 +23229,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -23517,8 +23372,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -23621,8 +23475,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -23819,8 +23672,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -24006,8 +23858,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -24141,8 +23992,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -24276,8 +24126,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -24421,8 +24270,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -24532,8 +24380,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -24692,8 +24539,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -24863,8 +24709,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -25060,8 +24905,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -25262,8 +25106,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -25407,8 +25250,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -25552,8 +25394,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -25652,16 +25493,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -25901,16 +25740,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "H",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         },
         "parameters": [
           {
@@ -26079,16 +25916,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "H",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         },
         "parameters": [
           {
@@ -26257,16 +26092,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "H",
           "SALES": "H",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         },
         "parameters": [
           {
@@ -26474,8 +26307,7 @@
           "SALES": "V",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -26626,8 +26458,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -26823,8 +26654,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -27479,8 +27309,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -27958,8 +27787,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -27986,8 +27814,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -29167,8 +28994,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -29722,8 +29548,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -30275,8 +30100,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -30391,8 +30215,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -30546,8 +30369,7 @@
           "SALES": "V",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -30666,8 +30488,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -30858,8 +30679,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -30993,8 +30813,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -31108,8 +30927,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -31221,8 +31039,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -31334,8 +31151,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -31509,8 +31325,7 @@
           "SALES": "H",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -31611,8 +31426,7 @@
           "SALES": "D",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -31802,8 +31616,7 @@
           "SALES": "V",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -32040,8 +31853,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -32066,8 +31878,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "V",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -32192,8 +32003,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "V",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -32343,8 +32153,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "V",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -32605,8 +32414,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -32821,8 +32629,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -33039,8 +32846,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -33138,8 +32944,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -33316,8 +33121,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -33448,8 +33252,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -33552,8 +33355,7 @@
           "SALES": "V",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -33668,8 +33470,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -33827,8 +33628,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -34061,8 +33861,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -34156,8 +33955,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -34385,8 +34183,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -34566,8 +34363,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -34740,8 +34536,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -34852,8 +34647,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -35032,8 +34826,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -35197,8 +34990,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -35222,8 +35014,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -35426,16 +35217,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -35588,8 +35377,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -35781,8 +35569,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -36034,16 +35821,14 @@
           "MANAGEMENT",
           "SALES",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         },
         "parameters": [
           {
@@ -36205,16 +35990,14 @@
           "MANAGEMENT",
           "SALES",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "H",
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         },
         "parameters": [
           {
@@ -36378,16 +36161,14 @@
           "MANAGEMENT",
           "SALES",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "H",
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         },
         "parameters": [
           {
@@ -36657,16 +36438,14 @@
           "MANAGEMENT",
           "SALES",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         }
       }
     },
@@ -36686,16 +36465,14 @@
           "MANAGEMENT",
           "SALES",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         },
         "parameters": [
           {
@@ -36967,8 +36744,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -37058,8 +36834,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "put": {
@@ -37147,8 +36922,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -37279,8 +37053,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "put": {
@@ -37455,8 +37228,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -37663,8 +37435,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -37788,8 +37559,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -37887,8 +37657,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -38097,8 +37866,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -38122,8 +37890,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -38292,8 +38059,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -38391,8 +38157,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -38488,8 +38253,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -38587,8 +38351,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -38686,8 +38449,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -38777,8 +38539,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -38868,8 +38629,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -38912,6 +38672,10 @@
                   "properties": {
                     "configured": {
                       "type": "boolean"
+                    },
+                    "bccAddress": {
+                      "nullable": true,
+                      "description": "Observed as null in the reference example."
                     }
                   },
                   "required": [
@@ -38972,8 +38736,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -39078,8 +38841,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -39171,8 +38933,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -39275,8 +39036,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -39413,8 +39173,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -39517,8 +39276,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -39648,8 +39406,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -39744,8 +39501,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -39848,8 +39604,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -39983,8 +39738,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -40008,8 +39762,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -40247,8 +40000,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -40381,8 +40133,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -40406,8 +40157,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -40490,8 +40240,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -40631,8 +40380,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -41006,8 +40754,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "V",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -41291,8 +41038,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -41515,8 +41261,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -41760,8 +41505,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -42025,8 +41769,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "V",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -42236,8 +41979,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "V",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -42466,8 +42208,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -42611,8 +42352,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -43046,8 +42786,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -43201,8 +42940,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -43302,8 +43040,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -43430,8 +43167,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -43719,8 +43455,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -43908,16 +43643,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "H",
           "SALES": "H",
           "DELIVERY": "A",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         }
       }
     },
@@ -44055,8 +43788,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -44146,16 +43878,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         }
       },
       "patch": {
@@ -44290,8 +44020,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -44316,8 +44045,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -45006,8 +44734,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -45823,8 +45550,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -46154,8 +45880,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -46429,8 +46154,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -46559,8 +46283,7 @@
           "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -46834,8 +46557,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -47041,8 +46763,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -47194,8 +46915,7 @@
           "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -47220,8 +46940,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -47377,8 +47096,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -47674,8 +47392,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -48440,8 +48157,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -48553,8 +48269,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -48664,8 +48379,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -48902,8 +48616,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -49172,8 +48885,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -49274,8 +48986,7 @@
           "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -49420,8 +49131,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -49534,8 +49244,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -49691,8 +49400,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -49838,8 +49546,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -49933,8 +49640,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -50114,8 +49820,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -50304,8 +50009,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -50326,16 +50030,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -50525,8 +50227,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -50772,16 +50473,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "H",
           "SALES": "H",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         },
         "parameters": [
           {
@@ -51029,16 +50728,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -51222,16 +50919,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -51510,16 +51205,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -51872,16 +51565,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -52071,16 +51762,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -52367,16 +52056,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -52600,16 +52287,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "V",
           "SALES": "V",
           "DELIVERY": "V",
           "FINANCE": "V",
-          "RESTRICTED_TECHNICAL": "V",
-          "CUSTOMER_SUPPORT": "V"
+          "RESTRICTED_TECHNICAL": "V"
         },
         "parameters": [
           {
@@ -52830,16 +52515,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -53021,16 +52704,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -53422,8 +53103,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -53553,8 +53233,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -53838,8 +53517,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -53939,8 +53617,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -54084,8 +53761,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -54276,8 +53952,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -54468,8 +54143,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -54569,8 +54243,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -54700,8 +54373,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -54799,8 +54471,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -54919,8 +54590,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -55007,16 +54677,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "H",
           "SALES": "H",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         }
       }
     },
@@ -55233,8 +54901,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "A"
         }
       }
     },
@@ -55524,16 +55191,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         }
       },
       "post": {
@@ -55704,16 +55369,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         }
       }
     },
@@ -55734,16 +55397,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -55971,16 +55632,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -56154,16 +55813,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         }
       }
     },
@@ -56261,16 +55918,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         }
       }
     },
@@ -56360,16 +56015,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         }
       }
     },
@@ -56390,16 +56043,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -56484,8 +56135,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -56714,8 +56364,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -56893,8 +56542,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -57117,8 +56765,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -57278,8 +56925,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -57377,8 +57023,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -57513,8 +57158,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -57659,8 +57303,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -57820,8 +57463,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -57978,8 +57620,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -58110,8 +57751,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -58135,8 +57775,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -58218,16 +57857,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -58385,8 +58022,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -58520,8 +58156,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -58656,8 +58291,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -58777,8 +58411,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -58895,8 +58528,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -58991,8 +58623,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -59189,8 +58820,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -59214,8 +58844,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -59393,8 +59022,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -59543,8 +59171,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -59647,8 +59274,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -59761,8 +59387,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -59865,8 +59490,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -59998,8 +59622,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -60112,8 +59735,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -60238,8 +59860,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -60371,8 +59992,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -60608,8 +60228,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -60813,8 +60432,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -60835,16 +60453,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -60916,16 +60532,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -60995,16 +60609,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -61125,16 +60737,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "H",
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "H",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "H"
+          "RESTRICTED_TECHNICAL": "H"
         },
         "parameters": [
           {
@@ -61224,16 +60834,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -61305,16 +60913,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -61390,8 +60996,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -61635,8 +61240,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -61734,8 +61338,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "get": {
@@ -61831,8 +61434,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -61930,8 +61532,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -62029,8 +61630,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -62056,8 +61656,7 @@
           "SALES": "V",
           "DELIVERY": "V",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -62269,8 +61868,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -62501,8 +62099,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -62625,8 +62222,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -62787,8 +62383,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -62886,8 +62481,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -62993,8 +62587,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -63119,8 +62712,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -63226,8 +62818,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "put": {
@@ -63331,8 +62922,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -63438,8 +63028,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -63545,8 +63134,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -63652,8 +63240,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -63759,8 +63346,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -63866,8 +63452,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -63973,8 +63558,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -64001,8 +63585,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -64268,8 +63851,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -64534,8 +64116,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -64710,8 +64291,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -64947,8 +64527,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -65154,8 +64733,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -65434,8 +65012,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -65653,16 +65230,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -65759,8 +65334,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -65873,8 +65447,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -66016,8 +65589,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -66126,8 +65698,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -66265,8 +65836,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -66377,8 +65947,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -66528,8 +66097,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -66813,8 +66381,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -67002,8 +66569,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -67181,8 +66747,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -67334,8 +66899,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -67785,16 +67349,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         }
       }
     },
@@ -67818,8 +67380,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -67924,8 +67485,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -68094,8 +67654,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -68193,8 +67752,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -68533,8 +68091,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -68684,8 +68241,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -68779,8 +68335,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -69082,8 +68637,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -69405,8 +68959,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -69680,8 +69233,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -69890,8 +69442,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -70070,8 +69621,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -70174,8 +69724,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "put": {
@@ -70305,8 +69854,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -70330,8 +69878,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -70584,8 +70131,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -70834,8 +70380,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -70956,8 +70501,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -71225,8 +70769,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -71327,8 +70870,7 @@
           "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -71703,8 +71245,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -71917,8 +71458,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -71939,16 +71479,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -72273,16 +71811,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         }
       },
       "get": {
@@ -72371,16 +71907,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         }
       },
       "post": {
@@ -72515,16 +72049,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         }
       }
     },
@@ -72646,8 +72178,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -72766,8 +72297,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -72984,8 +72514,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -73075,8 +72604,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -73164,8 +72692,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -73342,8 +72869,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -73441,8 +72967,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -73540,8 +73065,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -73639,8 +73163,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -73738,8 +73261,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -73829,8 +73351,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -73918,8 +73439,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -74017,8 +73537,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "get": {
@@ -74114,8 +73633,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -74211,8 +73729,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -74340,8 +73857,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -74365,8 +73881,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
           {
@@ -74469,16 +73984,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -74550,263 +74063,12 @@
         }
       }
     },
-    "/api/orgs/{orgSlug}/support/customers/{companyId}": {
-      "get": {
-        "operationId": "getSupportCustomersByCompanyId",
-        "summary": "GET /support/customers/{companyId}",
+    "/api/orgs/{orgSlug}/support-requests": {
+      "post": {
+        "operationId": "createSupportRequest",
+        "summary": "Ask Figbloom for help by email (V1.1). Any signed-in member of the organisation; the request is sent through Resend to Figbloom support with the member as Reply-To. Answers a reference to quote. Honours Idempotency-Key; at most 5 requests an hour per member.",
         "tags": [
           "Support"
-        ],
-        "security": [
-          {
-            "sessionCookie": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "orgSlug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "companyId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "headers": {
-              "x-request-id": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "401": {
-            "description": "Not signed in.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not allowed (`denial` explains who can).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found in this organisation, or hidden from this role.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "x-contract-source": "derived",
-        "x-allowed-roles": [],
-        "x-role-outcomes": {
-          "MANAGEMENT": "D",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
-        }
-      }
-    },
-    "/api/orgs/{orgSlug}/surveys": {
-      "get": {
-        "operationId": "getSurveys",
-        "summary": "GET /surveys",
-        "tags": [
-          "Surveys"
-        ],
-        "security": [
-          {
-            "sessionCookie": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "orgSlug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "companyId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d+$"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "maxLength": 64
-            }
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "maxLength": 64
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d+$"
-            }
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d+$"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "headers": {
-              "x-request-id": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed (`fieldErrors` lists the fields).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not signed in.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not allowed (`denial` explains who can).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found in this organisation, or hidden from this role.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "x-contract-source": "derived",
-        "x-allowed-roles": [],
-        "x-role-outcomes": {
-          "MANAGEMENT": "D",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
-        }
-      },
-      "post": {
-        "operationId": "postSurveys",
-        "summary": "POST /surveys",
-        "tags": [
-          "Surveys"
         ],
         "security": [
           {
@@ -74828,25 +74090,28 @@
           "content": {
             "application/json": {
               "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
                 "type": "object",
                 "properties": {
-                  "ticketId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "companyId": {
+                  "subject": {
                     "type": "string"
                   },
-                  "contactId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                  "message": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "urgency": {
+                    "type": "string"
+                  },
+                  "pagePath": {
+                    "type": "string"
                   }
                 },
+                "required": [
+                  "subject",
+                  "message"
+                ],
                 "additionalProperties": false
               }
             }
@@ -74855,16 +74120,12 @@
         "responses": {
           "200": {
             "description": "Success",
-            "headers": {
-              "x-request-id": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
               }
             }
           },
@@ -74898,8 +74159,8 @@
               }
             }
           },
-          "404": {
-            "description": "Not found in this organisation, or hidden from this role.",
+          "429": {
+            "description": "Rate limited.",
             "content": {
               "application/json": {
                 "schema": {
@@ -74917,18 +74178,19 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "A backing service (for example the malware scanner) is unavailable; retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
           }
         },
-        "x-contract-source": "derived",
-        "x-allowed-roles": [],
-        "x-role-outcomes": {
-          "MANAGEMENT": "D",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
-        }
+        "x-rate-limited": true
       }
     },
     "/api/orgs/{orgSlug}/sync/batch": {
@@ -74948,16 +74210,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -75119,16 +74379,14 @@
           "SALES",
           "DELIVERY",
           "FINANCE",
-          "RESTRICTED_TECHNICAL",
-          "CUSTOMER_SUPPORT"
+          "RESTRICTED_TECHNICAL"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "A"
+          "RESTRICTED_TECHNICAL": "A"
         },
         "parameters": [
           {
@@ -75362,8 +74620,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "A",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -75527,8 +74784,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -75639,8 +74895,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -75809,8 +75064,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -75940,8 +75194,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -76298,8 +75551,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "A"
         }
       },
       "post": {
@@ -76548,8 +75800,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "A"
         }
       }
     },
@@ -76746,8 +75997,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         }
       },
       "patch": {
@@ -77012,8 +76262,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         }
       }
     },
@@ -77239,8 +76488,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         }
       }
     },
@@ -77355,8 +76603,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         }
       },
       "post": {
@@ -77510,8 +76757,7 @@
           "SALES": "V",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         }
       }
     },
@@ -77630,8 +76876,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         }
       },
       "post": {
@@ -77822,8 +77067,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         }
       }
     },
@@ -77957,8 +77201,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         }
       }
     },
@@ -78072,8 +77315,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         }
       },
       "post": {
@@ -78185,8 +77427,7 @@
           "SALES": "A",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         }
       }
     },
@@ -78289,8 +77530,7 @@
           "SALES": "V",
           "DELIVERY": "H",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "H",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "H"
         }
       }
     },
@@ -78559,8 +77799,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "A"
         }
       }
     },
@@ -78811,712 +78050,7 @@
           "SALES": "A",
           "DELIVERY": "A",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "A",
-          "CUSTOMER_SUPPORT": "D"
-        }
-      }
-    },
-    "/api/orgs/{orgSlug}/tickets": {
-      "get": {
-        "operationId": "getTickets",
-        "summary": "GET /tickets",
-        "tags": [
-          "Tickets"
-        ],
-        "security": [
-          {
-            "sessionCookie": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "orgSlug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "priority",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "ownerMembershipId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "companyId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "q",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d+$"
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "maxLength": 64
-            }
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "maxLength": 64
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d+$"
-            }
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "pattern": "^\\d+$"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "headers": {
-              "x-request-id": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed (`fieldErrors` lists the fields).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not signed in.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not allowed (`denial` explains who can).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found in this organisation, or hidden from this role.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "x-contract-source": "derived",
-        "x-allowed-roles": [],
-        "x-role-outcomes": {
-          "MANAGEMENT": "D",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
-        }
-      },
-      "post": {
-        "operationId": "postTickets",
-        "summary": "POST /tickets",
-        "tags": [
-          "Tickets"
-        ],
-        "security": [
-          {
-            "sessionCookie": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "orgSlug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "type": "object",
-                "properties": {
-                  "companyId": {
-                    "type": "string"
-                  },
-                  "contactId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "title": {
-                    "type": "string"
-                  },
-                  "description": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  },
-                  "priority": {
-                    "type": "string"
-                  },
-                  "ownerMembershipId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "required": [
-                  "companyId",
-                  "title"
-                ],
-                "additionalProperties": false
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "headers": {
-              "x-request-id": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed (`fieldErrors` lists the fields).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not signed in.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not allowed (`denial` explains who can).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found in this organisation, or hidden from this role.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "x-contract-source": "derived",
-        "x-allowed-roles": [],
-        "x-role-outcomes": {
-          "MANAGEMENT": "D",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
-        }
-      }
-    },
-    "/api/orgs/{orgSlug}/tickets/{ticketId}": {
-      "get": {
-        "operationId": "getTicketsByTicketId",
-        "summary": "GET /tickets/{ticketId}",
-        "tags": [
-          "Tickets"
-        ],
-        "security": [
-          {
-            "sessionCookie": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "orgSlug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "ticketId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Success",
-            "headers": {
-              "x-request-id": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "401": {
-            "description": "Not signed in.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not allowed (`denial` explains who can).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found in this organisation, or hidden from this role.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "x-contract-source": "derived",
-        "x-allowed-roles": [],
-        "x-role-outcomes": {
-          "MANAGEMENT": "D",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
-        }
-      },
-      "patch": {
-        "operationId": "patchTicketsByTicketId",
-        "summary": "PATCH /tickets/{ticketId}",
-        "tags": [
-          "Tickets"
-        ],
-        "security": [
-          {
-            "sessionCookie": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "orgSlug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "ticketId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string"
-                  },
-                  "status": {
-                    "type": "string"
-                  },
-                  "priority": {
-                    "type": "string"
-                  },
-                  "ownerMembershipId": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "additionalProperties": false
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "headers": {
-              "x-request-id": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed (`fieldErrors` lists the fields).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not signed in.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not allowed (`denial` explains who can).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found in this organisation, or hidden from this role.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "x-contract-source": "derived",
-        "x-allowed-roles": [],
-        "x-role-outcomes": {
-          "MANAGEMENT": "D",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
-        }
-      }
-    },
-    "/api/orgs/{orgSlug}/tickets/{ticketId}/messages": {
-      "post": {
-        "operationId": "postTicketsByTicketIdMessages",
-        "summary": "POST /tickets/{ticketId}/messages",
-        "tags": [
-          "Tickets"
-        ],
-        "security": [
-          {
-            "sessionCookie": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "orgSlug",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "ticketId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string"
-                  },
-                  "body": {
-                    "type": "string"
-                  },
-                  "authorLabel": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
-                  }
-                },
-                "required": [
-                  "kind",
-                  "body"
-                ],
-                "additionalProperties": false
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Success",
-            "headers": {
-              "x-request-id": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed (`fieldErrors` lists the fields).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Not signed in.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not allowed (`denial` explains who can).",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found in this organisation, or hidden from this role.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected error.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "x-contract-source": "derived",
-        "x-allowed-roles": [],
-        "x-role-outcomes": {
-          "MANAGEMENT": "D",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "A"
         }
       }
     },
@@ -79636,8 +78170,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -79768,8 +78301,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -79867,8 +78399,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "get": {
@@ -79964,8 +78495,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -80094,8 +78624,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -80223,8 +78752,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -80348,8 +78876,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -80439,8 +78966,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -80578,8 +79104,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -80677,8 +79202,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "get": {
@@ -80774,8 +79298,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "patch": {
@@ -80921,8 +79444,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -81020,8 +79542,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -81194,8 +79715,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -81348,8 +79868,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       },
       "post": {
@@ -81493,8 +80012,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -81677,8 +80195,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -81822,8 +80339,7 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -81939,9 +80455,126 @@
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
-          "RESTRICTED_TECHNICAL": "D",
-          "CUSTOMER_SUPPORT": "D"
+          "RESTRICTED_TECHNICAL": "D"
         }
+      }
+    },
+    "/api/public/inbound/mailgun": {
+      "post": {
+        "operationId": "ingestMailgunInbound",
+        "summary": "Mailgun inbound route (BCC-to-CRM). Mailgun forwards the received email as a form; the signature is verified and the organisation is found from the recipient BCC address.",
+        "tags": [
+          "Public"
+        ],
+        "security": [
+          {
+            "mailgunSignature": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "recipient": {
+                    "type": "string"
+                  },
+                  "sender": {
+                    "type": "string"
+                  },
+                  "from": {
+                    "type": "string"
+                  },
+                  "subject": {
+                    "type": "string"
+                  },
+                  "body-plain": {
+                    "type": "string"
+                  },
+                  "stripped-text": {
+                    "type": "string"
+                  },
+                  "Message-Id": {
+                    "type": "string"
+                  },
+                  "timestamp": {
+                    "type": "string"
+                  },
+                  "token": {
+                    "type": "string"
+                  },
+                  "signature": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "recipient",
+                  "timestamp",
+                  "token",
+                  "signature"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-rate-limited": true
       }
     },
     "/api/public/orgs/{orgSlug}/communications/inbound": {
@@ -82392,6 +81025,12 @@
         "in": "header",
         "name": "x-figbloom-inbound-key",
         "description": "Or the `token` query parameter."
+      },
+      "mailgunSignature": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "signature",
+        "description": "Mailgun webhook signature: HMAC-SHA256 of timestamp+token with MAILGUN_INBOUND_SIGNING_KEY, sent in the form fields `timestamp`, `token`, `signature`."
       },
       "signedToken": {
         "type": "apiKey",

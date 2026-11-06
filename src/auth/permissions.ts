@@ -16,8 +16,7 @@ import {
  * lookup (`resolveActiveMembership`) loads the role's catalogue keys and the
  * organization's feature configuration and passes both to
  * `effectivePermissionKeys`, so the keys a request carries already reflect
- * the organization's release, its departure flags and the Customer Support
- * flag. Nothing downstream checks a role name; every check is a permission
+ * the organization's release, its departure flags and any role flag. Nothing downstream checks a role name; every check is a permission
  * key.
  */
 
@@ -140,7 +139,7 @@ export function roleIsAvailable(roleKey: string, config: FeatureConfig): boolean
  * The permission keys a member actually carries: the role's catalogue keys,
  * adjusted for the organization.
  *
- *  1. A flag-gated role (Customer Support) with its flag off carries nothing.
+ *  1. A flag-gated role (none today) with its flag off carries nothing.
  *  2. A departure that is off removes the keys it introduced and gives back
  *     the keys the seeded matrix had.
  *  3. Keys for a release the organization has not reached are dropped.

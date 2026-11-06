@@ -16,11 +16,11 @@ needs a new major version (`API_VERSION` in `src/api/openapi.ts`). Additions are
 
 ## 1.1.0 — V1.1 backend, additive (Nov 2026)
 
-contract-hash: 4d241d5137aa194124372c51ad8fe09ba16fecd6eab9e6b894cfdda7cb7dbb2c
+contract-hash: 4e9574fcb63fc8271f29a675bcca6977956eedf4ebd6729ac16f91a76ca5ae82
 
 Minor version: nothing existing was removed or renamed, so V1 callers keep working.
 
-- 98 new paths (platform console, two-step sign-in, quotes and approvals, chat, OAuth and mail/calendar sync, assistant, card capture, sequences, forecast, saved views, web forms, support tickets). Every V1.1 organisation route answers 403 `FEATURE_UNAVAILABLE` unless the organisation's release is V1.1 or later.
+- 95 new paths (platform console, Mailgun inbound email route (FIG-806), two-step sign-in, quotes and approvals, chat, OAuth and mail/calendar sync, assistant, card capture, sequences, forecast, saved views, web forms, support requests by email through Resend (`POST /orgs/{org}/support-requests`; there is no Customer Support role and no ticket API, decision 12)). Every V1.1 organisation route answers 403 `FEATURE_UNAVAILABLE` unless the organisation's release is V1.1 or later.
 - Additive changes to existing routes: `deals/board` accepts `pipelineId`; `search` accepts type `messages`; `deals/{id}/move` and `move-check` accept `changePipeline`; some responses gained optional fields.
 - Behaviour change to note: the sign-in and accept-invite API answers may now ask for a second step when the member has two-step sign-in on. The frozen pages are unchanged.
 

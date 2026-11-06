@@ -59,7 +59,7 @@ export function ConversationsScreen() {
   const [page, setPage] = useState(1);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const search = useDebounced(q.trim(), 300);
-  // "Log a note" on the Customer Support home lands here with the log dialog already open.
+  // A link with ?log=... lands here with the log dialog already open.
   const wantsLog = useSearchParams()?.get("log");
   useEffect(() => {
     if (wantsLog) setDialog({ kind: "log" });

@@ -64,7 +64,7 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Preferences](#preferences) (4)
 - [Privacy](#privacy) (1)
 - [Profile](#profile) (6)
-- [Public](#public) (2)
+- [Public](#public) (3)
 - [Push](#push) (4)
 - [Quick Capture](#quick-capture) (5)
 - [Quick capture](#quick-capture) (1)
@@ -84,11 +84,9 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Session](#session) (2)
 - [Settings](#settings) (1)
 - [Support](#support) (1)
-- [Surveys](#surveys) (2)
 - [Sync](#sync) (2)
 - [Tags](#tags) (5)
 - [Tasks](#tasks) (15)
-- [Tickets](#tickets) (5)
 - [Views](#views) (7)
 - [Web Forms](#web-forms) (7)
 - [Website Lead Assignment Rules](#website-lead-assignment-rules) (4)
@@ -241,7 +239,7 @@ Operations marked *derived* have their request schema recorded from the route it
 
 `postAttachmentsByAttachmentIdComplete` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `id`: string, `organizationId`: string, `fileId`: string, `companyId`?: null, `contactId`?: null, `leadId`: string, `dealId`?: null, `taskId`?: null, `proposalReferenceId`?: null, `title`?: null, `shared`: boolean, `uploadedByMembershipId`: string, `createdAt`: string, `deletedAt`?: null, `file`: object
 - **Errors:** 401, 404
 
@@ -411,7 +409,7 @@ The run log: each run with its rule, record and result
 
 `getCalendar` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Query:** `from`?: string, `to`?: string, `view`?: "month" | "week" | "day" | "list", `date`?: string, `membershipId`?: string
 - **Returns:** `from`: string, `to`: string, `timeZone`: string, `view`: string, `truncated`: boolean, `teamFilter`: object, `selected`: string, `items`: any[]
 - **Errors:** 400, 401, 404
@@ -1401,7 +1399,7 @@ Customer 360: independently loadable sections; a section the role may not read i
 
 Role home page: the sections this role has, each loaded independently (a section the role lacks is absent)
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `available`: object[], `sections`?: object[]
 - **Errors:** 401, 403
 
@@ -1421,7 +1419,7 @@ One dashboard section (sales_today, management, delivery, finance, technical, my
 
 Adoption, stalled deals, deals past close date and overdue tasks (stored values; sections by role)
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `computedAt`: string
 - **Errors:** 401, 403
 
@@ -1443,7 +1441,7 @@ Export rights, retention with documented defaults, legal hold, open requests (Ma
 
 Export approval requests (Management sees all; others their own)
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Query:** `status`?: string, `page`?: string, `pageSize`?: string, `cursor`?: string
 - **Returns:** `items`: object[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`: string | null
 - **Errors:** 401, 403
@@ -2145,7 +2143,7 @@ Get one deal (value masked for roles without deals.view.value)
 
 Release flags and organisation toggles, resolved for this organisation
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `release`: "v1" | "v1.1" | "v2", `flags`: object, `toggles`: object[]
 - **Errors:** 401, 403
 
@@ -2179,7 +2177,7 @@ Start a file upload: returns a short-lived signed link to send the bytes to
 
 A file's metadata (404 for a file the caller may not see)
 
-- **Credential:** sessionCookie; **access:** management, sales, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, finance, restricted technical
 - **Returns:** `id`: string, `purpose`: "AVATAR" | "LOGO" | "ATTACHMENT" | "IMPORT" | "EXPORT", `name`: string, `sizeBytes`: number, `mimeType`: string, `status`: "UPLOADING" | "READY" | "QUARANTINED" | "DELETED", `checksumSha256`: string | null, `ownerMembershipId`: string | null, `createdAt`: string, `readyAt`: string | null
 - **Errors:** 401, 404
 
@@ -2189,7 +2187,7 @@ A file's metadata (404 for a file the caller may not see)
 
 Delete a file (kept until the retention purge removes its bytes)
 
-- **Credential:** sessionCookie; **access:** management, sales, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, finance, restricted technical
 - **Returns:** `id`: string, `purpose`: "AVATAR" | "LOGO" | "ATTACHMENT" | "IMPORT" | "EXPORT", `name`: string, `sizeBytes`: number, `mimeType`: string, `status`: "UPLOADING" | "READY" | "QUARANTINED" | "DELETED", `checksumSha256`: string | null, `ownerMembershipId`: string | null, `createdAt`: string, `readyAt`: string | null
 - **Errors:** 401, 404
 
@@ -2199,7 +2197,7 @@ Delete a file (kept until the retention purge removes its bytes)
 
 Finish an upload: checks size, type, content and checksum, scans for malware, then makes the file ready
 
-- **Credential:** sessionCookie; **access:** management, sales, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, finance, restricted technical
 - **Returns:** `id`: string, `purpose`: "AVATAR" | "LOGO" | "ATTACHMENT" | "IMPORT" | "EXPORT", `name`: string, `sizeBytes`: number, `mimeType`: string, `status`: "UPLOADING" | "READY" | "QUARANTINED" | "DELETED", `checksumSha256`: string | null, `ownerMembershipId`: string | null, `createdAt`: string, `readyAt`: string | null
 - **Errors:** 400, 401, 404, 409, 503
 
@@ -2207,7 +2205,7 @@ Finish an upload: checks size, type, content and checksum, scans for malware, th
 
 `getFilesByFileIdContent` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, finance, restricted technical
 - **Returns:** any
 - **Errors:** 401, 403, 404
 
@@ -2217,7 +2215,7 @@ Finish an upload: checks size, type, content and checksum, scans for malware, th
 
 A signed download link, valid for about a minute
 
-- **Credential:** sessionCookie; **access:** management, sales, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, finance, restricted technical
 - **Returns:** `file`: object, `download`: object
 - **Errors:** 401, 404, 409
 
@@ -2322,7 +2320,7 @@ Upload a file's bytes with a signed upload link (local storage driver only).
 
 Imports and exports: your own, or everyone's for Management
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Query:** `kind`?: "IMPORT" | "EXPORT", `page`?: string, `pageSize`?: string, `cursor`?: string
 - **Returns:** `items`: object[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`: string | null
 - **Errors:** 400, 401
@@ -2333,7 +2331,7 @@ Imports and exports: your own, or everyone's for Management
 
 Progress, counts and state of one import or export
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `id`: string, `kind`: "IMPORT" | "EXPORT", `entity`: string, `status`: "QUEUED" | "RUNNING" | "COMPLETED" | "COMPLETED_WITH_ERRORS" | "FAILED" | "CANCELLED", `done`: boolean, `totalRows`: number, `processedRows`: number, `createdRows`: number, `duplicateRows`: number, `alreadyConvertedRows`: number, `failedRows`: number, `hasResultFile`: boolean, `hasErrorReport`: boolean
 - **Errors:** 401, 404
 
@@ -2343,7 +2341,7 @@ Progress, counts and state of one import or export
 
 Stop a running import or export at its next check; rows already imported stay
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `id`: string, `kind`: "IMPORT" | "EXPORT", `entity`: string, `status`: "QUEUED" | "RUNNING" | "COMPLETED" | "COMPLETED_WITH_ERRORS" | "FAILED" | "CANCELLED", `done`: boolean, `totalRows`: number, `processedRows`: number, `createdRows`: number, `duplicateRows`: number, `alreadyConvertedRows`: number, `failedRows`: number, `hasResultFile`: boolean, `hasErrorReport`: boolean
 - **Errors:** 401, 404
 
@@ -2353,7 +2351,7 @@ Stop a running import or export at its next check; rows already imported stay
 
 Short-lived signed link to the export (`which=result`) or the import error report (`which=errors`)
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Query:** `which`?: "result" | "errors"
 - **Returns:** `fileName`: string, `download`: object
 - **Errors:** 401, 404
@@ -2453,7 +2451,7 @@ Integrations registry: Connected, Not connected or Planned, each derived from re
 `getIntegrationsInboundEmailKey` · *derived*
 
 - **Credential:** sessionCookie; **access:** management
-- **Returns:** `configured`: boolean
+- **Returns:** `configured`: boolean, `bccAddress`?: null
 - **Errors:** 401, 403, 404
 
 ### `POST …/integrations/inbound-email-key`
@@ -2640,7 +2638,7 @@ Background jobs for this organisation with counts per status (Management)
 
 `postLeadPoolRequestsByRequestIdCancel` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `id`: string, `organizationId`: string, `leadId`: string, `requesterMembershipId`: string, `status`: string, `note`?: null, `decisionReason`?: null, `decidedByMembershipId`: string, `decidedAt`: string, `createdAt`: string, `updatedAt`: string, `lead`: object
 - **Errors:** 401, 404
 
@@ -2657,7 +2655,7 @@ Background jobs for this organisation with counts per status (Management)
 
 `getLeadPoolSettings` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `mode`: string
 - **Errors:** 401, 404
 
@@ -3058,7 +3056,7 @@ The person's recent sign-ins and failed attempts.
 
 `postMergesByMergeIdUndo` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** any
 - **Errors:** 401, 404
 
@@ -3079,7 +3077,7 @@ The person's recent sign-ins and failed attempts.
 
 `getNotificationPreferences` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `LEAD_ASSIGNED`: object, `TASK_DUE`: object, `TASK_OVERDUE`: object, `DEAL_WON_HANDOFF`: object, `MENTION`: object, `RENEWAL_DUE`: object, `PROPOSAL_UNANSWERED`: object, `STALLED_DEAL`: object, `SUPPORT_ACCESS_REQUEST`: object, `LEAD_POOL`: object, `PAYMENT_OVERDUE`: object, `DORMANT_CUSTOMER`: object
 - **Errors:** 401, 404
 
@@ -3087,7 +3085,7 @@ The person's recent sign-ins and failed attempts.
 
 `postNotificationPreferences` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Body:** `type`: "LEAD_ASSIGNED" | "TASK_DUE" | "TASK_OVERDUE" | "DEAL_WON_HANDOFF" | "MENTION" | "RENEWAL_DUE" | "PROPOSAL_UNANSWERED" | "STALLED_DEAL" | "SUPPORT_ACCESS_REQUEST" | "LEAD_POOL" | "PAYMENT_OVERDUE" | "DORMANT_CUSTOMER", `emailEnabled`?: boolean, `inAppEnabled`?: boolean
 - **Returns:** `id`: string, `organizationId`: string, `membershipId`: string, `type`: string, `emailEnabled`: boolean, `inAppEnabled`: boolean, `pushEnabled`: boolean, `createdAt`: string, `updatedAt`: string
 - **Errors:** 400, 401, 404
@@ -3100,7 +3098,7 @@ The person's recent sign-ins and failed attempts.
 
 Notification types for the caller's role, channels, presets, quiet hours and daily email limit
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `preset`: "EVERYTHING" | "IMPORTANT_ONLY" | "OFF" | "CUSTOM", `presets`: object[], `types`: object[], `quietHours`: object, `dailyEmailCap`: number, `dailyEmailCapRange`: object, `emailsToday`: number, `heldForDigest`: number
 - **Errors:** 401, 403
 
@@ -3110,7 +3108,7 @@ Notification types for the caller's role, channels, presets, quiet hours and dai
 
 Change notification preferences; overdue alerts cannot be turned off and push is not available yet
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Body:** `preset`?: "EVERYTHING" | "IMPORTANT_ONLY" | "OFF", `types`?: object, `quietHours`?: object, `dailyEmailCap`?: number
 - **Returns:** `preset`: "EVERYTHING" | "IMPORTANT_ONLY" | "OFF" | "CUSTOM", `presets`: object[], `types`: object[], `quietHours`: object, `dailyEmailCap`: number, `dailyEmailCapRange`: object, `emailsToday`: number, `heldForDigest`: number
 - **Errors:** 400, 401, 403
@@ -3121,7 +3119,7 @@ Change notification preferences; overdue alerts cannot be turned off and push is
 
 Notification centre: paged, filter by type, unread and archived; never reveals a record the caller cannot open
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Query:** `unreadOnly`?: "true" | "false", `archived`?: "true" | "false", `type`?: string, `page`?: string, `pageSize`?: string, `cursor`?: string
 - **Returns:** `items`: object[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`: string | null, `unreadCount`: number
 - **Errors:** 400, 401
@@ -3132,7 +3130,7 @@ Notification centre: paged, filter by type, unread and archived; never reveals a
 
 Archive a notification (DELETE on the same path restores it)
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `updated`: number
 - **Errors:** 401, 404
 
@@ -3140,7 +3138,7 @@ Archive a notification (DELETE on the same path restores it)
 
 `deleteNotificationsByNotificationIdArchive` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `updated`: number
 - **Errors:** 401, 404
 
@@ -3148,7 +3146,7 @@ Archive a notification (DELETE on the same path restores it)
 
 `postNotificationsByNotificationIdRead` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `count`: number
 - **Errors:** 401, 404
 
@@ -3156,7 +3154,7 @@ Archive a notification (DELETE on the same path restores it)
 
 `postNotificationsMarkAllRead` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `count`: number
 - **Errors:** 401, 404
 
@@ -3166,7 +3164,7 @@ Archive a notification (DELETE on the same path restores it)
 
 The bell badge: unread notifications this caller can open
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `unreadCount`: number
 - **Errors:** 401
 
@@ -3230,7 +3228,7 @@ Liveness and database reachability, with the last notifications sweep. No authen
 
 How the organisation looks: name, logo, default theme and page colour (every member can read)
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `name`: string, `shownName`: string, `displayName`: string | null, `logoUrl`: string | null, `defaultTheme`: string, `defaultPageColour`: string, `colours`: object, `showLogoOnClientPages`: boolean, `allowPersonalisation`: boolean
 - **Errors:** 401, 403
 
@@ -3253,7 +3251,7 @@ Change the organisation's look and whether members may personalise (Management o
 
 The web app manifest for this organisation (its name and colours)
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** object
 - **Errors:** 401
 
@@ -3263,7 +3261,7 @@ The web app manifest for this organisation (its name and colours)
 
 The cache version an installed app compares with its own, and what may be queued offline
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** object
 - **Errors:** 401
 
@@ -3498,7 +3496,7 @@ Due this week, overdue, collected this month, still owing
 
 Own preferences: appearance, start page, sidebar, date and time, with the device-only defaults
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `appearance`: object, `personalisation`: object, `startPage`: object, `sidebar`: object, `regional`: object, `deviceOnly`: object, `catalogue`: object, `undoAvailable`: boolean
 - **Errors:** 401, 403
 
@@ -3508,7 +3506,7 @@ Own preferences: appearance, start page, sidebar, date and time, with the device
 
 Change own preferences; look fields are ignored (and listed in `ignored`) while the organisation has personalisation off
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Body:** `theme`?: string, `pageColour`?: string, `toggle`?: object, `density`?: string, `startPage`?: string | null, `sidebar`?: object, `hourFormat`?: string, `firstDayOfWeek`?: string, `dateFormat`?: string, `ownColours`?: object | null
 - **Returns:** `appearance`: object, `personalisation`: object, `startPage`: object, `sidebar`: object, `regional`: object, `deviceOnly`: object, `catalogue`: object, `undoAvailable`: boolean, `ignored`: string[]
 - **Errors:** 400, 401, 403
@@ -3519,7 +3517,7 @@ Change own preferences; look fields are ignored (and listed in `ignored`) while 
 
 Back to Forest on White; returns a one-time undo token valid for ten minutes
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `preferences`: object, `undo`: object
 - **Errors:** 401, 403
 
@@ -3529,7 +3527,7 @@ Back to Forest on White; returns a one-time undo token valid for ten minutes
 
 Restore the look from before the last reset (single use)
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Body:** `token`: string
 - **Returns:** `appearance`: object, `personalisation`: object, `startPage`: object, `sidebar`: object, `regional`: object, `deviceOnly`: object, `catalogue`: object, `undoAvailable`: boolean
 - **Errors:** 400, 401, 403
@@ -3552,7 +3550,7 @@ Restore the look from before the last reset (single use)
 
 Use an uploaded picture: cropped, resized to 256px and re-encoded as WebP; the original is deleted
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Body:** `fileId`: string, `crop`?: object | null
 - **Returns:** `membershipId`: string, `userId`: string, `name`: string, `email`: string, `phone`: string | null, `timeZone`: string | null, `organizationTimeZone`: string, `effectiveTimeZone`: string, `avatar`: object
 - **Errors:** 400, 401, 403, 404
@@ -3563,7 +3561,7 @@ Use an uploaded picture: cropped, resized to 256px and re-encoded as WebP; the o
 
 Remove the picture (initials are shown instead)
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `membershipId`: string, `userId`: string, `name`: string, `email`: string, `phone`: string | null, `timeZone`: string | null, `organizationTimeZone`: string, `effectiveTimeZone`: string, `avatar`: object
 - **Errors:** 401, 403
 
@@ -3573,7 +3571,7 @@ Remove the picture (initials are shown instead)
 
 The signed-in person's profile: name, phone, time zone and picture
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `membershipId`: string, `userId`: string, `name`: string, `email`: string, `phone`: string | null, `timeZone`: string | null, `organizationTimeZone`: string, `effectiveTimeZone`: string, `avatar`: object
 - **Errors:** 401, 403
 
@@ -3583,7 +3581,7 @@ The signed-in person's profile: name, phone, time zone and picture
 
 Change own name, phone or time zone
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Body:** `name`?: string, `phone`?: string | null, `timeZone`?: string | null
 - **Returns:** `membershipId`: string, `userId`: string, `name`: string, `email`: string, `phone`: string | null, `timeZone`: string | null, `organizationTimeZone`: string, `effectiveTimeZone`: string, `avatar`: object
 - **Errors:** 400, 401, 403
@@ -3606,6 +3604,17 @@ Change own name, phone or time zone
 - **Errors:** 400, 401, 403, 404
 
 ## Public
+
+### `POST /api/public/inbound/mailgun`
+
+`ingestMailgunInbound` · rate limited
+
+Mailgun inbound route (BCC-to-CRM). Mailgun forwards the received email as a form; the signature is verified and the organisation is found from the recipient BCC address.
+
+- **Credential:** mailgunSignature
+- **Body:** `recipient`: string, `sender`?: string, `from`?: string, `subject`?: string, `body-plain`?: string, `stripped-text`?: string, `Message-Id`?: string, `timestamp`: string, `token`: string, `signature`: string
+- **Returns:** object
+- **Errors:** 401, 404, 429
 
 ### `POST /api/public/orgs/{orgSlug}/communications/inbound`
 
@@ -3637,7 +3646,7 @@ Website lead capture. Authenticated by the organisation's website key in `x-figb
 
 Whether Web Push is on for this server, and the public key to subscribe with
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** object
 - **Errors:** 401
 
@@ -3647,7 +3656,7 @@ Whether Web Push is on for this server, and the public key to subscribe with
 
 The caller's registered devices
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** object
 - **Errors:** 401
 
@@ -3657,7 +3666,7 @@ The caller's registered devices
 
 Register this browser or phone for push (endpoint must be on a real push service, over https)
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Body:** `endpoint`: string, `keys`: object, `userAgent`?: string
 - **Returns:** object
 - **Errors:** 400, 401
@@ -3668,7 +3677,7 @@ Register this browser or phone for push (endpoint must be on a real push service
 
 Stop sending push to one of the caller's own devices
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** object
 - **Errors:** 401, 404
 
@@ -3889,7 +3898,7 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 
 `getReferenceData` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `leadSources`: object[], `leadStatuses`: object[], `pipelineStages`: object[], `lifecycleStates`: object[], `lostReasons`: object[], `services`: object[], `members`: object[]
 - **Errors:** 401, 404
 
@@ -3901,7 +3910,7 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 
 The reference lists the caller may manage and what each allows
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `items`: object[]
 - **Errors:** 401, 403
 
@@ -4281,7 +4290,7 @@ CSV of My metrics
 
 Global search: groups with totals, paged per group (`type` + `page`), archived only on request, phone numbers in any format
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Query:** `q`: string, `type`?: "companies" | "contacts" | "leads" | "deals" | "tasks", `archived`?: "exclude" | "include" | "only", `page`?: string, `pageSize`?: string, `cursor`?: string
 - **Returns:** `query`: string, `tooShort`: boolean, `total`: number, `groups`: object[], `hidden`: object
 - **Errors:** 400, 401
@@ -4290,7 +4299,7 @@ Global search: groups with totals, paged per group (`type` + `page`), archived o
 
 `getSearchRecents` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `recents`: any[]
 - **Errors:** 401, 404
 
@@ -4298,7 +4307,7 @@ Global search: groups with totals, paged per group (`type` + `page`), archived o
 
 `postSearchRecents` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Body:** `query`: string
 - **Returns:** `recents`: object[]
 - **Errors:** 400, 401, 404
@@ -4307,7 +4316,7 @@ Global search: groups with totals, paged per group (`type` + `page`), archived o
 
 `deleteSearchRecents` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** `cleared`: number
 - **Errors:** 401, 404
 
@@ -4485,33 +4494,16 @@ Settings landing page: profile, member counts by state, integration states (Mana
 
 ## Support
 
-### `GET …/support/customers/{companyId}`
+### `POST …/support-requests`
 
-`getSupportCustomersByCompanyId` · *derived*
+`createSupportRequest` · rate limited
 
-- **Credential:** sessionCookie; **access:** nobody
-- **Returns:** any
-- **Errors:** 401, 403, 404
+Ask Figbloom for help by email (V1.1). Any signed-in member of the organisation; the request is sent through Resend to Figbloom support with the member as Reply-To. Answers a reference to quote. Honours Idempotency-Key; at most 5 requests an hour per member.
 
-## Surveys
-
-### `GET …/surveys`
-
-`getSurveys` · *derived*
-
-- **Credential:** sessionCookie; **access:** nobody
-- **Query:** `companyId`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
-- **Returns:** any
-- **Errors:** 400, 401, 403, 404
-
-### `POST …/surveys`
-
-`postSurveys` · *derived*
-
-- **Credential:** sessionCookie; **access:** nobody
-- **Body:** `ticketId`?: string | null, `companyId`?: string, `contactId`?: string | null
-- **Returns:** any
-- **Errors:** 400, 401, 403, 404
+- **Credential:** sessionCookie
+- **Body:** `subject`: string, `message`: string, `category`?: string, `urgency`?: string, `pagePath`?: string
+- **Returns:** object
+- **Errors:** 400, 401, 403, 429, 503
 
 ## Sync
 
@@ -4521,7 +4513,7 @@ Settings landing page: profile, member counts by state, integration states (Mana
 
 The offline queue: up to 100 actions, each with a client id; answered APPLIED, DUPLICATE, CONFLICT or REJECTED per item. Replaying a batch changes nothing. Stage and ownership are server-wins.
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Body:** `mutations`: object[]
 - **Returns:** `results`: object[], `counts`: object, `processedOrder`: number[]
 - **Errors:** 400, 401, 403
@@ -4532,7 +4524,7 @@ The offline queue: up to 100 actions, each with a client id; answered APPLIED, D
 
 The caller's queue as the server sees it: last sync, last seven days, what needs attention
 
-- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical, customer support
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
 - **Returns:** object
 - **Errors:** 401
 
@@ -4710,52 +4702,6 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 - **Credential:** sessionCookie; **access:** management, sales, delivery, restricted technical
 - **Query:** `assigneeMembershipId`?: string, `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string, `q`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
 - **Returns:** `key`: string, `label`: string, `count`: number, `items`: any[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`?: null
-- **Errors:** 400, 401, 403, 404
-
-## Tickets
-
-### `GET …/tickets`
-
-`getTickets` · *derived*
-
-- **Credential:** sessionCookie; **access:** nobody
-- **Query:** `status`?: string, `priority`?: string, `ownerMembershipId`?: string, `companyId`?: string, `q`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
-- **Returns:** any
-- **Errors:** 400, 401, 403, 404
-
-### `POST …/tickets`
-
-`postTickets` · *derived*
-
-- **Credential:** sessionCookie; **access:** nobody
-- **Body:** `companyId`: string, `contactId`?: string | null, `title`: string, `description`?: string | null, `priority`?: string, `ownerMembershipId`?: string | null
-- **Returns:** any
-- **Errors:** 400, 401, 403, 404
-
-### `GET …/tickets/{ticketId}`
-
-`getTicketsByTicketId` · *derived*
-
-- **Credential:** sessionCookie; **access:** nobody
-- **Returns:** any
-- **Errors:** 401, 403, 404
-
-### `PATCH …/tickets/{ticketId}`
-
-`patchTicketsByTicketId` · *derived*
-
-- **Credential:** sessionCookie; **access:** nobody
-- **Body:** `title`?: string, `status`?: string, `priority`?: string, `ownerMembershipId`?: string | null
-- **Returns:** any
-- **Errors:** 400, 401, 403, 404
-
-### `POST …/tickets/{ticketId}/messages`
-
-`postTicketsByTicketIdMessages` · *derived*
-
-- **Credential:** sessionCookie; **access:** nobody
-- **Body:** `kind`: string, `body`: string, `authorLabel`?: string | null
-- **Returns:** any
 - **Errors:** 400, 401, 403, 404
 
 ## Views

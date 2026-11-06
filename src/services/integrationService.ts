@@ -1,6 +1,7 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { NotFoundError, ValidationError } from "../auth/errors";
+import { inboundBccAddressFor } from "../auth/inboundBccAddress";
 import { generateInboundEmailKey } from "../auth/inboundEmailKey";
 import { generateWebsiteApiKey } from "../auth/websiteApiKey";
 import { adminDb } from "../db/adminClient";
@@ -239,10 +240,14 @@ export async function listRecentWebsiteActivity(ctx: AuthContext, limit = 25) {
 export async function getInboundEmailIntegrationStatus(ctx: AuthContext) {
   requirePermission(ctx, PERMISSION);
   const record = await getInboundEmailKeyRecord(ctx.organizationId);
+  // FIG-806: the BCC-to-CRM address (read-only, Management only); null until INBOUND_EMAIL_DOMAIN is set.
+  const organization = await adminDb.organization.findUniqueOrThrow({ where: { id: ctx.organizationId }, select: { id: true, slug: true } });
+  const bccAddress = inboundBccAddressFor(organization);
   if (!record) {
-    return { configured: false as const };
+    return { configured: false as const, bccAddress };
   }
   return {
+    bccAddress,
     configured: true as const,
     keyPrefix: record.keyPrefix,
     createdAt: record.createdAt,

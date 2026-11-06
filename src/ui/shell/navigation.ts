@@ -40,8 +40,6 @@ interface Def {
 
 const has = (c: NavInput, key: string) => c.permissionKeys.includes(key);
 const any = (c: NavInput, ...keys: string[]) => keys.some((k) => has(c, k));
-/** The proposed Customer Support role: tickets and no leads. Its menu is the design's: tasks, customers, its own metrics (no calendar). */
-const isSupportRole = (c: NavInput) => has(c, "tickets.manage") && !any(c, "leads.view.own", "leads.view.all");
 
 const SECTIONS: { key: string; label: (c: NavInput) => string; bottom?: boolean; collapsible?: boolean; icon?: NavIcon }[] = [
   { key: "overview", label: () => "Overview" },
@@ -69,7 +67,7 @@ const DEFS: Def[] = [
     built: true,
   },
   { section: "workspace", key: "tasks", label: () => "Tasks", path: "/tasks", icon: "tasks", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
-  { section: "workspace", key: "calendar", label: () => "Calendar", path: "/calendar", icon: "calendar", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all") && !isSupportRole(c), built: true },
+  { section: "workspace", key: "calendar", label: () => "Calendar", path: "/calendar", icon: "calendar", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
   // V1.1 commercial screens (M10, demo data): the permissions below are stripped until the organisation's release reaches V1.1.
   { section: "customers", key: "companies", label: () => "Companies", path: "/companies", icon: "companies", tint: "o", allowed: (c) => has(c, "companies.view"), built: true },
   { section: "customers", key: "contacts", label: () => "Contacts", path: "/contacts", icon: "contacts", tint: "o", allowed: (c) => has(c, "contacts.view"), built: true },
@@ -79,7 +77,6 @@ const DEFS: Def[] = [
   { section: "communication", key: "mail", label: () => "Mail", path: "/mail", icon: "mail", tint: "o", allowed: (c) => has(c, "mail.use"), built: true },
   { section: "communication", key: "chat", label: () => "Chat", path: "/chat", icon: "chat", tint: "o", allowed: (c) => has(c, "chat.view"), built: true },
   { section: "communication", key: "video", label: () => "Video Conference", path: "/video", icon: "video", tint: "o", allowed: (c) => has(c, "meetings.schedule"), built: true },
-  // Customer Support workspace (FIG-1178, demo data): only the proposed role's ticket permission shows it.
   { section: "after-sale", key: "handoffs", label: () => "Handoffs", path: "/handoffs", icon: "handoffs", tint: "o", allowed: (c) => any(c, "handoff.manage", "deals.handoff"), built: true },
   { section: "after-sale", key: "renewals", label: () => "Renewals", path: "/renewals", icon: "renewals", tint: "o", allowed: (c) => has(c, "company_services.manage"), built: true },
   { section: "after-sale", key: "payments", label: () => "Payments", path: "/payments", icon: "payments", tint: "o", allowed: (c) => has(c, "finance.view.payments"), built: true },

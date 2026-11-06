@@ -401,16 +401,53 @@ underlying error touched one.
 
 ## Inbound email provider
 
-`POST /api/public/orgs/[orgSlug]/communications/inbound` (FIG-598) logs an
-externally-sent email onto the matching contact's timeline -- "BCC-to-CRM"
-style. The endpoint itself is real and tested, authenticated by a
-per-organization token generated from `/o/[orgSlug]/settings`, but nothing
-calls it yet: that requires a real inbound-email-parsing provider account
-(Postmark, Mailgun, SendGrid inbound parse, or similar) plus the DNS/MX
-changes it needs, none of which exist for this project -- the same kind of
-gap as SMTP/Sentry/SMS above. Once you have one, configure its webhook to
-POST here with the token in the URL (see the settings page for the exact
-request shape).
+Two inbound paths exist. The older one, `POST /api/public/orgs/[orgSlug]/communications/inbound` (FIG-598), takes a neutral JSON body and a per-organisation token; nothing calls it. The one to use is the **Mailgun route** (FIG-806): `POST /api/public/inbound/mailgun`. Mailgun was chosen because it signs every webhook (HMAC-SHA256 of timestamp + token with your signing key); Postmark and SendGrid inbound do not. The adapter is one file (`src/integrations/inbound/mailgun.ts`), so another provider can be added later.
+
+How it works: each organisation has a BCC address, `<org-slug>+<token>@<INBOUND_EMAIL_DOMAIN>`, shown to Management in **Settings, Inbound email, BCC to CRM** with a Copy button. A user adds it to Bcc. Mailgun receives the mail and forwards it to the webhook. The app verifies the signature (refusing anything older than 15 minutes, any token used before, and any unknown or other-organisation address), then logs the message on the matching contact's timeline (sender not known: Needs linking). Attachments are not stored.
+
+### Environment variables
+
+| Variable | Notes |
+|---|---|
+| `MAILGUN_INBOUND_SIGNING_KEY` | Mailgun's **HTTP webhook signing key** (Mailgun dashboard, Sending, Webhooks). Unset: every inbound call is refused. Secret manager only. |
+| `INBOUND_EMAIL_DOMAIN` | The (sub)domain whose MX points at Mailgun, for example `inbound.yourcompany.com`. Unset: no BCC address is shown. Use a subdomain you do not use for normal mail. |
+| `INBOUND_EMAIL_ADDRESS_SECRET` | 32+ random characters (`openssl rand -base64 32`). Makes each address unguessable. Set once: changing it changes every organisation's address. Required in production. |
+
+### Runbook (Given)
+
+1. Create a Mailgun account (or use the existing one). Add the inbound domain (Sending, Domains, Add domain), for example `inbound.yourcompany.com`.
+2. At your DNS host add the two MX records Mailgun shows for that domain (`mxa.mailgun.org` and `mxb.mailgun.org`, priority 10; the EU hosts if the domain is in the EU region). Add the SPF and DKIM TXT records Mailgun also asks for. Wait until the domain shows as verified.
+3. In Mailgun open Receiving, Routes, Create route. Expression type **Match Recipient**, pattern `.*@inbound.yourcompany.com`. Action **Forward** to `https://<your app domain>/api/public/inbound/mailgun`. Priority 0.
+4. Copy the HTTP webhook signing key into `MAILGUN_INBOUND_SIGNING_KEY`. Set `INBOUND_EMAIL_DOMAIN` to the domain from step 1 and a new `INBOUND_EMAIL_ADDRESS_SECRET`. Redeploy.
+5. Sign in as Management and open Settings, Inbound email. The **BCC to CRM** card shows the address. Copy it.
+6. Production test: pick an existing contact with a known email address. Send an email from that address to anyone, with the BCC address in Bcc, and a subject such as "BCC test". Within a minute the message should appear on that contact's timeline as an inbound email. If the sender is not a contact, it appears under Needs linking instead.
+7. If nothing arrives: Mailgun, Logs shows whether the route fired and the HTTP status the app returned. 401 means the signing key is wrong or unset, or the message is older than 15 minutes; 404 means the address is not valid for this environment (check `INBOUND_EMAIL_DOMAIN`, `INBOUND_EMAIL_ADDRESS_SECRET` and the slug). Settings, Inbound email also shows the last message that could not be processed.
+
+Steps 1 to 6 need your Mailgun account and DNS, so this path is untested in production until you do them.
+
+## Support requests by email (Resend)
+
+Customers of the CRM (the organisations) ask Figbloom for help by email. There is no Customer Support role and no ticket list in the CRM (decision 12, 5 Nov 2026); the platform console holds the tickets. Full description: `docs/SUPPORT_BY_EMAIL.md`.
+
+How it works: any signed-in member opens Help, then **Contact support**, writes a subject and a message and sends it. The app sends one email through Resend's API to `SUPPORT_INBOX_EMAIL`. The member's own address is the Reply-To, so replies reach them directly. The subject carries a reference (`[FB-20261105-K7Q2X9] ...`) and the email carries the organisation, the member, the role and the page. A member may send 5 requests an hour and an organisation 20.
+
+| Variable | What it is |
+|---|---|
+| `RESEND_API_KEY` | The Resend API key (starts `re_`). Michael sends it once Resend is set up. Secret manager only. Use a key with **Sending access** only. |
+| `SUPPORT_EMAIL_FROM` | The sender, for example `Figbloom CRM <support-requests@mail.yourcompany.com>`. Its domain must be verified in Resend. |
+| `SUPPORT_INBOX_EMAIL` | Where Figbloom support reads requests: the address the platform console takes tickets from. |
+
+Set-up, in order:
+
+1. In Resend, add the sending domain (Domains, Add Domain) and add the DNS records it shows (SPF, DKIM). Wait until it shows **Verified**.
+2. Create an API key with **Sending access** for that domain. Put it in `RESEND_API_KEY` (secret manager), with `SUPPORT_EMAIL_FROM` and `SUPPORT_INBOX_EMAIL`. Redeploy.
+3. Sign in as any member of a V1.1 organisation, open Help, Contact support, send a request. The dialog shows the reference.
+4. Check the support inbox: the email arrives with the reference in the subject, and Reply goes to the member.
+5. If it does not arrive: Resend, Logs shows each send and its status. The app answers 503 with "Support by email is not set up yet" when any of the three variables is missing, and 503 "We could not send your request" when Resend refuses the message (the cause is in the server log, never on screen).
+
+Local development: with any variable unset the request is logged and the dialog says nothing was sent. Nothing leaves the machine.
+
+Until Michael's key arrives, step 2 onward cannot be done, so this path is untested against the real Resend service. The adapter is tested against a stand-in `fetch` (`tests/supportRequests.test.ts`).
 
 ## Backup and restore
 

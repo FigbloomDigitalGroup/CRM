@@ -48,20 +48,19 @@ export const approvalRules: ApprovalRule[] = [
   { key: "deletion", label: "Permanent deletion of a contact (data-protection request)", unit: "any", on: true, threshold: 0 },
 ];
 
-const r = (management: Access, sales: Access, delivery: Access, finance: Access, technical: Access, support: Access): Record<RoleKey, Access> => ({ management, sales, delivery, finance, technical, support });
+const r = (management: Access, sales: Access, delivery: Access, finance: Access, technical: Access): Record<RoleKey, Access> => ({ management, sales, delivery, finance, technical });
 
 export const fieldRows: FieldRow[] = [
-  { key: "deals.values", label: "Deal value", access: r("Edit", "Own", "Hidden", "View", "Hidden", "Hidden") },
-  { key: "deals.margin", label: "Cost and margin", access: r("View", "Hidden", "Hidden", "Hidden", "Hidden", "Hidden") },
-  { key: "contact.phone", label: "Contact phone and WhatsApp", access: r("Edit", "Edit", "View", "View", "Hidden", "View") },
-  { key: "payments.status", label: "Invoice and payment status", access: r("View", "Hidden", "Hidden", "Edit", "Hidden", "Hidden") },
-  { key: "leads.export", label: "Export leads", access: r("Edit", "Hidden", "Hidden", "Hidden", "Hidden", "Hidden") },
-  { key: "attachments.contract", label: "Signed contracts", access: r("Edit", "Own", "View", "View", "Hidden", "Hidden") },
-  { key: "tickets.manage", label: "Support tickets", access: r("Edit", "Hidden", "View", "Hidden", "Hidden", "Edit") },
+  { key: "deals.values", label: "Deal value", access: r("Edit", "Own", "Hidden", "View", "Hidden") },
+  { key: "deals.margin", label: "Cost and margin", access: r("View", "Hidden", "Hidden", "Hidden", "Hidden") },
+  { key: "contact.phone", label: "Contact phone and WhatsApp", access: r("Edit", "Edit", "View", "View", "Hidden") },
+  { key: "payments.status", label: "Invoice and payment status", access: r("View", "Hidden", "Hidden", "Edit", "Hidden") },
+  { key: "leads.export", label: "Export leads", access: r("Edit", "Hidden", "Hidden", "Hidden", "Hidden") },
+  { key: "attachments.contract", label: "Signed contracts", access: r("Edit", "Own", "View", "View", "Hidden") },
 ];
 
 /** Members per role, for "this affects N people". */
-export const membersPerRole: Record<RoleKey, number> = { management: 2, sales: 4, delivery: 3, finance: 1, technical: 2, support: 0 };
+export const membersPerRole: Record<RoleKey, number> = { management: 2, sales: 4, delivery: 3, finance: 1, technical: 2 };
 
 /** What the effect preview shows for each field (the sample record a person would open). */
 export const sampleValues: Record<string, string> = {
@@ -71,7 +70,6 @@ export const sampleValues: Record<string, string> = {
   "payments.status": "Deposit paid · balance due 30 Nov",
   "leads.export": "Export CSV",
   "attachments.contract": "Signed contract.pdf",
-  "tickets.manage": "Ticket #214 · camera offline",
 };
 
 export interface DemoToken {

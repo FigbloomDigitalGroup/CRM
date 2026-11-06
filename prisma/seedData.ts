@@ -1,8 +1,8 @@
 /**
  * Global role/permission catalog for CRM V1.
  *
- * Five fixed roles plus the proposed sixth, Customer Support (flag-gated,
- * see `requiredFeature`). The matrix was signed on 22 Oct 2026
+ * Five fixed roles. (A proposed sixth role, Customer Support, was dropped on 5 Nov 2026: support tickets are
+ * raised by email to Figbloom, see docs/SUPPORT_BY_EMAIL.md.) The matrix was signed on 22 Oct 2026
  * (docs/DECISIONS.md section 1) and extended by B1.01 (FIG-1017) with the
  * keys from the approved design. The seeded rows below already include the
  * five signed departures; `src/auth/permissions.ts` removes them again, per
@@ -54,13 +54,6 @@ export const ROLES: readonly RoleDef[] = [
     name: "Restricted Technical",
     description:
       "Least-privilege technical support and troubleshooting access.",
-  },
-  {
-    key: "CUSTOMER_SUPPORT",
-    name: "Customer Support",
-    description:
-      "Customer questions, tickets and satisfaction follow-up. Proposed role, off until the organisation switches it on.",
-    requiredFeature: "customer_support.role",
   },
 ];
 
@@ -469,11 +462,6 @@ export const PERMISSIONS: { key: string; area: string; description: string }[] =
       area: "Finance",
       description: "Record payment status and notes on won deals.",
     },
-    {
-      key: "tickets.manage",
-      area: "Support",
-      description: "Work customer support tickets.",
-    },
 
     // --- Signed departures from the seeded matrix (docs/DECISIONS.md 1.2 to
     // 1.6). Switched off per organisation with the `departure.*` toggles.
@@ -541,8 +529,6 @@ export const PERMISSION_MIN_RELEASE: Record<string, "v1" | "v1.1" | "v2"> = {
   "meetings.schedule": "v1.1",
   "api_tokens.manage": "v2",
   "webhooks.manage": "v2",
-  // FIG-1155 (B6.23): tickets arrive with V1.1; only Management and the flagged Customer Support role hold the key.
-  "tickets.manage": "v1.1",
 };
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -614,7 +600,6 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "webhooks.manage",
     "security.manage",
     "deals.margin",
-    "tickets.manage",
     "deals.handoff",
     "handoff.manage",
     "chat.view",
@@ -712,26 +697,5 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "mywork.view",
     "chat.view",
     "chat.post",
-  ],
-  // Proposed sixth role (docs/DECISIONS.md 2.4): behind `customer_support.role`.
-  CUSTOMER_SUPPORT: [
-    "contacts.view",
-    "companies.view",
-    "company_services.view",
-    "activities.view",
-    "activities.create",
-    "communications.view",
-    "communications.create",
-    "tasks.view.own",
-    "tasks.create",
-    "tasks.assign.own",
-    "reporting.view.own",
-    "attachments.manage",
-    "ai.use",
-    "tickets.manage",
-    "chat.view",
-    "chat.post",
-    "mail.use",
-    "meetings.schedule",
   ],
 };

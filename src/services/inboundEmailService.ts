@@ -81,6 +81,17 @@ export async function ingestInboundEmail(
   }
 }
 
+/**
+ * For an adapter that has already established the organisation itself (the Mailgun route: signed webhook plus the per-organisation
+ * BCC address, FIG-806). Same logging, de-duplication and Needs-linking behaviour as `ingestInboundEmail`.
+ */
+export async function ingestInboundEmailForOrganization(
+  organizationId: string,
+  payload: InboundEmailPayload,
+): Promise<IngestInboundEmailResult> {
+  return ingestForOrganization(organizationId, payload);
+}
+
 async function ingestForOrganization(
   organizationId: string,
   payload: InboundEmailPayload,

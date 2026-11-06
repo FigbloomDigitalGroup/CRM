@@ -17,8 +17,8 @@ interface Checklist {
   totals: Record<string, number>;
 }
 
-/** Roles an organisation can hand out today; Customer Support is proposed and behind a flag, so it is only offered to a person who already has it. */
-const OFFERED = ROLES.filter((r) => r.key !== "CUSTOMER_SUPPORT");
+/** Roles an organisation can hand out. */
+const OFFERED = ROLES;
 
 const STATE: Record<string, { label: string; tone: string }> = {
   active: { label: "Active", tone: "ok" },

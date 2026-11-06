@@ -7746,9 +7746,6 @@
           },
           "communication.group": {
             "type": "boolean"
-          },
-          "customer_support.role": {
-            "type": "boolean"
           }
         },
         "required": [
@@ -7767,8 +7764,7 @@
           "preferences.own_colours",
           "organisation.switcher",
           "quotes.enabled",
-          "communication.group",
-          "customer_support.role"
+          "communication.group"
         ],
         "additionalProperties": true
       },
@@ -8028,6 +8024,10 @@
     "properties": {
       "configured": {
         "type": "boolean"
+      },
+      "bccAddress": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
       }
     },
     "required": [

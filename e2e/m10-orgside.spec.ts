@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { loginAs } from "./helpers";
 
 /**
- * Two-step sign-in, Customer Support workspace and organisation switcher (FIG-1165, 1167, 1178), now wired to the real API (M14 wiring, lane W6).
+ * Two-step sign-in and organisation switcher (FIG-1165, 1167), now wired to the real API (M14 wiring, lane W6). The Customer Support workspace was removed on 5 Nov 2026 (decision 12).
  *
  * - The login page check always runs: the frozen page must not link to or change for the new step.
  * - The V1.1 screens answer FEATURE_UNAVAILABLE for a V1 organisation, so the checks that need them run only against a server started with
@@ -25,25 +25,6 @@ test.describe("two-step sign-in is a new route, the login page is untouched (FIG
     await expect(page.getByText("Sign in again")).toBeVisible();
     await expect(page.getByLabel("Authenticator code")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Back to sign-in" })).toBeVisible();
-  });
-});
-
-test.describe("Customer Support workspace (FIG-1178)", () => {
-  test.beforeEach(() => {
-    test.skip(!v11Server, "needs a V1.1 server (ACTIVE_RELEASE=v1.1, E2E_RELEASE_V11=true)");
-  });
-
-  test("Customer Support opens the Support workspace", async ({ page }) => {
-    await signInAs(page, "dev.support@figbloom.local");
-    await page.goto(page.url().replace(/\/o\/([^/]+).*/, "/o/$1/support"));
-    await expect(page.getByRole("heading", { name: "Support" })).toBeVisible();
-    await expect(page.getByText(/KES/)).toHaveCount(0);
-  });
-
-  test("Sales gets the explained no-access", async ({ page }) => {
-    await signInAs(page, "dev.sales@figbloom.local");
-    await page.goto(page.url().replace(/\/o\/([^/]+).*/, "/o/$1/support"));
-    await expect(page.getByText(/Customer Support/).first()).toBeVisible();
   });
 });
 

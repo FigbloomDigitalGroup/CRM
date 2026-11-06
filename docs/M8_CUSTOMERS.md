@@ -22,7 +22,7 @@ Nothing is computed from a masked value. A masked deal shows "Value hidden", "Wo
 4. **Import CSV** is a sheet on the list (`ImportCsvDialog`, usable for contacts too), not a link to the data-migration wizard (M9), so the button works today.
 5. **Export** uses the directory export (same filters as the list) and does not offer the bulk-approval path; above the bulk limit the API says so and the toast shows it.
 6. **Health score** is shown by the shared extras panel (agent F3.08), not duplicated on the page.
-7. **Tickets and the survey** are Customer Support (V1.1): "Outstanding issues" says nothing is outstanding and shows the API's `not_available` reason.
+7. **Tickets and the survey**: support tickets are raised by email to Figbloom and are not held in the CRM (decision 12): "Outstanding issues" says nothing is outstanding and shows the API's `not_available` reason.
 8. **Merge field defaults**: because the API ignores its fill-blanks rule once `fields` is sent, the dialog sends an explicit choice for every field.
 
 ## Tests

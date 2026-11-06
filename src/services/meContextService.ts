@@ -19,8 +19,8 @@ import { getPlatformPreferences } from "./platformPreferenceService";
  * `null`. See `src/api/dto/meContext.ts` for the contract.
  */
 
-/** Roles the design still shows as proposed, wherever the person sees their own role. */
-const ROLE_NAME_SUFFIX: Record<string, string> = { CUSTOMER_SUPPORT: " (proposed)" };
+/** Roles the design still shows as proposed, wherever the person sees their own role. None today. */
+const ROLE_NAME_SUFFIX: Record<string, string> = {};
 
 export const WORKSPACE_LABELS: Record<string, string> = {
   MANAGEMENT: "Management dashboard",
@@ -28,7 +28,6 @@ export const WORKSPACE_LABELS: Record<string, string> = {
   DELIVERY: "Delivery workspace",
   FINANCE: "Finance workspace",
   RESTRICTED_TECHNICAL: "Technical workspace",
-  CUSTOMER_SUPPORT: "Support workspace (proposed)",
 };
 
 function formatLocal(date: Date, timeZone: string | null, hourFormat: string): string {

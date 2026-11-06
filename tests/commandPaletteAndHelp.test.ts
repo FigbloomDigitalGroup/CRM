@@ -18,7 +18,7 @@ afterAll(() => {
   else process.env.ACTIVE_RELEASE = ORIGINAL_RELEASE;
 });
 
-const ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"] as const;
+const ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"] as const;
 
 async function world() {
   const org = await createTestOrganization("Palette Org");

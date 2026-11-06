@@ -81,6 +81,8 @@
 .fb-help-panel__key, .fb-helpc__key { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; font-size: 13px; border-top: 1px solid var(--border); }
 .fb-help-panel__more { padding: 0 18px 24px; font-size: 12.5px; }
 .fb-help-panel__more a, .fb-helpc a { color: var(--primary-text); font-weight: 500; }
+/* Contact support (decision 12) */
+.fb-help-panel__contact, .fb-helpc__contact { background: none; border: 0; padding: 0; font: inherit; font-weight: 500; color: var(--primary-text); cursor: pointer; text-decoration: underline; }
 .fb-helpc { display: flex; flex-direction: column; gap: 16px; max-width: 760px; }
 .fb-helpc__title { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.03em; }
 .fb-helpc__tabs { display: flex; gap: 6px; }

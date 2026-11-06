@@ -94,7 +94,6 @@ describe("B6.24 permissions: the new keys, every role", () => {
     DELIVERY: ["chat.view", "chat.post", "mail.use", "meetings.schedule"],
     FINANCE: ["chat.view", "chat.post"],
     RESTRICTED_TECHNICAL: ["chat.view", "chat.post"],
-    CUSTOMER_SUPPORT: ["chat.view", "chat.post", "mail.use", "meetings.schedule"],
   };
 
   it("gives each role exactly the keys the decision says, and the keys wait for V1.1", () => {
