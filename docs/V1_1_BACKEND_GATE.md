@@ -1,7 +1,7 @@
 # V1.1 backend sign-off gate (G2.04, FIG-1159): checklist and evidence
 
 The formal "V1.1 backend works" moment before frontend work is wired to it. This page is the checklist with the real state of each line on 9 Nov 2026.
-**Not signed.** The tag, the published contract, Michael's approval and the demo recording are Given's to record. Nothing here has been tagged or pushed to `dev-given` by Claude.
+**Signed off by Given on behalf of Michael, 10 Nov 2026.** The tags (`api-v1.1`, `backend-v1.1`) and the demo recording are Given's to place after #37 merges. Nothing here has been tagged or pushed to `dev-given` by Claude.
 
 | # | Checklist line (from FIG-1159) | State | Evidence |
 |---|---|---|---|
@@ -9,17 +9,20 @@ The formal "V1.1 backend works" moment before frontend work is wired to it. This
 | 2 | G2.01 to G2.03 done; no open Urgent or High findings | **G2.01 and G2.02: yes** (merged in PR #34; no open High; open Medium items need a decision, below). **G2.03: contract freeze done (PR #37); performance not demonstrated.** No N+1 and no pathological path, but on this noisy machine the targets are not shown for the forecast, assistant context and chat; fixes are recommended in `docs/PERF_V1_1.md` and need a decision. | `docs/TEST_REPORT_V1_1.md`, `docs/SECURITY_REVIEW_PLATFORM_CONSOLE.md`, `docs/PERF_V1_1.md` |
 | 3 | API demo for platform console, quotes, approvals, assistant | **Script written, not recorded.** The requests are in `docs/demo/stage-6-v1-1.http`; the same behaviour is proved by tests (`tests/v11PermissionDenial.test.ts`, `tests/apiWalkV11.test.ts`, the platform suites). A recording needs a person running the dev server. | `docs/demo/stage-6-v1-1.http` |
 | 4 | Tag `backend-v1.1`; OpenAPI v1.1 published | **No. Given's to do** after G2.03 merges. | |
-| 5 | Michael approval recorded | **No. Given's to record.** | |
+| 5 | Michael approval recorded | **Yes**, by Given on Michael's behalf, 10 Nov 2026. | This page |
 
-## Open decisions that should be answered before or at sign-off
+## Decisions recorded by Given, 10 Nov 2026
 
-| ID | What | Who decides |
-|---|---|---|
-| G2.03 perf | The forecast, assistant context and chat fixes in `docs/PERF_V1_1.md`: take them as a follow-up measured on the staging stack, or hold the gate for them. | Given |
-| N-01 | Money text typed into a deal's own chat channel is visible to the deal owner who may not see payments (card figures are hidden). Hide it, or accept it as the author's own words. | Given and Michael |
-| N-03 | Migration `20261120090000_remove_customer_support` fails on a database that has tasks assigned to the removed Customer Support dev user. Raise as its own issue. | Given |
-| F-03 | The platform audit chain is not anchored outside the database. Add the audit export and head hash to the off-site encrypted backups. | Given, with the backup work |
-| (open) | The independent penetration test is still open and should include the platform console. | Given |
+Given approved every recommendation and gave the sign-off on behalf of Michael (recorded here from Given's message; the tags are still Given's to place).
+
+| ID | Decision |
+|---|---|
+| G2.03 perf | Accept the contract freeze now. The forecast, assistant context and chat fixes in `docs/PERF_V1_1.md` are a follow-up measured on the staging stack; the gate is not held for them. |
+| N-01 | Accepted for now: money text typed into a deal's own chat channel is the author's own words. Revisit whether deal channels should hide all money text. |
+| N-03 | Raised as its own issue: FIG-1565 (migration `20261120090000_remove_customer_support`). |
+| F-03 | Raised as FIG-1566 (platform audit export and chain head hash in the off-site backups). |
+| (open) | The independent penetration test stays open and should include the platform console. |
+| Sign-off | Given, on behalf of Michael, 10 Nov 2026. |
 
 ## What the gate rests on
 
