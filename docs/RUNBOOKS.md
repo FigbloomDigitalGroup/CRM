@@ -700,3 +700,7 @@ The 29 s covers the machine steps on a 446 KiB database; the 1 hour RTO target i
 | Runbooks reviewed | Given | | |
 | Table-top and dry run seen | Given | | |
 | Informed | Michael | | |
+
+## First platform admin on an empty production database
+
+One-time path with no dev account anywhere: see [PLATFORM_BOOTSTRAP.md](PLATFORM_BOOTSTRAP.md) (`npm run platform:bootstrap-admin -- <email> "<name>"`, then sign in, enrol two-step, create the first organisation and invite its Management user).

@@ -1,5 +1,7 @@
 # Deployment (FIG-595)
 
+> **MVP on Vercel (9 Nov 2026, `docs/DECISIONS.md` section 7):** the first production deployment runs on Vercel with Neon PostgreSQL and an S3-compatible bucket. The Docker image below stays valid (staging on this computer, the later AWS move). For Vercel read "Vercel MVP deployment" at the end of this file and `docs/VERCEL_SETUP.md`.
+
 This project ships as a single Docker image (see `Dockerfile`), built once
 and promoted unchanged across environments -- staging and production are
 the same artifact with different environment variables, never separate
@@ -92,7 +94,7 @@ by whether an environment needs it:
 | `APP_DATABASE_URL` | Required | Required | Same host/db as `DATABASE_URL`, `figbloom_app` credentials. What the running app actually queries through. |
 | `TEST_DATABASE_URL` / `TEST_APP_DATABASE_URL` | Required (tests only) | Not needed | Only exist for the automated test suite's isolated database. |
 | `DEV_SESSION_SECRET` | Required | **Omit** | Signs the dev sign-in chips cookie, which only works when `NODE_ENV` is exactly `"development"` regardless (FIG-605) -- see `IMPLEMENTATION_NOTES.md`, "Real authentication (FIG-592)". |
-| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Optional (unset = logs the link) | **Required for real use** | Without these, password-reset/invite emails only ever reach the server log, not a real inbox -- acceptable for dev, not for real users. |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURE` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` | Optional (unset = logs the link) | Optional if `RESEND_API_KEY` and `EMAIL_FROM` are set | Invites, resets, notifications and quotes send through SMTP when `SMTP_HOST` is set, otherwise through Resend (`RESEND_API_KEY` + `EMAIL_FROM`). With neither, production logs an ERROR at boot and `/api/health` reports `email: misconfigured`; links are never logged in production. |
 | `WEBSITE_LEAD_RATE_LIMIT_*` | Optional | Optional | Sane defaults apply; tune only if the defaults are wrong for real traffic. |
 | `LOGIN_RATE_LIMIT_*` / `SIGNUP_RATE_LIMIT_*` / `PASSWORD_RESET_RATE_LIMIT_*` | Optional | Optional | Sane defaults apply (FIG-784) -- see "Rate limiting on login/signup/password-reset," below. |
 | `IMPORT_MAX_ROWS` | Optional | Optional | Per-call CSV import row ceiling (FIG-596); defaults to 20000. |
@@ -229,9 +231,9 @@ failure.
 
 ## Scheduled work
 
-Nothing in this repo schedules itself: the image has no scheduler sidecar, the
-compose files have no scheduler service, and the repo has no `vercel.json` or
-scheduled workflow. Whoever runs the environment must install **all** the calls
+Nothing in the Docker image schedules itself: it has no scheduler sidecar and the
+compose files have no scheduler service. **On Vercel, `vercel.json` installs all three calls**
+(see "Vercel MVP deployment", below). On any other host, whoever runs the environment must install **all** the calls
 below. Without them mail sync, scheduled sends, chat notifications,
 data-request exports, retention and the platform audit check never run.
 
@@ -517,7 +519,7 @@ rather than being discovered at deploy time.
 - [ ] Platform role created: `PLATFORM_DB_PASSWORD` set, then `npm run db:bootstrap-role` and `npm run db:grant-role`; `PLATFORM_DATABASE_URL` set.
 - [ ] Platform admin created with `npm run platform:bootstrap-admin`.
 - [ ] `TWO_STEP_ENCRYPTION_KEY` and `INTEGRATION_ENCRYPTION_KEY` set (32 random bytes, base64, different per environment).
-- [ ] SMTP configured (`SMTP_*`); in production links are never logged, so without SMTP invites and resets cannot be delivered.
+- [ ] Email configured (`RESEND_API_KEY` + `EMAIL_FROM`, or `SMTP_*`); in production links are never logged, so without a provider invites and resets cannot be delivered. `/api/health` must show `email.status: ok`.
 - [ ] `CRON_SECRET` set and the scheduler entries from "Scheduled work" installed (`/api/cron/jobs` every 5 minutes or less, `/api/cron/platform-maintenance` daily).
 - [ ] `TRUSTED_PROXY_HOPS` set when behind a proxy (number of trusted proxy hops; when unset `X-Forwarded-For` is ignored).
 - [ ] OAuth client ids and secrets set and `${APP_BASE_URL}/api/integrations/oauth/callback` registered, if mail and calendar connections are offered.
@@ -525,3 +527,132 @@ rather than being discovered at deploy time.
 ## Database hosting
 
 Plain PostgreSQL, running locally for now, with a planned migration to AWS (Michael's decision, 4 Nov 2026; `docs/DECISIONS.md` section 5). Keep to standard PostgreSQL features so that move is a dump and restore plus new connection strings. The AWS services and region are not chosen yet.
+
+## Vercel MVP deployment
+
+Decided by Given on 9 Nov 2026, Michael to confirm (`docs/DECISIONS.md` section 7). Scope: V1 plus the wired V1.1 screens; V2 screens stay hidden. The human steps, in order, are in `docs/VERCEL_SETUP.md`.
+
+### What is in the repository for Vercel
+
+| File | Purpose |
+|---|---|
+| `vercel.json` | Build command `prisma generate && next build` (migrations never run in a build), function `maxDuration` for the long routes, and the three cron entries. |
+| `prisma/schema.prisma` | `binaryTargets = ["native", "rhel-openssl-3.0.x"]`, so the query engine for the Vercel runtime is bundled. |
+| `next.config.js` | Unchanged and still applies: security headers, the `/sw.js` headers, the Sentry build wrapper (source map upload only with `SENTRY_AUTH_TOKEN`). |
+| `scripts/migrate-deploy-direct.ts` | `npm run migrate:deploy:direct`: runs `prisma migrate deploy` through `DIRECT_URL`. |
+
+**Why there is no `directUrl` in the Prisma datasource.** Prisma then makes a `DIRECT_URL` variable mandatory for every command (`generate`, `validate`, the test suite, CI), which would break every setup that has only `DATABASE_URL`. Instead `npm run migrate:deploy:direct` copies `DIRECT_URL` onto `DATABASE_URL` for that one command. With `DIRECT_URL` unset it behaves exactly like `npm run migrate:deploy`. Run it from a trusted computer, never from the Vercel build.
+
+**Connection strings on Neon.** `APP_DATABASE_URL` (what the running app queries through, role `figbloom_app`) and `PLATFORM_DATABASE_URL` (role `figbloom_platform`) use Neon's **pooled** host (the host name containing `-pooler`) with `?sslmode=require&pgbouncer=true&connection_limit=1`. `DATABASE_URL` (owner role) is the **direct** host, used only by scripts and migrations; `DIRECT_URL` is the same direct owner URL. Row-level security keys on the organisation set per transaction, which works through the transaction-mode pooler; step 9 below proves it on the hosted database.
+
+**Heavy dependencies.** `exceljs` and `web-push` are plain Node packages used by the import/export and push paths; no route uses the edge runtime. Vercel reports function size on the first build; if one exceeds the limit, report it.
+
+### Production database bring-up (run once, in this order)
+
+Run from a trusted computer with the repository on `dev-given`. Values below are placeholders; real values live only in the Vercel project settings and the secret store.
+
+1. **Create the Neon project** (Vercel Marketplace, plain PostgreSQL) and a database `figbloom_crm`. Keep the production project separate from any project used by previews; previews must never point at the production database.
+2. **Set the owner connection for this shell** (direct, non-pooled host, owner role):
+   ```bash
+   export DATABASE_URL="postgresql://<owner>:<password>@<direct-host>/figbloom_crm?sslmode=require"
+   export DIRECT_URL="$DATABASE_URL"
+   export APP_DB_PASSWORD="<long random value>"
+   export PLATFORM_DB_PASSWORD="<another long random value>"
+   ```
+3. **Enable `pg_trgm`** (search needs it): `psql "$DATABASE_URL" -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;'`.
+4. **Apply the migrations:** `npm run migrate:deploy:direct`, then confirm `npx prisma migrate status` shows nothing pending.
+5. **Create the application roles:** `npm run db:bootstrap-role` creates `figbloom_app` and `figbloom_platform` with the two passwords above; `npm run db:grant-role` grants their table privileges (audit events stay append-only; the platform role sees only its own tables). If Neon refuses the `GRANT CONNECT` on the database, note the exact message; the table grants are what matter.
+6. **Seed the role and permission catalogue only:** `NODE_ENV=production npm run seed`. `prisma/seed.ts` is the production-safe seed: the five roles and their permissions, no organisation, no user, no sample data. Re-running it is safe. **Never run `npm run seed:dev` or `npm run db:setup` against this database.**
+7. **Build the pooled URLs** for `figbloom_app` and `figbloom_platform` from Neon's pooled host and put them in Vercel as `APP_DATABASE_URL` and `PLATFORM_DATABASE_URL`.
+8. **Create the first platform admin and the first organisation** through the bootstrap flow (`docs/PLATFORM_ADMINS.md`).
+9. **Cross-organisation check on the hosted database.** With two test organisations A and B: signed in as a member of A, `GET /api/orgs/<B-slug>/leads/<B-lead-id>` must answer 403 or 404, and A's lists must never contain B's rows. In `psql` as `figbloom_app` with no organisation set, `SELECT count(*) FROM leads;` must return 0 (row-level security closed by default). The automated tenant tests run against a **copy** of the schema (`TEST_DATABASE_URL`), never against production data. Delete the test organisations afterwards.
+10. **Take a first backup** (`docs/BACKUP_RESTORE.md`; `pg_dump` over the direct URL) before real data is loaded.
+
+Moving to AWS later is a dump and restore plus new connection strings (section "Database hosting").
+
+### Environment variable reference
+
+One table, covering `.env.example` and every `process.env` read in `src/`. **Prod** = Vercel Production environment; **Preview** = Vercel Preview environment (own Neon project and own bucket, never the production database, different secrets). S = secret: enter only in Vercel as Sensitive, never in a file.
+
+| Variable | Prod | Preview | Supplied by | Notes |
+|---|---|---|---|---|
+| `NODE_ENV` | automatic | automatic | Vercel | `production` in both. |
+| `FIGBLOOM_ENVIRONMENT` | `production` | `preview` | Given | `production` switches on the production boot guards. Previews must not use it. |
+| `ACTIVE_RELEASE` | `v1.1` | `v1.1` | Given | MVP scope is V1 plus wired V1.1. Unset means `v1`. |
+| `APP_BASE_URL` | required | required | Given | Public URL, no trailing slash. Builds links, is a CSRF allowed origin, and derives the OAuth redirect. |
+| `DATABASE_URL` S | required | required | Given (Neon) | Owner role, **direct** host. Scripts and migrations only. |
+| `DIRECT_URL` S | local shell only | local shell only | Given (Neon) | Same as `DATABASE_URL`; read only by `npm run migrate:deploy:direct`. |
+| `APP_DB_PASSWORD` S, `PLATFORM_DB_PASSWORD` S | local shell only | local shell only | Given | Passwords `db:bootstrap-role` gives the two roles. |
+| `APP_DATABASE_URL` S | required | required | Given (Neon) | `figbloom_app`, **pooled** host. Production refuses to boot without it. |
+| `PLATFORM_DATABASE_URL` S | required | required | Given (Neon) | `figbloom_platform`, **pooled** host. The platform console fails closed without it. |
+| `APP_DB_ROLE`, `PLATFORM_DB_ROLE` | optional | optional | | Role names; defaults `figbloom_app`, `figbloom_platform`. |
+| `TEST_DATABASE_URL`, `TEST_APP_DATABASE_URL`, `TEST_PLATFORM_DATABASE_URL` | never | never | | Test suite only. |
+| `STORAGE_DRIVER` | `s3` | `s3` | Given | Required in production. |
+| `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` | required | required | Given | AWS example: `https://s3.<region>.amazonaws.com`. Preview uses its own bucket. |
+| `S3_ACCESS_KEY_ID` S, `S3_SECRET_ACCESS_KEY` S | required | required | Given | Key limited to this bucket (`docs/STORAGE.md`). |
+| `S3_FORCE_PATH_STYLE` | `false` | `false` | Given | Virtual-hosted style on Amazon S3. |
+| `S3_PUBLIC_ENDPOINT` | unset | unset | | Only when browsers reach the store at another host than the server. |
+| `STORAGE_LOCAL_DIR`, `STORAGE_SIGNING_SECRET` | not used | not used | | Local driver only (Vercel's disk is not persistent). |
+| `CLAMD_HOST`, `CLAMD_PORT` | unset | unset | | No ClamAV host in the MVP. |
+| `ANTIVIRUS_MODE` | `builtin-only` | optional | Given | Opt-out of the ClamAV requirement; needs the written risk acceptance in `docs/DECISIONS.md` section 7. Without it and without `CLAMD_HOST`, production refuses to boot. A warning is logged at every boot while it is active. Remove it when a ClamAV host exists. |
+| `CRON_SECRET` S | required | required | Given | 32+ random characters. Vercel sends it as `Authorization: Bearer` on cron calls. Unset: the cron routes answer 500. |
+| `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` | `30` | optional | | Match the cron interval. |
+| `TWO_STEP_ENCRYPTION_KEY` S | required | required | Given | `openssl rand -base64 32`. |
+| `INTEGRATION_ENCRYPTION_KEY` S | required | required | Given | `openssl rand -base64 32`. Without it no mail or calendar token can be stored. |
+| `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` S | for Gmail and Calendar | optional | Given (Google Cloud) | Redirect `${APP_BASE_URL}/api/integrations/oauth/callback`. |
+| `MICROSOFT_OAUTH_CLIENT_ID`, `MICROSOFT_OAUTH_CLIENT_SECRET` S, `MICROSOFT_OAUTH_TENANT` | for Outlook | optional | Given (Entra) | Same redirect. Tenant default `common`. |
+| `RESEND_API_KEY` S | required | optional | Michael or Given | Support requests by email. |
+| `SUPPORT_EMAIL_FROM` | required | optional | Given | Must use a domain verified in Resend. |
+| `SUPPORT_INBOX_EMAIL` | required | optional | Michael | Where support requests arrive. |
+| `RESEND_API_KEY` S, `EMAIL_FROM` | required for invites, resets and quotes (unless SMTP is used) | optional | Michael | Sender domain must be verified in Resend. In production links are never logged; without a provider, `/api/health` reports `email: misconfigured`. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` S, `SMTP_FROM` | optional alternative to Resend | optional | Given | If `SMTP_HOST` is set it wins over Resend. |
+| `MAILGUN_INBOUND_SIGNING_KEY` S, `INBOUND_EMAIL_DOMAIN`, `INBOUND_EMAIL_ADDRESS_SECRET` S | optional | optional | Given | BCC-to-CRM. Unset: inbound calls are refused. |
+| `ANTHROPIC_API_KEY` S | for assistant and card reader | optional | Given | Unset: the assistant says it is not set up. |
+| `ASSISTANT_MODEL` | optional | optional | Given | Model id. |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` S, `VAPID_SUBJECT` | for web push | optional | Given | All three or push is off. |
+| `PUSH_EXTRA_HOSTS` | optional | optional | | Extra push hosts. |
+| `TRUSTED_PROXY_HOPS` | `1` | `1` | Given | Vercel is one trusted proxy hop. Unset: per-IP rate limits have no key. |
+| `NEXT_PUBLIC_SENTRY_DSN` | optional | optional | Given | Error tracking. |
+| `SENTRY_ENVIRONMENT`, `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | `production` | `preview` | | |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` S | build-time, optional | optional | Given | Source map upload; unset skips it. |
+| `APP_VERSION` | optional | optional | | Falls back to `VERCEL_GIT_COMMIT_SHA`. |
+| `METRICS_TOKEN` S | optional | optional | Given | Only to read `/api/metrics`. |
+| `LOG_LEVEL`, `LOG_PLAIN` | optional | optional | | Default `info`. |
+| `LOGIN_*`, `SIGNUP_*`, `PASSWORD_RESET_*`, `WEBSITE_LEAD_RATE_LIMIT_*`, `TWO_STEP_RATE_LIMIT_*`, `LOCKOUT_*`, `INVITE_RESEND_COOLDOWN_MS`, `ME_CONTEXT_CACHE_MS`, `IMPORT_MAX_ROWS`, `MIGRATION_MAX_ROWS`, `MIGRATION_ROLLBACK_WINDOW_HOURS`, `PLATFORM_DELETION_WAIT_DAYS` | optional | optional | | Tuning; defaults are fine (`.env.example`). |
+| `JOBS_POLL_INTERVAL_MS` | not used | not used | | For `npm run jobs:worker`, which Vercel does not use. |
+| `SMS_PROVIDER_API_KEY` | unset | unset | | No provider is wired. |
+
+**Must NOT be set in Production (nor in Preview):**
+
+| Variable | Why |
+|---|---|
+| `ALLOW_DEV_ACCOUNTS` | Enables dev accounts and sign-in chips. Production boot fails if a dev account exists. |
+| `DEMO_SCREENS`, `NEXT_PUBLIC_DEMO_SCREENS` | Switch demo-data screens on. |
+| `NEXT_PUBLIC_PREVIEW_CHIPS`, `PREVIEW_DEV_CHIPS` | Build the dev sign-in chips (`npm run preview` only). |
+| `DEV_SESSION_SECRET`, `HIDE_DEV_LOGIN_ACCOUNTS`, `E2E_ALLOW_DEV_ACCOUNTS` | Development only. |
+| `NEXT_PUBLIC_API_SOURCE`, `NEXT_PUBLIC_MOCK_API_URL` | Mock API for development. |
+| `SKIP_BUILD_TYPECHECK`, `NEXT_DIST_DIR` | CI and local only; a deploy build keeps its type check. |
+| `STAGING_*`, `REHEARSAL_*`, `RECONCILE_*`, `ADOPTION_REPORT_DATABASE_URL` | Scripts only. |
+
+### Files: bucket, CORS, versioning, limits
+
+- **Bucket:** private (block all public access), default encryption on, versioning on, with a lifecycle rule that expires old versions after 30 days. The app's key may only get, put and delete objects in this bucket.
+- **Browser uploads and downloads go straight to the bucket** through signed links, so Vercel's 4.5 MB request body limit does not apply to them. Server-side steps (scan on finalise, import, export) read the object from the bucket.
+- **CORS on the bucket** (needed for the signed browser upload and download), with the real site origin:
+  ```json
+  [{ "AllowedOrigins": ["https://<your-domain>"], "AllowedMethods": ["GET", "PUT", "HEAD"], "AllowedHeaders": ["*"], "ExposeHeaders": ["ETag"], "MaxAgeSeconds": 3000 }]
+  ```
+- **Size limits** (`src/storage/policy.ts`): avatars and logos 2 MB, attachments 25 MB, imports 10 MB, exports 50 MB. Safe on Vercel because of the direct-to-bucket upload. The local-driver blob route does not exist when `STORAGE_DRIVER=s3`.
+- **Antivirus:** no ClamAV host in the MVP. Uploads get the built-in file-type checks and the EICAR detector only: the accepted risk in `docs/DECISIONS.md` section 7, and the reason for `ANTIVIRUS_MODE=builtin-only`.
+
+### Scheduled work on Vercel
+
+`vercel.json` holds the three entries: `/api/cron/jobs` every 5 minutes, `/api/cron/notifications-sweep` every 30 minutes, `/api/cron/platform-maintenance` daily at 03:00 UTC. Each route checks `Authorization: Bearer $CRON_SECRET` (constant-time compare, fails closed when unset); Vercel sends that header itself once `CRON_SECRET` is set in the project. Each function is allowed 300 seconds, and the job runner stops starting new jobs after 25 seconds. **Vercel Hobby allows one cron run per day, so a Pro plan is required** (mail sync every 5 minutes and queued sends depend on it). Nothing in production depends on `npm run jobs:worker`. Vercel runs crons only against the production deployment.
+
+### Domain, DNS, OAuth and email
+
+1. **Domain:** add `<your-domain>` in Vercel (Project, Settings, Domains) and create the DNS records the dashboard shows (for an apex domain an A record, for a subdomain a CNAME to the Vercel target; use the exact values displayed). The certificate is automatic.
+2. **`APP_BASE_URL`:** set to `https://<your-domain>` (no trailing slash) in Production, then redeploy.
+3. **OAuth redirect:** register `https://<your-domain>/api/integrations/oauth/callback` in Google Cloud (OAuth client, Gmail and Calendar scopes) and in the Microsoft Entra app registration (Web platform). Change both whenever the domain changes.
+4. **Resend:** add the sending domain in Resend, create the SPF (TXT) and DKIM records it shows at the DNS host, wait for "verified", then set `SUPPORT_EMAIL_FROM` on that domain. Add a DMARC TXT record (`v=DMARC1; p=none; rua=mailto:<address>`) and tighten it later.
+5. **Inbound email** (BCC-to-CRM, optional): MX of the inbound subdomain to Mailgun (see "Inbound email provider").

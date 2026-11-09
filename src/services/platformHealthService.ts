@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { emailProvider } from "../auth/email";
 import { NotFoundError, ValidationError } from "../auth/errors";
 import type { PlatformContext } from "../auth/platformSession";
 import { getPlatformDb } from "../db/platformClient";
@@ -82,8 +83,8 @@ const emailProbe: Probe = async () => {
   const rows = await getPlatformDb().$queryRaw<{ sent_24h: bigint; failed_24h: bigint; stuck_count: bigint }[]>`
     SELECT sent_24h, failed_24h, stuck_count FROM platform_email_health`;
   const r = rows[0]!;
-  const metrics = { sent24h: Number(r.sent_24h), failed24h: Number(r.failed_24h), stuck: Number(r.stuck_count), providerConfigured: Boolean(process.env.SMTP_HOST) };
-  if (!metrics.providerConfigured) return { status: "DEGRADED", detail: "No email provider is configured: messages are only logged, nobody receives them.", metrics };
+  const metrics = { sent24h: Number(r.sent_24h), failed24h: Number(r.failed_24h), stuck: Number(r.stuck_count), providerConfigured: emailProvider() !== "none" };
+  if (!metrics.providerConfigured) return { status: "DEGRADED", detail: "No email provider is configured (set RESEND_API_KEY and EMAIL_FROM, or SMTP_HOST): invites and resets are not delivered.", metrics };
   if (metrics.failed24h > 0 && metrics.failed24h >= metrics.sent24h) return { status: "DOWN", detail: `Email is failing: ${metrics.failed24h} failed and ${metrics.sent24h} sent in the last 24 hours.`, metrics };
   if (metrics.failed24h > 0 || metrics.stuck > 10) return { status: "DEGRADED", detail: `${metrics.failed24h} email${metrics.failed24h === 1 ? "" : "s"} failed in the last 24 hours and ${metrics.stuck} are waiting to be retried.`, metrics };
   return { status: "OPERATIONAL", detail: "Email is being delivered.", metrics };

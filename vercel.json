@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "npm ci",
+  "buildCommand": "prisma generate && next build",
+  "regions": ["fra1"],
+  "functions": {
+    "src/app/api/cron/**/route.ts": { "maxDuration": 300 },
+    "src/app/api/orgs/**/import/route.ts": { "maxDuration": 120 },
+    "src/app/api/orgs/**/imports/route.ts": { "maxDuration": 120 },
+    "src/app/api/orgs/**/export/route.ts": { "maxDuration": 120 },
+    "src/app/api/orgs/**/exports/route.ts": { "maxDuration": 120 },
+    "src/app/api/orgs/**/data-migration/**/route.ts": { "maxDuration": 120 },
+    "src/app/api/orgs/**/assistant/**/route.ts": { "maxDuration": 120 },
+    "src/app/api/orgs/**/quick-capture/**/route.ts": { "maxDuration": 120 }
+  },
+  "crons": [
+    { "path": "/api/cron/jobs", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/notifications-sweep", "schedule": "30 2 * * *" },
+    { "path": "/api/cron/platform-maintenance", "schedule": "0 3 * * *" }
+  ]
+}

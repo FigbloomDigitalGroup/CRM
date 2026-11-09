@@ -1,12 +1,6 @@
-import { notFound } from "next/navigation";
 import { VerifyPage } from "@/ui/screens/platform";
-import { demoScreensEnabled } from "@/ui/demo/enabled";
 
-/**
- * PL14 Verify it's you: the step after a platform password. A new route; the frozen sign-in pages are not touched. Demo only until the real platform
- * sign-in (B6.03) exists; the dev chip skips it.
- */
+/** PL14 Verify it's you: the second step after the platform password (authenticator code, backup code, or first-time set-up). A new route; the frozen sign-in pages are not touched. */
 export default function Page() {
-  if (!demoScreensEnabled()) notFound();
-  return <VerifyPage next="/login" />;
+  return <VerifyPage />;
 }

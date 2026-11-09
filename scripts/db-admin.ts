@@ -80,6 +80,15 @@ async function bootstrapRole(): Promise<void> {
       await client.query(
         `ALTER ROLE ${ident(APP_ROLE)} PASSWORD $pw$${password}$pw$`,
       );
+      const appAttrs = await client.query(
+        "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = $1",
+        [APP_ROLE],
+      );
+      if (appAttrs.rows[0]?.rolsuper || appAttrs.rows[0]?.rolbypassrls) {
+        throw new Error(
+          `Role "${APP_ROLE}" has SUPERUSER or BYPASSRLS. It must have neither (row-level security would not apply); fix the role before continuing.`,
+        );
+      }
       console.log(`Role "${APP_ROLE}" already exists -- password updated.`);
     }
 
@@ -105,10 +114,22 @@ async function bootstrapRole(): Promise<void> {
         console.log(`Created role "${PLATFORM_ROLE}".`);
       } else {
         // The migration creates it NOLOGIN: give it LOGIN and the password here.
+        // Only LOGIN and the password are changed here: managed hosts (Neon) refuse
+        // `ALTER ROLE ... NOSUPERUSER NOBYPASSRLS` from a non-superuser owner. The
+        // protections are checked instead of re-asserted, and the run fails if either is missing.
         await client.query(
-          `ALTER ROLE ${ident(PLATFORM_ROLE)} LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD $pw$${platformPassword}$pw$`,
+          `ALTER ROLE ${ident(PLATFORM_ROLE)} LOGIN PASSWORD $pw$${platformPassword}$pw$`,
         );
-        console.log(`Role "${PLATFORM_ROLE}" already exists -- login and password updated.`);
+        const attrs = await client.query(
+          "SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = $1",
+          [PLATFORM_ROLE],
+        );
+        if (attrs.rows[0]?.rolsuper || attrs.rows[0]?.rolbypassrls) {
+          throw new Error(
+            `Role "${PLATFORM_ROLE}" has SUPERUSER or BYPASSRLS. It must have neither; fix the role before continuing.`,
+          );
+        }
+        console.log(`Role "${PLATFORM_ROLE}" already exists -- login and password updated (not superuser, no RLS bypass).`);
       }
       for (const db of APP_DBS) {
         await client.query(

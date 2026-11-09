@@ -15,6 +15,7 @@
     "prisma:generate": "prisma generate",
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
+    "migrate:deploy:direct": "tsx scripts/migrate-deploy-direct.ts",
     "migrate:reset": "prisma migrate reset --force",
     "seed": "tsx prisma/seed.ts",
     "seed:dev": "tsx prisma/seedDev.ts",

@@ -22,7 +22,7 @@ test("a cross-origin POST with a valid session is refused with 403", async ({ pa
   expect(noOrigin.status()).toBe(403);
 
   // Same session, same request, own origin: accepted.
-  const own = await apiPost(page, "/api/orgs/figbloom/contacts", { firstName: "CsrfOwnOrigin" });
+  const own = await apiPost(page, "/api/orgs/figbloom/contacts", { firstName: `E2E CsrfOwnOrigin ${Date.now()}` });
   expect(own.ok()).toBe(true);
 });
 

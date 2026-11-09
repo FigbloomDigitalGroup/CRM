@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { ErrorState, LoadingState } from "../../components/states";
 import { useApiQuery } from "../../data/hooks";
@@ -49,8 +50,8 @@ export function HelpCentre({ orgSlug, view }: { orgSlug: string; view: "help" | 
     <div className="fb-helpc">
       <h1 className="fb-helpc__title">{view === "news" ? "What’s new" : "Help centre"}</h1>
       <nav className="fb-helpc__tabs" aria-label="Help sections">
-        <a href={`/o/${orgSlug}/help`} aria-current={view === "help" ? "page" : undefined}>Help</a>
-        <a href={`/o/${orgSlug}/help/whats-new`} aria-current={view === "news" ? "page" : undefined}>What’s new</a>
+        <Link href={`/o/${orgSlug}/help`} aria-current={view === "help" ? "page" : undefined}>Help</Link>
+        <Link href={`/o/${orgSlug}/help/whats-new`} aria-current={view === "news" ? "page" : undefined}>What’s new</Link>
       </nav>
       {active.isLoading ? (
         <LoadingState label="Loading" />

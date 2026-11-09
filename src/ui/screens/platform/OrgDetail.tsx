@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Archive, ArrowLeft, Ban, ChevronDown, Code, Download, Eye, RefreshCw, Send, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Archive, ArrowLeft, Ban, ChevronDown, Code, Download, RefreshCw, Send, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { fetchOrgDetail } from "./api";
@@ -73,7 +73,6 @@ export function OrgDetail({ id }: { id: string }) {
     org.status === "Active"
       ? { label: "Suspend", icon: Ban, run: () => setDialog("suspend"), danger: true, disabled: !canSuspend, reason: "Your platform role can’t suspend organisations" }
       : { label: "Reactivate", icon: RefreshCw, run: () => setDialog("reactivate"), disabled: final || !canSuspend, reason: final ? "An offboarded organisation can’t be reactivated" : "Your platform role can’t change an organisation’s status" },
-    { label: "Request support access", icon: Eye, href: `/platform/support-access?org=${id}`, disabled: false },
     { label: "Data requests", icon: Download, href: "/platform/data-requests" },
     { label: "Start offboarding", icon: Archive, run: () => setDialog("offboard"), danger: true, disabled: final || org.status === "Offboarding" || !canSuspend, reason: final ? "Already offboarded" : org.status === "Offboarding" ? "Offboarding has already started" : "Your platform role can’t change an organisation’s status" },
   ];

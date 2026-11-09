@@ -93,9 +93,9 @@ test.describe("the deals board", () => {
     await page.getByRole("button", { name: "New deal" }).click();
     const drawer = page.getByRole("dialog", { name: "New deal" });
     await expect(drawer.getByRole("button", { name: "Create deal" })).toBeDisabled();
-    const options = drawer.getByLabel(/^Company/).locator("option");
-    await expect.poll(async () => options.count()).toBeGreaterThan(1);
-    await drawer.getByLabel(/^Company/).selectOption({ index: 1 });
+    // The company picker searches the server as you type: open it and take the first match.
+    await drawer.getByRole("combobox", { name: /Company/ }).click();
+    await drawer.getByRole("option").first().click();
     await drawer.getByLabel("What are we selling?").fill(`E2E direct deal ${uniqueSuffix()}`);
     await drawer.getByLabel("Value (KES)").fill("50000");
     await drawer.getByRole("button", { name: "Create deal" }).click();

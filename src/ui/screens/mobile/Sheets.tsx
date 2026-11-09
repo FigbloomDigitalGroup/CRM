@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useToast } from "../../components/toast";
@@ -527,9 +528,9 @@ export function QueueSheet({ onClose }: { onClose: () => void }) {
           {busy ? "Sending…" : "Send now"}
         </button>
         {!conn.online ? <div className="fb-m-muted" style={{ marginTop: 8, fontSize: 12.5 }}>You are offline. They send on their own when you are back.</div> : null}
-        <a className="fb-m-link" href={`/o/${orgSlug}/m/sync`} onClick={onClose}>
+        <Link className="fb-m-link" href={`/o/${orgSlug}/m/sync`} onClick={onClose}>
           Open the full sync queue
-        </a>
+        </Link>
       </div>
     </Sheet>
   );

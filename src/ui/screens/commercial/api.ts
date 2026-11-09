@@ -196,11 +196,33 @@ export interface QuoteActivity {
 /* Reads -------------------------------------------------------------------------------------------------------------------------- */
 
 /** `useApiQuery` with the response type this module knows (the contract still says `unknown` for these routes). */
-function useRead<T, K extends OperationId = OperationId>(id: K, args: unknown, options: { enabled?: boolean; staleTime?: number; retry?: boolean } = {}) {
-  return useApiQuery(id, args as CallArgs<K>, options as never) as unknown as UseQueryResult<T>;
+function useRead<T, K extends OperationId = OperationId>(id: K, args: unknown, options: { enabled?: boolean; staleTime?: number; retry?: boolean; keepPrevious?: boolean } = {}) {
+  const { keepPrevious, ...rest } = options;
+  return useApiQuery(id, args as CallArgs<K>, { ...rest, ...(keepPrevious ? { placeholderData: (prev: unknown) => prev } : {}) } as never) as unknown as UseQueryResult<T>;
 }
 
-export const useQuotes = (orgSlug: string) => useRead<Page<QuoteListItem>>("getQuotes", { params: { orgSlug }, query: { pageSize: "100" } });
+/** Quotes per page on the Quotes list (the server pages; the screen never loads every quote). */
+export const QUOTES_PAGE_SIZE = 20;
+export const useQuotes = (orgSlug: string, page = 1, enabled = true) =>
+  useRead<Page<QuoteListItem>>("getQuotes", { params: { orgSlug }, query: { page: String(page), pageSize: String(QUOTES_PAGE_SIZE) } }, { keepPrevious: true, enabled });
+
+/** Open deals per page on the Quotes list (the server pages and searches; the screen never loads every deal). */
+export const OPEN_DEALS_PAGE_SIZE = 20;
+export interface OpenDealRow { id: string; notes?: string | null; company: { name: string }; service?: { name?: string } | null }
+export const useOpenDeals = (orgSlug: string, text: string, page: number, enabled = true) =>
+  useRead<Page<OpenDealRow>>(
+    "getDeals",
+    { params: { orgSlug }, query: { page: String(page), pageSize: String(OPEN_DEALS_PAGE_SIZE), outcome: "OPEN", ...(text ? { q: text } : {}) } },
+    { enabled, retry: false, keepPrevious: true },
+  );
+
+/** The quotes on the given deals (the deals on the page being shown), in one request: `dealId` takes several ids separated by commas. */
+export const useQuotesForDeals = (orgSlug: string, dealIds: string[], enabled = true) =>
+  useRead<Page<QuoteListItem>>(
+    "getQuotes",
+    { params: { orgSlug }, query: { dealId: dealIds.join(","), pageSize: "100" } },
+    { enabled: enabled && dealIds.length > 0, keepPrevious: true },
+  );
 
 /** The quote on a deal. A deal without one answers 404, which the builder treats as "no quote yet". */
 export const useDealQuote = (orgSlug: string, dealId: string) => useRead<QuoteView>("getDealsByDealIdQuote", { params: { orgSlug, dealId } }, { retry: false });
@@ -217,6 +239,15 @@ export const useQuoteActivity = (orgSlug: string, quoteId: string | undefined, v
 export const useQuoteSettings = (orgSlug: string) => useRead<QuoteSettingsView>("getQuoteSettings", { params: { orgSlug } }, { retry: false });
 
 export const useCatalogue = (orgSlug: string, enabled = true) => useRead<Page<CatalogueItemView>>("getCatalogue", { params: { orgSlug }, query: { pageSize: "100" } }, { enabled });
+
+/** Catalogue items for the quote builder's "Add" picker: one small page matching the typed text, never the whole catalogue. */
+export const CATALOGUE_PICKER_PAGE_SIZE = 20;
+export const useCatalogueSearch = (orgSlug: string, text: string, enabled = true) =>
+  useRead<Page<CatalogueItemView>>(
+    "getCatalogue",
+    { params: { orgSlug }, query: { pageSize: String(CATALOGUE_PICKER_PAGE_SIZE), ...(text ? { q: text } : {}) } },
+    { enabled },
+  );
 
 export const useApprovals = (orgSlug: string) => useRead<ApprovalPage>("getApprovals", { params: { orgSlug }, query: { pageSize: "100" } });
 

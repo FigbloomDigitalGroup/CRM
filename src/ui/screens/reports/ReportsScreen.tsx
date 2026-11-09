@@ -85,6 +85,9 @@ function OrganisationReports() {
   const filterQuery = useMemo(() => Object.fromEntries(Object.entries(filters).filter(([, v]) => v)), [filters]);
 
   const work = useApiQuery("getReportsMyWork", { params: { orgSlug } });
+  // The lists are capped by the server; `counts` carries the true totals (older responses have none, so the list length is the fallback).
+  const workCount = (k: "overdue" | "dueToday" | "newLeads" | "stalledDeals"): number =>
+    (work.data as { counts?: Partial<Record<typeof k, number>> } | undefined)?.counts?.[k] ?? work.data?.[k].length ?? 0;
   const org = useApiQuery("getReportsOrganization", { params: { orgSlug }, query: { ...range, ...filterQuery } as never }, { placeholderData: (prev) => prev });
   const v2 = useApiQuery("getReportsV2", { params: { orgSlug }, query: range });
 
@@ -162,10 +165,10 @@ function OrganisationReports() {
     reports.every((r) => r.table.rows.every((row) => Object.entries(row).every(([k, v]) => k === "label" || !v)));
 
   const tiles = [
-    { key: "overdue", label: "Overdue tasks", n: work.data?.overdue.length ?? 0, sub: "past their due time", icon: "tasks", tone: "red", href: `/o/${orgSlug}/tasks?view=overdue`, alert: true },
-    { key: "today", label: "Due today", n: work.data?.dueToday.length ?? 0, sub: "open follow-ups for today", icon: "calendar", tone: "orange", href: `/o/${orgSlug}/tasks?view=today` },
-    { key: "newleads", label: "New leads", n: work.data?.newLeads.length ?? 0, sub: "created in the last 7 days", icon: "users", tone: "blue", href: `/o/${orgSlug}/leads` },
-    { key: "stalled", label: "Stalled deals", n: work.data?.stalledDeals.length ?? 0, sub: "no activity for too long", icon: "briefcase", tone: "orange", href: `/o/${orgSlug}/deals` },
+    { key: "overdue", label: "Overdue tasks", n: workCount("overdue"), sub: "past their due time", icon: "tasks", tone: "red", href: `/o/${orgSlug}/tasks?view=overdue`, alert: true },
+    { key: "today", label: "Due today", n: workCount("dueToday"), sub: "open follow-ups for today", icon: "calendar", tone: "orange", href: `/o/${orgSlug}/tasks?view=today` },
+    { key: "newleads", label: "New leads", n: workCount("newLeads"), sub: "created in the last 7 days", icon: "users", tone: "blue", href: `/o/${orgSlug}/leads` },
+    { key: "stalled", label: "Stalled deals", n: workCount("stalledDeals"), sub: "no activity for too long", icon: "briefcase", tone: "orange", href: `/o/${orgSlug}/deals` },
   ];
 
   const select = (name: keyof Filters, label: string, options: { value: string; label: string }[]) => (

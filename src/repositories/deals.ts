@@ -111,6 +111,8 @@ export interface ListDealsFilters {
   ownerMembershipId?: string;
   pipelineStageId?: string;
   outcome?: "OPEN" | "WON" | "LOST";
+  /** Any of these outcomes (ANDed with everything else, including `visibleOutcome`). */
+  outcomes?: ("OPEN" | "WON" | "LOST")[];
   companyId?: string;
   serviceId?: string;
   /**
@@ -158,6 +160,7 @@ function baseDealsWhere(
   // Conditions that each need their own OR/AND go in one list, so none can overwrite another.
   const all: Prisma.DealWhereInput[] = [];
   if (filters.visibleOutcome) all.push({ outcome: filters.visibleOutcome });
+  if (filters.outcomes) all.push({ outcome: { in: filters.outcomes } });
   if (filters.stalledOnly || filters.closeDatePassed) {
     all.push({ outcome: "OPEN", expectedCloseDate: { lt: startOfToday() } });
   }

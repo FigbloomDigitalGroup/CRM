@@ -35,13 +35,12 @@ describe("Platform console shell (PL1, TB6)", () => {
     expect(screen.getByText(/hold no organisation role and see no customer records by default/)).toBeTruthy();
   });
 
-  it("shows the V2 pages only when V2 is on, and the data-requests badge counts what waits", async () => {
-    const user = userEvent.setup();
+  it("does not link the V2 pages (support access, flags and limits, announcements) and has no release switch; the data-requests badge counts what waits", async () => {
     shell();
-    expect(screen.getByRole("link", { name: /Flags and limits/ })).toBeTruthy();
-    await user.selectOptions(screen.getByLabelText("Release shown in the console"), "v11");
     expect(screen.queryByRole("link", { name: /Flags and limits/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /Announcements/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Support access/ })).toBeNull();
+    expect(screen.queryByLabelText("Release shown in the console")).toBeNull();
     await waitFor(() => expect(screen.getByRole("link", { name: /Data requests/ }).textContent).toContain("2"));
   });
 

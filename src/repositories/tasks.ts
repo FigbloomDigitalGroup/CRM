@@ -80,6 +80,8 @@ export interface ListTasksFilters {
   query?: string;
   assigneeMembershipId?: string;
   status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  /** Any of these statuses (ignored when `status` is set, `overdueOnly` and `upcomingOnly` carry their own). */
+  statuses?: ("PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED")[];
   priority?: "LOW" | "MEDIUM" | "HIGH";
   companyId?: string;
   contactId?: string;
@@ -115,7 +117,7 @@ function tasksWhere(
     organizationId,
     ...archivedWhere(filters),
     assigneeMembershipId: filters.assigneeMembershipId,
-    status: filters.status,
+    status: filters.status ?? (filters.statuses ? { in: filters.statuses } : undefined),
     priority: filters.priority,
     companyId: filters.companyId,
     contactId: filters.contactId,

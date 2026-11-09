@@ -119,15 +119,89 @@ describe("quote builder reads the real API (FIG-1168)", () => {
 });
 
 describe("quotes list reads the API", () => {
-  it("lists quotes and open deals, hiding masked totals", async () => {
-    const stub = stubClient({
-      getQuotes: () => page([{ id: "q1", number: "Q-2026-0001", dealId: "d1", companyName: "Kijani Foods", currency: "KES", latest: summary({ amountMasked: true, total: null }), updatedAt: "2026-11-01T00:00:00Z" }]),
-      getDeals: () => page([DEAL, deal({ id: "d2", company: "Savannah", stage: STAGES[0]! })]),
-    });
+  const D2 = deal({ id: "d2", company: "Savannah", stage: STAGES[0]! });
+  const qItem = (over: Record<string, unknown> = {}) => ({ id: "q1", number: "Q-2026-0001", dealId: "d1", companyName: "Kijani Foods", currency: "KES", latest: summary(), updatedAt: "2026-11-01T00:00:00Z", ...over });
+
+  it("lists the open deals, with a quote where there is one and \"No quote yet\" where there is not", async () => {
+    const stub = stubClient({ getDeals: () => page([DEAL, D2]), getQuotes: () => page([qItem()]) });
     renderScreen(<QuoteList />, stub.client, { permissionKeys: SALES });
     expect(await screen.findByText("Q-2026-0001 · v1")).toBeInTheDocument();
+    expect(screen.getByText("Kijani Foods")).toBeInTheDocument();
+    expect(screen.getByText("Savannah")).toBeInTheDocument();
     expect(screen.getByText("No quote yet")).toBeInTheDocument();
+    expect(screen.getByText("KES 37,000")).toBeInTheDocument();
+  });
+
+  it("asks for one page of open deals, then the quotes of exactly those deals in ONE request (no 100-deal cap, no request per deal)", async () => {
+    const stub = stubClient({ getDeals: () => page([DEAL, D2]), getQuotes: () => page([qItem()]) });
+    renderScreen(<QuoteList />, stub.client, { permissionKeys: SALES });
+    await screen.findByText("Q-2026-0001 · v1");
+    expect(stub.calls.filter((c) => c.id === "getDeals")).toHaveLength(1);
+    expect(stub.calls.find((c) => c.id === "getDeals")!.args.query).toMatchObject({ outcome: "OPEN", page: "1", pageSize: "20" });
+    const quoteCalls = stub.calls.filter((c) => c.id === "getQuotes");
+    expect(quoteCalls).toHaveLength(1);
+    expect(quoteCalls[0]!.args.query).toMatchObject({ dealId: "d1,d2" });
+    expect(stub.calls.some((c) => c.id === "getDealsByDealIdQuote")).toBe(false);
+  });
+
+  it("never shows a total the API masked", async () => {
+    const stub = stubClient({ getDeals: () => page([DEAL]), getQuotes: () => page([qItem({ latest: summary({ amountMasked: true, total: null }) })]) });
+    renderScreen(<QuoteList />, stub.client, { permissionKeys: SALES });
+    expect(await screen.findByText("Hidden")).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/KES\s?\d/);
+  });
+
+  it("searches the open deals on the server and returns to page 1", async () => {
+    const stub = stubClient({ getDeals: () => page([DEAL]), getQuotes: () => page([]) });
+    renderScreen(<QuoteList />, stub.client, { permissionKeys: SALES });
+    await screen.findByText("Kijani Foods");
+    await userEvent.type(screen.getByRole("searchbox", { name: "Search open deals" }), "Sav");
+    await waitFor(() => expect(stub.calls.some((c) => c.id === "getDeals" && c.args.query?.q === "Sav")).toBe(true));
+    expect(stub.calls.filter((c) => c.id === "getDeals").at(-1)!.args.query).toMatchObject({ outcome: "OPEN", page: "1", pageSize: "20", q: "Sav" });
+  });
+
+  it("pages the open deals on the server", async () => {
+    const stub = stubClient({
+      getDeals: () => ({ ...page([DEAL]), pageCount: 3, total: 41 }),
+      getQuotes: () => page([]),
+    });
+    renderScreen(<QuoteList />, stub.client, { permissionKeys: SALES });
+    await screen.findByText("Page 1 of 3");
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await waitFor(() => expect(stub.calls.some((c) => c.id === "getDeals" && c.args.query?.page === "2")).toBe(true));
+  });
+
+  it("\"All quotes\" lists one server page of quotes, including those on deals that are no longer open", async () => {
+    const stub = stubClient({
+      getDeals: () => page([DEAL]),
+      getQuotes: (args) => (args.query?.dealId ? page([]) : page([qItem({ id: "q9", number: "Q-2026-0009", dealId: "d9", companyName: "Closed Co" })])),
+    });
+    renderScreen(<QuoteList />, stub.client, { permissionKeys: SALES });
+    await screen.findByText("Kijani Foods");
+    await userEvent.click(screen.getByRole("button", { name: "All quotes" }));
+    expect(await screen.findByText("Q-2026-0009 · v1")).toBeInTheDocument();
+    expect(screen.getByText("Closed Co")).toBeInTheDocument();
+    expect(stub.calls.filter((c) => c.id === "getQuotes" && !c.args.query?.dealId).at(-1)!.args.query).toMatchObject({ page: "1", pageSize: "20" });
+  });
+
+  it("a role without quote permissions gets the explained no-access and asks for nothing", async () => {
+    const stub = stubClient({ getDeals: () => page([DEAL]), getQuotes: () => page([]) });
+    renderScreen(<QuoteList />, stub.client, { permissionKeys: ["reporting.view.own"] });
+    expect(await screen.findByRole("region", { name: /Quotes/ })).toBeInTheDocument();
+    expect(stub.calls.filter((c) => c.id === "getDeals" || c.id === "getQuotes")).toHaveLength(0);
+  });
+});
+
+describe("quote builder catalogue picker searches the server", () => {
+  it("loads one small page, then searches by the typed text instead of loading the whole catalogue", async () => {
+    const { calls } = builder();
+    const box = await screen.findByRole("combobox", { name: /Add a catalogue item/ });
+    await waitFor(() => expect(calls.some((c) => c.id === "getCatalogue")).toBe(true));
+    expect(calls.find((c) => c.id === "getCatalogue")!.args.query).toMatchObject({ pageSize: "20" });
+    await userEvent.click(box);
+    await userEvent.type(box, "CCT");
+    await waitFor(() => expect(calls.some((c) => c.id === "getCatalogue" && c.args.query?.q === "CCT")).toBe(true));
+    expect(await screen.findByRole("option", { name: /CCTV camera/ })).toBeInTheDocument();
   });
 });
 

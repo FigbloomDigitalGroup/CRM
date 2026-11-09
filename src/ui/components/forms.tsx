@@ -244,6 +244,157 @@ export function SearchableSelect({
   );
 }
 
+/* Search-as-you-type select: the server does the searching, so a large collection is never loaded to fill a list ---------------------- */
+
+/** How long typing must pause before the search text is handed to the caller (ms). */
+export const ASYNC_SELECT_DEBOUNCE_MS = 250;
+
+/**
+ * A combobox whose options come from the server. The caller owns the request: it gets the (debounced) text through `onSearch`, runs a small
+ * paged query with it (a `q` and a page of about 20, never the whole collection) and passes the rows back as `options`. The chosen option's label
+ * is remembered here, so the field still shows it after the search text changes and the option is no longer in the loaded rows; a caller that
+ * starts with a value (an edit form) passes `selectedLabel` for it.
+ */
+export function AsyncSelect({
+  label,
+  options,
+  value,
+  selectedLabel,
+  onChange,
+  onSearch,
+  loading,
+  placeholder = "Type to search",
+  required,
+  help,
+  error,
+  disabledReason,
+  emptyText = "No matches",
+  minChars = 0,
+  debounceMs = ASYNC_SELECT_DEBOUNCE_MS,
+  inputClassName = "fb-input",
+}: FieldShellProps & {
+  options: SelectOption[];
+  value: string | null;
+  selectedLabel?: string | null;
+  onChange: (value: string | null, option?: SelectOption) => void;
+  /** Called with the trimmed search text once typing pauses (and with "" when the list opens or the text is cleared). */
+  onSearch: (text: string) => void;
+  loading?: boolean;
+  placeholder?: string;
+  emptyText?: string;
+  /** Fewer typed letters than this shows a hint instead of results. */
+  minChars?: number;
+  debounceMs?: number;
+  /** Lets a surface with its own field styling (a drawer) style the input; defaults to the design system input. */
+  inputClassName?: string;
+}) {
+  const listId = useId();
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+  const [chosen, setChosen] = useState<SelectOption | null>(null);
+  const onSearchRef = useRef(onSearch);
+  onSearchRef.current = onSearch;
+  const shownLabel = (value ? (options.find((o) => o.value === value)?.label ?? (chosen?.value === value ? chosen.label : null) ?? selectedLabel) : null) ?? "";
+  useDismiss(wrapRef, open, () => setOpen(false));
+  useEffect(() => setActive(0), [query, open, options]);
+
+  useEffect(() => {
+    const text = query.trim();
+    const t = setTimeout(() => onSearchRef.current(text), text === "" ? 0 : debounceMs);
+    return () => clearTimeout(t);
+  }, [query, debounceMs]);
+
+  const tooShort = query.trim().length < minChars;
+
+  const choose = useCallback(
+    (o: SelectOption | undefined) => {
+      if (!o || o.disabled) return;
+      setChosen(o);
+      onChange(o.value, o);
+      setQuery("");
+      setOpen(false);
+    },
+    [onChange],
+  );
+
+  return (
+    <Field label={label} required={required} help={help} error={error} disabledReason={disabledReason}>
+      {(a11y) => (
+        <div className="fb-combo" ref={wrapRef}>
+          <input
+            {...a11y}
+            role="combobox"
+            className={inputClassName}
+            autoComplete="off"
+            aria-expanded={open}
+            aria-controls={listId}
+            aria-autocomplete="list"
+            aria-busy={loading || undefined}
+            aria-activedescendant={open && !tooShort && options[active] ? `${listId}-${active}` : undefined}
+            disabled={Boolean(disabledReason)}
+            placeholder={shownLabel || placeholder}
+            value={open ? query : shownLabel}
+            onFocus={() => setOpen(true)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOpen(true);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setOpen(true);
+                setActive((i) => Math.min(i + 1, options.length - 1));
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setActive((i) => Math.max(i - 1, 0));
+              } else if (e.key === "Enter" && open) {
+                e.preventDefault();
+                if (!tooShort) choose(options[active]);
+              } else if (e.key === "Escape") {
+                setOpen(false);
+              }
+            }}
+          />
+          {open ? (
+            <ul id={listId} role="listbox" aria-label={typeof label === "string" ? label : undefined} className="fb-listbox">
+              {tooShort ? (
+                <li role="option" aria-disabled="true" aria-selected="false" className="fb-option" style={{ cursor: "default" }}>
+                  Type at least {minChars} letter{minChars === 1 ? "" : "s"}
+                </li>
+              ) : loading && options.length === 0 ? (
+                <li role="option" aria-disabled="true" aria-selected="false" className="fb-option" style={{ cursor: "default" }}>Searching…</li>
+              ) : options.length === 0 ? (
+                <li role="option" aria-disabled="true" aria-selected="false" className="fb-option" style={{ cursor: "default" }}>{emptyText}</li>
+              ) : (
+                options.map((o, i) => (
+                  <li
+                    key={o.value}
+                    id={`${listId}-${i}`}
+                    role="option"
+                    aria-selected={o.value === value}
+                    aria-disabled={o.disabled || undefined}
+                    data-active={i === active ? "true" : undefined}
+                    className="fb-option"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      choose(o);
+                    }}
+                  >
+                    {o.label}
+                    {o.hint ? <span className="fb-help" style={{ marginLeft: "auto" }}>{o.hint}</span> : null}
+                  </li>
+                ))
+              )}
+            </ul>
+          ) : null}
+        </div>
+      )}
+    </Field>
+  );
+}
+
 /* The form layer ---------------------------------------------------------------------------------------------------------------- */
 
 /** A list of problems at the top of a form, announced when it appears, for forms with more than a field or two. */

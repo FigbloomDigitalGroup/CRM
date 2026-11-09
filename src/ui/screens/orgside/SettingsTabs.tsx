@@ -3,153 +3,118 @@
 import { Smartphone } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useApi, useApiMutation, useApiQuery } from "../../data/hooks";
 import { Badge, Button } from "../../components/basics";
-import { Input, Select, Textarea } from "../../components/forms";
+import { Select, Textarea } from "../../components/forms";
 import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
-import { demoScreensEnabledClient } from "../../demo/enabled";
 import { Panel } from "../settings/kit";
 import { LoadingState } from "../../components/states";
 import { describeError } from "../../errors";
 import { QueryFailure } from "../../featureUnavailable";
 import { useForgetDevice, useMyTwoStep, useSetTwoStepPolicy, useTwoStepPolicy } from "./api";
-import type { DemoDataRequest } from "./demo/data";
-import { orgSideDemo, useOrgSideDemo } from "./demo/store";
 
-/** Until these sections are wired to the API (M13/M14) a production build says so instead of showing sample records. */
-function NotYet({ name }: { name: string }) {
-  return (
-    <Panel title={name} description="This section arrives with the V1.1 release. It is not available in your organisation yet." />
-  );
+interface OrgRequest {
+  id: string;
+  kind: "EXPORT" | "DELETE";
+  status: "SUBMITTED_TO_PLATFORM" | "APPROVED" | "COMPLETED" | "REJECTED" | "CANCELLED";
+  note: string | null;
+  submittedAt: string;
+  exportStatus: "NONE" | "PACKAGING" | "READY" | "FAILED" | "EXPIRED";
+  exportExpiresAt: string | null;
+  deleteAfter: string | null;
 }
 
-const REQUEST_TYPES: DemoDataRequest["type"][] = ["Data export", "Data deletion", "Tenant offboarding"];
-
-const STATUS_TONE = { Received: "info", "In review": "warning", Approved: "info", Completed: "success", Rejected: "neutral" } as const;
+const KIND_LABEL = { EXPORT: "Data export", DELETE: "Organisation deletion" } as const;
+const STATUS_LABEL: Record<OrgRequest["status"], string> = { SUBMITTED_TO_PLATFORM: "With Figbloom", APPROVED: "Approved", COMPLETED: "Completed", REJECTED: "Rejected", CANCELLED: "Cancelled" };
+const STATUS_TONE: Record<OrgRequest["status"], "info" | "warning" | "success" | "neutral"> = { SUBMITTED_TO_PLATFORM: "warning", APPROVED: "info", COMPLETED: "success", REJECTED: "neutral", CANCELLED: "neutral" };
+const day = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 /**
- * OS6, Settings › Data requests (FIG-1166): the organisation asks Figbloom for a file export, a deletion or offboarding and watches the status.
- * Filing it only sends a request; nothing is deleted here (deletion and offboarding need two platform admins, see PL6). Demo data.
+ * OS6, Settings > Data requests (FIG-1166, wired to B6.09): Management asks Figbloom to export the whole organisation or to delete it, and follows the
+ * status. Filing only hands the request to the platform queue; nothing is deleted here (deletion needs two platform admins). A ready export is
+ * downloaded through a short-lived signed link.
  */
 export function DataRequests() {
-  return demoScreensEnabledClient() ? <DataRequestsDemo /> : <NotYet name="Data requests" />;
-}
-
-function DataRequestsDemo() {
-  const demo = useOrgSideDemo();
   const toast = useToast();
   const { orgSlug } = useMember();
-  const [type, setType] = useState<DemoDataRequest["type"]>("Data export");
-  const [subject, setSubject] = useState("");
+  const api = useApi();
+  const list = useApiQuery("listOrganisationDataRequests", { params: { orgSlug } });
+  const submit = useApiMutation("submitOrganisationDataRequest", { invalidate: [["listOrganisationDataRequests"]] });
+  const [kind, setKind] = useState<"EXPORT" | "DELETE">("EXPORT");
   const [notes, setNotes] = useState("");
-  const [error, setError] = useState<string | undefined>();
+  const fail = (e: unknown) => toast.show({ tone: "danger", message: describeError(e).body });
+  const items = ((list.data as { items?: OrgRequest[] } | undefined)?.items ?? []).slice().reverse();
 
-  function submit() {
-    if (!subject.trim()) {
-      setError("Say what the request is about");
-      return;
+  function send() {
+    submit.mutate(
+      { params: { orgSlug }, body: { kind, ...(notes.trim() ? { note: notes.trim() } : {}) } },
+      {
+        onSuccess: () => {
+          toast.show({ message: "Request sent to Figbloom. You will see status changes here.", tone: "success" });
+          setNotes("");
+        },
+        onError: fail,
+      },
+    );
+  }
+
+  async function download(id: string) {
+    try {
+      const r = (await api.call("getPrivacyOrganisationRequestsByRequestIdDownload", { params: { orgSlug, requestId: id } } as never)) as { download?: { url?: string } };
+      if (r.download?.url) window.location.assign(r.download.url);
+    } catch (e) {
+      fail(e);
     }
-    setError(undefined);
-    orgSideDemo.fileRequest(type, subject.trim());
-    toast.show({ message: "Request sent to Figbloom. You’ll see status changes here.", tone: "success" });
-    setSubject("");
-    setNotes("");
   }
 
   return (
-    <div className="fb-set__body" data-screen-label="OS6 Settings › Data requests">
-      
-      <Panel title="Data requests" description="Ask Figbloom to export, delete or offboard data. A person from Figbloom confirms the request with you first; deletion and offboarding need a second platform admin to approve.">
+    <div className="fb-set__body" data-screen-label="OS6 Settings > Data requests">
+      <Panel title="Data requests" description="Ask Figbloom to export or delete the whole organisation. A person from Figbloom confirms the request with you first; deletion needs a second platform admin to approve.">
         <div className="fb-os-form">
-          <Select label="Type" value={type} onChange={(e) => setType(e.target.value as DemoDataRequest["type"])} options={REQUEST_TYPES.map((t) => ({ value: t, label: t }))} />
-          <Input label="What is it about?" required value={subject} error={error} onChange={(e) => setSubject(e.target.value)} placeholder="Leads and deals (CSV), or a person’s name" />
+          <Select label="Type" value={kind} onChange={(e) => setKind(e.target.value === "DELETE" ? "DELETE" : "EXPORT")} options={(["EXPORT", "DELETE"] as const).map((k) => ({ value: k, label: KIND_LABEL[k] }))} />
           <div className="fb-os-form__wide">
             <Textarea label="Notes for Figbloom" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
         </div>
         <div>
-          <Button variant="primary" onClick={submit}>
+          <Button variant="primary" disabled={submit.isPending} onClick={send}>
             Send request
           </Button>
         </div>
       </Panel>
       <Panel title="Your requests" flush>
-        {demo.dataRequests.length === 0 ? <p className="fb-set-muted" style={{ padding: "0 22px 18px" }}>No requests yet.</p> : null}
-        {demo.dataRequests.map((r) => (
+        {list.isPending ? <LoadingState label="Loading your requests" lines={2} /> : null}
+        {list.isError ? <QueryFailure error={list.error} area="Your data requests" onRetry={() => void list.refetch()} /> : null}
+        {list.data && items.length === 0 ? (
+          <p className="fb-set-muted" style={{ padding: "0 22px 18px" }}>
+            No requests yet.
+          </p>
+        ) : null}
+        {items.map((r) => (
           <div key={r.id} className="fb-set-row">
             <div className="fb-set-row__main">
               <div className="fb-set-row__name">
-                {r.type} · {r.subject}
+                {KIND_LABEL[r.kind]}
+                {r.note ? ` · ${r.note}` : ""}
               </div>
               <div className="fb-set-row__meta">
-                Received {r.received} · due {r.due}
+                Sent {day(r.submittedAt)}
+                {r.exportStatus === "PACKAGING" ? " · preparing the export" : ""}
+                {r.exportStatus === "READY" && r.exportExpiresAt ? ` · download until ${day(r.exportExpiresAt)}` : ""}
+                {r.exportStatus === "FAILED" ? " · the export failed, Figbloom will retry" : ""}
+                {r.exportStatus === "EXPIRED" ? " · the download window has ended" : ""}
+                {r.deleteAfter ? ` · deletion after ${day(r.deleteAfter)}` : ""}
               </div>
             </div>
-            <Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge>
+            {r.exportStatus === "READY" ? (
+              <Button size="sm" onClick={() => void download(r.id)}>
+                Download
+              </Button>
+            ) : null}
+            <Badge tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Badge>
           </div>
         ))}
-      </Panel>
-      <p className="fb-set-muted">
-        Want to see the screen your people get while the workspace is paused?{" "}
-        <button
-          type="button"
-          className="fb-btn fb-btn--link"
-          onClick={() => {
-            document.cookie = "fb_demo_suspended=1; path=/; max-age=3600; samesite=lax";
-            window.location.assign(`/o/${orgSlug}/suspended`);
-          }}
-        >
-          Preview the suspended screen
-        </button>
-      </p>
-    </div>
-  );
-}
-
-/** Settings › Support access history (FIG-1192): every time Figbloom Support asked to look, who, why, what they opened and how it ended. */
-export function SupportHistory() {
-  return demoScreensEnabledClient() ? <SupportHistoryDemo /> : <NotYet name="Support access history" />;
-}
-
-function SupportHistoryDemo() {
-  const demo = useOrgSideDemo();
-  const tone = (s: string) => (s === "Active" ? "warning" : s === "Denied" ? "danger" : s.startsWith("Pending") ? "warning" : "neutral");
-  return (
-    <div className="fb-set__body" data-screen-label="Settings › Support access history">
-      
-      <Panel title="Support access history" description="Only Management sees this. Figbloom Support can never see inside the workspace without an approved, time-limited request, and you can end a session at any time.">
-        <div className="fb-set-tablewrap">
-          <table className="fb-table">
-            <thead>
-              <tr>
-                {["When", "Who", "Why", "Scope", "Pages viewed", "Status", "Ended by"].map((h) => (
-                  <th key={h} scope="col">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {demo.support.map((s) => (
-                <tr key={s.id}>
-                  <td>{s.at}</td>
-                  <td>Figbloom Support ({s.by})</td>
-                  <td>
-                    {s.reason} · {s.ticket}
-                  </td>
-                  <td>
-                    {s.scope} · {s.mins} min
-                  </td>
-                  <td>{s.pages?.length ? s.pages.join(", ") : "—"}</td>
-                  <td>
-                    <Badge tone={tone(s.status)}>{s.status}</Badge>
-                  </td>
-                  <td>{s.endedBy ?? "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </Panel>
     </div>
   );

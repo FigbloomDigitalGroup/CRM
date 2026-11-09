@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/db/adminClient";
 import { appDb } from "@/db/orgScopedClient";
+import { emailConfigProblem } from "@/auth/email";
 import { logger } from "@/lib/logger";
 import { instrumentRequest } from "@/observability/instrument";
 import { currentRequestContext } from "@/observability/requestContext";
@@ -59,6 +60,11 @@ export async function GET() {
       logger.error({ err }, "Health check: failed to read notifications sweep status");
     }
 
-    return NextResponse.json({ status: "ok", appRole: "ok", notificationsSweep }, { headers });
+    // Mail is not needed to serve requests, so a problem is reported here but does not fail the check.
+    const emailProblem = emailConfigProblem();
+    return NextResponse.json(
+      { status: "ok", appRole: "ok", notificationsSweep, email: emailProblem ? { status: "misconfigured", detail: emailProblem } : { status: "ok" } },
+      { headers },
+    );
   });
 }

@@ -11,12 +11,29 @@ type Env = Record<string, string | undefined>;
 
 export const ANTIVIRUS_MISSING_MESSAGE =
   "Refusing to start in production: CLAMD_HOST is not set, so uploaded files would only be checked by the built-in test-file detector. " +
-  "Set CLAMD_HOST (and CLAMD_PORT) to the production ClamAV daemon. See docs/STORAGE.md.";
+  "Set CLAMD_HOST (and CLAMD_PORT) to the production ClamAV daemon, or accept the risk in writing and set ANTIVIRUS_MODE=builtin-only. See docs/STORAGE.md.";
 
-/** Throws when this is a production deployment without a ClamAV host; does nothing anywhere else. */
+/**
+ * The explicit, written-risk-acceptance opt-out (MVP on Vercel, docs/DECISIONS.md section 7): `ANTIVIRUS_MODE=builtin-only`
+ * lets a production deployment boot without a ClamAV host, so uploads get only the built-in file-type checks and the
+ * EICAR test detector. Any other value (or none) keeps the default: production refuses to boot without CLAMD_HOST.
+ */
+export const ANTIVIRUS_OPT_OUT_MODE = "builtin-only";
+
+export const ANTIVIRUS_OPT_OUT_WARNING =
+  "WARNING: ANTIVIRUS_MODE=builtin-only is active in production. Uploaded files are NOT scanned for malware; only built-in file-type " +
+  "checks and the EICAR test detector run. This is an accepted, time-limited risk (docs/DECISIONS.md section 7). Set CLAMD_HOST and remove ANTIVIRUS_MODE as soon as a ClamAV host exists.";
+
+function optedOut(env: Env) {
+  return env.ANTIVIRUS_MODE?.trim().toLowerCase() === ANTIVIRUS_OPT_OUT_MODE;
+}
+
+/** Throws when this is a production deployment without a ClamAV host (and without the explicit opt-out); does nothing anywhere else. */
 export function assertAntivirusConfigured(env: Env = process.env) {
   if (env.NODE_ENV !== "production" || env.FIGBLOOM_ENVIRONMENT !== "production") return;
-  if (!env.CLAMD_HOST?.trim()) throw new Error(ANTIVIRUS_MISSING_MESSAGE);
+  if (env.CLAMD_HOST?.trim()) return;
+  if (optedOut(env)) return;
+  throw new Error(ANTIVIRUS_MISSING_MESSAGE);
 }
 
 /**
@@ -24,8 +41,12 @@ export function assertAntivirusConfigured(env: Env = process.env) {
  * rather than a server that answers every request with a 500 (same reasoning as `enforceNoDevAccountsInProduction`).
  */
 export function enforceAntivirusInProduction(options: { env?: Env; exit?: (code: number) => void } = {}) {
+  const env = options.env ?? process.env;
   try {
-    assertAntivirusConfigured(options.env);
+    assertAntivirusConfigured(env);
+    if (env.NODE_ENV === "production" && env.FIGBLOOM_ENVIRONMENT === "production" && !env.CLAMD_HOST?.trim() && optedOut(env)) {
+      console.warn(ANTIVIRUS_OPT_OUT_WARNING);
+    }
   } catch (err) {
     console.error(err instanceof Error ? err.message : err);
     (options.exit ?? process.exit)(1);

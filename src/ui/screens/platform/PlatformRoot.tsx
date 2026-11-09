@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Toasts } from "./kit";
 import { ReverifyHost } from "./Verify";
@@ -40,6 +41,17 @@ export function PlatformRoot({ children, call, csv }: { children: ReactNode; cal
       return next;
     });
   }, []);
+  // The sign-in pages run before there is a platform session: they must not start the console's reads.
+  const pathname = usePathname() ?? "";
+  if (pathname === "/platform/sign-in" || pathname === "/platform/verify") {
+    return (
+      <ThemeCtx.Provider value={{ theme, toggle }}>
+        <div className="fb-pl" data-pl-theme={theme}>
+          {children}
+        </div>
+      </ThemeCtx.Provider>
+    );
+  }
   return (
     <ThemeCtx.Provider value={{ theme, toggle }}>
       <PlatformStoreProvider call={call} csv={csv}>

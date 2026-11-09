@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { HelpCircle, Lightbulb, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ContactSupportDialog } from "./ContactSupportDialog";
@@ -54,7 +55,7 @@ export function HelpPanel({ open, onClose, pathname, orgSlug }: { open: boolean;
         ))}
       </section>
       <p className="fb-help-panel__more">
-        <a href={`/o/${orgSlug}/help`}>Open the Help centre</a> · <a href={`/o/${orgSlug}/help/whats-new`}>All that’s new</a>
+        <Link href={`/o/${orgSlug}/help`}>Open the Help centre</Link> · <Link href={`/o/${orgSlug}/help/whats-new`}>All that’s new</Link>
       </p>
       <p className="fb-help-panel__more">
         Need a person? <button type="button" className="fb-help-panel__contact" onClick={() => setContacting(true)}>Contact support</button>

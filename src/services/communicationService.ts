@@ -2,6 +2,7 @@ import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
+import { emailProvider } from "../auth/email";
 import { sendComposedEmail } from "../notifications/email";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
@@ -126,6 +127,11 @@ export async function sendAndLogEmail(ctx: AuthContext, input: SendEmailServiceI
   }
 
   if (input.templateId) await assertTemplateUsable(ctx, input.templateId, input.subject, input.body);
+
+  // In production with no provider the transport would drop the message; never record (or lock a quote) for mail nobody got.
+  if (process.env.NODE_ENV === "production" && emailProvider() === "none") {
+    throw new ValidationError("Email is not set up on this deployment, so nothing was sent. Ask whoever runs Figbloom to configure it.");
+  }
 
   try {
     await sendComposedEmail(input.to, { subject: input.subject, body: input.body });

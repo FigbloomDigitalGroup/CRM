@@ -9,6 +9,8 @@ import { notifyTaskDue, notifyTaskOverdue, retryDueDeliveries } from "../../serv
  */
 export const NOTIFICATIONS_SWEEP_JOB_TYPE = "notifications.sweep";
 export const DEFAULT_SWEEP_INTERVAL_MINUTES = 15;
+/** Tasks read per round trip by the sweep. */
+export const SWEEP_BATCH_SIZE = 200;
 
 /** `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` (FIG-783 AC: "configurable through env") -- see docs/DEPLOYMENT.md's "Scheduled jobs" section. */
 export function sweepIntervalMinutes(): number {
@@ -20,34 +22,51 @@ function startOfDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-export async function sweepOrganization(organizationId: string): Promise<{
+export async function sweepOrganization(
+  organizationId: string,
+  options: { batchSize?: number } = {},
+): Promise<{
   due: number;
   overdue: number;
   retried: number;
 }> {
+  const batchSize = options.batchSize ?? SWEEP_BATCH_SIZE;
   const today = startOfDay(new Date());
   const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
-  const dueToday = await listTasks(organizationId, {
-    dueAfter: today,
-    dueBefore: tomorrow,
-  });
-  for (const task of dueToday) {
-    if (task.status !== "PENDING" && task.status !== "IN_PROGRESS") continue;
-    await notifyTaskDue(organizationId, task.assigneeMembershipId, {
-      id: task.id,
-      title: task.title,
+  // Tasks are read a batch at a time (stable order, so skip/take never repeats or misses a row) instead of loading every one into memory.
+  let due = 0;
+  for (let skip = 0; ; skip += batchSize) {
+    const batch = await listTasks(organizationId, {
+      dueAfter: today,
+      dueBefore: tomorrow,
+      statuses: ["PENDING", "IN_PROGRESS"],
+      take: batchSize,
+      skip,
     });
+    for (const task of batch) {
+      await notifyTaskDue(organizationId, task.assigneeMembershipId, {
+        id: task.id,
+        title: task.title,
+      });
+      due += 1;
+    }
+    if (batch.length < batchSize) break;
   }
 
-  const overdue = await listTasks(organizationId, { overdueOnly: true });
-  for (const task of overdue) {
-    await notifyTaskOverdue(organizationId, task.assigneeMembershipId, {
-      id: task.id,
-      title: task.title,
-    });
+  let overdue = 0;
+  for (let skip = 0; ; skip += batchSize) {
+    const batch = await listTasks(organizationId, { overdueOnly: true, take: batchSize, skip });
+    for (const task of batch) {
+      await notifyTaskOverdue(organizationId, task.assigneeMembershipId, {
+        id: task.id,
+        title: task.title,
+      });
+      overdue += 1;
+    }
+    if (batch.length < batchSize) break;
   }
 
   const { attempted } = await retryDueDeliveries(organizationId);
-  return { due: dueToday.length, overdue: overdue.length, retried: attempted };
+  return { due, overdue, retried: attempted };
 }

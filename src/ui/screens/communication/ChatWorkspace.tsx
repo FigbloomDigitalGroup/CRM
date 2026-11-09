@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ArrowLeft, AtSign, Hash, Link2, Lock, MessagesSquare, Paperclip, Plus, Search, Send, Smile, SmilePlus, Trash2, Users } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Avatar, Badge, Banner, Button, IconButton } from "../../components/basics";
@@ -434,7 +435,7 @@ function RecordCardView({ card, orgSlug }: { card: CardView; orgSlug: string }) 
     <div className="fb-chat__card">
       <div className="fb-chat__cardhead">
         <Badge tone="info">{card.type === "DEAL" ? "Deal" : card.type === "COMPANY" ? "Company" : card.type === "LEAD" ? "Lead" : "Invoice"}</Badge>
-        <a href={`/o/${orgSlug}/${CARD_PATH[card.type]}${card.type === "INVOICE" ? "" : `/${card.id}`}`}>{card.name}</a>
+        <Link href={`/o/${orgSlug}/${CARD_PATH[card.type]}${card.type === "INVOICE" ? "" : `/${card.id}`}`}>{card.name}</Link>
       </div>
       <dl>
         {card.stage ? (<><dt>Stage</dt><dd>{card.stage}</dd></>) : null}

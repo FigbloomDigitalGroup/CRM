@@ -1,5 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  emailConfigProblem,
+  emailProvider,
   sendMembershipInviteEmail,
   sendPasswordResetEmail,
   type MailTransport,
@@ -17,6 +19,10 @@ function fakeTransport() {
 }
 
 const originalEnv = { ...process.env };
+beforeEach(() => {
+  delete process.env.RESEND_API_KEY;
+  delete process.env.EMAIL_FROM;
+});
 afterEach(() => {
   process.env = { ...originalEnv };
 });
@@ -116,5 +122,60 @@ describe("deliverOrLog without SMTP", () => {
     err.mockRestore();
     warn.mockRestore();
     vi.unstubAllEnvs();
+  });
+});
+
+describe("Resend as the auth email provider (MVP-11)", () => {
+  it("picks SMTP over Resend, Resend when only the key is set, else none", () => {
+    expect(emailProvider({ SMTP_HOST: "smtp.example.test", RESEND_API_KEY: "k" })).toBe("smtp");
+    expect(emailProvider({ RESEND_API_KEY: "k" })).toBe("resend");
+    expect(emailProvider({})).toBe("none");
+  });
+
+  it("sends the invite through the Resend API with both text and html, and never logs the link", async () => {
+    delete process.env.SMTP_HOST;
+    process.env.RESEND_API_KEY = "test-key-placeholder";
+    process.env.EMAIL_FROM = "FigBloom <crm@mail.example.test>";
+    vi.stubEnv("NODE_ENV", "production");
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ id: "msg_1" }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      await sendMembershipInviteEmail("invitee@example.test", "https://crm.example.test/accept-invite?token=secrettoken");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe("https://api.resend.com/emails");
+      const body = JSON.parse(init.body);
+      expect(body.from).toBe("FigBloom <crm@mail.example.test>");
+      expect(body.to).toEqual(["invitee@example.test"]);
+      expect(body.text).toContain("secrettoken");
+      expect(body.html).toContain("secrettoken");
+      expect(log).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("in production a missing EMAIL_FROM is a clear error, not a silent drop", async () => {
+    delete process.env.SMTP_HOST;
+    delete process.env.SMTP_FROM;
+    process.env.RESEND_API_KEY = "test-key-placeholder";
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubGlobal("fetch", vi.fn());
+    try {
+      await expect(sendPasswordResetEmail("x@example.test", "https://example.test/r")).rejects.toThrow(/EMAIL_FROM/);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("emailConfigProblem names what is missing", () => {
+    expect(emailConfigProblem({})).toMatch(/RESEND_API_KEY and EMAIL_FROM/);
+    expect(emailConfigProblem({ RESEND_API_KEY: "k" })).toMatch(/EMAIL_FROM/);
+    expect(emailConfigProblem({ RESEND_API_KEY: "k", EMAIL_FROM: "a@b.test" })).toBeNull();
+    expect(emailConfigProblem({ SMTP_HOST: "h" })).toBeNull();
   });
 });

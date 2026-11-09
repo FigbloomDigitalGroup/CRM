@@ -185,3 +185,39 @@ No AWS service decision is made here. The move is a dump and restore:
 * Confirm the RPO and RTO targets and the retention schedule, and decide whether WAL archiving is needed.
 * Run the timed drill on staging, record real numbers here, and run the file restore sample.
 * Sign off the data-location side with the P1.06 assessment (erasure versus backup retention).
+
+## 10. Hosted setup on Vercel (MVP, drafted 9 Nov 2026, FIG-1556 / MVP-17)
+
+**Status: written, not yet drilled.** The database and bucket do not exist yet (MVP-02, MVP-05, MVP-07 need Michael's accounts), so no restore has been run on the hosted setup. Sections 1 to 9 describe the local Docker stack and still apply to it. The restore drill result for the hosted setup must be recorded below once it has been done.
+
+### What changes on the hosted setup
+
+| Part | Local / staging stack | Hosted (Vercel + Neon + S3) |
+|---|---|---|
+| Database backups | `ops/backup/` nightly dump container | The provider's automatic backups and point-in-time restore. **Confirm on the chosen plan** the retention window and whether point-in-time restore is included, and write the numbers here. Take a manual `pg_dump` (through `DIRECT_URL`, not the pooled URL) before every migration that drops or rewrites data. |
+| File backups | Object-store snapshot | Turn on **bucket versioning** and a lifecycle rule that keeps previous versions for the retention period in section 2. Enable deletion protection on the bucket. |
+| Off-site copy | Not done (open from M12) | A weekly encrypted `pg_dump` copied to a second account or provider, with two key holders (still open, see section 9). |
+| Rollback of the app | Image rollback (RUNBOOKS 2a) | Vercel **instant rollback**: Deployments, pick the last good deployment, Promote to Production (or `vercel rollback`). It switches code only. It does not touch the database. |
+
+### Restore drill on the hosted database (to do once, then record)
+
+1. Create a scratch database: a point-in-time branch or restore from the provider, or `pg_dump` from `DIRECT_URL` restored into an empty scratch database. Never restore over production.
+2. Apply `npm run migrate:deploy:direct` against the scratch database; `prisma migrate status` must be clean.
+3. Run `npm run db:bootstrap-role` and `npm run db:grant-role` against it (the roles are created again, with new passwords).
+4. Start the app locally with `DATABASE_URL`, `APP_DATABASE_URL`, `PLATFORM_DATABASE_URL` pointing at the scratch database; sign in as a test user; open a company, a deal and the audit log.
+5. Run `npm run reconcile:counts` (or `scripts/reconcile-counts.ts`) against the scratch database and compare with production.
+6. Write the date, who ran it, how long each step took (that is the real RTO), how old the restored data was (the real RPO) and anything that surprised you in the table below. Then delete the scratch database.
+
+| Date | Run by | Source (dump or point in time) | RTO measured | RPO measured | Result / problems |
+|---|---|---|---|---|---|
+| (not yet run) | | | | | |
+
+### Rollback rule when a migration has already run
+
+Migrations are forward-only. A rollback of the code must still work with the newer database, so every migration follows expand and contract:
+
+1. **Expand:** add the new column, table or index; keep the old one; the old code keeps working. Deploy.
+2. **Switch:** deploy code that writes and reads the new shape. Keep the old column filled for one release.
+3. **Contract:** drop the old column only in a later release, after the new code has run in production without a rollback.
+
+If a bad migration has already run: (1) promote the previous deployment only if it is compatible with the new schema; (2) if not, fix forward with a new migration; (3) restore from backup into a scratch database and copy the lost rows back only when data was destroyed. Declare an incident (RUNBOOKS section 8) before restoring anything.

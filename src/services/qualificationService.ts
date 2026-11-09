@@ -57,8 +57,10 @@ export interface QualificationView {
 }
 
 export async function getQualification(ctx: AuthContext, leadId: string): Promise<QualificationView> {
-  const lead = await getLead(ctx, leadId);
-  const [questions, statuses] = await Promise.all([
+  // The organisation's questions and status names do not depend on the lead, so they load while the lead is fetched and authorised. If the
+  // lead check refuses, Promise.all rejects with that error and the other results are discarded unseen.
+  const [lead, questions, statuses] = await Promise.all([
+    getLead(ctx, leadId),
     loadQuestions(ctx.organizationId),
     adminDb.leadStatus.findMany({ where: { organizationId: ctx.organizationId }, select: { key: true, name: true } }),
   ]);

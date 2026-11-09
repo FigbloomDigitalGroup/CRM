@@ -12,6 +12,8 @@ export interface ResendMessage {
   to: string[];
   subject: string;
   text: string;
+  /** Optional HTML body (auth and notification mail send both parts). */
+  html?: string;
   replyTo?: string;
   headers?: Record<string, string>;
   /** Resend tags allow only ASCII letters, numbers, underscores and dashes in both name and value. */
@@ -55,6 +57,7 @@ export async function sendWithResend(message: ResendMessage, options: SendOption
     to: message.to,
     subject: message.subject,
     text: message.text,
+    ...(message.html ? { html: message.html } : {}),
     ...(message.replyTo ? { reply_to: message.replyTo } : {}),
     ...(message.headers ? { headers: message.headers } : {}),
     ...(message.tags ? { tags: message.tags } : {}),

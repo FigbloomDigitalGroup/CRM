@@ -2,9 +2,9 @@ import type { AuthContext } from "../auth/context";
 import {
   deny, hasPermission, requirePermission } from "../auth/context";
 import { ForbiddenError } from "../auth/errors";
-import { listDeals } from "./dealService";
-import { listLeads } from "./leadService";
-import { listTasks } from "./taskService";
+import { countDeals, listDeals } from "./dealService";
+import { countLeads, listLeads } from "./leadService";
+import { countTasks, listTasks } from "./taskService";
 import {
   getDealOutcomeSummary,
   getFollowUpStatusBreakdown,
@@ -67,6 +67,18 @@ async function ignoreForbidden<T>(promise: Promise<T[]>): Promise<T[]> {
   }
 }
 
+async function countOrZero(promise: Promise<number>): Promise<number> {
+  try {
+    return await promise;
+  } catch (err) {
+    if (err instanceof ForbiddenError) return 0;
+    throw err;
+  }
+}
+
+/** How many rows of each "actionable work" list are returned; the true totals travel in `counts`. */
+export const MY_WORK_LIST_LIMIT = 50;
+
 /**
  * "Actionable work": due-today follow-ups, overdue tasks, new leads, and
  * stalled deals, reusing the existing service-layer own/all scoping and
@@ -74,6 +86,12 @@ async function ignoreForbidden<T>(promise: Promise<T[]>): Promise<T[]> {
  * no-ops to `[]` if the caller's role lacks that permission (e.g. Finance
  * has no tasks.* or leads.* at all) instead of failing the whole
  * dashboard.
+ *
+ * Each list is capped at `MY_WORK_LIST_LIMIT` rows (the first rows of the
+ * same ordering as before) so a large organisation never loads every
+ * overdue task or new lead; `counts` carries the true totals, computed with
+ * COUNT queries under the same scoping, so a number shown to the person is
+ * never the length of a truncated list.
  */
 export async function getMyActionableWork(ctx: AuthContext) {
   if (
@@ -86,19 +104,31 @@ export async function getMyActionableWork(ctx: AuthContext) {
   const today = startOfDay(new Date());
   const tomorrow = new Date(today.getTime() + DAY_MS);
   const sevenDaysAgo = new Date(Date.now() - 7 * DAY_MS);
+  const take = MY_WORK_LIST_LIMIT;
 
-  const [dueToday, overdue, newLeads, stalledDeals] = await Promise.all([
-    ignoreForbidden(
-      listTasks(ctx, { dueAfter: today, dueBefore: tomorrow }).then((tasks) =>
-        tasks.filter((t) => t.status === "PENDING" || t.status === "IN_PROGRESS"),
-      ),
-    ),
-    ignoreForbidden(listTasks(ctx, { overdueOnly: true })),
-    ignoreForbidden(listLeads(ctx, { createdAfter: sevenDaysAgo })),
-    ignoreForbidden(listDeals(ctx, { stalledOnly: true })),
+  const dueTodayFilters = { dueAfter: today, dueBefore: tomorrow, statuses: ["PENDING", "IN_PROGRESS"] as ("PENDING" | "IN_PROGRESS")[] };
+  const overdueFilters = { overdueOnly: true };
+  const newLeadFilters = { createdAfter: sevenDaysAgo };
+  const stalledFilters = { stalledOnly: true };
+
+  const [dueToday, overdue, newLeads, stalledDeals, dueTodayN, overdueN, newLeadsN, stalledDealsN] = await Promise.all([
+    ignoreForbidden(listTasks(ctx, { ...dueTodayFilters, take })),
+    ignoreForbidden(listTasks(ctx, { ...overdueFilters, take })),
+    ignoreForbidden(listLeads(ctx, { ...newLeadFilters, take })),
+    ignoreForbidden(listDeals(ctx, { ...stalledFilters, take })),
+    countOrZero(countTasks(ctx, dueTodayFilters)),
+    countOrZero(countTasks(ctx, overdueFilters)),
+    countOrZero(countLeads(ctx, newLeadFilters)),
+    countOrZero(countDeals(ctx, stalledFilters)),
   ]);
 
-  return { dueToday, overdue, newLeads, stalledDeals };
+  return {
+    dueToday,
+    overdue,
+    newLeads,
+    stalledDeals,
+    counts: { dueToday: dueTodayN, overdue: overdueN, newLeads: newLeadsN, stalledDeals: stalledDealsN },
+  };
 }
 
 export interface OrganizationMetricsFilters {

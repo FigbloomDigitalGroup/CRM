@@ -13,6 +13,7 @@ build ad hoc schedulers.
 | Runner: `runDueJobs`, `enqueueJobFor`, `enqueueAndRunNow`, schedules, missed-run check | `src/jobs/runner.ts` |
 | Worker process | `npm run jobs:worker` (`scripts/jobs-worker.ts`) |
 | Cron entry for serverless hosting | `GET /api/cron/jobs`, every 5 minutes or less (see "Scheduled work" in `docs/DEPLOYMENT.md`) |
+| Vercel | Installed by `vercel.json`: `/api/cron/jobs` every 5 minutes, `/api/cron/notifications-sweep` every 30 minutes, `/api/cron/platform-maintenance` daily at 03:00 UTC. Vercel sends `Authorization: Bearer $CRON_SECRET`. Needs a Pro plan (Hobby allows daily crons only). Production does not use `npm run jobs:worker`. |
 | Platform maintenance (belongs to no organisation, so not a job) | `GET /api/cron/platform-maintenance`, daily |
 | Status API for Management | `GET /api/orgs/{org}/jobs`, `/jobs/{id}`, `/retry`, `/cancel`, `/schedules` |
 

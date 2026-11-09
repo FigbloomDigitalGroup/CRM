@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bell, Building2, ChevronDown, Eye, FileText, History, Home, Layers, Moon, Search, Shield, SlidersHorizontal, Sun, Users, Zap, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Building2, ChevronDown, FileText, History, Home, Layers, Moon, Search, Shield, SlidersHorizontal, Sun, Users, Zap, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -19,21 +19,17 @@ interface NavDef {
   path: string;
   label: string;
   icon: LucideIcon;
-  v2?: boolean;
   badge?: "requests";
 }
 
-const NAV: NavDef[] = [
+export const PLATFORM_NAV: NavDef[] = [
   { path: "/platform", label: "Home", icon: Home },
   { path: "/platform/organisations", label: "Organisations", icon: Building2 },
   { path: "/platform/data-requests", label: "Data requests", icon: FileText, badge: "requests" },
-  { path: "/platform/support-access", label: "Support access", icon: Eye },
   { path: "/platform/health", label: "Health", icon: Zap },
   { path: "/platform/audit", label: "Audit log", icon: History },
   { path: "/platform/admins", label: "Platform admins", icon: Users },
   { path: "/platform/security", label: "Security", icon: Shield },
-  { path: "/platform/flags", label: "Flags and limits", icon: SlidersHorizontal, v2: true },
-  { path: "/platform/announcements", label: "Announcements", icon: Bell, v2: true },
 ];
 
 /** Pages a phone shows as the platform mobile app (PLM) instead of the desktop console. */
@@ -50,7 +46,7 @@ function isCurrent(pathname: string, path: string) {
 export function PlatformShell({ identity, signOut, children }: { identity: PlatformIdentityView; signOut: ReactNode; children: ReactNode }) {
   const pathname = usePathname() ?? "/platform";
   const router = useRouter();
-  const { state, dispatch } = usePlatform();
+  const { state } = usePlatform();
   const { theme, toggle } = usePlatformTheme();
   const [q, setQ] = useState("");
   const [menu, setMenu] = useState(false);
@@ -93,7 +89,7 @@ export function PlatformShell({ identity, signOut, children }: { identity: Platf
           </div>
         </div>
         <nav className="fb-pl-nav">
-          {NAV.filter((n) => !n.v2 || state.release === "v2").map((n) => {
+          {PLATFORM_NAV.map((n) => {
             const Icon = n.icon;
             const count = n.badge === "requests" ? pendingRequests : 0;
             return (
@@ -103,19 +99,10 @@ export function PlatformShell({ identity, signOut, children }: { identity: Platf
                 </span>
                 <span className="fb-pl-nav-label">{n.label}</span>
                 {count ? <span className="fb-pl-nav-badge" aria-label={`${count} waiting`}>{count}</span> : null}
-                {n.v2 ? <span className="fb-pl-nav-v2">V2</span> : null}
               </Link>
             );
           })}
         </nav>
-        <label className="fb-pl-demo-release">
-          
-          <span className="fb-pl-sr">Release shown</span>
-          <select aria-label="Release shown in the console" value={state.release} onChange={(e) => dispatch({ type: "release", value: e.target.value === "v2" ? "v2" : "v11" })}>
-            <option value="v11">V1.1</option>
-            <option value="v2">V2</option>
-          </select>
-        </label>
         <div className="fb-pl-side-note">
           <Shield size={13} aria-hidden="true" /> Platform admins hold no organisation role and see no customer records by default.
         </div>

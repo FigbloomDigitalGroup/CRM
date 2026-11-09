@@ -1,9 +1,8 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { OrgBanners } from "../../../../src/ui/screens/orgside/OrgBanners";
 import { OrgSwitcher } from "../../../../src/ui/screens/orgside/OrgSwitcher";
-import { DataRequests, SupportHistory, TwoStepSettings } from "../../../../src/ui/screens/orgside/SettingsTabs";
+import { DataRequests, TwoStepSettings } from "../../../../src/ui/screens/orgside/SettingsTabs";
 import { apiError, renderScreen, stubClient, violations } from "../deals/harness";
 
 const uncontracted = vi.hoisted(() => vi.fn());
@@ -12,34 +11,6 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/o/figbloom/settings", u
 
 const MGMT = { permissionKeys: ["configuration.manage", "security.manage"], roleName: "Management" };
 const SALES = { permissionKeys: ["leads.view.own"], roleName: "Sales" };
-
-describe("Organisation side of support access (FIG-1192, OS2, OS3, OS5)", () => {
-  it("Management approves a request, the banner appears with End now, and ending it lands in the history", async () => {
-    const { client } = stubClient({});
-    renderScreen(
-      <>
-        <OrgBanners />
-        <SupportHistory />
-      </>,
-      client,
-      MGMT,
-    );
-    expect(screen.getByText(/Figbloom Support asks to view your workspace/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Approve" }));
-    expect(screen.getByText(/Figbloom Support is viewing settings and health \(read-only\)/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "End now" }));
-    expect(screen.queryByRole("button", { name: "End now" })).not.toBeInTheDocument();
-    expect(screen.getAllByText("Ended").length).toBeGreaterThan(1);
-  });
-
-  it("the announcement can be dismissed", async () => {
-    const { client } = stubClient({});
-    renderScreen(<OrgBanners />, client, SALES);
-    expect(screen.queryByText(/asks to view your workspace/)).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Dismiss announcement" }));
-    expect(screen.queryByText(/Planned maintenance/)).not.toBeInTheDocument();
-  });
-});
 
 const ORGS = {
   items: [
@@ -95,16 +66,46 @@ describe("Organisation switcher (FIG-1165, TB4, wired to FIG-1133)", () => {
 });
 
 describe("Settings sections on the organisation side (FIG-1166, FIG-1167)", () => {
-  it("files a data request, refuses an empty one, and lists the status", async () => {
-    const { client } = stubClient({});
+  const REQ = (over: Record<string, unknown>) => ({ id: "r1", kind: "EXPORT", status: "SUBMITTED_TO_PLATFORM", note: null, submittedAt: "2026-11-02T08:00:00Z", exportStatus: "NONE", exportExpiresAt: null, deleteAfter: null, ...over });
+
+  it("lists the organisation's requests from the API, files a new one, and offers a ready export for download", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    let items = [REQ({ id: "r1", status: "APPROVED", exportStatus: "READY", exportExpiresAt: "2026-12-01T00:00:00Z" })];
+    const { client, calls } = stubClient({
+      listOrganisationDataRequests: () => ({ items }),
+      submitOrganisationDataRequest: ({ body }) => {
+        items = [...items, REQ({ id: "r2", kind: (body as { kind: string }).kind, note: (body as { note?: string }).note ?? null })];
+        return items[1];
+      },
+      getPrivacyOrganisationRequestsByRequestIdDownload: () => ({ download: { url: "https://files.example/export.gz" } }),
+    });
     const { container } = renderScreen(<DataRequests />, client, MGMT);
+    expect(await screen.findByText("Approved")).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Type"), "DELETE");
+    await userEvent.type(screen.getByLabelText("Notes for Figbloom"), "Closing the branch");
     await userEvent.click(screen.getByRole("button", { name: "Send request" }));
-    expect(screen.getByText("Say what the request is about")).toBeInTheDocument();
-    await userEvent.type(screen.getByLabelText(/What is it about/), "Customer list (CSV)");
-    await userEvent.click(screen.getByRole("button", { name: "Send request" }));
-    expect(screen.getByText(/Data export · Customer list \(CSV\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Peter Ochieng/)).toBeInTheDocument();
+    await waitFor(() => expect(calls.find((c) => c.id === "submitOrganisationDataRequest")?.args).toMatchObject({ params: { orgSlug: "figbloom" }, body: { kind: "DELETE", note: "Closing the branch" } }));
+    expect(await screen.findByText(/Organisation deletion · Closing the branch/)).toBeInTheDocument();
+    expect(screen.getByText("With Figbloom")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Download" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://files.example/export.gz"));
+    expect(calls.find((c) => c.id === "getPrivacyOrganisationRequestsByRequestIdDownload")?.args).toMatchObject({ params: { requestId: "r1" } });
     expect(await violations(container)).toEqual([]);
+    vi.unstubAllGlobals();
+  });
+
+  it("says why a request was refused, and never shows a preview of the suspended screen", async () => {
+    const { client } = stubClient({
+      listOrganisationDataRequests: () => ({ items: [] }),
+      submitOrganisationDataRequest: () => apiError(400, "A request to export the organisation is already with the platform team."),
+    });
+    renderScreen(<DataRequests />, client, MGMT);
+    expect(await screen.findByText("No requests yet.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Send request" }));
+    expect(await screen.findByText(/already with the platform team/)).toBeInTheDocument();
+    expect(screen.queryByText(/suspended screen/i)).not.toBeInTheDocument();
+    expect(document.cookie).not.toContain("fb_demo_suspended");
   });
 
   it("two-step policy is read from and saved to the API, and a trusted device can be forgotten", async () => {
