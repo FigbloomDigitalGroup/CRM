@@ -36,3 +36,15 @@ See the "Verification" section at the end of this file, filled in after the fina
 4. Confirm the AWS owner role bypasses RLS.
 5. Custom roles can never hold audit, bulk export, payments or margin: product confirmation.
 6. The V2 screens are still on demo data and must be wired to these routes (M18).
+
+## Verification (10 Nov 2026)
+
+- Full suite on the merged branch (`ACTIVE_RELEASE=v1`, own Postgres on port 55433): **274 of 274 files, 3428 tests passed, 8 skipped.** `npm run typecheck` and `npm run lint` clean.
+- A first full run had 7 failures; all were fixed, none by weakening a test's meaning:
+  - Contract and typed-client tests: the contract was regenerated after the matrix snapshots (`contract:update`; hash in `docs/API_CHANGELOG.md`).
+  - Matrix rules and V1.1 walk: the V2 route families are expected to answer `FEATURE_UNAVAILABLE` below release V2 (they are walked under V2 in their own tests).
+  - V1.1 walk, `PUT .../stages/{stageId}/rules`: a **pre-existing flaky fixture** (an unordered `findFirst` could hand the walk the Closed Lost stage); the fixture now picks the first open stage by sequence.
+  - `seed.test`: counts the five platform roles only; custom roles (organisation-owned) are not seed data.
+  - `quickCapture` database-call budget raised from 16 to 17: **a deliberate change**, one indexed webhook-endpoint lookup per created lead (FIG-804), constant per capture.
+- Found and fixed during integration: the organisation's monthly API-call limit (FIG-1184) was never called from the API-token guard. It now is (`authenticateApiToken`), with a test (`tests/publicApi.test.ts`).
+- Not run: e2e (Playwright), the performance suite, the 50k-lead run. Nothing in M17 changes a frozen page.
