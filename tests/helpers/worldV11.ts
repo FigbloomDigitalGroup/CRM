@@ -167,14 +167,14 @@ export async function buildWorldV11(prefix = "WalkV11"): Promise<WorldV11> {
     if (proposal) overrides["/assistant/proposals/{proposalId}:proposalId"] = proposal.id;
   }
 
-  // Pipelines (B6.15): the default pipeline and one of its stages.
-  const pipeline = await adminDb.pipeline.findFirst({ where: { organizationId: org } });
-  if (pipeline) {
-    ids.pipelineId = pipeline.id;
-    const stage = await adminDb.pipelineStage.findFirst({ where: { organizationId: org } });
-    if (stage) ids.stageId = stage.id;
+  // Pipelines (B6.15): an open stage and its pipeline. Picked by key, never "the first row": a closed stage (won or lost) takes no rules, so an
+  // unordered pick made the recorded matrix differ between databases.
+  const stage = await adminDb.pipelineStage.findFirst({ where: { organizationId: org, key: "SOLUTION_PRESENTED" }, orderBy: { id: "asc" } });
+  if (stage?.pipelineId) {
+    ids.pipelineId = stage.pipelineId;
+    ids.stageId = stage.id;
     world.v11Records.push("pipeline and stage");
-  } else missing.push("pipeline: the organisation has none");
+  } else missing.push("pipeline: the organisation has no open SOLUTION_PRESENTED stage on a pipeline");
 
   // The V1.1 records are tenant data like any other: the attack suite must see them as markers.
   world.markers.push(
