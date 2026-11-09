@@ -18,6 +18,8 @@ const RequestSchema = z.strictObject({
       body: z.string().optional(),
       templateId: z.string().optional(),
       linkExpiresInDays: z.number().int().optional(),
+      language: z.string().optional(),
+      allowSigning: z.boolean().optional(),
     })
     .optional(),
 });

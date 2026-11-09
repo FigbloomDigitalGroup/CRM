@@ -1,4 +1,5 @@
 import { invalidateMeContext } from "./meContextCache";
+import { findAssignableRole } from "../repositories/roles";
 import { withAvatars } from "./profileService";
 import { requiredFeatureForRole, roleIsAvailable } from "../auth/permissions";
 import { loadFeatureConfig } from "../lib/featureConfig";
@@ -14,6 +15,7 @@ import {
 import { generateInviteToken } from "../auth/membershipInvite";
 import { revokeSessionsForUser } from "../auth/session";
 import { adminDb } from "../db/adminClient";
+import { assertSeatAvailable } from "./orgLimitService";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
   countActiveManagementMemberships,
@@ -101,7 +103,7 @@ export async function inviteMember(
     throw new ValidationError("Name and email are required.");
   }
 
-  const role = await adminDb.role.findUnique({ where: { key: input.roleKey } });
+  const role = await findAssignableRole(ctx.organizationId, input.roleKey);
   if (!role) {
     throw new ValidationError(`Unknown role "${input.roleKey}".`);
   }
@@ -121,6 +123,8 @@ export async function inviteMember(
       "This person is deactivated -- reactivate them instead of sending a new invite.",
     );
   }
+  // B7.02: a new invitation takes a seat; re-sending one that is already pending does not.
+  if (existing?.status !== "PENDING") await assertSeatAvailable(ctx.organizationId);
 
   const { plaintext, tokenHash, expiresAt } = generateInviteToken();
   const membership = await upsertPendingInvite({
@@ -233,7 +237,7 @@ export async function changeMemberRole(
     throw new NotFoundError("Membership", membershipId);
   }
 
-  const role = await adminDb.role.findUnique({ where: { key: roleKey } });
+  const role = await findAssignableRole(ctx.organizationId, roleKey);
   if (!role) {
     throw new ValidationError(`Unknown role "${roleKey}".`);
   }
@@ -431,6 +435,7 @@ export async function reactivateMember(ctx: AuthContext, membershipId: string) {
     );
   }
 
+  await assertSeatAvailable(ctx.organizationId); // B7.02: a reactivated member takes a seat again.
   const updated = await reactivateMembership(membershipId);
 
   await recordAuditEvent({

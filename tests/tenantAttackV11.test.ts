@@ -45,6 +45,12 @@ import { setTyping, syncChat, heartbeat } from "../src/services/chatRealtimeServ
 
 /** The tables V1.1 added with an organisation id (migrations 20261106090000 to 20261120100000 that are tenant-owned). */
 const V11_TABLES = [
+  "api_tokens",
+  "churn_hints",
+  "quote_signatures",
+  "role_field_rules",
+  "webhook_deliveries",
+  "webhook_endpoints",
   "approval_requests",
   "assistant_proposals",
   "assistant_requests",

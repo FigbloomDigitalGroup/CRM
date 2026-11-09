@@ -15,6 +15,10 @@ const SendSchema = z.strictObject({
   /** An email template (FIG-797) to start the subject and body from. */
   templateId: z.string().optional(),
   linkExpiresInDays: z.number().int().optional(),
+  /** FIG-1189: the language of the document, the email and the signing page (en or sw). */
+  language: z.string().optional(),
+  /** FIG-1186: also create an online signing link (V2). */
+  allowSigning: z.boolean().optional(),
 });
 
 // Emails the quote with a secure link and locks the version (FIG-1144, B6.12). The link is in the response once; only its hash is kept.

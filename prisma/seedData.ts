@@ -447,6 +447,11 @@ export const PERMISSIONS: { key: string; area: string; description: string }[] =
       description: "Create and manage webhooks.",
     },
     {
+      key: "roles.manage",
+      area: "Roles",
+      description: "Create custom roles and edit their permissions and field access (FIG-1188).",
+    },
+    {
       key: "security.manage",
       area: "Security",
       description:
@@ -529,6 +534,7 @@ export const PERMISSION_MIN_RELEASE: Record<string, "v1" | "v1.1" | "v2"> = {
   "meetings.schedule": "v1.1",
   "api_tokens.manage": "v2",
   "webhooks.manage": "v2",
+  "roles.manage": "v2",
 };
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -598,6 +604,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "ai.configure",
     "api_tokens.manage",
     "webhooks.manage",
+    "roles.manage",
     "security.manage",
     "deals.margin",
     "deals.handoff",

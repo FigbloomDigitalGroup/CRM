@@ -10,6 +10,7 @@ import {
   deny, requirePermission } from "../auth/context";
 import { NotFoundError, ValidationError } from "../auth/errors";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import { emitWebhookEvent } from "./webhookService";
 import { getCompanyById } from "../repositories/companies";
 import {
   archiveContact as archiveContactRecord,
@@ -168,6 +169,7 @@ export async function createContact(
     });
   }
 
+  await emitWebhookEvent({ organizationId: ctx.organizationId, type: "contact.created", record: contact });
   return { contact, possibleDuplicates, duplicates: found.candidates, hiddenDuplicates: found.hiddenCount };
 }
 

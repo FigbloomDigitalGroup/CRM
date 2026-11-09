@@ -118,8 +118,8 @@ function money(show: boolean, value: Prisma.Decimal | number | null): number | n
   return Number(value);
 }
 
-export function presentVersion(ctx: Pick<AuthContext, "permissionKeys" | "membershipId">, deal: { ownerMembershipId: string | null }, v: VersionRow, rules: ApprovalRuleSettings | null = null, now = new Date()) {
-  const showValue = ctx.permissionKeys.includes("deals.view.value") || deal.ownerMembershipId === ctx.membershipId;
+export function presentVersion(ctx: Pick<AuthContext, "permissionKeys" | "membershipId"> & { hiddenFields?: readonly string[] }, deal: { ownerMembershipId: string | null }, v: VersionRow, rules: ApprovalRuleSettings | null = null, now = new Date()) {
+  const showValue = !ctx.hiddenFields?.includes("deal.value") && (ctx.permissionKeys.includes("deals.view.value") || deal.ownerMembershipId === ctx.membershipId);
   const showMargin = showValue && ctx.permissionKeys.includes("deals.margin");
   const total = Number(v.total);
   const cost = v.costTotal === null ? null : Number(v.costTotal);

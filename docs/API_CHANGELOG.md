@@ -14,6 +14,12 @@ To change the API on purpose:
 A change that removes or renames a path, field or enum value, narrows what a role may do, or makes an optional field required is **breaking** and
 needs a new major version (`API_VERSION` in `src/api/openapi.ts`). Additions are minor. Wording-only and documentation changes are patches.
 
+## 1.1.0 — V2 backend routes, additive (M17, Nov 2026)
+
+contract-hash: 07436fd0247605dd10a8f3fba1bfe37cbbacea589023f1bc631cc6105a1a1f2d
+
+Additive only (still version 1.1.0, behind `release.v2`): support access (request, approve, open, end, page-view log), per-organisation flags and limits, announcements and dismissals, e-signature signing (`/api/public/sign/{token}`), per-document client language, custom roles and field rules (`/roles*`), churn hints (`/churn-hints*`), API token and webhook management. The public `/api/v1/*` API has its own document at `/api/v1/openapi.json`. Existing routes keep their behaviour.
+
 ## 1.1.0 — V1.1 backend, additive (Nov 2026)
 
 contract-hash: 4e9574fcb63fc8271f29a675bcca6977956eedf4ebd6729ac16f91a76ca5ae82

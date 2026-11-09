@@ -22,7 +22,10 @@ const PLATFORM_CONSOLE_APPEND_ONLY = [
   "platform_data_request_approvals",
   "platform_deletion_certificates",
 ];
-const PLATFORM_CONSOLE_MUTABLE = ["platform_idempotency_keys", "platform_incidents", "platform_data_requests"];
+const PLATFORM_CONSOLE_MUTABLE = ["platform_idempotency_keys", "platform_incidents", "platform_data_requests", "platform_announcements"];
+/** FIG-1183 (B7.01): support access. These carry an organisation id, so the platform role has no privilege on them (it uses the support_access_* functions); the tenant role approves, denies and ends a grant, and only reads the page-view log. */
+const SUPPORT_ACCESS_GRANTS = "support_access_grants";
+const SUPPORT_ACCESS_PAGE_VIEWS = "support_access_page_views";
 const PLATFORM_CONSOLE_VIEWS = ["platform_jobs_health", "platform_email_health", "platform_organization_profile"];
 /** FIG-1134 (B6.02): two-step tables, revoked from the tenant role (`TWO_STEP_TENANT_TABLES` and `TWO_STEP_PLATFORM_TABLES`); the platform ones are granted to the platform role. */
 const TWO_STEP_TENANT_TABLES = ["user_two_step", "user_backup_codes", "user_trusted_devices", "two_step_challenges"];
@@ -209,6 +212,9 @@ async function grantRole(): Promise<void> {
     for (const name of PLATFORM_CONSOLE_APPEND_ONLY.concat(PLATFORM_CONSOLE_MUTABLE, PLATFORM_CONSOLE_VIEWS)) {
       await client.query(`REVOKE ALL ON "${name}" FROM ${ident(APP_ROLE)}`);
     }
+    // FIG-1183: the tenant side approves or ends a grant; it never creates or deletes one, and never writes the page-view log.
+    await client.query(`REVOKE INSERT, DELETE ON "${SUPPORT_ACCESS_GRANTS}" FROM ${ident(APP_ROLE)}`);
+    await client.query(`REVOKE INSERT, UPDATE, DELETE ON "${SUPPORT_ACCESS_PAGE_VIEWS}" FROM ${ident(APP_ROLE)}`);
     await client.query(
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${ident(APP_ROLE)}`,
     );

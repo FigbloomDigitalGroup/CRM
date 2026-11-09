@@ -10,6 +10,8 @@ const UpdateFormSchema = z.strictObject({
   fields: z.unknown().optional(),
   leadSourceKey: z.string().nullable().optional(),
   successMessage: z.string().optional(),
+  /** FIG-1189: language of the public form's own text (en or sw). */
+  language: z.string().optional(),
   allowedOrigins: z.unknown().optional(),
   honeypotFieldName: z.string().optional(),
   captchaSecret: z.string().nullable().optional(),

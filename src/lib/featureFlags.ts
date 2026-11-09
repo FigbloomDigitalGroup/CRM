@@ -155,6 +155,11 @@ export interface FeatureConfig {
   release: Release;
   /** The organization's saved toggle values. */
   toggles: Record<string, boolean>;
+  /**
+   * Toggle values the platform fixed for this organisation (B7.02, FIG-1184). They win over `toggles`, never over the release: a V2
+   * feature stays off in V1 whatever the platform says. Absent means the organisation decides.
+   */
+  platformOverrides?: Record<string, boolean>;
 }
 
 export type FeatureReason = "release" | "toggle";
@@ -182,7 +187,7 @@ export function resolveFeature(key: string, config: FeatureConfig): FeatureResol
   if (!releaseAtLeast(config.release, toggle.minRelease)) {
     return { enabled: false, reason: "release", availableIn: toggle.minRelease };
   }
-  const value = config.toggles[key] ?? toggle.defaultValue;
+  const value = config.platformOverrides?.[key] ?? config.toggles[key] ?? toggle.defaultValue;
   return value ? { enabled: true } : { enabled: false, reason: "toggle" };
 }
 

@@ -198,7 +198,7 @@ export async function getSalesBySalesperson(
   const scope = getReportScope(ctx);
   if (!scope.deals) throw deny(ctx, "deals.view.own (or .all)", ["deals.view.own"]);
   const ownOnly = scope.mode === "personal" && scope.deals === "own";
-  const canSeeValue = ownOnly || hasPermission(ctx, "deals.view.value");
+  const canSeeValue = (ownOnly && !ctx.hiddenFields?.includes("deal.value")) || hasPermission(ctx, "deals.view.value");
 
   const { dateFrom, dateTo, dateToQuery } = resolveRange(filters);
   const repoFilters = {

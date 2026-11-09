@@ -15,6 +15,11 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 |---|:-:|:-:|:-:|:-:|:-:|
 | `GET /activities` | A | A | D | D | D |
 | `POST /activities` | A | A | D | D | D |
+| `GET /announcements` | D | D | D | D | D |
+| `POST /announcements/{announcementId}/dismiss` | D | D | D | D | D |
+| `GET /api-tokens` | D | D | D | D | D |
+| `POST /api-tokens` | D | D | D | D | D |
+| `DELETE /api-tokens/{tokenId}` | D | D | D | D | D |
 | `GET /approval-rules` | D | D | D | D | D |
 | `PATCH /approval-rules` | D | D | D | D | D |
 | `GET /approvals` | D | D | D | D | D |
@@ -68,6 +73,10 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `GET /chat/search` | D | D | D | D | D |
 | `GET /chat/sync` | D | D | D | D | D |
 | `GET /chat/unread` | D | D | D | D | D |
+| `GET /churn-hints` | D | D | D | D | D |
+| `POST /churn-hints/{hintId}/dismiss` | D | D | D | D | D |
+| `POST /churn-hints/{hintId}/feedback` | D | D | D | D | D |
+| `POST /churn-hints/refresh` | D | D | D | D | D |
 | `GET /commands` | D | D | D | D | D |
 | `DELETE /comments/{commentId}` | A | D | D | D | D |
 | `PATCH /comments/{commentId}` | A | D | D | D | D |
@@ -428,6 +437,13 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `GET /reports/v2/my-metrics` | A | A | A | A | D |
 | `GET /reports/v2/my-metrics/export` | A | A | A | A | D |
 | `GET /retention` | A | A | D | D | D |
+| `GET /roles` | D | D | D | D | D |
+| `POST /roles` | D | D | D | D | D |
+| `DELETE /roles/{roleId}` | D | D | D | D | D |
+| `GET /roles/{roleId}` | D | D | D | D | D |
+| `PATCH /roles/{roleId}` | D | D | D | D | D |
+| `GET /roles/catalog` | D | D | D | D | D |
+| `POST /roles/preview` | D | D | D | D | D |
 | `GET /scoring/weights` | A | D | D | D | D |
 | `PATCH /scoring/weights` | A | D | D | D | D |
 | `GET /search` | A | A | A | A | A |
@@ -452,6 +468,11 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `POST /sequences/{sequenceId}/enrollments` | D | D | D | D | D |
 | `GET /settings/overview` | A | D | D | D | D |
 | `GET /signals` | A | A | A | A | A |
+| `GET /support-access` | D | D | D | D | D |
+| `GET /support-access/{grantId}` | D | D | D | D | D |
+| `POST /support-access/{grantId}/decision` | D | D | D | D | D |
+| `POST /support-access/{grantId}/end` | D | D | D | D | D |
+| `GET /support-access/banner` | D | D | D | D | D |
 | `POST /support-requests` | D | D | D | D | D |
 | `POST /sync/batch` | A | A | A | A | A |
 | `GET /sync/status` | A | A | A | A | A |
@@ -489,10 +510,19 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `PATCH /web-forms/{formId}` | D | D | D | D | D |
 | `POST /web-forms/{formId}/rotate-key` | D | D | D | D | D |
 | `GET /web-forms/{formId}/submissions` | D | D | D | D | D |
+| `GET /webhooks` | D | D | D | D | D |
+| `POST /webhooks` | D | D | D | D | D |
+| `DELETE /webhooks/{endpointId}` | D | D | D | D | D |
+| `GET /webhooks/{endpointId}` | D | D | D | D | D |
+| `PATCH /webhooks/{endpointId}` | D | D | D | D | D |
+| `GET /webhooks/{endpointId}/deliveries` | D | D | D | D | D |
+| `POST /webhooks/{endpointId}/deliveries/{deliveryId}/retry` | D | D | D | D | D |
+| `POST /webhooks/{endpointId}/rotate-secret` | D | D | D | D | D |
+| `POST /webhooks/{endpointId}/test` | D | D | D | D | D |
 | `GET /website-lead-assignment-rules` | A | D | D | D | D |
 | `POST /website-lead-assignment-rules` | V | D | D | D | D |
 | `POST /website-lead-assignment-rules/{ruleId}` | A | D | D | D | D |
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D |
 | `GET /whats-new` | D | D | D | D | D |
 
-481 route and method pairs, 2405 role answers: A 649, D 1532, H 134, V 90.
+511 route and method pairs, 2555 role answers: A 649, D 1682, H 134, V 90.

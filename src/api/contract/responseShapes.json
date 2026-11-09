@@ -13682,13 +13682,38 @@
       "stalledDeals": {
         "type": "array",
         "items": {}
+      },
+      "counts": {
+        "type": "object",
+        "properties": {
+          "dueToday": {
+            "type": "integer"
+          },
+          "overdue": {
+            "type": "integer"
+          },
+          "newLeads": {
+            "type": "integer"
+          },
+          "stalledDeals": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dueToday",
+          "overdue",
+          "newLeads",
+          "stalledDeals"
+        ],
+        "additionalProperties": true
       }
     },
     "required": [
       "dueToday",
       "overdue",
       "newLeads",
-      "stalledDeals"
+      "stalledDeals",
+      "counts"
     ],
     "additionalProperties": true
   },

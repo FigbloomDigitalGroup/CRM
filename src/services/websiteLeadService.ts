@@ -16,6 +16,7 @@ import {
   sendWebsiteLeadAcknowledgement,
 } from "./notificationService";
 import { autoEnrolLead } from "./followUpService";
+import { emitLeadCreatedById } from "./webhookService";
 import {
   recordWebsiteLeadRequest,
   type WebsiteLeadRequestOutcome,
@@ -183,6 +184,7 @@ export async function submitWebsiteLead(
     outcome = "ACCEPTED";
     // Follow-up sequences that start from a new website lead (FIG-1150); never fails the submission.
     await autoEnrolLead(organizationId, result.leadId);
+    await emitLeadCreatedById(organizationId, result.leadId);
 
     // Both best-effort and post-commit (FIG-597): the lead/task above is
     // already durably saved, so a notification/acknowledgement delivery

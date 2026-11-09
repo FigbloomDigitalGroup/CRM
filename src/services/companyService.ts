@@ -11,6 +11,7 @@ import {
 import { NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import { emitWebhookEvent } from "./webhookService";
 import {
   archiveCompany as archiveCompanyRecord,
   createCompany as createCompanyRecord,
@@ -164,6 +165,7 @@ export async function createCompany(
     });
   }
 
+  await emitWebhookEvent({ organizationId: ctx.organizationId, type: "company.created", record: company });
   return { company, possibleDuplicates, duplicates: found.candidates, hiddenDuplicates: found.hiddenCount };
 }
 

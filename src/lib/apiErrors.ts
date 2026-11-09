@@ -121,7 +121,8 @@ async function roleName(roleKey: string): Promise<string> {
   if (cached) return cached;
   const role = await adminDb.role.findUnique({ where: { key: roleKey } });
   const name = role?.name ?? roleKey;
-  roleNameCache.set(roleKey, name);
+  // A custom role can be renamed (B7.06), so only the platform roles, whose names never change, are remembered.
+  if (role && role.organizationId === null) roleNameCache.set(roleKey, name);
   return name;
 }
 

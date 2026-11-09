@@ -80,7 +80,7 @@ export async function updateExportRights(ctx: AuthContext, patch: { allowedRoleK
   const before = await loadExportRights(ctx.organizationId);
   const next = { ...before };
   if (patch.allowedRoleKeys !== undefined) {
-    const roles = await adminDb.role.findMany({ select: { key: true } });
+    const roles = await adminDb.role.findMany({ where: { OR: [{ organizationId: null }, { organizationId: ctx.organizationId }] }, select: { key: true } });
     const known = new Set(roles.map((r) => r.key));
     const bad = patch.allowedRoleKeys.filter((r) => !known.has(r));
     if (bad.length > 0) issues.push({ path: "allowedRoleKeys", message: `Unknown roles: ${bad.join(", ")}.` });

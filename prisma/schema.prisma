@@ -12,7 +12,7 @@
 // if an application-layer filter is missed.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // "native" for local and CI; "rhel-openssl-3.0.x" is the Vercel (Amazon Linux) runtime, so the query engine is bundled into the functions.
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
@@ -264,15 +264,22 @@ model PasswordResetToken {
 /// Technical). RBAC is a security rule, not organization-configurable
 /// business data, so this is global rather than per-organization.
 model Role {
-  id              String   @id @default(uuid())
-  key             String   @unique
-  name            String
-  description     String?
-  isSystem        Boolean  @default(true) @map("is_system")
+  id                    String    @id @default(uuid())
+  key                   String    @unique
+  name                  String
+  description           String?
+  isSystem              Boolean   @default(true) @map("is_system")
   /// Feature toggle that must be on for the role to be assignable (B1.01).
-  requiredFeature String?  @map("required_feature")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  requiredFeature       String?   @map("required_feature")
+  /// B7.06 (FIG-1188): null for the five platform roles; the owning organisation for a custom role (row-level security shows a
+  /// custom role to its own organisation only). The foreign key to organizations is in the migration.
+  organizationId        String?   @map("organization_id")
+  /// The platform role a custom role was started from, for display only.
+  basedOnRoleKey        String?   @map("based_on_role_key")
+  archivedAt            DateTime? @map("archived_at")
+  createdByMembershipId String?   @map("created_by_membership_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   memberships     Membership[]
   rolePermissions RolePermission[]
@@ -626,24 +633,24 @@ model DealHandoff {
 /// (`isDev`), created by `npm run seed:dev`; B6.03 adopts it for real platform
 /// admins.
 model PlatformIdentity {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  name         String
-  passwordHash String?  @map("password_hash")
-  isDev        Boolean  @default(false) @map("is_dev")
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  name               String
+  passwordHash       String?   @map("password_hash")
+  isDev              Boolean   @default(false) @map("is_dev")
   /// B1.08: the only look setting a platform admin has (LIGHT or DARK).
-  uiMode       String   @default("LIGHT") @map("ui_mode")
+  uiMode             String    @default("LIGHT") @map("ui_mode")
   /// B6.03: ACTIVE or SUSPENDED (a suspended admin cannot sign in).
-  status       String   @default("ACTIVE")
-  lastSignInAt DateTime? @map("last_sign_in_at")
+  status             String    @default("ACTIVE")
+  lastSignInAt       DateTime? @map("last_sign_in_at")
   /// B6.08: wrong passwords or codes in a row; `lockedUntil` in the future refuses sign-in.
-  failedSignInCount   Int       @default(0) @map("failed_sign_in_count")
-  lastFailedSignInAt  DateTime? @map("last_failed_sign_in_at")
-  lockedUntil         DateTime? @map("locked_until")
+  failedSignInCount  Int       @default(0) @map("failed_sign_in_count")
+  lastFailedSignInAt DateTime? @map("last_failed_sign_in_at")
+  lockedUntil        DateTime? @map("locked_until")
   /// Last reset or recovery of the password or second step; a DELETE approval needs this to be older than 24 hours.
-  credentialsResetAt  DateTime? @map("credentials_reset_at")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  credentialsResetAt DateTime? @map("credentials_reset_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   sessions PlatformSession[]
 
@@ -1743,9 +1750,11 @@ enum AuthRateLimitAction {
   PLATFORM_LOGIN
   SURVEY_RESPONSE
   QUOTE_VIEW
+  QUOTE_SIGN
   WEB_FORM
   ASSISTANT_ASK
   SUPPORT_REQUEST
+  API_TOKEN
 }
 
 /// Durable, cross-instance rate-limit counter (FIG-784) shared by every
@@ -2586,16 +2595,16 @@ model PushSubscription {
 /// A sales target for one month (FIG-1146, B6.14). `membershipId` null is the team target. Foreign keys and the two
 /// partial unique indexes are hand-written in the migration (no relation fields on purpose, like other composite-FK tables).
 model SalesTarget {
-  id                 String   @id @default(uuid())
-  organizationId     String   @map("organization_id")
-  membershipId       String?  @map("membership_id")
+  id                String   @id @default(uuid())
+  organizationId    String   @map("organization_id")
+  membershipId      String?  @map("membership_id")
   /// First day of the month the target is for.
-  periodStart        DateTime @map("period_start") @db.Date
-  amount             Decimal  @db.Decimal(14, 2)
-  currency           String   @default("KES")
-  setByMembershipId  String?  @map("set_by_membership_id")
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  periodStart       DateTime @map("period_start") @db.Date
+  amount            Decimal  @db.Decimal(14, 2)
+  currency          String   @default("KES")
+  setByMembershipId String?  @map("set_by_membership_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@index([organizationId, periodStart])
   @@map("sales_targets")
@@ -2988,8 +2997,8 @@ model PlatformDataRequest {
   deletionStartedAt       DateTime? @map("deletion_started_at")
   updatedAt               DateTime  @default(now()) @updatedAt @map("updated_at")
 
-  approvals    PlatformDataRequestApproval[]
-  certificate  PlatformDeletionCertificate?
+  approvals   PlatformDataRequestApproval[]
+  certificate PlatformDeletionCertificate?
 
   @@index([organizationId, submittedAt], map: "platform_data_requests_org_idx")
   @@index([status, submittedAt], map: "platform_data_requests_status_idx")
@@ -3234,6 +3243,10 @@ model QuoteShare {
   revokedAt             DateTime? @map("revoked_at")
   documentHtml          String    @map("document_html")
   documentSha256        String    @map("document_sha256")
+  /// FIG-1186: this link may be used to sign the quote online (the email carries a /sign link). Fixed at creation by a trigger.
+  signingEnabled        Boolean   @default(false) @map("signing_enabled")
+  /// FIG-1189: the language of the document that was sent (en or sw). Fixed at creation by a trigger.
+  language              String    @default("en")
   viewCount             Int       @default(0) @map("view_count")
   firstViewedAt         DateTime? @map("first_viewed_at")
   lastViewedAt          DateTime? @map("last_viewed_at")
@@ -3265,21 +3278,23 @@ model QuoteEvent {
 /// is an address, not a secret; abuse protection is the origin list, honeypot, optional captcha and rate limits. Foreign keys
 /// are hand-written in the migration.
 model WebForm {
-  id                String   @id @default(uuid())
-  organizationId    String   @map("organization_id")
-  name              String
-  publicKey         String   @unique @map("public_key")
-  status            String   @default("DRAFT")
-  fields            Json     @default("[]")
-  leadSourceKey     String?  @map("lead_source_key")
-  successMessage    String   @default("Thank you. We will be in touch.") @map("success_message")
-  allowedOrigins    String[] @default([]) @map("allowed_origins")
-  honeypotFieldName String   @default("website_url") @map("honeypot_field_name")
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  name                  String
+  publicKey             String   @unique @map("public_key")
+  status                String   @default("DRAFT")
+  fields                Json     @default("[]")
+  leadSourceKey         String?  @map("lead_source_key")
+  successMessage        String   @default("Thank you. We will be in touch.") @map("success_message")
+  allowedOrigins        String[] @default([]) @map("allowed_origins")
+  honeypotFieldName     String   @default("website_url") @map("honeypot_field_name")
+  /// FIG-1189: language of the form's own text (en or sw).
+  language              String   @default("en")
   /// Cloudflare Turnstile secret, server side only, never returned.
-  captchaSecret     String?  @map("captcha_secret")
-  createdByMembershipId String? @map("created_by_membership_id")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  captchaSecret         String?  @map("captcha_secret")
+  createdByMembershipId String?  @map("created_by_membership_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@index([organizationId, status])
   @@map("web_forms")
@@ -3393,20 +3408,20 @@ model AssistantProposal {
 /// A timed follow-up sequence (FIG-1150, B6.18): steps that remind a person with a task, or draft or send an approved email template.
 /// A sequence never moves a deal stage, sets a discount or approves anything (CLAUDE.md rule 9). Foreign keys are hand-written in the migration.
 model FollowUpSequence {
-  id                String   @id @default(uuid())
-  organizationId    String   @map("organization_id")
-  name              String
-  description       String?
+  id                    String   @id @default(uuid())
+  organizationId        String   @map("organization_id")
+  name                  String
+  description           String?
   /// LEAD or DEAL: what a person is enrolled on.
-  subjectType       String   @map("subject_type")
+  subjectType           String   @map("subject_type")
   /// MANUAL, or WEBSITE_LEAD to enrol every new website or web form lead.
-  trigger           String   @default("MANUAL")
-  isActive          Boolean  @default(false) @map("is_active")
+  trigger               String   @default("MANUAL")
+  isActive              Boolean  @default(false) @map("is_active")
   /// CLOSED (lead converted or lost, deal won or lost) and ARCHIVED end an enrolment.
-  exitRules         String[] @default(["CLOSED", "ARCHIVED"]) @map("exit_rules")
-  createdByMembershipId String? @map("created_by_membership_id")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  exitRules             String[] @default(["CLOSED", "ARCHIVED"]) @map("exit_rules")
+  createdByMembershipId String?  @map("created_by_membership_id")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@index([organizationId, isActive])
   @@map("follow_up_sequences")
@@ -3466,19 +3481,19 @@ model FollowUpEnrollment {
 /// The run log: every enrolment, step, pause, resume and exit, one row each. A STEP row is unique per enrolment and position,
 /// which is also how two workers never run the same step twice.
 model FollowUpRun {
-  id                  String   @id @default(uuid())
-  organizationId      String   @map("organization_id")
-  enrollmentId        String   @map("enrollment_id")
+  id                String   @id @default(uuid())
+  organizationId    String   @map("organization_id")
+  enrollmentId      String   @map("enrollment_id")
   /// ENROL, STEP, PAUSE, RESUME or EXIT.
-  kind                String
-  position            Int?
+  kind              String
+  position          Int?
   /// For a STEP: PENDING, DONE, SKIPPED or FAILED.
-  outcome             String?
-  result              String
-  taskId              String?  @map("task_id")
-  communicationId     String?  @map("communication_id")
-  actorMembershipId   String?  @map("actor_membership_id")
-  createdAt           DateTime @default(now()) @map("created_at")
+  outcome           String?
+  result            String
+  taskId            String?  @map("task_id")
+  communicationId   String?  @map("communication_id")
+  actorMembershipId String?  @map("actor_membership_id")
+  createdAt         DateTime @default(now()) @map("created_at")
 
   @@index([organizationId, enrollmentId, createdAt])
   @@map("follow_up_runs")
@@ -3548,4 +3563,242 @@ model CardCapture {
 
   @@index([organizationId, membershipId, status])
   @@map("card_captures")
+}
+
+/// B7.06 (FIG-1188): a field-visibility rule of a custom role (docs/M17_LANE_D_ROLES_AND_CHURN.md). Only `deal.value` is editable;
+/// the platform fixes the others. Tenant isolation: organization_id with a policy, and a composite foreign key to the role.
+model RoleFieldRule {
+  roleId         String   @map("role_id")
+  organizationId String   @map("organization_id")
+  field          String
+  access         String
+  updatedAt      DateTime @default(now()) @map("updated_at")
+
+  @@id([roleId, field])
+  @@index([organizationId])
+  @@map("role_field_rules")
+}
+
+/// FIG-805: a personal API token. Only the SHA-256 of the token is stored (it carries 256 bits of randomness, so a fast hash is right);
+/// the plain text is shown once at creation. The token runs as its owning membership: every request resolves that membership afresh, so a
+/// removed person, a changed role or a suspended organisation takes effect at once. `scopes` only narrow what the membership may do.
+/// Tenant isolation: organization_id with a policy, and a composite foreign key to the membership (docs/M17_LANE_C_PUBLIC_API_WEBHOOKS.md).
+model ApiToken {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  membershipId          String    @map("membership_id")
+  name                  String
+  /// First characters of the token, for the list ("fbk_AbCd1234"); never enough to use it.
+  tokenPrefix           String    @map("token_prefix")
+  tokenHash             String    @unique @map("token_hash")
+  scopes                String[]  @default([])
+  expiresAt             DateTime? @map("expires_at")
+  lastUsedAt            DateTime? @map("last_used_at")
+  revokedAt             DateTime? @map("revoked_at")
+  revokedByMembershipId String?   @map("revoked_by_membership_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  @@index([organizationId, membershipId])
+  @@map("api_tokens")
+}
+
+/// FIG-804: an outbound webhook endpoint. The signing secret is stored sealed (AES-256-GCM, `src/lib/secretBox.ts`) because delivery needs it;
+/// it is shown once when created or rotated. Payloads are built as the endpoint's creator, so value masking follows the role of that person.
+model WebhookEndpoint {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  url                   String
+  description           String?
+  events                String[]  @default([])
+  secretSealed          String    @map("secret_sealed")
+  /// Last four characters of the secret, so people can tell which one a receiver holds.
+  secretHint            String    @map("secret_hint")
+  secretRotatedAt       DateTime? @map("secret_rotated_at")
+  status                String    @default("ACTIVE")
+  consecutiveFailures   Int       @default(0) @map("consecutive_failures")
+  lastDeliveryAt        DateTime? @map("last_delivery_at")
+  createdByMembershipId String?   @map("created_by_membership_id")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@index([organizationId, status])
+  @@map("webhook_endpoints")
+}
+
+/// FIG-804: one event for one endpoint, with its attempts. PENDING rows are retried by the `webhooks.deliver` job with doubling backoff
+/// until `attempts` reaches the limit, then DEAD. This table is the delivery log shown in Settings.
+model WebhookDelivery {
+  id             String    @id @default(uuid())
+  organizationId String    @map("organization_id")
+  endpointId     String    @map("endpoint_id")
+  eventId        String    @map("event_id")
+  eventType      String    @map("event_type")
+  payload        Json
+  status         String    @default("PENDING")
+  attempts       Int       @default(0)
+  nextAttemptAt  DateTime? @map("next_attempt_at")
+  lastAttemptAt  DateTime? @map("last_attempt_at")
+  lastStatusCode Int?      @map("last_status_code")
+  lastError      String?   @map("last_error")
+  durationMs     Int?      @map("duration_ms")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  deliveredAt    DateTime? @map("delivered_at")
+
+  @@index([organizationId, status, nextAttemptAt])
+  @@index([endpointId, createdAt])
+  @@map("webhook_deliveries")
+}
+
+/// FIG-1186 (B7.04): the e-signature of a sent quote version. Append-only (a trigger refuses update and delete); one per version.
+/// `sealSha256` is a hash over the canonical record (see `src/lib/quoteSignature.ts`), so a changed row is detectable; `documentSha256`
+/// ties it to the exact document the client saw. FKs, checks, triggers and RLS are hand-written in the migration.
+model QuoteSignature {
+  id              String   @id @default(uuid())
+  organizationId  String   @map("organization_id")
+  quoteId         String   @map("quote_id")
+  quoteVersionId  String   @unique @map("quote_version_id")
+  shareId         String?  @map("share_id")
+  signerName      String   @map("signer_name")
+  signerEmail     String?  @map("signer_email")
+  /// TYPED (the typed name) or DRAWN (a PNG data URL).
+  signatureKind   String   @map("signature_kind")
+  signatureData   String   @map("signature_data")
+  signatureSha256 String   @map("signature_sha256")
+  consentText     String   @map("consent_text")
+  language        String   @default("en")
+  documentSha256  String   @map("document_sha256")
+  sealSha256      String   @map("seal_sha256")
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent")
+  signedAt        DateTime @map("signed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, quoteId])
+  @@map("quote_signatures")
+}
+
+/// FIG-1184 (B7.02): a usage count per organisation, metric and period (API calls per month). Numbers only. FKs, checks and RLS are hand-written in the migration.
+model OrganizationUsageCounter {
+  organizationId String   @map("organization_id")
+  metric         String
+  periodStart    DateTime @map("period_start") @db.Date
+  count          BigInt   @default(0)
+  updatedAt      DateTime @default(now()) @map("updated_at")
+
+  @@id([organizationId, metric, periodStart])
+  @@map("organization_usage_counters")
+}
+
+/// FIG-1185 (B7.03): a platform announcement, targeted at all organisations or a list. Platform-owned (no organisation id); the tenant feed reads it
+/// through the schema-owner client. Checks, RLS and the platform-only policy are hand-written in the migration.
+model PlatformAnnouncement {
+  id                    String    @id @default(uuid())
+  title                 String
+  body                  String
+  kind                  String    @default("MAINTENANCE")
+  severity              String    @default("INFO")
+  startsAt              DateTime  @map("starts_at")
+  endsAt                DateTime  @map("ends_at")
+  targetAll             Boolean   @default(false) @map("target_all")
+  targetOrganizationIds String[]  @default([]) @map("target_organization_ids")
+  dismissRule           String    @default("PERMANENT") @map("dismiss_rule")
+  cancelledAt           DateTime? @map("cancelled_at")
+  cancelledByLabel      String?   @map("cancelled_by_label")
+  createdByIdentityId   String?   @map("created_by_identity_id")
+  createdByLabel        String    @map("created_by_label")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @default(now()) @map("updated_at")
+
+  @@index([startsAt, endsAt], map: "platform_announcements_window_idx")
+  @@map("platform_announcements")
+}
+
+/// FIG-1185: one member's dismissal of one announcement. Tenant table (RLS on the organisation).
+model AnnouncementDismissal {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  membershipId   String   @map("membership_id")
+  announcementId String   @map("announcement_id")
+  dismissedAt    DateTime @default(now()) @map("dismissed_at")
+
+  @@unique([membershipId, announcementId])
+  @@index([organizationId])
+  @@map("announcement_dismissals")
+}
+
+/// FIG-1183 (B7.01): a support access (break-glass) request and its grant: one row from request to end. A trigger enforces who may move it
+/// between states; see the migration and docs/M17_LANE_A_SUPPORT_FLAGS_ANNOUNCEMENTS.md.
+model SupportAccessGrant {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  requestedByIdentityId String    @map("requested_by_identity_id")
+  requestedByLabel      String    @map("requested_by_label")
+  reason                String
+  ticketReference       String    @map("ticket_reference")
+  scope                 String[]
+  durationMinutes       Int       @map("duration_minutes")
+  unmaskContactDetails  Boolean   @default(false) @map("unmask_contact_details")
+  status                String    @default("PENDING")
+  requestedAt           DateTime  @default(now()) @map("requested_at")
+  requestExpiresAt      DateTime  @map("request_expires_at")
+  decidedAt             DateTime? @map("decided_at")
+  decidedByMembershipId String?   @map("decided_by_membership_id")
+  decidedByLabel        String?   @map("decided_by_label")
+  decisionNote          String?   @map("decision_note")
+  openedAt              DateTime? @map("opened_at")
+  openedByIdentityId    String?   @map("opened_by_identity_id")
+  startsAt              DateTime? @map("starts_at")
+  endsAt                DateTime? @map("ends_at")
+  endedAt               DateTime? @map("ended_at")
+  endedByLabel          String?   @map("ended_by_label")
+  endReason             String?   @map("end_reason")
+  updatedAt             DateTime  @default(now()) @map("updated_at")
+
+  @@index([organizationId, requestedAt], map: "support_access_grants_organization_id_requested_at_idx")
+  @@index([status], map: "support_access_grants_status_idx")
+  @@map("support_access_grants")
+}
+
+/// FIG-1183: what a support admin looked at during a grant. Append-only; the organisation reads it.
+model SupportAccessPageView {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  grantId        String   @map("grant_id")
+  viewedAt       DateTime @default(now()) @map("viewed_at")
+  identityId     String?  @map("identity_id")
+  identityLabel  String   @map("identity_label")
+  resource       String
+  pageOffset     Int      @default(0) @map("page_offset")
+  rowCount       Int      @default(0) @map("row_count")
+
+  @@index([grantId, viewedAt], map: "support_access_page_views_grant_id_viewed_at_idx")
+  @@index([organizationId], map: "support_access_page_views_organization_id_idx")
+  @@map("support_access_page_views")
+}
+
+/// B7.08 (FIG-1190): one churn hint for an account owner (docs/M17_LANE_D_ROLES_AND_CHURN.md). `signals` holds every reason with the permission
+/// a viewer needs to see it; a viewer is shown only the reasons they may see, and the level is recomputed from those. No money is stored.
+model ChurnHint {
+  id                      String    @id @default(uuid())
+  organizationId          String    @map("organization_id")
+  companyId               String    @map("company_id")
+  ownerMembershipId       String?   @map("owner_membership_id")
+  score                   Int
+  signals                 Json
+  signalsHash             String    @map("signals_hash")
+  status                  String    @default("OPEN")
+  generatedAt             DateTime  @default(now()) @map("generated_at")
+  resolvedAt              DateTime? @map("resolved_at")
+  dismissedAt             DateTime? @map("dismissed_at")
+  dismissedByMembershipId String?   @map("dismissed_by_membership_id")
+  dismissReason           String?   @map("dismiss_reason")
+  feedback                String?
+  feedbackNote            String?   @map("feedback_note")
+  feedbackByMembershipId  String?   @map("feedback_by_membership_id")
+  feedbackAt              DateTime? @map("feedback_at")
+  updatedAt               DateTime  @default(now()) @map("updated_at")
+
+  @@index([organizationId, status])
+  @@index([organizationId, companyId])
+  @@map("churn_hints")
 }
