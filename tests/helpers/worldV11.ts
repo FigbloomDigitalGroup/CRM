@@ -31,6 +31,10 @@ export interface WorldV11 extends World {
 }
 
 export async function buildWorldV11(prefix = "WalkV11"): Promise<WorldV11> {
+  // The V1.1 permissions (catalogue, chat, sequences, quotes) are stripped while the deployment's release is below V1.1 (src/lib/featureFlags.ts), and CI has
+  // no .env to set it. A developer's own ACTIVE_RELEASE wins; the reviewed matrix (src/api/contract/accessMatrixV11.json) is the one for v2. Q2.01 (FIG-1179):
+  // without this, G2.01's four files failed in CI (PR #34, shards 3 and 6) with "catalogue item" missing.
+  process.env.ACTIVE_RELEASE ||= "v2";
   const world = (await buildWorld(prefix)) as WorldV11;
   const org = world.organization.id;
   const { ids, overrides, missing } = world;

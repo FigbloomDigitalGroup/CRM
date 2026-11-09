@@ -6,10 +6,9 @@ import { apiPost, loginAs, ORG_SLUG, uniqueSuffix } from "./helpers";
  * server (see m10-orgside.spec.ts); otherwise skipped, not failed. The dropdown and the move of Conversations are also checked on the
  * normal server in ui-shell.spec.ts.
  */
-const demoServer = process.env.E2E_DEMO_SCREENS === "true";
-test.beforeEach(() => {
-  test.skip(!demoServer, "needs a demo-screens server (DEMO_SCREENS, NEXT_PUBLIC_DEMO_SCREENS, ACTIVE_RELEASE=v2)");
-});
+// Q2.01, Q2.05 (FIG-1179, FIG-1386): on the real API since M14, so it runs on the standard e2e server (ACTIVE_RELEASE=v2). Sending mail and creating a
+// meeting need a connected Google or Microsoft account, which a test cannot complete; those paths are covered by tests/mailSync.test.ts, tests/meetings.test.ts
+// and tests/q205*.test.ts. Here the not-connected state is the journey.
 
 /** Signs in through the real /login. The dev sign-in chips are not built into the e2e server (only `npm run preview` has them), so clicking one would wait forever. */
 async function signInAs(page: Page, email: string) {
@@ -129,38 +128,25 @@ test.describe("Chat (F6.21)", () => {
 });
 
 test.describe("Mail (F6.22) and Video Conference (F6.23)", () => {
-  test("connect, send a logged mail, link an unlinked message", async ({ page }) => {
+  test("with no mailbox connected, Mail says so, Compose is disabled, and Connect explains the provider sign-in", async ({ page }) => {
     await signInAs(page, "dev.management@figbloom.local");
     await page.goto(orgPath(page, "/mail"));
+    await expect(page.getByText("Your mailbox is not connected.")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Compose/ })).toHaveAttribute("aria-disabled", "true");
     await page.getByRole("button", { name: "Connect mailbox" }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Connect" }).click();
-    await page.getByRole("button", { name: /Compose/ }).click();
-    const dialog = page.getByRole("dialog");
-    await dialog.getByLabel(/^To/).fill("esther@savannafoods.example");
-    await dialog.getByLabel(/Subject/).fill("Quote follow-up");
-    await dialog.getByLabel(/Message/).fill("Thanks for your time.");
-    await dialog.getByLabel(/Record/).selectOption("deal:savanna");
-    await dialog.getByRole("button", { name: /Send/ }).click();
-    await expect(page.getByText(/Sent and logged on Deal: Savanna Foods/)).toBeVisible();
-    await page.getByRole("tab", { name: /Needs linking/ }).click();
-    await page.getByRole("button", { name: /Do you do POS for dairies/ }).click();
-    await page.getByLabel("Link to a record").selectOption("lead:nakuru");
-    await page.getByRole("button", { name: "Link", exact: true }).click();
-    await expect(page.getByText("Nothing needs linking")).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(/You will sign in with your provider/)).toBeVisible();
+    await page.keyboard.press("Escape"); // leaving for Google or Microsoft cannot be completed in a test
+    await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 
-  test("schedule a meeting with a link, and a contact with no email is flagged", async ({ page }) => {
+  test("with no calendar connected, Video Conference says so and Schedule is disabled", async ({ page }) => {
     await signInAs(page, "dev.sales@figbloom.local");
     await page.goto(orgPath(page, "/video"));
+    await expect(page.getByText("Your calendar is not connected.")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Schedule/ }).first()).toHaveAttribute("aria-disabled", "true");
     await page.getByRole("button", { name: "Connect calendar" }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Connect" }).click();
-    await page.getByRole("button", { name: /Schedule/ }).click();
-    const dialog = page.getByRole("dialog");
-    await dialog.getByLabel(/Title/).fill("Kisumu review");
-    await dialog.getByLabel(/Lucy Chebet/).check();
-    await expect(dialog.getByText(/will not get an invite/)).toBeVisible();
-    await dialog.getByLabel(/Amina Wekesa/).check();
-    await dialog.getByRole("button", { name: /Schedule and send invites/ }).click();
-    await expect(page.getByText("Kisumu review")).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(/You will sign in with your provider/)).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
   });
 });
