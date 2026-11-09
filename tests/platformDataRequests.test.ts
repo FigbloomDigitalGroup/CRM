@@ -575,6 +575,27 @@ describe("hardening: reset credentials, resumable deletion, verify it's you", ()
     await adminDb.platformIdentity.update({ where: { id: admin1.id }, data: { credentialsResetAt: null } });
   });
 
+  it("an approval stops counting when its approver is suspended, and counts again once they are reinstated (G2.02, F-01)", async () => {
+    const world = await setup();
+    const request = await submitOrganisationRequest(world.management, { kind: "DELETE" });
+    await decideDataRequest(admin1.actor, request.id, { decision: "APPROVE" });
+    await decideDataRequest(admin2.actor, request.id, { decision: "APPROVE" });
+    await runExportJob(world.org.id);
+    const after = new Date(Date.now() + 31 * DAY);
+    expect((await checkDeletionGate(request.id, after)).ok).toBe(true);
+
+    await adminDb.platformIdentity.update({ where: { id: admin2.id }, data: { status: "SUSPENDED" } });
+    const suspended = await checkDeletionGate(request.id, after);
+    expect(suspended.ok).toBe(false);
+    expect(suspended.blockers.join(" ")).toMatch(/no longer an active platform admin/);
+    expect(suspended.blockers.join(" ")).toMatch(/there is 1/);
+    await expect(executeDeletion(admin1.actor, request.id, { confirmSlug: world.org.slug }, { now: after })).rejects.toThrow();
+    expect(await adminDb.organization.findUnique({ where: { id: world.org.id } })).not.toBeNull();
+
+    await adminDb.platformIdentity.update({ where: { id: admin2.id }, data: { status: "ACTIVE" } });
+    expect((await checkDeletionGate(request.id, after)).ok).toBe(true);
+  });
+
   it("a deletion that fails while removing files is resumable, and cannot be cancelled once started", async () => {
     const at = new Date("2026-12-01T09:00:00Z");
     const { org, request } = await approvedDeletion(at);

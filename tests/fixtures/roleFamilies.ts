@@ -8,12 +8,12 @@
  * Patterns match the key "METHOD /api/orgs/{orgSlug}/path". `{x}` stands for any one path parameter.
  */
 
-function key(path: string, methods = "[A-Z]+"): RegExp {
+export function key(path: string, methods = "[A-Z]+"): RegExp {
   const escaped = path.replace(/[.*+?^$()|[\]\\]/g, "\\$&").replace(/\{[A-Za-z0-9]+\}/g, "\\{[A-Za-z0-9]+\\}");
   return new RegExp(`^(${methods}) /api/orgs/\\{orgSlug\\}${escaped}$`);
 }
 /** `/prefix` and everything under it. */
-function under(prefix: string, methods = "[A-Z]+"): RegExp {
+export function under(prefix: string, methods = "[A-Z]+"): RegExp {
   const escaped = prefix.replace(/[.*+?^$()|[\]\\]/g, "\\$&").replace(/\{[A-Za-z0-9]+\}/g, "\\{[A-Za-z0-9]+\\}");
   return new RegExp(`^(${methods}) /api/orgs/\\{orgSlug\\}${escaped}(/.*)?$`);
 }
