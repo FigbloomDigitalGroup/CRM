@@ -36,6 +36,7 @@ import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 import { assertValidHandoffOwner, startDealWonHandoff, type HandoffOptions } from "./handoffService";
 import { rescoreCompanyQuietly } from "./scoreEngine";
 import { invalidateSignals } from "./signalService";
+import { emitWebhookEvent } from "./webhookService";
 import { touchDealActivity } from "../repositories/deals";
 
 /**
@@ -275,7 +276,7 @@ export async function getDealSummary(ctx: AuthContext) {
 
   const valuesVisible =
     hasPermission(ctx, "deals.view.value") ||
-    summary.openNotOwnedByViewer === 0;
+    (summary.openNotOwnedByViewer === 0 && !ctx.hiddenFields?.includes("deal.value"));
   const [only] = summary.openByCurrency;
   const openValue =
     summary.open > 0 &&
@@ -457,6 +458,13 @@ export async function updateDeal(
     });
   }
 
+  // Webhooks (FIG-804): a move to another stage, and a deal that became won or lost. Facts only; nothing here decides anything.
+  if (input.pipelineStageId && input.pipelineStageId !== deal.pipelineStageId) {
+    await emitWebhookEvent({ organizationId: ctx.organizationId, type: "deal.stage_changed", record: updated, extra: { previousStageId: deal.pipelineStageId, stageId: input.pipelineStageId } });
+  }
+  if (outcomeChanged && (updated.outcome === "WON" || updated.outcome === "LOST")) {
+    await emitWebhookEvent({ organizationId: ctx.organizationId, type: updated.outcome === "WON" ? "deal.won" : "deal.lost", record: updated, extra: { previousOutcome: deal.outcome } });
+  }
   if (custom) await auditCustomFieldChanges(ctx, "Deal", dealId, custom.changes);
   if (outcomeChanged) await rescoreCompanyQuietly(ctx.organizationId, deal.companyId);
   await invalidateSignals(ctx.organizationId);

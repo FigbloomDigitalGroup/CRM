@@ -105,6 +105,12 @@ export async function updateFeatureToggles(
         { path: key, message: "Must be true or false." },
       ]);
     }
+    if (config.platformOverrides && key in config.platformOverrides) {
+      throw new ValidationError(
+        `"${key}" is managed by Figbloom for your organisation and cannot be changed here. Contact Figbloom support to change it.`,
+        [{ path: key, message: "Managed by Figbloom.", code: "MANAGED_BY_PLATFORM" }],
+      );
+    }
     const resolution = resolveFeature(key, config);
     if (resolution.reason === "release") {
       throw new ValidationError(

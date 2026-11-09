@@ -5,6 +5,7 @@ import { deny, hasPermission } from "../auth/context";
 import { NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { ApiError } from "../lib/apiErrors";
+import { assertStorageAvailable } from "./orgLimitService";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
   createFileRecord,
@@ -155,6 +156,7 @@ export async function createUpload(ctx: AuthContext, input: CreateUploadInput) {
   requireCreate(ctx, input.purpose);
   const policy = FILE_POLICIES[input.purpose];
   const name = validateDeclared(policy, input);
+  await assertStorageAvailable(ctx.organizationId, input.sizeBytes); // B7.02: the platform may cap an organisation's storage.
 
   const id = randomUUID();
   const storageKey = buildStorageKey(ctx.organizationId, input.purpose.toLowerCase(), id);

@@ -344,7 +344,7 @@ export async function getBoard(ctx: AuthContext, filters: ListDealsFilters = {},
     loadStageRules(ctx.organizationId),
     boardColumns(ctx.organizationId, { ...scoped.filters, outcome: undefined }),
   ]);
-  const showValues = hasPermission(ctx, "deals.view.value") || scoped.ownDealsOnly;
+  const showValues = hasPermission(ctx, "deals.view.value") || (scoped.ownDealsOnly && !ctx.hiddenFields?.includes("deal.value"));
 
   const now = new Date();
   const result: BoardColumn[] = [];

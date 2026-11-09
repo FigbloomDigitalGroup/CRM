@@ -7,6 +7,8 @@ import {
 
 export const TOGGLES_KEY = "feature_toggles";
 export const RELEASE_KEY = "release_override";
+/** B7.02: toggle values the platform fixed for the organisation, `{ "assistant.enabled": false }`. */
+export const PLATFORM_FLAGS_KEY = "platform_flag_overrides";
 
 /**
  * The organization's effective release and saved toggle values. Lives apart
@@ -15,7 +17,7 @@ export const RELEASE_KEY = "release_override";
  */
 export async function loadFeatureConfig(organizationId: string): Promise<FeatureConfig> {
   const rows = await adminDb.organizationSetting.findMany({
-    where: { organizationId, key: { in: [TOGGLES_KEY, RELEASE_KEY] } },
+    where: { organizationId, key: { in: [TOGGLES_KEY, RELEASE_KEY, PLATFORM_FLAGS_KEY] } },
   });
   const byKey = new Map(rows.map((r) => [r.key, r.value]));
 
@@ -26,9 +28,17 @@ export async function loadFeatureConfig(organizationId: string): Promise<Feature
       if (typeof value === "boolean") toggles[key] = value;
     }
   }
+  const platformOverrides: Record<string, boolean> = {};
+  const rawOverrides = byKey.get(PLATFORM_FLAGS_KEY);
+  if (rawOverrides && typeof rawOverrides === "object" && !Array.isArray(rawOverrides)) {
+    for (const [key, value] of Object.entries(rawOverrides)) {
+      if (typeof value === "boolean") platformOverrides[key] = value;
+    }
+  }
   const override = byKey.get(RELEASE_KEY) as { release?: string } | null | undefined;
   return {
     release: parseRelease(override?.release) ?? globalRelease(),
     toggles,
+    platformOverrides,
   };
 }

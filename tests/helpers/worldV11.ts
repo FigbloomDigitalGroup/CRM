@@ -31,6 +31,10 @@ export interface WorldV11 extends World {
 }
 
 export async function buildWorldV11(prefix = "WalkV11"): Promise<WorldV11> {
+  // The V1.1 permissions (catalogue, chat, sequences, quotes) are stripped while the deployment's release is below V1.1 (src/lib/featureFlags.ts), and CI has
+  // no .env to set it. A developer's own ACTIVE_RELEASE wins; the reviewed matrix (src/api/contract/accessMatrixV11.json) is the one for v2. Q2.01 (FIG-1179):
+  // without this, G2.01's four files failed in CI (PR #34, shards 3 and 6) with "catalogue item" missing.
+  process.env.ACTIVE_RELEASE ||= "v2";
   const world = (await buildWorld(prefix)) as WorldV11;
   const org = world.organization.id;
   const { ids, overrides, missing } = world;
@@ -167,14 +171,15 @@ export async function buildWorldV11(prefix = "WalkV11"): Promise<WorldV11> {
     if (proposal) overrides["/assistant/proposals/{proposalId}:proposalId"] = proposal.id;
   }
 
-  // Pipelines (B6.15): an open stage and its pipeline. Picked by key, never "the first row": a closed stage (won or lost) takes no rules, so an
-  // unordered pick made the recorded matrix differ between databases.
-  const stage = await adminDb.pipelineStage.findFirst({ where: { organizationId: org, key: "SOLUTION_PRESENTED" }, orderBy: { id: "asc" } });
-  if (stage?.pipelineId) {
-    ids.pipelineId = stage.pipelineId;
-    ids.stageId = stage.id;
+  // Pipelines (B6.15): the default pipeline and one of its stages.
+  const pipeline = await adminDb.pipeline.findFirst({ where: { organizationId: org } });
+  if (pipeline) {
+    ids.pipelineId = pipeline.id;
+    // An open stage, the first by sequence: with no ordering the walk could be handed Closed Lost, which refuses every rule (a flaky matrix cell).
+    const stage = await adminDb.pipelineStage.findFirst({ where: { organizationId: org, isWon: false, isLost: false, isActive: true }, orderBy: { sequence: "asc" } });
+    if (stage) ids.stageId = stage.id;
     world.v11Records.push("pipeline and stage");
-  } else missing.push("pipeline: the organisation has no open SOLUTION_PRESENTED stage on a pipeline");
+  } else missing.push("pipeline: the organisation has none");
 
   // The V1.1 records are tenant data like any other: the attack suite must see them as markers.
   world.markers.push(

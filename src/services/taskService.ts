@@ -8,6 +8,7 @@ import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
 import { assertRecordVisible } from "../auth/visibility";
 import { assertWritable, cleanArchiveReason, canRestoreRecord } from "../lib/archive";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import { emitWebhookEvent } from "./webhookService";
 import {
   createTask as createTaskRecord,
   archiveTask as archiveTaskRecord,
@@ -124,6 +125,7 @@ export async function createTask(
   });
   await rescoreCompanyQuietly(ctx.organizationId, task.companyId);
   await invalidateSignals(ctx.organizationId);
+  await emitWebhookEvent({ organizationId: ctx.organizationId, type: "task.created", record: task });
   return task;
 }
 

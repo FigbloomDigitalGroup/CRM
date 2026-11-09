@@ -1,4 +1,6 @@
 import type { JsonSchema } from "./jsonSchema";
+import { LANE_A_NOT_IN_V1_CONTRACT } from "./v2OperationsA";
+import { LANE_C_NOT_IN_V1_CONTRACT } from "./v2OperationsC";
 
 /**
  * The routes that are not under an organisation (G1.06): sign-in and account, the person's own sessions, the public website and
@@ -12,6 +14,8 @@ import type { JsonSchema } from "./jsonSchema";
  *   /api/metrics                             operations endpoint for the metrics scraper (METRICS_TOKEN), not product API
  */
 export const NOT_IN_V1_CONTRACT: Record<string, string> = {
+  ...LANE_A_NOT_IN_V1_CONTRACT,
+  ...LANE_C_NOT_IN_V1_CONTRACT,
   "/api/dev-session": "development only (CLAUDE.md rule 10)",
   "/api/dev-sentry-test": "development only",
   "/api/platform/preferences": "Platform Super Admin, V1.1",
@@ -96,6 +100,7 @@ export const NOT_IN_V1_CONTRACT: Record<string, string> = {
   "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/{stageId}": "Pipelines and stage rules, V1.1 (B6.15)",
   "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/{stageId}/rules": "Pipelines and stage rules, V1.1 (B6.15)",
   "/api/public/quotes/{token}": "Public quote link (token is the secret), V1.1 (B6.12)",
+  "/api/public/sign/{token}": "Public quote signing (token is the secret), V2 (B7.04, FIG-1186)",
   "/api/openapi.json": "serves this document, outside production only",
   "/api/integrations/oauth/callback": "V1.1 OAuth connections (B6.21, FIG-1153): the fixed provider redirect address",
   "/api/orgs/{orgSlug}/integrations/connections": "V1.1 OAuth connections (B6.21, FIG-1153)",

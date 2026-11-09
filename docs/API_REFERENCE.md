@@ -10,9 +10,11 @@ Operations marked *derived* have their request schema recorded from the route it
 ## Contents
 
 - [Activities](#activities) (2)
+- [Announcements](#announcements) (2)
+- [Api Tokens](#api-tokens) (3)
 - [Approval Rules](#approval-rules) (2)
 - [Approvals](#approvals) (4)
-- [Assistant](#assistant) (7)
+- [Assistant](#assistant) (11)
 - [Attachments](#attachments) (3)
 - [Audit](#audit) (4)
 - [Auth](#auth) (6)
@@ -76,6 +78,7 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Reminders](#reminders) (2)
 - [Renewals](#renewals) (10)
 - [Reports](#reports) (15)
+- [Roles](#roles) (7)
 - [Scoring](#scoring) (2)
 - [Search](#search) (4)
 - [Security](#security) (5)
@@ -84,11 +87,13 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Session](#session) (2)
 - [Settings](#settings) (1)
 - [Support](#support) (1)
+- [Support Access](#support-access) (5)
 - [Sync](#sync) (2)
 - [Tags](#tags) (5)
 - [Tasks](#tasks) (15)
 - [Views](#views) (7)
 - [Web Forms](#web-forms) (7)
+- [Webhooks](#webhooks) (9)
 - [Website Lead Assignment Rules](#website-lead-assignment-rules) (4)
 - [Whats New](#whats-new) (1)
 
@@ -111,6 +116,51 @@ Operations marked *derived* have their request schema recorded from the route it
 - **Body:** `type`: "CALL" | "MEETING" | "NOTE" | "EMAIL" | "WHATSAPP" | "OTHER", `subject`?: string, `description`?: string, `occurredAt`?: any, `outcome`?: string, `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string
 - **Returns:** `id`: string, `organizationId`: string, `type`: string, `subject`: string, `description`: string, `occurredAt`: string, `outcome`: string, `authorMembershipId`: string, `companyId`: string, `contactId`: string, `leadId`: string, `dealId`: string, `createdAt`: string, `importSessionId`?: null
 - **Errors:** 400, 401, 403, 404
+
+## Announcements
+
+### `GET …/announcements`
+
+`getAnnouncements` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/announcements/{announcementId}/dismiss`
+
+`postAnnouncementsByAnnouncementIdDismiss` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+## Api Tokens
+
+### `GET …/api-tokens`
+
+`getApiTokens` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/api-tokens`
+
+`postApiTokens` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`: string, `scopes`: "companies:read" | "companies:write" | "contacts:read" | "contacts:write" | "leads:read" | "leads:write" | "deals:read" | "deals:write" | "activities:read" | "activities:write" | "tasks:read" | "tasks:write"[], `expiresInDays`?: number
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `DELETE …/api-tokens/{tokenId}`
+
+`deleteApiTokensByTokenId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
 
 ## Approval Rules
 
@@ -227,6 +277,50 @@ Operations marked *derived* have their request schema recorded from the route it
 - **Credential:** sessionCookie; **access:** management
 - **Body:** `enabled`?: boolean, `summaries`?: boolean, `drafts`?: boolean, `scoring`?: boolean, `retention`?: boolean, `dailyLimitPerUser`?: number, `dailyLimitPerOrg`?: number
 - **Returns:** `enabled`: boolean, `providerConfigured`: boolean, `options`: object, `limits`: object, `usage`: object, `canConfigure`: boolean
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/churn-hints`
+
+`listChurnHints`
+
+Churn hints for the customers you own (Management: all), each with its reasons, shown only as far as your role may see the data behind them (ai.use; V2; assistant and its churn option on)
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `status`?: string, `companyId`?: string, `mine`?: string
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `POST …/churn-hints/{hintId}/dismiss`
+
+`dismissChurnHint`
+
+Dismiss a hint; it returns only when the customer's situation changes
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `reason`?: string
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/churn-hints/{hintId}/feedback`
+
+`rateChurnHint`
+
+Say whether a hint was useful
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `value`: "HELPFUL" | "NOT_HELPFUL", `note`?: string
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/churn-hints/refresh`
+
+`refreshChurnHints`
+
+Look at the organisation's customers again now (the nightly job does the same)
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** JSON object
+- **Returns:** object
 - **Errors:** 400, 401, 403, 404
 
 ## Attachments
@@ -4185,7 +4279,7 @@ Renewals and retention: LAPSED, DUE_30, UNANSWERED_PROPOSALS, GOING_QUIET, CROSS
 `getReportsMyWork` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, finance
-- **Returns:** `dueToday`: any[], `overdue`: any[], `newLeads`: object[], `stalledDeals`: any[]
+- **Returns:** `dueToday`: any[], `overdue`: any[], `newLeads`: object[], `stalledDeals`: any[], `counts`: object
 - **Errors:** 401, 403, 404
 
 ### `GET …/reports/organization`
@@ -4285,6 +4379,82 @@ CSV of My metrics
 - **Query:** `dateFrom`?: string, `dateTo`?: string
 - **Returns:** string
 - **Errors:** 401, 403
+
+## Roles
+
+### `GET …/roles`
+
+`listRoles`
+
+The platform roles and this organisation's custom roles with their permissions, field rules and member counts (roles.manage or role.assign; V2)
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Query:** `includeArchived`?: string
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `POST …/roles`
+
+`createRole`
+
+Create a custom role, optionally starting from a platform role; reserved keys are refused (roles.manage; V2)
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`: string, `basedOnRoleKey`?: string, `description`?: string | null, `permissionKeys`?: string[], `fieldRules`?: object
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/roles/{roleId}`
+
+`getRole`
+
+One role
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `PATCH …/roles/{roleId}`
+
+`updateRole`
+
+Rename a custom role or change its permissions and field rules; effective on the next request, audited. Platform roles are fixed (roles.manage; V2)
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `name`?: string, `description`?: string | null, `permissionKeys`?: string[], `fieldRules`?: object
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
+
+### `DELETE …/roles/{roleId}`
+
+`archiveRole`
+
+Archive a custom role nobody holds any more (roles.manage; V2)
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `GET …/roles/catalog`
+
+`getRoleCatalog`
+
+Every permission with whether it may be granted to a custom role and why not, the controllable fields and the starting-point roles (roles.manage; V2)
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `POST …/roles/preview`
+
+`previewRole`
+
+The effect of a role change before saving: keys gained and lost, what the role can see and change per screen family, the people reached, warnings. Writes nothing (roles.manage; V2)
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `roleId`?: string, `basedOnRoleKey`?: string, `permissionKeys`?: string[], `fieldRules`?: object
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
 
 ## Scoring
 
@@ -4530,6 +4700,48 @@ Ask Figbloom for help by email (V1.1). Any signed-in member of the organisation;
 - **Body:** `subject`: string, `message`: string, `category`?: string, `urgency`?: string, `pagePath`?: string
 - **Returns:** object
 - **Errors:** 400, 401, 403, 429, 503
+
+## Support Access
+
+### `GET …/support-access`
+
+`getSupportAccess` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/support-access/{grantId}`
+
+`getSupportAccessByGrantId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/support-access/{grantId}/decision`
+
+`postSupportAccessByGrantIdDecision` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/support-access/{grantId}/end`
+
+`postSupportAccessByGrantIdEnd` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/support-access/banner`
+
+`getSupportAccessBanner` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
 
 ## Sync
 
@@ -4853,6 +5065,82 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 - **Query:** `accepted`?: "true" | "false", `outcome`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
 - **Returns:** `items`: any[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`?: null
 - **Errors:** 400, 401, 403, 404
+
+## Webhooks
+
+### `GET …/webhooks`
+
+`getWebhooks` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/webhooks`
+
+`postWebhooks` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `url`: string, `events`: "lead.created" | "lead.assigned" | "lead.converted" | "deal.stage_changed" | "deal.won" | "deal.lost" | "contact.created" | "company.created" | "task.created"[], `description`?: string | null
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/webhooks/{endpointId}`
+
+`getWebhooksByEndpointId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `PATCH …/webhooks/{endpointId}`
+
+`patchWebhooksByEndpointId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `url`?: string, `events`?: "lead.created" | "lead.assigned" | "lead.converted" | "deal.stage_changed" | "deal.won" | "deal.lost" | "contact.created" | "company.created" | "task.created"[], `description`?: string | null, `status`?: "ACTIVE" | "PAUSED"
+- **Returns:** any
+- **Errors:** 400, 401, 403, 404
+
+### `DELETE …/webhooks/{endpointId}`
+
+`deleteWebhooksByEndpointId` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `GET …/webhooks/{endpointId}/deliveries`
+
+`getWebhooksByEndpointIdDeliveries` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/webhooks/{endpointId}/deliveries/{deliveryId}/retry`
+
+`postWebhooksByEndpointIdDeliveriesByDeliveryIdRetry` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/webhooks/{endpointId}/rotate-secret`
+
+`postWebhooksByEndpointIdRotateSecret` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
+
+### `POST …/webhooks/{endpointId}/test`
+
+`postWebhooksByEndpointIdTest` · *derived*
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** any
+- **Errors:** 401, 403, 404
 
 ## Website Lead Assignment Rules
 

@@ -148,6 +148,8 @@ export function effectivePermissionKeys(input: {
   roleKey: string;
   catalogueKeys: readonly string[];
   config: FeatureConfig;
+  /** B7.06: a custom role of the organisation. It has no seeded departure rows, so a departure that is off removes its keys from it whole. */
+  custom?: boolean;
 }): string[] {
   const { roleKey, catalogueKeys, config } = input;
   if (!roleIsAvailable(roleKey, config)) return [];
@@ -155,6 +157,10 @@ export function effectivePermissionKeys(input: {
   const keys = new Set(catalogueKeys);
   for (const departure of DEPARTURES) {
     if (isDepartureActive(departure, config)) continue;
+    if (input.custom) {
+      for (const granted of Object.values(departure.grants)) for (const key of granted) keys.delete(key);
+      continue;
+    }
     for (const key of departure.grants[roleKey] ?? []) keys.delete(key);
     for (const key of departure.restores[roleKey] ?? []) keys.add(key);
   }

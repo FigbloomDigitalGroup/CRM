@@ -18,6 +18,11 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
 | `GET /activities` | A | A | D | D | D | same |
 | `POST /activities` | A | A | D | D | D | same |
+| `GET /announcements` | D | D | D | D | D | same |
+| `POST /announcements/{announcementId}/dismiss` | D | D | D | D | D | same |
+| `GET /api-tokens` | D | D | D | D | D | same |
+| `POST /api-tokens` | D | D | D | D | D | same |
+| `DELETE /api-tokens/{tokenId}` | D | D | D | D | D | same |
 | `GET /approval-rules` | A | D | D | D | D | opened |
 | `PATCH /approval-rules` | A | D | D | D | D | opened |
 | `GET /approvals` | A | A | D | D | D | opened |
@@ -71,6 +76,10 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `GET /chat/search` | A | A | A | A | A | opened |
 | `GET /chat/sync` | A | A | A | A | A | opened |
 | `GET /chat/unread` | A | A | A | A | A | opened |
+| `GET /churn-hints` | D | D | D | D | D | same |
+| `POST /churn-hints/{hintId}/dismiss` | D | D | D | D | D | same |
+| `POST /churn-hints/{hintId}/feedback` | D | D | D | D | D | same |
+| `POST /churn-hints/refresh` | D | D | D | D | D | same |
 | `GET /commands` | A | A | A | A | A | opened |
 | `DELETE /comments/{commentId}` | A | D | D | D | D | same |
 | `PATCH /comments/{commentId}` | A | D | D | D | D | same |
@@ -431,6 +440,13 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `GET /reports/v2/my-metrics` | A | A | A | A | D | same |
 | `GET /reports/v2/my-metrics/export` | A | A | A | A | D | same |
 | `GET /retention` | A | A | D | D | D | same |
+| `GET /roles` | D | D | D | D | D | same |
+| `POST /roles` | D | D | D | D | D | same |
+| `DELETE /roles/{roleId}` | D | D | D | D | D | same |
+| `GET /roles/{roleId}` | D | D | D | D | D | same |
+| `PATCH /roles/{roleId}` | D | D | D | D | D | same |
+| `GET /roles/catalog` | D | D | D | D | D | same |
+| `POST /roles/preview` | D | D | D | D | D | same |
 | `GET /scoring/weights` | A | D | D | D | D | same |
 | `PATCH /scoring/weights` | A | D | D | D | D | same |
 | `GET /search` | A | A | A | A | A | same |
@@ -455,6 +471,11 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /sequences/{sequenceId}/enrollments` | V | V | V | D | V | opened |
 | `GET /settings/overview` | A | D | D | D | D | same |
 | `GET /signals` | A | A | A | A | A | same |
+| `GET /support-access` | D | D | D | D | D | same |
+| `GET /support-access/{grantId}` | D | D | D | D | D | same |
+| `POST /support-access/{grantId}/decision` | D | D | D | D | D | same |
+| `POST /support-access/{grantId}/end` | D | D | D | D | D | same |
+| `GET /support-access/banner` | D | D | D | D | D | same |
 | `POST /support-requests` | A | A | A | A | A | opened |
 | `POST /sync/batch` | A | A | A | A | A | same |
 | `GET /sync/status` | A | A | A | A | A | same |
@@ -492,10 +513,19 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `PATCH /web-forms/{formId}` | A | D | D | D | D | opened |
 | `POST /web-forms/{formId}/rotate-key` | A | D | D | D | D | opened |
 | `GET /web-forms/{formId}/submissions` | A | D | D | D | D | opened |
+| `GET /webhooks` | D | D | D | D | D | same |
+| `POST /webhooks` | D | D | D | D | D | same |
+| `DELETE /webhooks/{endpointId}` | D | D | D | D | D | same |
+| `GET /webhooks/{endpointId}` | D | D | D | D | D | same |
+| `PATCH /webhooks/{endpointId}` | D | D | D | D | D | same |
+| `GET /webhooks/{endpointId}/deliveries` | D | D | D | D | D | same |
+| `POST /webhooks/{endpointId}/deliveries/{deliveryId}/retry` | D | D | D | D | D | same |
+| `POST /webhooks/{endpointId}/rotate-secret` | D | D | D | D | D | same |
+| `POST /webhooks/{endpointId}/test` | D | D | D | D | D | same |
 | `GET /website-lead-assignment-rules` | A | D | D | D | D | same |
 | `POST /website-lead-assignment-rules` | V | D | D | D | D | same |
 | `POST /website-lead-assignment-rules/{ruleId}` | A | D | D | D | D | same |
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D | same |
 | `GET /whats-new` | A | A | A | A | A | opened |
 
-481 route and method pairs, 2405 role answers: A 843, D 1140, H 255, V 167.
+511 route and method pairs, 2555 role answers: A 843, D 1290, H 255, V 167.

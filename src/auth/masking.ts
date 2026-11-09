@@ -17,6 +17,8 @@ import { hasPermission } from "./context";
  */
 
 export function canSeeDealValue(ctx: AuthContext, deal: { ownerMembershipId: string | null }): boolean {
+  // B7.06: a custom role can hide the value even from the deal's owner (field rule `deal.value` = hidden).
+  if (ctx.hiddenFields?.includes("deal.value")) return false;
   return hasPermission(ctx, "deals.view.value") || deal.ownerMembershipId === ctx.membershipId;
 }
 

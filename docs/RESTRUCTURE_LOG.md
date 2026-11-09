@@ -164,3 +164,7 @@ The V1.1 backend is built and committed on `makeover/m13-backend-v11` (`bbdc883`
 - Contract gaps (response types are `unknown` and bodies of PUT version, send, request-approval and response are untyped in `openapi.v1.json` 1.1.0): the shapes are declared in `src/ui/screens/commercial/api.ts`. Not changed in the contract.
 - Pipelines editor switches the quote and approval rules per stage; new pipelines are created with three starter stages (no service picker yet, no stage reorder or add UI).
 - `commercial/demo/store.ts` and `demo/data.ts` stay: Forecast and `settingsplus/demo/data.ts` (sequences, web forms) still import them.
+
+## M17 close-out (9 Nov 2026)
+
+Backend V2 is built on `makeover/m17-backend-v2` (see the Stage 17 section of `IMPLEMENTATION_NOTES.md`). **Nothing is wired yet:** the V2 demo screens (support access, flags and limits, announcements, e-signature, roles and field access, developers) still read demo data and are to be wired to these routes. FIG-1187 (deposit request) is not built and waits for the payments decision.

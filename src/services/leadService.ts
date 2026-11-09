@@ -17,6 +17,7 @@ import { NotFoundError, ValidationError } from "../auth/errors";
 import { assertRecordVisible } from "../auth/visibility";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import { emitWebhookEvent } from "./webhookService";
 import {
   convertLeadToDeal,
   LeadAlreadyConvertedError,
@@ -188,6 +189,7 @@ export async function createLead(
   }
 
   await rescoreLeadQuietly(ctx.organizationId, lead.id);
+  await emitWebhookEvent({ organizationId: ctx.organizationId, type: "lead.created", record: lead });
   return { lead, possibleDuplicates, duplicates: found.candidates, hiddenDuplicates: found.hiddenCount };
 }
 
@@ -433,6 +435,7 @@ export async function assignLead(
     label: lead.company?.name ?? lead.contact?.firstName ?? "a lead",
   });
 
+  await emitWebhookEvent({ organizationId: ctx.organizationId, type: "lead.assigned", record: reassigned, extra: { previousOwnerMembershipId: lead.ownerMembershipId ?? null } });
   return reassigned;
 }
 
@@ -553,6 +556,7 @@ export async function convertLead(
       onlyIfUnset: true,
       detail: { leadId, dealId: deal.id },
     });
+    await emitWebhookEvent({ organizationId: ctx.organizationId, type: "lead.converted", record: { ...lead, convertedAt: new Date() }, extra: { dealId: deal.id } });
     return deal;
   } catch (err) {
     if (

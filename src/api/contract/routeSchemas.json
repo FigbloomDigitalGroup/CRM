@@ -3522,6 +3522,9 @@
         "successMessage": {
           "type": "string"
         },
+        "language": {
+          "type": "string"
+        },
         "allowedOrigins": {},
         "honeypotFieldName": {
           "type": "string"
@@ -3534,6 +3537,54 @@
         }
       },
       "additionalProperties": false
+    }
+  },
+  "PATCH /api/orgs/{orgSlug}/webhooks/{endpointId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "events": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "lead.created",
+              "lead.assigned",
+              "lead.converted",
+              "deal.stage_changed",
+              "deal.won",
+              "deal.lost",
+              "contact.created",
+              "company.created",
+              "task.created"
+            ]
+          }
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 200
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "PAUSED"
+          ]
+        }
+      }
     }
   },
   "POST /api/orgs/{orgSlug}/activities": {
@@ -3577,6 +3628,50 @@
       },
       "required": [
         "type"
+      ]
+    }
+  },
+  "POST /api/orgs/{orgSlug}/api-tokens": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "scopes": {
+          "minItems": 1,
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "companies:read",
+              "companies:write",
+              "contacts:read",
+              "contacts:write",
+              "leads:read",
+              "leads:write",
+              "deals:read",
+              "deals:write",
+              "activities:read",
+              "activities:write",
+              "tasks:read",
+              "tasks:write"
+            ]
+          }
+        },
+        "expiresInDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365
+        }
+      },
+      "required": [
+        "name",
+        "scopes"
       ]
     }
   },
@@ -6820,6 +6915,9 @@
         "successMessage": {
           "type": "string"
         },
+        "language": {
+          "type": "string"
+        },
         "allowedOrigins": {},
         "honeypotFieldName": {
           "type": "string"
@@ -6835,6 +6933,51 @@
         "name"
       ],
       "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/webhooks": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "events": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "lead.created",
+              "lead.assigned",
+              "lead.converted",
+              "deal.stage_changed",
+              "deal.won",
+              "deal.lost",
+              "contact.created",
+              "company.created",
+              "task.created"
+            ]
+          }
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 200
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "url",
+        "events"
+      ]
     }
   },
   "POST /api/orgs/{orgSlug}/website-lead-assignment-rules": {

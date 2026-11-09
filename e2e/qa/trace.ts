@@ -64,3 +64,40 @@ export const V1_TRACE: Record<string, string[]> = {
   TB3: ["ui-shell"],
   TB5: ["ui-shell", "mobile-pages-375"],
 };
+
+/**
+ * Q2.01 (FIG-1179): the same map for the 29 V1.1 rows of the Screen Checklist. `tests/e2eV11Traceability.test.ts` checks it the way
+ * `tests/e2eTraceability.test.ts` checks V1_TRACE. Several of these journeys need a server that has the V1.1 features on or the dev Super
+ * Admin sign-in open; see `docs/V11_TEST_REPORT.md` for how each one is run and which file skips itself on the standard e2e server.
+ */
+export const V11_TRACE: Record<string, string[]> = {
+  Q1: ["commercial"],
+  Q3: ["commercial"],
+  Q4: ["commercial"],
+  X2: ["engage-tools"],
+  X3: ["engage-tools"],
+  X4: ["engage-tools"],
+  "S6#2": ["commercial", "v11-settings"],
+  "S7#2": ["engage-tools", "m10-orgside", "v11-settings"],
+  A5: ["m10-orgside"],
+  M4: ["engage-tools"],
+  A6: ["dev-accounts-closed", "frozen-auth"],
+  PL1: ["platform-console"],
+  PL2: ["platform-console"],
+  PL3: ["platform-console"],
+  PL4: ["platform-console"],
+  PL5: ["platform-console"],
+  PL6: ["platform-console"],
+  PL8: ["platform-console"],
+  PL9: ["platform-console"],
+  PL10: ["platform-console"],
+  PL11: ["platform-console"],
+  PL14: ["platform-console"],
+  PL15: ["platform-console"],
+  PLM: ["mobile-platform"],
+  OS1: ["m10-orgside"],
+  OS6: ["m10-orgside"],
+  AP4: ["engage-tools"],
+  TB4: ["m10-orgside"],
+  TB6: ["platform-console"],
+};

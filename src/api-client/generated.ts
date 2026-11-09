@@ -397,6 +397,40 @@ export interface Operations {
       [key: string]: unknown;
     };
   };
+  getAnnouncements: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  postAnnouncementsByAnnouncementIdDismiss: {
+    params: { orgSlug: string; announcementId: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  getApiTokens: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  postApiTokens: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: {
+      name: string;
+      scopes: Array<"companies:read" | "companies:write" | "contacts:read" | "contacts:write" | "leads:read" | "leads:write" | "deals:read" | "deals:write" | "activities:read" | "activities:write" | "tasks:read" | "tasks:write">;
+      expiresInDays?: number;
+    };
+    response: unknown;
+  };
+  deleteApiTokensByTokenId: {
+    params: { orgSlug: string; tokenId: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
   getApprovalRules: {
     params: { orgSlug: string };
     query: undefined;
@@ -1599,6 +1633,47 @@ export interface Operations {
       channels: {
         [key: string]: unknown;
       };
+      [key: string]: unknown;
+    };
+  };
+  listChurnHints: {
+    params: { orgSlug: string };
+    query: {
+      status?: string;
+      companyId?: string;
+      mine?: string;
+    };
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  dismissChurnHint: {
+    params: { orgSlug: string; hintId: string };
+    query: undefined;
+    body: {
+      reason?: string;
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  rateChurnHint: {
+    params: { orgSlug: string; hintId: string };
+    query: undefined;
+    body: {
+      value: "HELPFUL" | "NOT_HELPFUL";
+      note?: string;
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  refreshChurnHints: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: Record<string, unknown>;
+    response: {
       [key: string]: unknown;
     };
   };
@@ -9814,6 +9889,13 @@ export interface Operations {
         [key: string]: unknown;
       }>;
       stalledDeals: Array<unknown>;
+      counts: {
+        dueToday: number;
+        overdue: number;
+        newLeads: number;
+        stalledDeals: number;
+        [key: string]: unknown;
+      };
       [key: string]: unknown;
     };
   };
@@ -10121,6 +10203,86 @@ export interface Operations {
           [key: string]: unknown;
         };
       };
+      [key: string]: unknown;
+    };
+  };
+  listRoles: {
+    params: { orgSlug: string };
+    query: {
+      includeArchived?: string;
+    };
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  createRole: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: {
+      name: string;
+      basedOnRoleKey?: string;
+      description?: string | null;
+      permissionKeys?: Array<string>;
+      fieldRules?: {
+        [key: string]: string;
+      };
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  archiveRole: {
+    params: { orgSlug: string; roleId: string };
+    query: undefined;
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  getRole: {
+    params: { orgSlug: string; roleId: string };
+    query: undefined;
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  updateRole: {
+    params: { orgSlug: string; roleId: string };
+    query: undefined;
+    body: {
+      name?: string;
+      description?: string | null;
+      permissionKeys?: Array<string>;
+      fieldRules?: {
+        [key: string]: string;
+      };
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  getRoleCatalog: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  previewRole: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: {
+      roleId?: string;
+      basedOnRoleKey?: string;
+      permissionKeys?: Array<string>;
+      fieldRules?: {
+        [key: string]: string;
+      };
+    };
+    response: {
       [key: string]: unknown;
     };
   };
@@ -10603,6 +10765,36 @@ export interface Operations {
       computedAt: string;
       [key: string]: unknown;
     };
+  };
+  getSupportAccess: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  getSupportAccessByGrantId: {
+    params: { orgSlug: string; grantId: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  postSupportAccessByGrantIdDecision: {
+    params: { orgSlug: string; grantId: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  postSupportAccessByGrantIdEnd: {
+    params: { orgSlug: string; grantId: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  getSupportAccessBanner: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
   };
   createSupportRequest: {
     params: { orgSlug: string };
@@ -11400,6 +11592,69 @@ export interface Operations {
       [key: string]: unknown;
     };
   };
+  getWebhooks: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  postWebhooks: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: {
+      url: string;
+      events: Array<"lead.created" | "lead.assigned" | "lead.converted" | "deal.stage_changed" | "deal.won" | "deal.lost" | "contact.created" | "company.created" | "task.created">;
+      description?: string | null;
+    };
+    response: unknown;
+  };
+  deleteWebhooksByEndpointId: {
+    params: { orgSlug: string; endpointId: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  getWebhooksByEndpointId: {
+    params: { orgSlug: string; endpointId: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  patchWebhooksByEndpointId: {
+    params: { orgSlug: string; endpointId: string };
+    query: undefined;
+    body: {
+      url?: string;
+      events?: Array<"lead.created" | "lead.assigned" | "lead.converted" | "deal.stage_changed" | "deal.won" | "deal.lost" | "contact.created" | "company.created" | "task.created">;
+      description?: string | null;
+      status?: "ACTIVE" | "PAUSED";
+    };
+    response: unknown;
+  };
+  getWebhooksByEndpointIdDeliveries: {
+    params: { orgSlug: string; endpointId: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  postWebhooksByEndpointIdDeliveriesByDeliveryIdRetry: {
+    params: { orgSlug: string; endpointId: string; deliveryId: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  postWebhooksByEndpointIdRotateSecret: {
+    params: { orgSlug: string; endpointId: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
+  postWebhooksByEndpointIdTest: {
+    params: { orgSlug: string; endpointId: string };
+    query: undefined;
+    body: undefined;
+    response: unknown;
+  };
   getWebsiteLeadAssignmentRules: {
     params: { orgSlug: string };
     query: undefined;
@@ -11578,6 +11833,11 @@ export const operations = {
   listMySignInEvents: { method: "GET", path: "/api/me/sign-in-events", tag: "Me", summary: "The person's recent sign-ins and failed attempts.", contentType: "json", errors: [401], allowedRoles: null },
   getActivities: { method: "GET", path: "/api/orgs/{orgSlug}/activities", tag: "Activities", summary: "GET /activities", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   postActivities: { method: "POST", path: "/api/orgs/{orgSlug}/activities", tag: "Activities", summary: "POST /activities", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getAnnouncements: { method: "GET", path: "/api/orgs/{orgSlug}/announcements", tag: "Announcements", summary: "GET /announcements", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  postAnnouncementsByAnnouncementIdDismiss: { method: "POST", path: "/api/orgs/{orgSlug}/announcements/{announcementId}/dismiss", tag: "Announcements", summary: "POST /announcements/{announcementId}/dismiss", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getApiTokens: { method: "GET", path: "/api/orgs/{orgSlug}/api-tokens", tag: "Api Tokens", summary: "GET /api-tokens", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  postApiTokens: { method: "POST", path: "/api/orgs/{orgSlug}/api-tokens", tag: "Api Tokens", summary: "POST /api-tokens", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  deleteApiTokensByTokenId: { method: "DELETE", path: "/api/orgs/{orgSlug}/api-tokens/{tokenId}", tag: "Api Tokens", summary: "DELETE /api-tokens/{tokenId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   getApprovalRules: { method: "GET", path: "/api/orgs/{orgSlug}/approval-rules", tag: "Approval Rules", summary: "GET /approval-rules", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   patchApprovalRules: { method: "PATCH", path: "/api/orgs/{orgSlug}/approval-rules", tag: "Approval Rules", summary: "PATCH /approval-rules", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getApprovals: { method: "GET", path: "/api/orgs/{orgSlug}/approvals", tag: "Approvals", summary: "GET /approvals", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
@@ -11631,6 +11891,10 @@ export const operations = {
   getChatSearch: { method: "GET", path: "/api/orgs/{orgSlug}/chat/search", tag: "Chat", summary: "GET /chat/search", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getChatSync: { method: "GET", path: "/api/orgs/{orgSlug}/chat/sync", tag: "Chat", summary: "GET /chat/sync", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getChatUnread: { method: "GET", path: "/api/orgs/{orgSlug}/chat/unread", tag: "Chat", summary: "GET /chat/unread", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  listChurnHints: { method: "GET", path: "/api/orgs/{orgSlug}/churn-hints", tag: "Assistant", summary: "Churn hints for the customers you own (Management: all), each with its reasons, shown only as far as your role may see the data behind them (ai.use; V2; assistant and its churn option on)", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  dismissChurnHint: { method: "POST", path: "/api/orgs/{orgSlug}/churn-hints/{hintId}/dismiss", tag: "Assistant", summary: "Dismiss a hint; it returns only when the customer's situation changes", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  rateChurnHint: { method: "POST", path: "/api/orgs/{orgSlug}/churn-hints/{hintId}/feedback", tag: "Assistant", summary: "Say whether a hint was useful", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  refreshChurnHints: { method: "POST", path: "/api/orgs/{orgSlug}/churn-hints/refresh", tag: "Assistant", summary: "Look at the organisation's customers again now (the nightly job does the same)", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   getCommands: { method: "GET", path: "/api/orgs/{orgSlug}/commands", tag: "Commands", summary: "GET /commands", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   deleteCommentsByCommentId: { method: "DELETE", path: "/api/orgs/{orgSlug}/comments/{commentId}", tag: "Comments", summary: "DELETE /comments/{commentId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   editComment: { method: "PATCH", path: "/api/orgs/{orgSlug}/comments/{commentId}", tag: "Comments", summary: "Edit your own comment (soft: marked edited; only newly mentioned people are notified)", contentType: "json", errors: [400,401,403,404,409], allowedRoles: ["MANAGEMENT"] },
@@ -11991,6 +12255,13 @@ export const operations = {
   getMyMetricsV2: { method: "GET", path: "/api/orgs/{orgSlug}/reports/v2/my-metrics", tag: "Reports", summary: "My metrics: the caller's own figures only, as cards and a table", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   exportMyMetrics: { method: "GET", path: "/api/orgs/{orgSlug}/reports/v2/my-metrics/export", tag: "Reports", summary: "CSV of My metrics", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   getRenewalsAndRetention: { method: "GET", path: "/api/orgs/{orgSlug}/retention", tag: "Renewals", summary: "Renewals and retention: LAPSED, DUE_30, UNANSWERED_PROPOSALS, GOING_QUIET, CROSS_SELL. A customer is in exactly one list; counts match the lists.", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES"] },
+  listRoles: { method: "GET", path: "/api/orgs/{orgSlug}/roles", tag: "Roles", summary: "The platform roles and this organisation's custom roles with their permissions, field rules and member counts (roles.manage or role.assign; V2)", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  createRole: { method: "POST", path: "/api/orgs/{orgSlug}/roles", tag: "Roles", summary: "Create a custom role, optionally starting from a platform role; reserved keys are refused (roles.manage; V2)", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  archiveRole: { method: "DELETE", path: "/api/orgs/{orgSlug}/roles/{roleId}", tag: "Roles", summary: "Archive a custom role nobody holds any more (roles.manage; V2)", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getRole: { method: "GET", path: "/api/orgs/{orgSlug}/roles/{roleId}", tag: "Roles", summary: "One role", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  updateRole: { method: "PATCH", path: "/api/orgs/{orgSlug}/roles/{roleId}", tag: "Roles", summary: "Rename a custom role or change its permissions and field rules; effective on the next request, audited. Platform roles are fixed (roles.manage; V2)", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  getRoleCatalog: { method: "GET", path: "/api/orgs/{orgSlug}/roles/catalog", tag: "Roles", summary: "Every permission with whether it may be granted to a custom role and why not, the controllable fields and the starting-point roles (roles.manage; V2)", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  previewRole: { method: "POST", path: "/api/orgs/{orgSlug}/roles/preview", tag: "Roles", summary: "The effect of a role change before saving: keys gained and lost, what the role can see and change per screen family, the people reached, warnings. Writes nothing (roles.manage; V2)", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   getScoringWeights: { method: "GET", path: "/api/orgs/{orgSlug}/scoring/weights", tag: "Scoring", summary: "GET /scoring/weights", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   patchScoringWeights: { method: "PATCH", path: "/api/orgs/{orgSlug}/scoring/weights", tag: "Scoring", summary: "PATCH /scoring/weights", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   search: { method: "GET", path: "/api/orgs/{orgSlug}/search", tag: "Search", summary: "Global search: groups with totals, paged per group (`type` + `page`), archived only on request, phone numbers in any format", contentType: "json", errors: [400,401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
@@ -12015,6 +12286,11 @@ export const operations = {
   postSequencesBySequenceIdEnrollments: { method: "POST", path: "/api/orgs/{orgSlug}/sequences/{sequenceId}/enrollments", tag: "Sequences", summary: "POST /sequences/{sequenceId}/enrollments", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
   getSettingsOverview: { method: "GET", path: "/api/orgs/{orgSlug}/settings/overview", tag: "Settings", summary: "Settings landing page: profile, member counts by state, integration states (Management)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
   getSignals: { method: "GET", path: "/api/orgs/{orgSlug}/signals", tag: "Dashboard", summary: "Adoption, stalled deals, deals past close date and overdue tasks (stored values; sections by role)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getSupportAccess: { method: "GET", path: "/api/orgs/{orgSlug}/support-access", tag: "Support Access", summary: "GET /support-access", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getSupportAccessByGrantId: { method: "GET", path: "/api/orgs/{orgSlug}/support-access/{grantId}", tag: "Support Access", summary: "GET /support-access/{grantId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  postSupportAccessByGrantIdDecision: { method: "POST", path: "/api/orgs/{orgSlug}/support-access/{grantId}/decision", tag: "Support Access", summary: "POST /support-access/{grantId}/decision", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  postSupportAccessByGrantIdEnd: { method: "POST", path: "/api/orgs/{orgSlug}/support-access/{grantId}/end", tag: "Support Access", summary: "POST /support-access/{grantId}/end", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getSupportAccessBanner: { method: "GET", path: "/api/orgs/{orgSlug}/support-access/banner", tag: "Support Access", summary: "GET /support-access/banner", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   createSupportRequest: { method: "POST", path: "/api/orgs/{orgSlug}/support-requests", tag: "Support", summary: "Ask Figbloom for help by email (V1.1). Any signed-in member of the organisation; the request is sent through Resend to Figbloom support with the member as Reply-To. Answers a reference to quote. Honours Idempotency-Key; at most 5 requests an hour per member.", contentType: "json", errors: [400,401,403,429,503], allowedRoles: null },
   applySyncBatch: { method: "POST", path: "/api/orgs/{orgSlug}/sync/batch", tag: "Sync", summary: "The offline queue: up to 100 actions, each with a client id; answered APPLIED, DUPLICATE, CONFLICT or REJECTED per item. Replaying a batch changes nothing. Stage and ownership are server-wins.", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getSyncStatus: { method: "GET", path: "/api/orgs/{orgSlug}/sync/status", tag: "Sync", summary: "The caller's queue as the server sees it: last sync, last seven days, what needs attention", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
@@ -12052,6 +12328,15 @@ export const operations = {
   patchWebFormsByFormId: { method: "PATCH", path: "/api/orgs/{orgSlug}/web-forms/{formId}", tag: "Web Forms", summary: "PATCH /web-forms/{formId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postWebFormsByFormIdRotateKey: { method: "POST", path: "/api/orgs/{orgSlug}/web-forms/{formId}/rotate-key", tag: "Web Forms", summary: "POST /web-forms/{formId}/rotate-key", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   getWebFormsByFormIdSubmissions: { method: "GET", path: "/api/orgs/{orgSlug}/web-forms/{formId}/submissions", tag: "Web Forms", summary: "GET /web-forms/{formId}/submissions", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getWebhooks: { method: "GET", path: "/api/orgs/{orgSlug}/webhooks", tag: "Webhooks", summary: "GET /webhooks", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  postWebhooks: { method: "POST", path: "/api/orgs/{orgSlug}/webhooks", tag: "Webhooks", summary: "POST /webhooks", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  deleteWebhooksByEndpointId: { method: "DELETE", path: "/api/orgs/{orgSlug}/webhooks/{endpointId}", tag: "Webhooks", summary: "DELETE /webhooks/{endpointId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getWebhooksByEndpointId: { method: "GET", path: "/api/orgs/{orgSlug}/webhooks/{endpointId}", tag: "Webhooks", summary: "GET /webhooks/{endpointId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  patchWebhooksByEndpointId: { method: "PATCH", path: "/api/orgs/{orgSlug}/webhooks/{endpointId}", tag: "Webhooks", summary: "PATCH /webhooks/{endpointId}", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  getWebhooksByEndpointIdDeliveries: { method: "GET", path: "/api/orgs/{orgSlug}/webhooks/{endpointId}/deliveries", tag: "Webhooks", summary: "GET /webhooks/{endpointId}/deliveries", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  postWebhooksByEndpointIdDeliveriesByDeliveryIdRetry: { method: "POST", path: "/api/orgs/{orgSlug}/webhooks/{endpointId}/deliveries/{deliveryId}/retry", tag: "Webhooks", summary: "POST /webhooks/{endpointId}/deliveries/{deliveryId}/retry", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  postWebhooksByEndpointIdRotateSecret: { method: "POST", path: "/api/orgs/{orgSlug}/webhooks/{endpointId}/rotate-secret", tag: "Webhooks", summary: "POST /webhooks/{endpointId}/rotate-secret", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  postWebhooksByEndpointIdTest: { method: "POST", path: "/api/orgs/{orgSlug}/webhooks/{endpointId}/test", tag: "Webhooks", summary: "POST /webhooks/{endpointId}/test", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   getWebsiteLeadAssignmentRules: { method: "GET", path: "/api/orgs/{orgSlug}/website-lead-assignment-rules", tag: "Website Lead Assignment Rules", summary: "GET /website-lead-assignment-rules", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   postWebsiteLeadAssignmentRules: { method: "POST", path: "/api/orgs/{orgSlug}/website-lead-assignment-rules", tag: "Website Lead Assignment Rules", summary: "POST /website-lead-assignment-rules", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postWebsiteLeadAssignmentRulesByRuleId: { method: "POST", path: "/api/orgs/{orgSlug}/website-lead-assignment-rules/{ruleId}", tag: "Website Lead Assignment Rules", summary: "POST /website-lead-assignment-rules/{ruleId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },

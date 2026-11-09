@@ -1,3 +1,4 @@
+import { isClientLocale } from "../lib/clientText";
 import { openSecret, sealSecret } from "../lib/secretBox";
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
@@ -52,6 +53,7 @@ function present(row: Row) {
     fields: row.fields as unknown as FormField[],
     leadSourceKey: row.leadSourceKey,
     successMessage: row.successMessage,
+    language: row.language,
     allowedOrigins: row.allowedOrigins,
     honeypotFieldName: row.honeypotFieldName,
     captchaConfigured: row.captchaSecret !== null,
@@ -70,6 +72,11 @@ function cleanHoneypot(value: unknown): string {
   if (typeof value !== "string" || !KEY_PATTERN.test(value)) {
     throw new ValidationError("The hidden trap field is a lower case name such as website_url.", [{ path: "honeypotFieldName", message: "Lower case letters, digits and underscores." }]);
   }
+  return value;
+}
+
+function cleanLanguage(value: unknown): string {
+  if (!isClientLocale(value)) throw new ValidationError("The language is en (English) or sw (Swahili).", [{ path: "language", message: "Use en or sw.", code: "INVALID_LANGUAGE" }]);
   return value;
 }
 
@@ -116,7 +123,7 @@ export async function getForm(ctx: AuthContext, id: string) {
 
 export async function createForm(
   ctx: AuthContext,
-  input: { name: string; fields?: unknown; leadSourceKey?: string | null; successMessage?: string; allowedOrigins?: unknown; honeypotFieldName?: string; captchaSecret?: string | null },
+  input: { name: string; fields?: unknown; leadSourceKey?: string | null; successMessage?: string; language?: string; allowedOrigins?: unknown; honeypotFieldName?: string; captchaSecret?: string | null },
 ) {
   await gate(ctx);
   const name = cleanName(input.name);
@@ -134,6 +141,7 @@ export async function createForm(
     fields: fields as unknown as object,
     leadSourceKey: await checkSource(ctx, input.leadSourceKey),
     ...(input.successMessage !== undefined ? { successMessage: cleanMessage(input.successMessage) } : {}),
+    ...(input.language !== undefined ? { language: cleanLanguage(input.language) } : {}),
     allowedOrigins: origins.origins,
     honeypotFieldName: honeypot,
     captchaSecret: sealCaptchaSecret(input.captchaSecret),
@@ -146,7 +154,7 @@ export async function createForm(
 export async function updateForm(
   ctx: AuthContext,
   id: string,
-  patch: { name?: string; status?: string; fields?: unknown; leadSourceKey?: string | null; successMessage?: string; allowedOrigins?: unknown; honeypotFieldName?: string; captchaSecret?: string | null },
+  patch: { name?: string; status?: string; fields?: unknown; leadSourceKey?: string | null; successMessage?: string; language?: string; allowedOrigins?: unknown; honeypotFieldName?: string; captchaSecret?: string | null },
 ) {
   await gate(ctx);
   const row = await load(ctx, id);
@@ -172,6 +180,7 @@ export async function updateForm(
   throwProblems(problems);
   if (patch.leadSourceKey !== undefined) data.leadSourceKey = await checkSource(ctx, patch.leadSourceKey);
   if (patch.successMessage !== undefined) data.successMessage = cleanMessage(patch.successMessage);
+  if (patch.language !== undefined) data.language = cleanLanguage(patch.language);
   if (patch.captchaSecret !== undefined) data.captchaSecret = sealCaptchaSecret(patch.captchaSecret);
   if (patch.status !== undefined) {
     if (!(STATUSES as readonly string[]).includes(patch.status)) throw new ValidationError("status is DRAFT, PUBLISHED or ARCHIVED.", [{ path: "status", message: "DRAFT, PUBLISHED or ARCHIVED." }]);

@@ -6,9 +6,9 @@ import { requireFeature } from "@/services/featureService";
 import { previewQuote } from "@/services/quoteDocumentService";
 
 // The document as the client sees it: `{ source, html, sha256 }` (FIG-1144, B6.12). A sent version returns the stored sent document.
-// Needs the right to see the deal value; the document never carries cost or margin.
+// `?language=sw` previews the Swahili document (FIG-1189). Needs the right to see the deal value; the document never carries cost or margin.
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ orgSlug: string; quoteId: string; version: string }> },
 ) {
   return handleRoute(async () => {
@@ -17,6 +17,6 @@ export async function GET(
     await requireFeature(ctx.organizationId, "quotes.enabled"); // release gate first: before the version param and the body are checked
     const n = parseVersionParam(version);
     if (!n) throw new NotFoundError("QuoteVersion", `${quoteId}/${version}`);
-    return previewQuote(ctx, quoteId, n);
+    return previewQuote(ctx, quoteId, n, new Date(), new URL(request.url).searchParams.get("language") ?? undefined);
   });
 }

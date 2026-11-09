@@ -12,8 +12,11 @@ import { CHAT_NOTIFY_JOB, deliverChatNotifications } from "../services/chatServi
 import { ORG_EXPORT_JOB } from "./offboardingJobs";
 import { runOrganisationExportJob } from "../services/platformDataRequestService";
 import { runDueSequences } from "../sequences/engine";
+import { expireSupportAccess } from "../services/supportAccessService";
 import { registerJob } from "./registry";
 import "./integrationJobs";
+import "./webhookJobs";
+import "./churnJobs";
 import { FILES_PURGE_JOB_TYPE, purgeOrganizationFiles } from "./handlers/filePurge";
 import {
   NOTIFICATIONS_SWEEP_JOB_TYPE,
@@ -232,4 +235,17 @@ registerJob({
     if (result.enrollments > 0) ctx.log.info(result, "Follow-up sequences: due enrolments processed");
     return result;
   },
+});
+
+/**
+ * Support access (FIG-1183, B7.01): requests, approvals and sessions the clock has passed are marked EXPIRED, and Management is told when a
+ * session ran out. Reads never wait for this (the database function compares the clock itself), so a late run costs nothing but tidiness.
+ */
+registerJob({
+  type: "support_access.expire",
+  schedule: { everyMs: 5 * 60_000 },
+  timeoutMs: 2 * 60_000,
+  maxAttempts: 3,
+  concurrency: 4,
+  handler: async (ctx) => expireSupportAccess(ctx.organizationId),
 });

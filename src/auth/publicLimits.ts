@@ -28,3 +28,8 @@ export function limitInboundEmail(ipAddress: string | null, orgSlug: string) {
 export function limitQuoteView(ipAddress: string | null) {
   return enforceRateLimit("QUOTE_VIEW", [{ scope: "ip", key: ipAddress, windowMs: WINDOW_MS, max: 120 }]);
 }
+
+/** Opening or submitting the signing page (FIG-1186): a signature is rare; a flood of guesses or repeated submissions is cut off per address. */
+export function limitQuoteSign(ipAddress: string | null) {
+  return enforceRateLimit("QUOTE_SIGN", [{ scope: "ip", key: ipAddress, windowMs: WINDOW_MS, max: 60 }]);
+}
