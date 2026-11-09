@@ -6,6 +6,7 @@ import { canSeeDealValue } from "../auth/masking";
 import { adminDb } from "../db/adminClient";
 import { assertWritable } from "../lib/archive";
 import { discountNeedsApproval } from "../lib/approvalRules";
+import { createTranslator, isClientLocale, type ClientLocale } from "../lib/clientText";
 import { LOGO_PLACEHOLDER, escapeHtml, renderQuoteHtml, type QuoteDocumentInput } from "../lib/quoteDocument";
 import { isExpiredOn, todayIso } from "../lib/quotes";
 import { lookColours } from "../preferences/catalogue";
@@ -19,6 +20,7 @@ import { sendAndLogEmail } from "./communicationService";
 import { renderTemplate } from "./emailTemplateService";
 import { isOrganizationActive } from "../repositories/webForms";
 import { isFeatureEnabled, requireFeature } from "./featureService";
+import { listQuoteSignatures } from "./quoteSignatureService";
 import { loadQuoteAndDeal, presentVersion, quoteAuditSnapshot, requireQuoteWrite } from "./quoteService";
 
 /**
@@ -56,10 +58,22 @@ export function shareLinkFor(token: string): string {
   return `${appBaseUrl()}/api/public/quotes/${token}`;
 }
 
+/** The address of the online signing page (FIG-1186). The same token as the quote link, on a share created with `allowSigning`. */
+export function signLinkFor(token: string): string {
+  return `${appBaseUrl()}/sign/${token}`;
+}
+
+/** The language a quote is written in (FIG-1189): English unless Swahili is asked for; anything else is refused. */
+export function requireLanguage(value: unknown, path = "language"): ClientLocale {
+  if (value === undefined || value === null || value === "") return "en";
+  if (!isClientLocale(value)) throw new ValidationError("The language is en (English) or sw (Swahili).", [{ path, message: "Use en or sw.", code: "INVALID_LANGUAGE" }]);
+  return value;
+}
+
 type VersionWithLines = NonNullable<Awaited<ReturnType<typeof getVersionWithLines>>>;
 
 /** Builds the document for a version. `now` fixes the issue date, so a preview and a send made on the same day match. */
-export async function buildQuoteDocument(organizationId: string, quote: { number: string; dealId: string }, version: VersionWithLines, now: Date): Promise<{ html: string; sha256: string }> {
+export async function buildQuoteDocument(organizationId: string, quote: { number: string; dealId: string }, version: VersionWithLines, now: Date, language: ClientLocale = "en"): Promise<{ html: string; sha256: string }> {
   const org = await adminDb.organization.findUniqueOrThrow({ where: { id: organizationId } });
   const deal = await adminDb.deal.findFirstOrThrow({
     where: { id: quote.dealId, organizationId },
@@ -92,6 +106,7 @@ export async function buildQuoteDocument(organizationId: string, quote: { number
     },
     preparedFor: { company: deal.company.name, contact: deal.primaryContact ? [deal.primaryContact.firstName, deal.primaryContact.lastName].filter(Boolean).join(" ") : null },
     preparedBy: creator?.user.name ?? null,
+    language,
   };
   const html = renderQuoteHtml(input);
   return { html, sha256: sha256(html) };
@@ -108,7 +123,7 @@ async function loadVersion(ctx: AuthContext, quoteId: string, version: number) {
 }
 
 /** The document as the client would see it. A sent version returns the stored snapshot. */
-export async function previewQuote(ctx: AuthContext, quoteId: string, version: number, now = new Date()) {
+export async function previewQuote(ctx: AuthContext, quoteId: string, version: number, now = new Date(), languageInput?: unknown) {
   await requireFeature(ctx.organizationId, "quotes.enabled");
   if (!hasPermission(ctx, "quotes.create") && !hasPermission(ctx, "quotes.approve")) throw deny(ctx, "quotes (quotes.create or quotes.approve)", ["quotes.create", "quotes.approve"]);
   const { quote, deal } = await loadQuoteAndDeal(ctx, quoteId);
@@ -116,7 +131,7 @@ export async function previewQuote(ctx: AuthContext, quoteId: string, version: n
   const row = await loadVersion(ctx, quoteId, version);
   const sent = await latestShareWithDocument(ctx.organizationId, row.id);
   if (sent) return { source: "sent" as const, html: sent.documentHtml, sha256: sent.documentSha256 };
-  const built = await buildQuoteDocument(ctx.organizationId, quote, row, now);
+  const built = await buildQuoteDocument(ctx.organizationId, quote, row, now, requireLanguage(languageInput));
   return { source: "draft" as const, ...built };
 }
 
@@ -127,6 +142,10 @@ export interface SendQuoteInput {
   templateId?: string;
   /** Link lifetime in days; never beyond the end of the quote validity or 90 days. */
   linkExpiresInDays?: number;
+  /** FIG-1189: the language of the document, the email and the signing page: `en` (default) or `sw`. */
+  language?: string;
+  /** FIG-1186: the email also carries an online signing link (V2: needs release V2). */
+  allowSigning?: boolean;
 }
 
 // The same pattern the mail service uses: one address, no list separators or angle brackets.
@@ -140,6 +159,8 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
   requireSeesAmounts(ctx, deal, "sending a quote");
   assertWritable(ctx, "deal", deal, "sending its quote");
   const row = await loadVersion(ctx, quoteId, version);
+  const language = requireLanguage(input.language);
+  const allowSigning = input.allowSigning === true;
 
   const fail = (message: string, code: string, path = "version") => new ValidationError(message, [{ path, message, code }]);
   const validUntil = row.validUntil.toISOString().slice(0, 10);
@@ -151,6 +172,9 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
   if (row.status === "DRAFT" && discountNeedsApproval(Number(row.discountPercent), await loadApprovalRules(ctx.organizationId))) {
     throw fail("A discount this size needs approval before the quote can be sent. Ask for approval first.", "APPROVAL_REQUIRED", "discountPercent");
   }
+
+  // Online signing is V2: on an organisation below V2 the signing link would be dead, so asking for one is refused up front.
+  if (allowSigning && !(await isFeatureEnabled(ctx.organizationId, "release.v2"))) throw fail("Online signing is not available for this organisation yet.", "SIGNING_NOT_AVAILABLE", "allowSigning");
 
   let to = input.to?.trim();
   if (!to && deal.primaryContactId) {
@@ -167,7 +191,7 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
   let expiresAt = new Date(Math.min(validityEnd.getTime(), ceiling.getTime()));
   if (input.linkExpiresInDays !== undefined) expiresAt = new Date(Math.min(expiresAt.getTime(), now.getTime() + input.linkExpiresInDays * 86_400_000));
 
-  const document = await buildQuoteDocument(ctx.organizationId, quote, row, now);
+  const document = await buildQuoteDocument(ctx.organizationId, quote, row, now, language);
   const token = randomBytes(32).toString("base64url");
   const link = shareLinkFor(token);
 
@@ -180,9 +204,12 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
   }
   const org = await adminDb.organization.findUniqueOrThrow({ where: { id: ctx.organizationId }, select: { name: true, displayName: true } });
   const orgName = org.displayName?.trim() ? org.displayName : org.name;
-  subject = subject?.trim() || `Quote ${quote.number} from ${orgName}`;
-  body = body?.trim() || `Hello,\n\nPlease find your quote ${quote.number} (version ${row.version}) from ${orgName}.`;
-  if (!body.includes(link)) body += `\n\nView your quote: ${link}\nThis link works until ${expiresAt.toISOString().slice(0, 10)}.`;
+  const tr = createTranslator(language);
+  subject = subject?.trim() || tr.t("mail.subject", { number: quote.number, organisation: orgName });
+  body = body?.trim() || tr.t("mail.body", { number: quote.number, version: row.version, organisation: orgName });
+  if (!body.includes(link)) body += `\n\n${tr.t("mail.viewLink", { link })}\n${tr.t("mail.validUntil", { date: expiresAt.toISOString().slice(0, 10) })}`;
+  const signLink = allowSigning ? signLinkFor(token) : null;
+  if (signLink && !body.includes(signLink)) body += `\n\n${tr.t("mail.signLink", { link: signLink })}`;
 
   // Email first: when it fails, nothing is locked and no link exists.
   await sendAndLogEmail(ctx, { to, subject, body, dealId: deal.id, companyId: deal.companyId, contactId: deal.primaryContactId ?? undefined, templateId: input.templateId });
@@ -200,6 +227,8 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
     expiresAt,
     documentHtml: document.html,
     documentSha256: document.sha256,
+    signingEnabled: allowSigning,
+    language,
     createdByMembershipId: ctx.membershipId,
   });
   await addEvent({ organizationId: ctx.organizationId, quoteId, quoteVersionId: row.id, shareId: share.id, type: "SENT", occurredAt: now });
@@ -210,13 +239,15 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
     entityType: "Quote",
     entityId: quoteId,
     newValue: quoteAuditSnapshot(quote, updated!),
-    metadata: { shareId: share.id, expiresAt: expiresAt.toISOString() },
+    metadata: { shareId: share.id, expiresAt: expiresAt.toISOString(), language, signingEnabled: allowSigning },
   });
   return {
     version: presentVersion(ctx, deal, updated!, null, now),
     share: { id: share.id, recipientEmail: to, expiresAt, documentSha256: document.sha256 },
     /** Shown once: only a hash is kept. */
     link,
+    /** Shown once, like the link: the address of the online signing page, when it was asked for. */
+    signLink,
   };
 }
 
@@ -224,13 +255,16 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
 export async function getQuoteActivity(ctx: AuthContext, quoteId: string, version: number, nowDate = new Date()) {
   await requireFeature(ctx.organizationId, "quotes.enabled");
   if (!hasPermission(ctx, "quotes.create") && !hasPermission(ctx, "quotes.approve")) throw deny(ctx, "quotes (quotes.create or quotes.approve)", ["quotes.create", "quotes.approve"]);
-  await loadQuoteAndDeal(ctx, quoteId);
+  const { deal } = await loadQuoteAndDeal(ctx, quoteId);
   const row = await loadVersion(ctx, quoteId, version);
   const now = nowDate.getTime();
   const [shares, events] = await Promise.all([listShares(ctx.organizationId, row.id), listEvents(ctx.organizationId, row.id)]);
   return {
     shares: shares.map((s) => ({ ...s, active: s.revokedAt === null && s.expiresAt.getTime() > now })),
     events: events.map((e) => ({ id: e.id, type: e.type, shareId: e.shareId, occurredAt: e.occurredAt })),
+    // The signed record (FIG-1186) proves a document that is all prices, so it follows the deal value rule; others learn only that it is hidden.
+    signatures: canSeeDealValue(ctx, deal) ? await listQuoteSignatures(ctx, quoteId, version) : null,
+    signaturesMasked: !canSeeDealValue(ctx, deal),
   };
 }
 

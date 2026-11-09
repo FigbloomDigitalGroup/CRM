@@ -12,7 +12,7 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Activities](#activities) (2)
 - [Approval Rules](#approval-rules) (2)
 - [Approvals](#approvals) (4)
-- [Assistant](#assistant) (7)
+- [Assistant](#assistant) (11)
 - [Attachments](#attachments) (3)
 - [Audit](#audit) (4)
 - [Auth](#auth) (6)
@@ -76,6 +76,7 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Reminders](#reminders) (2)
 - [Renewals](#renewals) (10)
 - [Reports](#reports) (15)
+- [Roles](#roles) (7)
 - [Scoring](#scoring) (2)
 - [Search](#search) (4)
 - [Security](#security) (5)
@@ -224,6 +225,50 @@ Operations marked *derived* have their request schema recorded from the route it
 - **Credential:** sessionCookie; **access:** nobody
 - **Returns:** any
 - **Errors:** 401, 403, 404
+
+### `GET …/churn-hints`
+
+`listChurnHints`
+
+Churn hints for the customers you own (Management: all), each with its reasons, shown only as far as your role may see the data behind them (ai.use; V2; assistant and its churn option on)
+
+- **Credential:** sessionCookie
+- **Query:** `status`?: string, `companyId`?: string, `mine`?: string
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `POST …/churn-hints/{hintId}/dismiss`
+
+`dismissChurnHint`
+
+Dismiss a hint; it returns only when the customer's situation changes
+
+- **Credential:** sessionCookie
+- **Body:** `reason`?: string
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/churn-hints/{hintId}/feedback`
+
+`rateChurnHint`
+
+Say whether a hint was useful
+
+- **Credential:** sessionCookie
+- **Body:** `value`: "HELPFUL" | "NOT_HELPFUL", `note`?: string
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
+
+### `POST …/churn-hints/refresh`
+
+`refreshChurnHints`
+
+Look at the organisation's customers again now (the nightly job does the same)
+
+- **Credential:** sessionCookie
+- **Body:** JSON object
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
 
 ## Attachments
 
@@ -4262,6 +4307,82 @@ CSV of My metrics
 - **Query:** `dateFrom`?: string, `dateTo`?: string
 - **Returns:** string
 - **Errors:** 401, 403
+
+## Roles
+
+### `GET …/roles`
+
+`listRoles`
+
+The platform roles and this organisation's custom roles with their permissions, field rules and member counts (roles.manage or role.assign; V2)
+
+- **Credential:** sessionCookie
+- **Query:** `includeArchived`?: string
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `POST …/roles`
+
+`createRole`
+
+Create a custom role, optionally starting from a platform role; reserved keys are refused (roles.manage; V2)
+
+- **Credential:** sessionCookie
+- **Body:** `name`: string, `basedOnRoleKey`?: string, `description`?: string | null, `permissionKeys`?: string[], `fieldRules`?: object
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/roles/{roleId}`
+
+`getRole`
+
+One role
+
+- **Credential:** sessionCookie
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `PATCH …/roles/{roleId}`
+
+`updateRole`
+
+Rename a custom role or change its permissions and field rules; effective on the next request, audited. Platform roles are fixed (roles.manage; V2)
+
+- **Credential:** sessionCookie
+- **Body:** `name`?: string, `description`?: string | null, `permissionKeys`?: string[], `fieldRules`?: object
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
+
+### `DELETE …/roles/{roleId}`
+
+`archiveRole`
+
+Archive a custom role nobody holds any more (roles.manage; V2)
+
+- **Credential:** sessionCookie
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `GET …/roles/catalog`
+
+`getRoleCatalog`
+
+Every permission with whether it may be granted to a custom role and why not, the controllable fields and the starting-point roles (roles.manage; V2)
+
+- **Credential:** sessionCookie
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `POST …/roles/preview`
+
+`previewRole`
+
+The effect of a role change before saving: keys gained and lost, what the role can see and change per screen family, the people reached, warnings. Writes nothing (roles.manage; V2)
+
+- **Credential:** sessionCookie
+- **Body:** `roleId`?: string, `basedOnRoleKey`?: string, `permissionKeys`?: string[], `fieldRules`?: object
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
 
 ## Scoring
 

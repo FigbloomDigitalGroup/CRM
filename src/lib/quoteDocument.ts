@@ -6,6 +6,8 @@
  * public page swaps in a fresh one when it serves the stored document.
  */
 
+import { createTranslator, formatDateFor, formatMoneyFor, type ClientLocale, type Translator } from "./clientText";
+
 export const LOGO_PLACEHOLDER = "__QUOTE_LOGO_URL__";
 
 export interface QuoteDocumentLine {
@@ -43,6 +45,8 @@ export interface QuoteDocumentInput {
   };
   preparedFor: { company: string; contact: string | null };
   preparedBy: string | null;
+  /** The language of this document (FIG-1189); English when left out. Dates and money follow it. */
+  language?: ClientLocale;
 }
 
 export function escapeHtml(value: string): string {
@@ -54,32 +58,52 @@ export function formatMoney(amount: number, currency: string): string {
   return `${currency} ${n}`;
 }
 
-function formatDate(iso: string): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(d);
-}
-
 function safeColour(value: string): string {
   return /^#[0-9a-fA-F]{6}$/.test(value) ? value : "#1f6f4a";
 }
 
-export function renderQuoteHtml(input: QuoteDocumentInput): string {
+/** `translator` replaces the built-in text (tests use it to prove the visible English fallback). */
+export function renderQuoteHtml(input: QuoteDocumentInput, translator?: Translator): string {
   const { organization: org, quote: q } = input;
+  const locale: ClientLocale = input.language ?? "en";
+  const tr = translator ?? createTranslator(locale);
+  const t = tr.t;
+  const money = (n: number) => formatMoneyFor(locale, n, q.currency);
   const accent = safeColour(org.accent);
   const rows = q.lines
     .map(
-      (l) => `<tr><td>${escapeHtml(l.description)}${l.taxable ? "" : " <span class=\"note\">(no VAT)</span>"}</td><td class="num">${l.quantity}</td><td>${escapeHtml(l.unit)}</td><td class="num">${escapeHtml(formatMoney(l.unitPrice, q.currency))}</td><td class="num">${escapeHtml(formatMoney(l.lineTotal, q.currency))}</td></tr>`,
+      (l) => `<tr><td>${escapeHtml(l.description)}${l.taxable ? "" : ` <span class="note">${escapeHtml(t("doc.noVat"))}</span>`}</td><td class="num">${l.quantity}</td><td>${escapeHtml(l.unit)}</td><td class="num">${escapeHtml(money(l.unitPrice))}</td><td class="num">${escapeHtml(money(l.lineTotal))}</td></tr>`,
     )
     .join("");
   const contact = [org.phone, org.website, org.address].filter((x): x is string => !!x && x.trim() !== "").map(escapeHtml).join(" · ");
   const discountRow =
     q.discountAmount > 0
-      ? `<tr><td colspan="4" class="num">Discount (${q.discountPercent}%)</td><td class="num">-${escapeHtml(formatMoney(q.discountAmount, q.currency))}</td></tr>`
+      ? `<tr><td colspan="4" class="num">${escapeHtml(t("doc.discount", { pct: q.discountPercent }))}</td><td class="num">-${escapeHtml(money(q.discountAmount))}</td></tr>`
       : "";
+  const labels = {
+    title: t("doc.title", { number: q.number }),
+    version: t("doc.version", { n: q.version }),
+    preparedFor: t("doc.preparedFor"),
+    issued: t("doc.issued"),
+    validUntil: t("doc.validUntil"),
+    preparedBy: t("doc.preparedBy"),
+    description: t("doc.description"),
+    qty: t("doc.qty"),
+    unit: t("doc.unit"),
+    unitPrice: t("doc.unitPrice"),
+    amount: t("doc.amount"),
+    subtotal: t("doc.subtotal"),
+    total: t("doc.total"),
+    vatNote: t("doc.vatNote"),
+    terms: t("doc.terms"),
+  };
+  // Asked for in a language that has no text for some key: say so on the page, once, in the language itself (which falls back too when needed).
+  const fallbackNote = tr.fellBack.size > 0 ? `<p class="note">${escapeHtml(t("doc.fallbackNote"))}</p>
+` : "";
   return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Quote ${escapeHtml(q.number)} · ${escapeHtml(org.name)}</title>
+<title>${escapeHtml(labels.title)} · ${escapeHtml(org.name)}</title>
 <style>
 :root{--accent:${accent};--ink:#1b2420;--muted:#5b6a63;--line:#dfe6e2}
 *{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:#f6f8f7}
@@ -93,12 +117,12 @@ table{width:100%;border-collapse:collapse}th,td{padding:8px 6px;border-bottom:1p
 @media (max-width:560px){.sheet{padding:16px}header{flex-direction:column}th:nth-child(3),td:nth-child(3){display:none}}
 @media print{body{background:#fff}main{padding:0;max-width:none}.sheet{border:0;padding:0}}
 </style></head><body><main><div class="sheet">
-<header><div><h1>Quote ${escapeHtml(q.number)}</h1><div class="muted">Version ${q.version}</div></div><div>${org.showLogo ? `<img src="${LOGO_PLACEHOLDER}" alt="${escapeHtml(org.name)}">` : `<strong>${escapeHtml(org.name)}</strong>`}</div></header>
-<section class="meta"><div><strong>Prepared for</strong>${escapeHtml(input.preparedFor.company)}${input.preparedFor.contact ? `<br>${escapeHtml(input.preparedFor.contact)}` : ""}</div><div><strong>Issued</strong>${escapeHtml(formatDate(q.issuedOn))}</div><div><strong>Valid until</strong>${escapeHtml(formatDate(q.validUntil))}</div>${input.preparedBy ? `<div><strong>Prepared by</strong>${escapeHtml(input.preparedBy)}</div>` : ""}</section>
-<table><thead><tr><th>Description</th><th class="num">Qty</th><th>Unit</th><th class="num">Unit price</th><th class="num">Amount</th></tr></thead><tbody>${rows}</tbody>
-<tfoot>${q.discountAmount > 0 ? `<tr><td colspan="4" class="num">Subtotal</td><td class="num">${escapeHtml(formatMoney(q.subtotal, q.currency))}</td></tr>` : ""}${discountRow}<tr class="total"><td colspan="4" class="num">Total</td><td class="num">${escapeHtml(formatMoney(q.total, q.currency))}</td></tr></tfoot></table>
-<p class="note">Prices include VAT where it applies.</p>
-${q.terms ? `<section class="terms"><strong>Terms</strong><br>${escapeHtml(q.terms)}</section>` : ""}
+<header><div><h1>${escapeHtml(labels.title)}</h1><div class="muted">${escapeHtml(labels.version)}</div></div><div>${org.showLogo ? `<img src="${LOGO_PLACEHOLDER}" alt="${escapeHtml(org.name)}">` : `<strong>${escapeHtml(org.name)}</strong>`}</div></header>
+<section class="meta"><div><strong>${escapeHtml(labels.preparedFor)}</strong>${escapeHtml(input.preparedFor.company)}${input.preparedFor.contact ? `<br>${escapeHtml(input.preparedFor.contact)}` : ""}</div><div><strong>${escapeHtml(labels.issued)}</strong>${escapeHtml(formatDateFor(locale, q.issuedOn))}</div><div><strong>${escapeHtml(labels.validUntil)}</strong>${escapeHtml(formatDateFor(locale, q.validUntil))}</div>${input.preparedBy ? `<div><strong>${escapeHtml(labels.preparedBy)}</strong>${escapeHtml(input.preparedBy)}</div>` : ""}</section>
+<table><thead><tr><th>${escapeHtml(labels.description)}</th><th class="num">${escapeHtml(labels.qty)}</th><th>${escapeHtml(labels.unit)}</th><th class="num">${escapeHtml(labels.unitPrice)}</th><th class="num">${escapeHtml(labels.amount)}</th></tr></thead><tbody>${rows}</tbody>
+<tfoot>${q.discountAmount > 0 ? `<tr><td colspan="4" class="num">${escapeHtml(labels.subtotal)}</td><td class="num">${escapeHtml(money(q.subtotal))}</td></tr>` : ""}${discountRow}<tr class="total"><td colspan="4" class="num">${escapeHtml(labels.total)}</td><td class="num">${escapeHtml(money(q.total))}</td></tr></tfoot></table>
+<p class="note">${escapeHtml(labels.vatNote)}</p>
+${fallbackNote}${q.terms ? `<section class="terms"><strong>${escapeHtml(labels.terms)}</strong><br>${escapeHtml(q.terms)}</section>` : ""}
 <footer><strong>${escapeHtml(org.name)}</strong>${contact ? `<br>${contact}` : ""}</footer>
 </div></main></body></html>`;
 }

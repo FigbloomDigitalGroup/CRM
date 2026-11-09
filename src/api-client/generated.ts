@@ -986,6 +986,47 @@ export interface Operations {
     body: undefined;
     response: unknown;
   };
+  listChurnHints: {
+    params: { orgSlug: string };
+    query: {
+      status?: string;
+      companyId?: string;
+      mine?: string;
+    };
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  dismissChurnHint: {
+    params: { orgSlug: string; hintId: string };
+    query: undefined;
+    body: {
+      reason?: string;
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  rateChurnHint: {
+    params: { orgSlug: string; hintId: string };
+    query: undefined;
+    body: {
+      value: "HELPFUL" | "NOT_HELPFUL";
+      note?: string;
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  refreshChurnHints: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: Record<string, unknown>;
+    response: {
+      [key: string]: unknown;
+    };
+  };
   getCommands: {
     params: { orgSlug: string };
     query: undefined;
@@ -8743,6 +8784,86 @@ export interface Operations {
       [key: string]: unknown;
     };
   };
+  listRoles: {
+    params: { orgSlug: string };
+    query: {
+      includeArchived?: string;
+    };
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  createRole: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: {
+      name: string;
+      basedOnRoleKey?: string;
+      description?: string | null;
+      permissionKeys?: Array<string>;
+      fieldRules?: {
+        [key: string]: string;
+      };
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  archiveRole: {
+    params: { orgSlug: string; roleId: string };
+    query: undefined;
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  getRole: {
+    params: { orgSlug: string; roleId: string };
+    query: undefined;
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  updateRole: {
+    params: { orgSlug: string; roleId: string };
+    query: undefined;
+    body: {
+      name?: string;
+      description?: string | null;
+      permissionKeys?: Array<string>;
+      fieldRules?: {
+        [key: string]: string;
+      };
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  getRoleCatalog: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  previewRole: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: {
+      roleId?: string;
+      basedOnRoleKey?: string;
+      permissionKeys?: Array<string>;
+      fieldRules?: {
+        [key: string]: string;
+      };
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
   getScoringWeights: {
     params: { orgSlug: string };
     query: undefined;
@@ -9865,6 +9986,10 @@ export const operations = {
   getChatSearch: { method: "GET", path: "/api/orgs/{orgSlug}/chat/search", tag: "Chat", summary: "GET /chat/search", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   getChatSync: { method: "GET", path: "/api/orgs/{orgSlug}/chat/sync", tag: "Chat", summary: "GET /chat/sync", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   getChatUnread: { method: "GET", path: "/api/orgs/{orgSlug}/chat/unread", tag: "Chat", summary: "GET /chat/unread", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  listChurnHints: { method: "GET", path: "/api/orgs/{orgSlug}/churn-hints", tag: "Assistant", summary: "Churn hints for the customers you own (Management: all), each with its reasons, shown only as far as your role may see the data behind them (ai.use; V2; assistant and its churn option on)", contentType: "json", errors: [401,403,404], allowedRoles: null },
+  dismissChurnHint: { method: "POST", path: "/api/orgs/{orgSlug}/churn-hints/{hintId}/dismiss", tag: "Assistant", summary: "Dismiss a hint; it returns only when the customer's situation changes", contentType: "json", errors: [400,401,403,404], allowedRoles: null },
+  rateChurnHint: { method: "POST", path: "/api/orgs/{orgSlug}/churn-hints/{hintId}/feedback", tag: "Assistant", summary: "Say whether a hint was useful", contentType: "json", errors: [400,401,403,404], allowedRoles: null },
+  refreshChurnHints: { method: "POST", path: "/api/orgs/{orgSlug}/churn-hints/refresh", tag: "Assistant", summary: "Look at the organisation's customers again now (the nightly job does the same)", contentType: "json", errors: [400,401,403,404], allowedRoles: null },
   getCommands: { method: "GET", path: "/api/orgs/{orgSlug}/commands", tag: "Commands", summary: "GET /commands", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   deleteCommentsByCommentId: { method: "DELETE", path: "/api/orgs/{orgSlug}/comments/{commentId}", tag: "Comments", summary: "DELETE /comments/{commentId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   editComment: { method: "PATCH", path: "/api/orgs/{orgSlug}/comments/{commentId}", tag: "Comments", summary: "Edit your own comment (soft: marked edited; only newly mentioned people are notified)", contentType: "json", errors: [400,401,403,404,409], allowedRoles: ["MANAGEMENT"] },
@@ -10225,6 +10350,13 @@ export const operations = {
   getMyMetricsV2: { method: "GET", path: "/api/orgs/{orgSlug}/reports/v2/my-metrics", tag: "Reports", summary: "My metrics: the caller's own figures only, as cards and a table", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   exportMyMetrics: { method: "GET", path: "/api/orgs/{orgSlug}/reports/v2/my-metrics/export", tag: "Reports", summary: "CSV of My metrics", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   getRenewalsAndRetention: { method: "GET", path: "/api/orgs/{orgSlug}/retention", tag: "Renewals", summary: "Renewals and retention: LAPSED, DUE_30, UNANSWERED_PROPOSALS, GOING_QUIET, CROSS_SELL. A customer is in exactly one list; counts match the lists.", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES"] },
+  listRoles: { method: "GET", path: "/api/orgs/{orgSlug}/roles", tag: "Roles", summary: "The platform roles and this organisation's custom roles with their permissions, field rules and member counts (roles.manage or role.assign; V2)", contentType: "json", errors: [401,403,404], allowedRoles: null },
+  createRole: { method: "POST", path: "/api/orgs/{orgSlug}/roles", tag: "Roles", summary: "Create a custom role, optionally starting from a platform role; reserved keys are refused (roles.manage; V2)", contentType: "json", errors: [400,401,403,404], allowedRoles: null },
+  archiveRole: { method: "DELETE", path: "/api/orgs/{orgSlug}/roles/{roleId}", tag: "Roles", summary: "Archive a custom role nobody holds any more (roles.manage; V2)", contentType: "json", errors: [401,403,404], allowedRoles: null },
+  getRole: { method: "GET", path: "/api/orgs/{orgSlug}/roles/{roleId}", tag: "Roles", summary: "One role", contentType: "json", errors: [401,403,404], allowedRoles: null },
+  updateRole: { method: "PATCH", path: "/api/orgs/{orgSlug}/roles/{roleId}", tag: "Roles", summary: "Rename a custom role or change its permissions and field rules; effective on the next request, audited. Platform roles are fixed (roles.manage; V2)", contentType: "json", errors: [400,401,403,404], allowedRoles: null },
+  getRoleCatalog: { method: "GET", path: "/api/orgs/{orgSlug}/roles/catalog", tag: "Roles", summary: "Every permission with whether it may be granted to a custom role and why not, the controllable fields and the starting-point roles (roles.manage; V2)", contentType: "json", errors: [401,403,404], allowedRoles: null },
+  previewRole: { method: "POST", path: "/api/orgs/{orgSlug}/roles/preview", tag: "Roles", summary: "The effect of a role change before saving: keys gained and lost, what the role can see and change per screen family, the people reached, warnings. Writes nothing (roles.manage; V2)", contentType: "json", errors: [400,401,403,404], allowedRoles: null },
   getScoringWeights: { method: "GET", path: "/api/orgs/{orgSlug}/scoring/weights", tag: "Scoring", summary: "GET /scoring/weights", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   patchScoringWeights: { method: "PATCH", path: "/api/orgs/{orgSlug}/scoring/weights", tag: "Scoring", summary: "PATCH /scoring/weights", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   search: { method: "GET", path: "/api/orgs/{orgSlug}/search", tag: "Search", summary: "Global search: groups with totals, paged per group (`type` + `page`), archived only on request, phone numbers in any format", contentType: "json", errors: [400,401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },

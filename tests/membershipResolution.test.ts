@@ -32,6 +32,9 @@ async function resolveActiveMembershipPrisma(userId: string, organizationId: str
     loadFeatureConfig(organizationId),
   ]);
   if (!membership) return null;
+  // B7.06 (FIG-1188): a custom role counts only for its own organisation and only while it is not archived.
+  const customRole = membership.role.organizationId !== null;
+  if (customRole && (membership.role.organizationId !== membership.organizationId || membership.role.archivedAt !== null)) return null;
   const lock = membership.organization.status;
   if (lock === "SUSPENDED" || lock === "OFFBOARDED" || (lock === "OFFBOARDING" && !options.allowOffboarding)) {
     throw new OrganizationUnavailableError(lock, membership.organization.name);
@@ -45,7 +48,15 @@ async function resolveActiveMembershipPrisma(userId: string, organizationId: str
       roleKey: membership.role.key,
       catalogueKeys: membership.role.rolePermissions.map((rp) => rp.permission.key),
       config,
+      custom: customRole,
     }),
+    ...(customRole
+      ? await (async () => {
+          const rules = await adminDb.roleFieldRule.findMany({ where: { roleId: membership.roleId, organizationId: membership.organizationId } });
+          const hiddenFields = rules.filter((r) => r.access === "hidden").map((r) => r.field).sort();
+          return hiddenFields.length > 0 ? { hiddenFields } : {};
+        })()
+      : {}),
   };
 }
 

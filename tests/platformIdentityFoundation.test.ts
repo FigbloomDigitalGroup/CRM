@@ -49,7 +49,8 @@ const CONSOLE_APPEND_ONLY = [
   "platform_data_request_approvals",
   "platform_deletion_certificates",
 ];
-const CONSOLE_MUTABLE = ["platform_idempotency_keys", "platform_incidents", "platform_data_requests"];
+// B7.03 (FIG-1185): platform announcements are platform-owned (no organisation id).
+const CONSOLE_MUTABLE = ["platform_idempotency_keys", "platform_incidents", "platform_data_requests", "platform_announcements"];
 const CONSOLE_VIEWS = ["platform_jobs_health", "platform_email_health", "platform_organization_profile"];
 // B6.02 (two-step sign-in) and B6.08 (platform admins: invitations and settings) tables the platform role owns.
 const TWO_STEP_PLATFORM = ["platform_two_step", "platform_backup_codes", "platform_two_step_challenges", "platform_admin_invites", "platform_settings"];

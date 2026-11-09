@@ -13,7 +13,7 @@ export function listShares(organizationId: string, quoteVersionId: string) {
     tx.quoteShare.findMany({
       where: { organizationId, quoteVersionId },
       orderBy: { createdAt: "desc" },
-      select: { id: true, recipientEmail: true, expiresAt: true, revokedAt: true, viewCount: true, firstViewedAt: true, lastViewedAt: true, createdAt: true, createdByMembershipId: true, documentSha256: true },
+      select: { id: true, signingEnabled: true, language: true, recipientEmail: true, expiresAt: true, revokedAt: true, viewCount: true, firstViewedAt: true, lastViewedAt: true, createdAt: true, createdByMembershipId: true, documentSha256: true },
     }),
   );
 }

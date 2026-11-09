@@ -3,6 +3,7 @@ import { OrganizationUnavailableError } from "../auth/errors";
 import { effectivePermissionKeys } from "../auth/permissions";
 import { adminDb } from "../db/adminClient";
 import { loadFeatureConfig } from "../lib/featureConfig";
+import { hiddenFieldsOf } from "../lib/roleLimits";
 
 export interface AddMembershipInput {
   organizationId: string;
@@ -84,9 +85,9 @@ export async function resolveActiveMembership(
   // membership, so it is read at the same time.
   const [rows, config] = await Promise.all([
     adminDb.$queryRaw<
-      Array<{ id: string; user_id: string; organization_id: string; role_key: string; org_status: string; org_name: string; keys: string[] }>
+      Array<{ id: string; user_id: string; organization_id: string; role_id: string; role_key: string; role_org: string | null; org_status: string; org_name: string; keys: string[] }>
     >(Prisma.sql`
-      SELECT m.id, m.user_id, m.organization_id, r.key AS role_key, o.status::text AS org_status, o.name AS org_name,
+      SELECT m.id, m.user_id, m.organization_id, r.id AS role_id, r.key AS role_key, r.organization_id AS role_org, o.status::text AS org_status, o.name AS org_name,
              COALESCE(array_agg(p.key) FILTER (WHERE p.key IS NOT NULL), ARRAY[]::text[]) AS keys
       FROM memberships m
       JOIN roles r ON r.id = m.role_id
@@ -95,7 +96,9 @@ export async function resolveActiveMembership(
       LEFT JOIN permissions p ON p.id = rp.permission_id
       WHERE m.user_id = ${userId} AND m.organization_id = ${organizationId}
         AND m.status = ${MembershipStatus.ACTIVE}::"MembershipStatus"
-      GROUP BY m.id, r.key, o.status, o.name
+        -- B7.06: a custom role counts only for its own organisation and only while it is not archived.
+        AND (r.organization_id IS NULL OR (r.organization_id = m.organization_id AND r.archived_at IS NULL))
+      GROUP BY m.id, r.id, r.key, r.organization_id, o.status, o.name
       ORDER BY m.created_at ASC
       LIMIT 1`),
     // B1.01/B1.03: the keys a request carries are the role's catalogue keys
@@ -119,6 +122,18 @@ export async function resolveActiveMembership(
     throw new OrganizationUnavailableError(lock, membership.org_name);
   }
 
+  // B7.06: a custom role may hide fields from people who would otherwise see them (the owner of a deal, for its value). Built-in
+  // roles have no field rules, so they cost no extra query.
+  const hiddenFields = membership.role_org
+    ? hiddenFieldsOf(
+        Object.fromEntries(
+          (await adminDb.roleFieldRule.findMany({ where: { roleId: membership.role_id, organizationId: membership.organization_id } })).map(
+            (r) => [r.field, r.access],
+          ),
+        ),
+      )
+    : [];
+
   return {
     membershipId: membership.id,
     userId: membership.user_id,
@@ -128,7 +143,9 @@ export async function resolveActiveMembership(
       roleKey: membership.role_key,
       catalogueKeys: membership.keys,
       config,
+      custom: membership.role_org !== null,
     }),
+    ...(hiddenFields.length > 0 ? { hiddenFields } : {}),
   };
 }
 

@@ -1,3 +1,4 @@
+import { createTranslator, isClientLocale, type ClientLocale } from "../lib/clientText";
 import { readCaptchaSecret } from "./webFormService";
 import { NotFoundError, ValidationError } from "../auth/errors";
 import { verifyCaptchaToken } from "../auth/captcha";
@@ -9,6 +10,7 @@ import { findPublicForm, isOrganizationActive, recordSubmission } from "../repos
 import { checkSubmission, MAX_PAYLOAD_BYTES, SubmissionRejected, type FormField, type SubmissionOutcome } from "../lib/webForms";
 import { notifyLeadAssigned } from "./notificationService";
 import { autoEnrolLead } from "./followUpService";
+import { emitLeadCreatedById } from "./webhookService";
 
 /**
  * The public web form endpoint's logic (FIG-1151, B6.19). Session-less, like `submitWebsiteLead`: there is no CRM user, the form's
@@ -54,12 +56,25 @@ async function resolveForm(orgSlug: string, publicKey: string, meta: FormRequest
   return form;
 }
 
+/**
+ * The thank-you text (FIG-1189). The organisation's own wording is always shown as written; only the built-in default, left untouched,
+ * follows the form's language.
+ */
+function successMessageFor(form: { successMessage: string; language: string }): string {
+  const english = createTranslator("en").t("form.thanks");
+  return form.successMessage === english && isClientLocale(form.language) ? createTranslator(form.language).t("form.thanks") : form.successMessage;
+}
+
 /** What a page needs to draw the form. No ids, no settings, no secrets. */
 export async function getPublicForm(orgSlug: string, publicKey: string, meta: FormRequestMeta) {
   const form = await resolveForm(orgSlug, publicKey, meta);
   await enforceRateLimit("WEB_FORM", [{ scope: "ip-definition", key: meta.ipAddress, windowMs: windowMs(), max: maxPerIp() * 6 }]);
   const fields = (form.fields as unknown as FormField[]).map((f) => ({ key: f.key, label: f.label, type: f.type, required: f.required, ...(f.options ? { options: f.options } : {}) }));
-  return { name: form.name, fields, honeypotFieldName: form.honeypotFieldName, captchaRequired: form.captchaSecret !== null };
+  // The form's own text in its language (FIG-1189); a key with no Swahili text yet is English and listed in `fallbackKeys`, so a page can say so.
+  const language: ClientLocale = isClientLocale(form.language) ? form.language : "en";
+  const tr = createTranslator(language);
+  const text = { submit: tr.t("form.submit"), required: tr.t("form.required"), optional: tr.t("form.optional"), captcha: tr.t("form.captcha"), fixFields: tr.t("form.fixFields") };
+  return { name: form.name, language, text, fallbackKeys: [...tr.fellBack].sort(), fields, honeypotFieldName: form.honeypotFieldName, captchaRequired: form.captchaSecret !== null };
 }
 
 const TO_WEBSITE_OUTCOME: Record<SubmissionOutcome, WebsiteLeadRequestOutcome> = {
@@ -109,7 +124,7 @@ export async function submitWebForm(orgSlug: string, publicKey: string, rawBodyT
     if (typeof trap === "string" && trap.trim().length > 0) {
       outcome = "HONEYPOT_TRIGGERED";
       reason = "The hidden trap field was filled in.";
-      return { message: form.successMessage };
+      return { message: successMessageFor(form) };
     }
 
     const rules: RateLimitRule[] = [
@@ -131,7 +146,7 @@ export async function submitWebForm(orgSlug: string, publicKey: string, rawBodyT
       // Looks like a success to whatever filled it in; no lead is made.
       outcome = "HONEYPOT_TRIGGERED";
       reason = "The hidden trap field was filled in.";
-      return { message: form.successMessage };
+      return { message: successMessageFor(form) };
     }
 
     if (form.captchaSecret) {
@@ -152,12 +167,13 @@ export async function submitWebForm(orgSlug: string, publicKey: string, rawBodyT
 
     // Follow-up sequences that start from a new website lead (FIG-1150); never fails the submission.
     await autoEnrolLead(organizationId, result.leadId);
+    await emitLeadCreatedById(organizationId, result.leadId);
 
     // Best effort and after the commit: a notification problem never turns a saved submission into an error.
     if (result.ownerMembershipId) {
       await notifyLeadAssigned(organizationId, result.ownerMembershipId, { id: result.leadId, label: checked.lead.company ?? checked.lead.name }).catch(() => undefined);
     }
-    return { message: form.successMessage };
+    return { message: successMessageFor(form) };
   } catch (err) {
     if (err instanceof SubmissionRejected) {
       outcome = err.outcome;
