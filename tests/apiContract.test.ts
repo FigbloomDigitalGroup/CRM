@@ -18,6 +18,7 @@ import { ApiRequestError, buildUrl, createClient } from "../src/api-client";
 import { operations } from "../src/api-client/generated";
 import { NOT_IN_V1_CONTRACT } from "../src/api/accountOperations";
 import { buildClientSource } from "../src/api/clientGenerator";
+import { loadContractExamples } from "../src/api/contractExamples";
 import { createMockServer } from "../src/api/mockServer";
 import { API_VERSION, buildOpenApiDocument } from "../src/api/openapi";
 import { buildReferenceMarkdown } from "../src/api/referenceDoc";
@@ -171,7 +172,7 @@ describe("the mock server", () => {
   let server: ReturnType<typeof createMockServer>;
 
   beforeAll(async () => {
-    const examples = JSON.parse(readFileSync("src/api/contract/examples.json", "utf8"));
+    const examples = loadContractExamples();
     server = createMockServer({ doc: JSON.parse(readFileSync(FROZEN, "utf8")), examples });
     await new Promise<void>((resolve) => server.listen(0, resolve));
     base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -214,7 +215,7 @@ describe("the mock server", () => {
   });
 
   it("carries the same masking as the real API in every recorded example: no deal value or payment for a role that may not see it", () => {
-    const examples = JSON.parse(readFileSync("src/api/contract/examples.json", "utf8")) as Record<string, Record<string, unknown>>;
+    const examples = loadContractExamples() as Record<string, Record<string, unknown>>;
     const mayDealValue = new Set(["MANAGEMENT", "FINANCE", "SALES"]);
     const mayPayments = new Set(["MANAGEMENT", "FINANCE"]);
     const leaks: string[] = [];

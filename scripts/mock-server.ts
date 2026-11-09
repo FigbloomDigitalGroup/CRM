@@ -1,3 +1,4 @@
+import { loadContractExamples } from "../src/api/contractExamples";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createMockServer } from "../src/api/mockServer";
@@ -11,8 +12,8 @@ const args = process.argv.slice(2);
 const port = Number(args[args.indexOf("--port") + 1] || 4010);
 const frozen = resolve("src/api/contract/openapi.v1.json");
 const doc = existsSync(frozen) ? JSON.parse(readFileSync(frozen, "utf8")) : buildOpenApiDocument();
-const examplesPath = resolve("src/api/contract/examples.json");
-const examples = existsSync(examplesPath) ? JSON.parse(readFileSync(examplesPath, "utf8")) : {};
+
+const examples = existsSync(resolve("src/api/contract/examples.json")) ? loadContractExamples() : {};
 createMockServer({ doc, examples }).listen(port, () => {
   console.log(`Figbloom CRM mock API on http://localhost:${port} (${Object.keys(doc.paths).length} paths). Header x-mock-role picks the role.`);
 });

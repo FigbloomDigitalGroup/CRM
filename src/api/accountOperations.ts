@@ -12,23 +12,6 @@ import type { JsonSchema } from "./jsonSchema";
  *   /api/metrics                             operations endpoint for the metrics scraper (METRICS_TOKEN), not product API
  */
 export const NOT_IN_V1_CONTRACT: Record<string, string> = {
-  "/api/orgs/{orgSlug}/chat/channels": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/channels/{channelId}": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/channels/{channelId}/join": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/channels/{channelId}/leave": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/channels/{channelId}/members": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/channels/{channelId}/members/{membershipId}": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages/{messageId}": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages/{messageId}/reactions": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages/{messageId}/attachments/{fileId}": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/channels/{channelId}/read": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/channels/{channelId}/typing": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/unread": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/people": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/presence": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/sync": "Chat, V1.1 (B6.24 to B6.26)",
-  "/api/orgs/{orgSlug}/chat/search": "Chat, V1.1 (B6.24 to B6.26)",
   "/api/dev-session": "development only (CLAUDE.md rule 10)",
   "/api/dev-sentry-test": "development only",
   "/api/platform/preferences": "Platform Super Admin, V1.1",

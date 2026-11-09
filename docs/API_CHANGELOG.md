@@ -16,7 +16,9 @@ needs a new major version (`API_VERSION` in `src/api/openapi.ts`). Additions are
 
 ## 1.1.0 — V1.1 backend, additive (Nov 2026)
 
-contract-hash: 4e9574fcb63fc8271f29a675bcca6977956eedf4ebd6729ac16f91a76ca5ae82
+contract-hash: d744bd6ed6b4173259cdba95931b5964a4ef19ad68353d7f1135e457c9f93b0b
+
+Amended before the `api-v1.1` tag (9 Nov 2026, G2.03, FIG-1158), so no caller can have depended on the earlier text: the V1.1 routes were recorded on a V1 organisation, where every one answers "not in your release", so the contract listed them as refused for every role (`x-allowed-roles: []`) with no request or response schema. They are now described from a walk of every route as each role on a V1.1 organisation (`tests/apiWalkV11.test.ts`, recorded in `src/api/contract/*V11.json`): the roles the permission model lets through, the request schema each route validates against, and the shape of its answer. The mock server serves the V1.1 examples for those routes (`src/api/contractExamples.ts`). No route, status code or behaviour changed; only the documentation of V1.1 routes did. Platform console, sign-in and two-step routes remain outside the contract (`src/api/accountOperations.ts`); they are not organisation routes and the platform walls are held by `tests/platformTenantDenialV11.test.ts`.
 
 Minor version: nothing existing was removed or renamed, so V1 callers keep working.
 
