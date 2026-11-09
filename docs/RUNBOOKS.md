@@ -61,6 +61,8 @@ If step 4, 5 or 6 fails: go to section 2 and apply the decision rule. Do not try
 
 Two different rollbacks exist. Choose with the decision rule below.
 
+**On the Vercel setup (MVP, from 9 Nov 2026)** the equivalent of 2a is Vercel's own rollback: project, Deployments, pick the last good deployment, Promote to Production (or `vercel rollback`). It switches code only and takes about a minute. The equivalent of 2b is a restore from a dump or the provider's point-in-time restore into a scratch database, never over production; the steps, the rule for migrations that already ran (expand and contract), and the result of the one drill done so far (about 14 minutes for a very small database, from Kenya) are in `docs/BACKUP_RESTORE.md` section 10. Migrations are never run by the deploy: `npm run migrate:deploy:direct` is run by hand before the deploy that needs them.
+
 ### 2a. Image rollback (fast, usually safe)
 
 Put the previous image tag back on the replicas.
