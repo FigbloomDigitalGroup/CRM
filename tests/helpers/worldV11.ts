@@ -12,6 +12,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { adminDb } from "../../src/db/adminClient";
 import { TOGGLES_KEY } from "../../src/lib/featureConfig";
 import { createFileRecord } from "../../src/repositories/files";
+import { resolveActiveMembership } from "../../src/repositories/memberships";
 import { createCatalogueEntry } from "../../src/services/catalogueService";
 import { createChannel, postMessage } from "../../src/services/chatService";
 import { createSequence, enrol } from "../../src/services/followUpService";
@@ -22,7 +23,7 @@ import { createView } from "../../src/services/savedViewService";
 import { createForm } from "../../src/services/webFormService";
 import { setOrganizationRelease } from "../../src/services/featureService";
 import { buildStorageKey } from "../../src/storage/keys";
-import { buildWorld, type World } from "./world";
+import { buildWorld, ROLE_KEYS, type World } from "./world";
 
 export interface WorldV11 extends World {
   /** What V1.1 records exist, by name, for the report. */
@@ -32,7 +33,6 @@ export interface WorldV11 extends World {
 export async function buildWorldV11(prefix = "WalkV11"): Promise<WorldV11> {
   const world = (await buildWorld(prefix)) as WorldV11;
   const org = world.organization.id;
-  const { MANAGEMENT: mgmt, SALES: sales } = world.ctx;
   const { ids, overrides, missing } = world;
   world.v11Records = [];
 
@@ -42,6 +42,15 @@ export async function buildWorldV11(prefix = "WalkV11"): Promise<WorldV11> {
     update: { value: { "assistant.enabled": true } },
     create: { organizationId: org, key: TOGGLES_KEY, value: { "assistant.enabled": true } },
   });
+
+  // A person's permissions depend on the organisation's release, and a context carries them as they were when it was made: make every context again now
+  // the organisation is at V1.1, or the V1.1 permissions (catalogue, quotes, chat, mail, assistant) are missing under a V1 deployment default, as in CI.
+  for (const key of ROLE_KEYS) {
+    const fresh = await resolveActiveMembership(world.ctx[key].userId, org);
+    if (!fresh) throw new Error(`No active membership for ${key} after the release change`);
+    world.ctx[key] = fresh;
+  }
+  const { MANAGEMENT: mgmt, SALES: sales } = world.ctx;
 
   async function step<T>(name: string, fn: () => Promise<T>): Promise<T | null> {
     try {
