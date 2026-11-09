@@ -12,4 +12,4 @@ export { FlagsAndLimits, Announcements } from "./FlagsAnnouncements";
 export { PlatformNotFound, PlatformPreferences } from "./Misc";
 export { PlatformMobile, type MobileTab } from "./Mobile";
 export { VerifyDialog } from "./Verify";
-export { PlatformSignInPage, VerifyPage } from "./SignIn";
+export { AcceptInvitePage, PlatformSignInPage, VerifyPage } from "./SignIn";
