@@ -146,5 +146,9 @@ export function emailConfigProblem(env: Record<string, string | undefined> = pro
   if (provider === "resend" && !(env.EMAIL_FROM?.trim() || env.SMTP_FROM?.trim())) {
     return "RESEND_API_KEY is set but EMAIL_FROM is not: set EMAIL_FROM to an address on a domain verified in Resend.";
   }
+  // A mail user with no password: the server would refuse every message. (No SMTP_USER at all is allowed: a local mail catcher has no login.)
+  if (provider === "smtp" && env.SMTP_USER?.trim() && !env.SMTP_PASS?.trim()) {
+    return "SMTP_USER is set but SMTP_PASS is empty: the mail server will refuse every message, so invites and password resets are NOT delivered. Add SMTP_PASS (for Gmail, an app password).";
+  }
   return null;
 }

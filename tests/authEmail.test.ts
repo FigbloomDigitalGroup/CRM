@@ -178,4 +178,13 @@ describe("Resend as the auth email provider (MVP-11)", () => {
     expect(emailConfigProblem({ RESEND_API_KEY: "k", EMAIL_FROM: "a@b.test" })).toBeNull();
     expect(emailConfigProblem({ SMTP_HOST: "h" })).toBeNull();
   });
+
+  it("emailConfigProblem catches an SMTP login with no password, but allows a server with no login at all", () => {
+    // A mail user without its password would be refused by the server on every message while /api/health said "ok".
+    expect(emailConfigProblem({ SMTP_HOST: "smtp.gmail.com", SMTP_USER: "me@example.test" })).toMatch(/SMTP_PASS/);
+    expect(emailConfigProblem({ SMTP_HOST: "smtp.gmail.com", SMTP_USER: "me@example.test", SMTP_PASS: "  " })).toMatch(/SMTP_PASS/);
+    expect(emailConfigProblem({ SMTP_HOST: "smtp.gmail.com", SMTP_USER: "me@example.test", SMTP_PASS: "secret" })).toBeNull();
+    // A local mail catcher (staging) has no login: still fine.
+    expect(emailConfigProblem({ SMTP_HOST: "mailpit" })).toBeNull();
+  });
 });
