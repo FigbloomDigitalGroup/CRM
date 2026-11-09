@@ -43,6 +43,8 @@ import { emailSecurityAlert } from "./securityAlertService";
  */
 export const PLATFORM_MIN_PASSWORD_LENGTH = 12;
 const INVITE_DAYS = 7;
+/** A recovery link resets a password and the second step, so it lives one day, not a week (G2.02, F-05). */
+const RECOVERY_HOURS = 24;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ADMIN_LOCK_KEY = 1134_1140; // advisory lock: platform admin roster changes, one at a time
 
@@ -231,7 +233,9 @@ function withoutUrl<T extends { inviteUrl: string }>(link: T): Omit<T, "inviteUr
 async function issueLink(ctx: PlatformContext | null, input: { kind: "INVITE" | "RECOVERY"; email: string; name?: string | null; identityId?: string | null }) {
   const db = getPlatformDb();
   const token = newToken();
-  const expiresAt = new Date(Date.now() + INVITE_DAYS * DAY_MS);
+  const lifetimeMs = input.kind === "RECOVERY" ? RECOVERY_HOURS * 3_600_000 : INVITE_DAYS * DAY_MS;
+  const lifetimeText = input.kind === "RECOVERY" ? `${RECOVERY_HOURS} hours` : `${INVITE_DAYS} days`;
+  const expiresAt = new Date(Date.now() + lifetimeMs);
   // One live link per email and kind: a new one replaces the old.
   await db.platformAdminInvite.updateMany({ where: { email: input.email, kind: input.kind, acceptedAt: null, revokedAt: null }, data: { revokedAt: new Date() } });
   const row = await db.platformAdminInvite.create({
@@ -243,8 +247,8 @@ async function issueLink(ctx: PlatformContext | null, input: { kind: "INVITE" | 
     {
       to: input.email,
       subject: input.kind === "INVITE" ? "You have been invited as a FigBloom platform admin" : "Recover your FigBloom platform admin account",
-      text: `Use this link to set your password${input.kind === "RECOVERY" ? " and set up two-step sign-in again" : ""}. It expires in ${INVITE_DAYS} days and works once.\n\n${url}`,
-      html: `<p>Use this link to set your password${input.kind === "RECOVERY" ? " and set up two-step sign-in again" : ""}. It expires in ${INVITE_DAYS} days and works once.</p><p><a href="${url}">${url}</a></p>`,
+      text: `Use this link to set your password${input.kind === "RECOVERY" ? " and set up two-step sign-in again" : ""}. It expires in ${lifetimeText} and works once.\n\n${url}`,
+      html: `<p>Use this link to set your password${input.kind === "RECOVERY" ? " and set up two-step sign-in again" : ""}. It expires in ${lifetimeText} and works once.</p><p><a href="${url}">${url}</a></p>`,
     },
   ).catch((err) => console.error("[platform-admin] could not send the link:", err instanceof Error ? err.message : "unknown error"));
   return { id: row.id, email: input.email, expiresAt: expiresAt.toISOString(), inviteUrl: url };

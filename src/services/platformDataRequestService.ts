@@ -465,11 +465,17 @@ export async function checkDeletionGate(requestId: string, now = new Date(), db:
   const blockers: string[] = [];
   if (request.kind !== "DELETE") blockers.push("Only a deletion request can delete an organisation.");
   if (request.status !== "APPROVED") blockers.push(`The request is ${request.status.toLowerCase()}, not approved.`);
-  const approvers = new Set(request.approvals.filter((a) => a.decision === "APPROVE").map((a) => a.approverIdentityId));
-  if (approvers.size < APPROVALS_REQUIRED.DELETE) blockers.push(`Two different approvers are needed; there ${approvers.size === 1 ? "is" : "are"} ${approvers.size}.`);
   const approverRows = request.approvals.filter((a) => a.decision === "APPROVE");
-  const identities = await getPlatformDb().platformIdentity.findMany({ where: { id: { in: approverRows.map((a) => a.approverIdentityId) } }, select: { id: true, credentialsResetAt: true } });
+  const identities = await getPlatformDb().platformIdentity.findMany({ where: { id: { in: approverRows.map((a) => a.approverIdentityId) } }, select: { id: true, status: true, credentialsResetAt: true } });
   const resetById = new Map(identities.map((i) => [i.id, i.credentialsResetAt]));
+  // An approval stands only while its approver is still an active platform admin: suspending or removing an admin is what the team does
+  // when an account may be compromised, and that account's earlier "yes" must not stay in force (G2.02, F-01).
+  const activeIds = new Set(identities.filter((i) => i.status === "ACTIVE").map((i) => i.id));
+  const approvers = new Set(approverRows.map((a) => a.approverIdentityId).filter((id) => activeIds.has(id)));
+  if (approvers.size < APPROVALS_REQUIRED.DELETE) blockers.push(`Two different approvers are needed; there ${approvers.size === 1 ? "is" : "are"} ${approvers.size}.`);
+  if (approverRows.some((a) => !activeIds.has(a.approverIdentityId))) {
+    blockers.push("An approver is no longer an active platform admin (suspended or removed), so that approval no longer counts.");
+  }
   if (approverRows.some((a) => isFreshlyReset(resetById.get(a.approverIdentityId), a.decidedAt))) {
     blockers.push("An approver's password or two-step sign-in was reset within 24 hours of approving. Approve again once 24 hours have passed.");
   }

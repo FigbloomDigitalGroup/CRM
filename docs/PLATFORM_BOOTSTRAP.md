@@ -12,7 +12,7 @@ Goal: Michael signs in as platform admin, creates the first organisation and inv
 
 1. **Create the invitation** (once):
    `npm run platform:bootstrap-admin -- michael@example.com "Michael Surname"`
-   It creates no account and sets no password. It prints one single-use link (valid 7 days) and writes a platform audit entry. The link is never logged by the app; treat the terminal output as a secret and clear it afterwards.
+   It creates no account and sets no password. It prints one single-use link (valid 7 days; a recovery link made with `--force` for an existing admin is valid 24 hours) and writes a platform audit entry. The link is never logged by the app; treat the terminal output as a secret and clear it afterwards.
 2. **Open the link** (`/platform/accept-invite?token=...`), choose a password (at least the platform minimum). The identity is created here: exactly one, `is_dev = false`.
 3. **Platform sign-in** at `/platform/sign-in` with email and password. First sign-in is **two-step enrolment**: scan the QR code (or enter the key) in an authenticator app, confirm with a code. Keep the recovery details safe; a second platform admin is advised (the console enforces a minimum of two before some actions).
 4. **Create the first organisation** in the console (Organisations, New). This uses the product's provisioning path (`organizationProvisioningService`), which also loads the organisation's starting reference data (pipelines, stages, tags, catalogues) and no demo records.

@@ -1,6 +1,6 @@
 import type { PlatformIdentity } from "@prisma/client";
 import { RateLimitedError, UnauthorizedError, ValidationError } from "../auth/errors";
-import { verifyPassword } from "../auth/password";
+import { hashPassword, verifyPassword } from "../auth/password";
 import { createPlatformSession, revokePlatformSession } from "../auth/platformSession";
 import { loadPlatformSettings } from "../auth/platformSettings";
 import { enforceRateLimit } from "../auth/rateLimiter";
@@ -27,6 +27,16 @@ const GONE = "This sign-in has expired. Sign in again.";
 function envInt(name: string, fallback: number): number {
   const raw = Number(process.env[name]);
   return Number.isFinite(raw) && raw > 0 ? raw : fallback;
+}
+
+/**
+ * A real bcrypt hash of a random string, made once. When the email is unknown, suspended or has no password, the sign-in still pays for
+ * one password comparison against it, so how long the answer takes does not say whether an email belongs to a platform admin (G2.02, F-02).
+ */
+let decoyHash: Promise<string> | null = null;
+function decoy(): Promise<string> {
+  decoyHash ??= hashPassword(`decoy-${Math.random().toString(36)}-${Date.now()}`);
+  return decoyHash;
 }
 
 export interface PlatformClient {
@@ -87,6 +97,7 @@ export async function startPlatformSignIn(email: string, password: string, clien
   const identity = await db.platformIdentity.findUnique({ where: { email: normalised } });
   // The dev Super Admin has no password sign-in at all (FIG-1196); a suspended or password-less identity cannot sign in either.
   if (!identity || identity.isDev || identity.status !== "ACTIVE" || !identity.passwordHash) {
+    await verifyPassword(password, await decoy());
     if (identity && !identity.isDev) await audit(identity, "platform.signin_failed", { reason: identity.status !== "ACTIVE" ? "inactive" : "no_password" });
     throw new UnauthorizedError(GENERIC_FAILURE);
   }

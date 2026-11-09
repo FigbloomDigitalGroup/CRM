@@ -193,6 +193,24 @@ describe("platform sign-in", () => {
     await adminDb.organization.delete({ where: { id: org.id } });
   });
 
+  it("takes about as long to refuse an unknown or suspended email as a wrong password, so timing does not reveal who is an admin (G2.02, F-02)", async () => {
+    const admin = await makeAdmin();
+    const suspended = await makeAdmin("timing.suspended");
+    await adminDb.platformIdentity.update({ where: { id: suspended.id }, data: { status: "SUSPENDED" } });
+    const timed = async (email: string) => {
+      const started = performance.now();
+      await startPlatformSignIn(email, "not the password", CLIENT()).catch(() => null);
+      return performance.now() - started;
+    };
+    await timed(`warm.${randomUUID().slice(0, 6)}@platform.example.com`); // the first call also makes the decoy hash
+    const wrong = await timed(admin.email);
+    const unknown = await timed(`nobody.${randomUUID().slice(0, 6)}@platform.example.com`);
+    const inactive = await timed(suspended.email);
+    // bcrypt at cost 12 dominates a refused sign-in; without the decoy an unknown email answered in a few milliseconds.
+    expect(unknown).toBeGreaterThan(wrong * 0.5);
+    expect(inactive).toBeGreaterThan(wrong * 0.5);
+  });
+
   it("locks after the configured wrong attempts, even for the right password, and rate limits by address", async () => {
     const admin = await makeAdmin();
     await signedIn(admin);
@@ -408,6 +426,16 @@ describe("invitations and recovery", () => {
     expect((await audited("platform.admin_recovery_issued", a.identity.email)).length).toBe(1);
     expect((await audited("platform.admin_recovered", b.identity.email)).length).toBe(1);
     expect((await adminDb.platformIdentity.findUniqueOrThrow({ where: { id: b.identity.id } })).credentialsResetAt).not.toBeNull();
+  });
+
+  it("a recovery link lives 24 hours and an invitation seven days (G2.02, F-05)", async () => {
+    const a = await activeAdmin("a");
+    const b = await activeAdmin("b");
+    await withEmailedLink(() => issuePlatformRecoveryLink(a.ctx, b.identity.id));
+    const recovery = await adminDb.platformAdminInvite.findFirstOrThrow({ where: { email: b.identity.email, kind: "RECOVERY" }, orderBy: { createdAt: "desc" } });
+    const hours = (recovery.expiresAt.getTime() - Date.now()) / 3_600_000;
+    expect(hours).toBeGreaterThan(23.9);
+    expect(hours).toBeLessThanOrEqual(24);
   });
 
   it("only another active admin can issue a recovery link; a suspended issuer and self-recovery are refused", async () => {
