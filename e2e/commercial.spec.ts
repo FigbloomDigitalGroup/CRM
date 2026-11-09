@@ -2,15 +2,11 @@ import { expect as baseExpect, test, type Page } from "@playwright/test";
 import { apiPost, gotoAndSettle, loginAs, ORG_SLUG, uniqueSuffix } from "./helpers";
 
 /**
- * M10 commercial screens on demo data (FIG-1168 to FIG-1170, FIG-1174, FIG-1193, FIG-1194), per role, in a real browser.
- *
- * These screens exist only where demo screens are allowed and the organisation's release reaches V1.1 (the quote, approval and forecast permissions
- * are stripped before that). Build and start the app for this run with
- *   DEMO_SCREENS=true NEXT_PUBLIC_DEMO_SCREENS=true ACTIVE_RELEASE=v2
- * and set E2E_DEMO_SCREENS=true. Without it the suite is skipped, not failed: a plain V1 server must answer 404 for these pages.
+ * Commercial screens on the real API (FIG-1168 to FIG-1170, FIG-1174), per role, in a real browser. Q2.01 (FIG-1179): rewritten on 9 Nov 2026. M14 removed the
+ * demo-screens switch, so the suite needs only a server whose release reaches V1.1 (ACTIVE_RELEASE=v2, which playwright.config.ts sets); the quote,
+ * approval and forecast permissions are stripped before that. The V2 API-token editor and the demo signing page were dropped with the V2 screens.
  */
 const expect = baseExpect.configure({ timeout: 20_000 });
-const enabled = process.env.E2E_DEMO_SCREENS === "true";
 
 /**
  * The quote, approval, forecast and catalogue screens read the real API now, so these tests make the data they need through it (the catalogue starts
@@ -37,9 +33,7 @@ async function makeOpenDeal(page: Page, label: string): Promise<{ id: string; co
   return { id: (await res.json()).id as string, company };
 }
 
-test.describe("commercial screens on demo data", () => {
-  test.skip(!enabled, "needs DEMO_SCREENS, NEXT_PUBLIC_DEMO_SCREENS and ACTIVE_RELEASE=v2 on the server");
-
+test.describe("commercial screens on the real API", () => {
   test("Sales builds a quote, margin stays hidden, and a deep discount waits for Management who then decides it", async ({ page, browser }) => {
     // Set-up through the API: a catalogue item (Management) and an open deal owned by Sales with no quote yet.
     const manager = await browser.newPage();
@@ -101,13 +95,14 @@ test.describe("commercial screens on demo data", () => {
     await expect(page.getByText(theirs.company)).toBeVisible();
 
     // A target is saved on Enter (or when the field is left). Targets persist, so a rerun changes it to the other value.
-    const target = page.getByLabel("Target for Ruth Kibet");
+    const target = page.getByLabel(/^Target for /).first();
+    const who = ((await target.getAttribute("aria-label")) ?? "").replace(/^Target for /, "");
     const next = /^1800000/.test(await target.inputValue()) ? "1900000" : "1800000";
     await target.fill(next);
     await target.press("Enter");
-    await expect(page.getByText("Target saved for Ruth Kibet")).toBeVisible();
+    await expect(page.getByText(`Target saved for ${who}`)).toBeVisible();
     await gotoAndSettle(page, `/o/${ORG_SLUG}/forecast`);
-    await expect(page.getByLabel("Target for Ruth Kibet")).toHaveValue(new RegExp(`^${next}`));
+    await expect(page.getByLabel(`Target for ${who}`)).toHaveValue(new RegExp(`^${next}`));
     await page.getByRole("button", { name: "Table" }).click();
     await expect(page.getByRole("table", { name: "Expected closes by month" })).toBeVisible();
 
@@ -119,7 +114,7 @@ test.describe("commercial screens on demo data", () => {
     await expect(sales.getByLabel(/Target for/)).toHaveCount(0);
   });
 
-  test("settings editors explain the impact, block bad input and keep a token's secret to one viewing", async ({ page }) => {
+  test("settings editors explain the impact and block bad input", async ({ page }) => {
     await loginAs(page, "dev.management@figbloom.local");
     await gotoAndSettle(page, `/o/${ORG_SLUG}/settings?tab=catalogue`);
     // The catalogue starts empty on a fresh database: make sure the item the test edits exists, and change it to a price it does not have now.
@@ -134,40 +129,10 @@ test.describe("commercial screens on demo data", () => {
     await page.getByRole("button", { name: "Save changes" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Catalogue changed")).toBeVisible();
-
-    await gotoAndSettle(page, `/o/${ORG_SLUG}/settings?tab=developers`);
-    await page.getByRole("button", { name: /New token/ }).click();
-    await page.getByLabel("Name").fill("E2E token");
-    await page.getByLabel("deals:read").check();
-    await page.getByRole("button", { name: "Create token" }).click();
-    const secret = await page.getByTestId("secret-once").innerText();
-    expect(secret).toMatch(/^fbk_live_/);
-    await page.getByRole("button", { name: "I have saved it" }).click();
-    await expect(page.getByText(secret)).toHaveCount(0);
-  });
-
-  test("the public signing page works on a phone, in Swahili, without signing in", async ({ browser }) => {
-    const context = await browser.newContext({ viewport: { width: 375, height: 700 }, hasTouch: true });
-    const page = await context.newPage();
-    await page.goto("/sign/demo-unsigned");
-    await expect(page.getByRole("heading", { name: /Quote Q-2026-032/ })).toBeVisible();
-    await page.getByRole("button", { name: "SW" }).click();
-    await page.getByRole("checkbox").check();
-    await page.getByRole("button", { name: "Saini na ukubali" }).click();
-    await expect(page.getByText("Imesainiwa. Asante.")).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-
-    await page.goto("/sign/not-a-real-link");
-    // Next.js keeps an empty live region (role=alert) on every page, so ask for the one that carries the message.
-    await expect(page.getByRole("alert").filter({ hasText: "This link is not valid" })).toBeVisible();
-    await context.close();
   });
 });
 
-test("without demo screens enabled the client signing page (demo tokens) does not exist", async ({ page }) => {
-  test.skip(enabled, "only meaningful on a server without DEMO_SCREENS");
-  await loginAs(page, "dev.management@figbloom.local");
-  // Approvals is wired to the real API (M13) and no longer demo-only; only the signing page on demo tokens is still behind the switch.
+test("the client signing page is V2 and hidden: a link under /sign is a 404", async ({ page }) => {
   const sign = await page.goto("/sign/demo-unsigned");
   expect(sign?.status()).toBe(404);
 });
