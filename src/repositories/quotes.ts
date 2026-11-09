@@ -44,14 +44,20 @@ export function getVersionById(organizationId: string, versionId: string) {
 
 export function listQuotes(
   organizationId: string,
-  filter: { dealIds?: string[]; dealId?: string; status?: string },
+  /** `dealIds`: the deals the caller may open (undefined = all). `dealId`: the deal(s) asked for. Both given means the deals asked for that the caller may open. */
+  filter: { dealIds?: string[]; dealId?: string | string[]; status?: string },
   paging: { skip: number; take: number },
 ) {
+  const asked = filter.dealId === undefined ? undefined : Array.isArray(filter.dealId) ? filter.dealId : [filter.dealId];
+  let dealIds = filter.dealIds;
+  if (asked) {
+    const allowed = dealIds ? new Set(dealIds) : null;
+    dealIds = asked.filter((id) => !allowed || allowed.has(id));
+  }
   return withOrgContext(organizationId, async (tx) => {
     const where: Prisma.QuoteWhereInput = {
       organizationId,
-      ...(filter.dealId ? { dealId: filter.dealId } : {}),
-      ...(filter.dealIds ? { dealId: { in: filter.dealIds } } : {}),
+      ...(dealIds ? { dealId: { in: dealIds } } : {}),
     };
     // The status filter is on the latest version of each quote; the database picks those quotes, then pages them.
     if (filter.status) {

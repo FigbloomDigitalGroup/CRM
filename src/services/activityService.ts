@@ -4,7 +4,7 @@ import { requirePermission } from "../auth/context";
 import { adminDb } from "../db/adminClient";
 import {
   createActivity as createActivityRecord,
-  countActivities as countActivitiesRecord,
+  listActivitiesWithCount,
   listActivities as listActivitiesRecord,
   countActivitiesForTimeline as countActivitiesForTimelineRecord,
   listActivitiesForTimeline as listActivitiesForTimelineRecord,
@@ -64,14 +64,7 @@ export async function listActivitiesPage(
   await assertCanAccessLinkedRecords(ctx, ids);
   requirePermission(ctx, "activities.view");
   const paging = resolvePaging(request);
-  const [items, total] = await Promise.all([
-    listActivitiesRecord(ctx.organizationId, {
-      ...ids,
-      take: paging.take,
-      skip: paging.skip,
-    }),
-    countActivitiesRecord(ctx.organizationId, ids),
-  ]);
+  const { items, total } = await listActivitiesWithCount(ctx.organizationId, { ...ids, take: paging.take, skip: paging.skip });
   return buildPage(items, total, paging);
 }
 

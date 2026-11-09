@@ -39,6 +39,13 @@ export async function register() {
     const { enforceAppDatabaseUrl } = await import("./db/appRoleGuard");
     enforceAppDatabaseUrl();
 
+    // MVP-11: a production deployment with no way to send email would drop invites and resets without a sign. Loud, not fatal.
+    if (process.env.NODE_ENV === "production") {
+      const { emailConfigProblem } = await import("./auth/email");
+      const problem = emailConfigProblem();
+      if (problem) console.error(`[email] ERROR: ${problem}`);
+    }
+
     const { scrubSentryEvent } = await import("./lib/sentryScrub");
     Sentry.init({
       ...sharedOptions,

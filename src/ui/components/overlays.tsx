@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Children,
   cloneElement,
@@ -14,6 +15,11 @@ import {
   type ReactNode,
 } from "react";
 import { cx, Portal, useDismiss, useFocusTrap } from "../internal";
+
+/** A page of this app (soft navigation); anything else (api downloads, tel:, mailto:, external, protocol-relative) stays a plain anchor. */
+export function isInAppHref(href: string): boolean {
+  return href.startsWith("/") && !href.startsWith("//") && !href.startsWith("/api/");
+}
 
 /* Tooltip --------------------------------------------------------------------------------------------------------------------- */
 
@@ -201,10 +207,17 @@ export function Menu({
               <span key={item.key}>
                 {item.separatorBefore ? <hr /> : null}
                 {item.href && !blocked ? (
-                  <a {...common} href={item.href} onClick={select}>
-                    {item.icon}
-                    {item.label}
-                  </a>
+                  isInAppHref(item.href) ? (
+                    <Link {...common} href={item.href} onClick={select}>
+                      {item.icon}
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <a {...common} href={item.href} onClick={select}>
+                      {item.icon}
+                      {item.label}
+                    </a>
+                  )
                 ) : (
                   <button type="button" {...common} onClick={select}>
                     {item.icon}

@@ -157,6 +157,8 @@ export interface ListLeadsFilters {
   archivedOnly?: boolean;
   /** The shared pool (B2.02): leads with no owner, still open. */
   unassignedOnly?: boolean;
+  /** Leads not yet converted to a deal (convertedAt is null). */
+  openOnly?: boolean;
   /** `customField[key]=value` filters (FIG-803), built by `buildCustomFieldWhere`. */
   customFieldClauses?: JsonClause[];
   /** Records carrying any of these tags (FIG-798). */
@@ -206,6 +208,7 @@ function baseLeadsWhere(
     ...archivedWhere(filters),
     ...tagFilter(filters.tagIds),
     ...(filters.unassignedOnly ? { ownerMembershipId: null, convertedAt: null } : {}),
+    ...(filters.openOnly ? { convertedAt: null } : {}),
     ...(filters.createdAfter || filters.createdBefore
       ? {
           createdAt: {

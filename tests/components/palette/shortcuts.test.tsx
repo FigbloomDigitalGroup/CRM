@@ -116,9 +116,7 @@ describe("global keyboard shortcuts (X3, FIG-1172)", () => {
     expect(screen.getByText("Server shortcut")).toBeInTheDocument();
   });
 
-  it("is off in a production build unless demo screens are switched on", () => {
-    expect(toolsEnabled({ NODE_ENV: "production" })).toBe(false);
-    expect(toolsEnabled({ NODE_ENV: "production", NEXT_PUBLIC_DEMO_SCREENS: "true" })).toBe(true);
-    expect(toolsEnabled({ NODE_ENV: "development" })).toBe(true);
+  it("is on in every build (the V1.1 tools are wired; the server says when an organisation is not on V1.1)", () => {
+    expect(toolsEnabled()).toBe(true);
   });
 });

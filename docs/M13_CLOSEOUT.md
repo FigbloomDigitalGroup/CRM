@@ -7,6 +7,7 @@ Read-only review of branch `makeover/m13-backend-v11` at commit `bbdc883`, done 
 How scheduled work is registered today:
 
 - Job types are registered in code by `registerJob` (`src/jobs/definitions.ts`, plus `src/jobs/integrationJobs.ts`, imported from `definitions.ts`). The runner loads them on first use, so the worker and the cron route see the same list.
+- **Update 9 Nov 2026 (MVP on Vercel):** `vercel.json` now holds the three cron entries (`/api/cron/jobs` every 5 minutes, `/api/cron/notifications-sweep` every 30 minutes, `/api/cron/platform-maintenance` daily); the scheduler items below are **resolved in the repository** and become live once the project is on a Vercel Pro plan with `CRON_SECRET` set (`docs/VERCEL_SETUP.md`). The MISSING rows below describe the state before this change.
 - Something outside the code must call the job runner. The repo has **no `vercel.json`, no scheduled GitHub workflow** (`.github/workflows/ci.yml` has no `schedule:`), and `docs/DEPLOYMENT.md` (lines 150 to 178) documents a cron entry **only for `/api/cron/notifications-sweep`**. `/api/cron/jobs` is described in `docs/JOBS.md:15` and `docs/API_REFERENCE.md:2557` but not in the deployment guide. `npm run jobs:worker` (`scripts/jobs-worker.ts`) is the alternative long-running scheduler.
 - The platform's own work belongs to no organisation, so it is a cron route, not a job (`src/app/api/cron/platform-maintenance/route.ts`).
 

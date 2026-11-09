@@ -113,7 +113,7 @@ STAGING_URL=http://localhost:33000 npx tsx scripts/staging-smoke.ts
 $C down                                            # stop (add -v to wipe the data)
 ```
 
-UAT sign-ins (password is `STAGING_UAT_PASSWORD`): `uat-management@`, `uat-sales@`, `uat-delivery@`, `uat-finance@`, `uat-restricted-technical@`, `uat-customer-support@` `staging.example.com`, organisation slug `figbloom`.
+UAT sign-ins (password is `STAGING_UAT_PASSWORD`): `uat-management@`, `uat-sales@`, `uat-delivery@`, `uat-finance@`, `uat-restricted-technical@` `staging.example.com`, organisation slug `figbloom`.
 
 Notes from the first live run (4 Nov 2026):
 

@@ -64,14 +64,17 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
   const caps = useLeadCaps();
   const refresh = useRefreshLeads();
 
+  // The lead and everything beside it (qualification, score, tasks, history) are asked for at the same time, not one stage after the other. Every one of
+  // those endpoints checks the caller on its own, so a missing or forbidden lead just answers each with an error nothing on this page draws. Only the
+  // deals list waits, because it needs the lead's company.
   const leadQ = useApiQuery("getLeadsByLeadId", { params: { orgSlug, leadId } });
-  const qualQ = useApiQuery("getLeadsByLeadIdQualification", { params: { orgSlug, leadId } }, { enabled: leadQ.isSuccess });
+  const qualQ = useApiQuery("getLeadsByLeadIdQualification", { params: { orgSlug, leadId } });
   const lead = leadQ.data as (LeadDetail & { lostReason?: { name: string } | null; leadSource?: { id: string; key: string; name: string } | null; archiveReason?: string | null }) | undefined;
   const qual = qualQ.data as unknown as Qualification | undefined;
-  const tasksQ = useApiQuery("getTasks", { params: { orgSlug }, query: { leadId } }, { enabled: leadQ.isSuccess && can("tasks.view.own") || can("tasks.view.all") });
-  const activitiesQ = useApiQuery("getActivities", { params: { orgSlug }, query: { leadId, pageSize: "50" } as never }, { enabled: leadQ.isSuccess && can("activities.view") });
-  const auditQ = useApiQuery("getAudit", { params: { orgSlug }, query: { entityType: "Lead", entityId: leadId } as never }, { enabled: leadQ.isSuccess && can("audit.view") });
-  const scoreQ = useApiQuery("getLeadsByLeadIdScore", { params: { orgSlug, leadId } }, { enabled: leadQ.isSuccess });
+  const tasksQ = useApiQuery("getTasks", { params: { orgSlug }, query: { leadId } }, { enabled: can("tasks.view.own") || can("tasks.view.all") });
+  const activitiesQ = useApiQuery("getActivities", { params: { orgSlug }, query: { leadId, pageSize: "50" } as never }, { enabled: can("activities.view") });
+  const auditQ = useApiQuery("getAudit", { params: { orgSlug }, query: { entityType: "Lead", entityId: leadId } as never }, { enabled: can("audit.view") });
+  const scoreQ = useApiQuery("getLeadsByLeadIdScore", { params: { orgSlug, leadId } });
   const dealsQ = useApiQuery("getDeals", { params: { orgSlug }, query: { companyId: lead?.companyId ?? undefined, pageSize: "10" } }, { enabled: Boolean(lead?.companyId) && (can("deals.view.all") || can("deals.view.own") || can("deals.view.won")) });
 
   const [edit, setEdit] = useState(false);

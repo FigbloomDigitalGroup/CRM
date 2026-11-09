@@ -9,6 +9,13 @@ import { gotoAndSettle, loginAs, ORG_SLUG } from "./helpers";
 
 const BASE = `/o/${ORG_SLUG}`;
 
+// The upload is checked by its content now, not its name: a file that is not really a JPEG is refused ("The content of the file does not match its declared type").
+// This is a genuine 1x1 JPEG. With no vision model connected the app still opens the form with its "Check the fields before saving" line, which is what this test needs.
+const TINY_JPEG = Buffer.from(
+  "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
+  "base64",
+);
+
 // These screens exist only on demo data, so a production build (what CI runs) answers 404 for them. They run against a server built and started
 // with DEMO_SCREENS=true NEXT_PUBLIC_DEMO_SCREENS=true ACTIVE_RELEASE=v2 and E2E_DEMO_SCREENS=true; otherwise they are skipped, not failed.
 const demoServer = process.env.E2E_DEMO_SCREENS === "true";
@@ -25,7 +32,8 @@ test.describe("command palette, help and shortcuts (X3)", () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole("option", { name: /New lead/ })).toBeVisible();
     await expect(dialog.getByRole("option", { name: /Go to Settings/ })).toHaveCount(0);
-    await page.getByRole("combobox").fill("go to tasks");
+    // The top bar has its own search combobox, so the palette's input is the one inside the dialog.
+    await dialog.getByRole("combobox").fill("go to tasks");
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(new RegExp(`${BASE}/tasks`));
   });
@@ -36,7 +44,8 @@ test.describe("command palette, help and shortcuts (X3)", () => {
     await page.keyboard.press("g");
     await page.keyboard.press("l");
     await expect(page).toHaveURL(new RegExp(`${BASE}/leads`));
-    await page.keyboard.press("Shift+/");
+    // A person pressing ? sends the key "?". ("Shift+/" would send "/", which is the top bar search shortcut.)
+    await page.keyboard.press("?");
     await expect(page.getByRole("complementary", { name: "Help" })).toContainText("Help · Leads");
     await page.keyboard.press("Escape");
     await expect(page.getByRole("complementary", { name: "Help" })).toHaveCount(0);
@@ -78,16 +87,18 @@ test.describe("Ask Figbloom (X2)", () => {
 
 test.describe("saved views (X4)", () => {
   test("save a view, pin it, and it appears in the sidebar and applies from there", async ({ page }) => {
+    // Views are stored through the real API now, so a fixed name would clash with the one a previous run saved.
+    const viewName = `My hot ones ${Date.now()}`;
     await loginAs(page, "dev.sales@figbloom.local");
     await gotoAndSettle(page, `${BASE}/leads`);
     await page.getByRole("button", { name: "Save as view" }).click();
-    await page.getByLabel("Name for this view").fill("My hot ones");
+    await page.getByLabel("Name for this view").fill(viewName);
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await page.getByRole("button", { name: "Manage views" }).click();
     const dialog = page.getByRole("dialog", { name: "Manage views" });
-    await dialog.getByRole("listitem").filter({ hasText: "My hot ones" }).getByRole("button", { name: "Pin to sidebar" }).click();
+    await dialog.getByRole("listitem").filter({ hasText: viewName }).getByRole("button", { name: "Pin to sidebar" }).click();
     await dialog.getByRole("button", { name: "Done" }).click();
-    await expect(page.getByTestId("sidebar-saved-views").getByRole("link", { name: "My hot ones" })).toBeVisible();
+    await expect(page.getByTestId("sidebar-saved-views").getByRole("link", { name: viewName })).toBeVisible();
   });
 });
 
@@ -97,9 +108,17 @@ test.describe("own colours (AP4)", () => {
     await gotoAndSettle(page, `${BASE}/preferences?tab=appearance`);
     const section = page.getByTestId("prefs-own-colours");
     await section.locator("#own-page-hex").fill("#777777");
-    await expect(section.getByRole("alert")).toContainText("Too close to mid-grey");
+    // A grey page also leaves the accent and highlight unreadable against it, so each field has its own alert: check the page colour's.
+    const pageNote = section.locator("#own-page-note");
+    await expect(pageNote).toContainText("Too close to mid-grey");
     await expect(section.getByRole("button", { name: "Save my colours" })).toHaveAttribute("aria-disabled", "true");
-    await section.getByRole("button", { name: /^Use #/ }).first().click();
+    await pageNote.getByRole("button", { name: /^Use #/ }).click();
+    // The fix is applied: the page colour no longer carries a warning.
+    await expect(pageNote).toHaveCount(0);
+    // The grey page made the other two colours unreadable against it as well, and each of them offers its own fix. Saving is allowed once all are applied.
+    const fixes = section.getByRole("button", { name: /^Use #/ });
+    for (let guard = 0; guard < 4 && (await fixes.count()) > 0; guard++) await fixes.first().click();
+    await expect(fixes).toHaveCount(0);
     await expect(section.getByRole("button", { name: "Save my colours" })).not.toHaveAttribute("aria-disabled", "true");
   });
 });
@@ -129,7 +148,7 @@ test.describe("mobile capture (M4)", () => {
     await loginAs(page, "dev.sales@figbloom.local");
     await gotoAndSettle(page, `${BASE}/m`);
     await page.getByRole("button", { name: "Quick capture" }).click();
-    await page.getByLabel("Photograph a business card").setInputFiles({ name: "card.jpg", mimeType: "image/jpeg", buffer: Buffer.from("x") });
+    await page.getByLabel("Photograph a business card").setInputFiles({ name: "card.jpg", mimeType: "image/jpeg", buffer: TINY_JPEG });
     await expect(page.getByTestId("scan-banner")).toContainText("Check the fields before saving");
     await expect(page.getByRole("button", { name: "Save lead" })).toBeVisible();
   });

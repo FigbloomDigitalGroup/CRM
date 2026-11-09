@@ -10,7 +10,7 @@ import { PlatformMobile } from "../../../src/ui/screens/platform/Mobile";
 import { OrgDetail } from "../../../src/ui/screens/platform/OrgDetail";
 import { Organisations } from "../../../src/ui/screens/platform/Organisations";
 import { ProvisionWizard } from "../../../src/ui/screens/platform/Provision";
-import { VerifyPage } from "../../../src/ui/screens/platform/Verify";
+import { PlatformSignInPage, VerifyPage } from "../../../src/ui/screens/platform/SignIn";
 import { ApiError, fixtures, makeCall, renderConsole } from "./fakePlatform";
 
 const push = vi.fn();
@@ -310,19 +310,77 @@ describe("Platform admins and security (PL10, PL11, PL14)", () => {
   });
 });
 
-describe("Verify it’s you page (PL14)", () => {
-  it("takes a backup code instead, and shows the lock after too many wrong codes", async () => {
+describe("Platform sign-in and Verify it’s you (PL14, the real routes)", () => {
+  it("the password step posts to the platform sign-in route, says one thing for every failure, and goes on to verify", async () => {
     const user = userEvent.setup();
-    render(<VerifyPage next="/login" />);
-    await user.click(screen.getByRole("button", { name: "Use a backup code" }));
-    expect(screen.getByLabelText("Backup code")).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Use my authenticator code" }));
-    for (let i = 0; i < 5; i++) {
-      await user.type(screen.getByLabelText("Authenticator code"), "000000");
-      await user.click(screen.getByRole("button", { name: "Verify" }));
-      if (i < 4) await user.clear(screen.getByLabelText("Authenticator code"));
-    }
-    expect(await screen.findByText(/Platform sign-in is locked for 30 minutes/)).toBeTruthy();
+    const calls: [string, string, unknown][] = [];
+    let fail = true;
+    const call = (async (m: string, p: string, b?: unknown) => {
+      calls.push([m, p, b]);
+      if (fail) throw Object.assign(new Error("no"), { status: 401 });
+      return { twoStepRequired: true, purpose: "VERIFY" };
+    }) as never;
+    const onDone = vi.fn();
+    render(<PlatformSignInPage call={call} onDone={onDone} />);
+    await user.click(screen.getByRole("button", { name: /Continue/ }));
+    expect(screen.getByRole("alert").textContent).toMatch(/Enter your email and password/);
+    await user.type(screen.getByLabelText("Email"), "admin@figbloom.example");
+    await user.type(screen.getByLabelText("Password"), "wrong");
+    await user.click(screen.getByRole("button", { name: /Continue/ }));
+    expect(await screen.findByText(/did not match, or the account is locked/)).toBeTruthy();
+    expect(onDone).not.toHaveBeenCalled();
+    fail = false;
+    await user.click(screen.getByRole("button", { name: /Continue/ }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(calls.at(-1)).toEqual(["POST", "/api/platform/auth/sign-in", { email: "admin@figbloom.example", password: "wrong" }]);
+  });
+
+  it("verify: an authenticator or backup code goes to the verify route and lands on the console", async () => {
+    const user = userEvent.setup();
+    const calls: [string, string, unknown][] = [];
+    const call = (async (m: string, p: string, b?: unknown) => {
+      calls.push([m, p, b]);
+      if (p.endsWith("/challenge")) return { purpose: "VERIFY" };
+      if (b && (b as { code: string }).code === "000000") throw Object.assign(new Error("no"), { status: 401 });
+      return { landing: "/platform" };
+    }) as never;
+    const onDone = vi.fn();
+    render(<VerifyPage call={call} onDone={onDone} />);
+    await user.type(await screen.findByLabelText(/Authenticator or backup code/), "000 000");
+    await user.click(screen.getByRole("button", { name: /Verify/ }));
+    expect(await screen.findByText(/That code did not work/)).toBeTruthy();
+    await user.clear(screen.getByLabelText(/Authenticator or backup code/));
+    await user.type(screen.getByLabelText(/Authenticator or backup code/), "123456");
+    await user.click(screen.getByRole("button", { name: /Verify/ }));
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith("/platform"));
+    expect(calls.at(-1)).toEqual(["POST", "/api/platform/auth/two-step/verify", { code: "123456" }]);
+    expect(document.body.textContent).not.toMatch(/dev chip|PROPOSED ADDITION|Dev Super Admin/i);
+  });
+
+  it("first sign-in sets two-step up, shows the backup codes once, then opens the console", async () => {
+    const user = userEvent.setup();
+    const call = (async (_m: string, p: string) => {
+      if (p.endsWith("/challenge")) return { purpose: "ENROL" };
+      if (p.endsWith("/enrol/start")) return { secret: "JBSWY3DPEHPK3PXP", otpauthUri: "otpauth://totp/x" };
+      return { landing: "/platform", backupCodes: ["AAAA-1111", "BBBB-2222"] };
+    }) as never;
+    const onDone = vi.fn();
+    render(<VerifyPage call={call} onDone={onDone} />);
+    expect(await screen.findByText(/JBSWY3DPEHPK3PXP/)).toBeTruthy();
+    await user.type(screen.getByLabelText(/Authenticator code/), "123456");
+    await user.click(screen.getByRole("button", { name: /Turn on and sign in/ }));
+    expect(await screen.findByText("AAAA-1111")).toBeTruthy();
+    expect(onDone).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: /open the console/ }));
+    expect(onDone).toHaveBeenCalledWith("/platform");
+  });
+
+  it("an expired or missing pending sign-in says so and links back to the password step", async () => {
+    const call = (async () => {
+      throw Object.assign(new Error("no"), { status: 401 });
+    }) as never;
+    render(<VerifyPage call={call} />);
+    expect(await screen.findByRole("link", { name: /Back to sign-in/ })).toHaveProperty("href", expect.stringContaining("/platform/sign-in"));
   });
 });
 

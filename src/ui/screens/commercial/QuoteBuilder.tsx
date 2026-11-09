@@ -4,7 +4,7 @@ import { ArrowLeft, Clock, Copy, FileText, Send, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { ApiRequestError } from "@/api-client";
-import { Banner, Button, EmptyState, IconButton, Input, LoadingState, NoAccess, ReleaseTag, Select, Textarea, useApiQuery, useMember, useToast } from "@/ui";
+import { AsyncSelect, Banner, Button, EmptyState, IconButton, Input, LoadingState, NoAccess, ReleaseTag, Textarea, useApiQuery, useMember, useToast } from "@/ui";
 import { QueryFailure } from "../../featureUnavailable";
 import {
   STATUS_LABEL,
@@ -14,7 +14,7 @@ import {
   historyOf,
   kes,
   useApplyToDeal,
-  useCatalogue,
+  useCatalogueSearch,
   useCreateQuote,
   useDealQuote,
   useNewVersion,
@@ -137,7 +137,8 @@ function Builder({ deal, quoteId, number, current }: { deal: DealView; quoteId: 
 
   const versionQ = useQuoteVersion(orgSlug, quoteId, current);
   const quoteQ = useDealQuote(orgSlug, deal.id);
-  const catalogue = useCatalogue(orgSlug, mayBuild);
+  const [catalogueText, setCatalogueText] = useState("");
+  const catalogue = useCatalogueSearch(orgSlug, catalogueText, mayBuild);
   const activity = useQuoteActivity(orgSlug, quoteId, current);
   const save = useSaveVersion();
   const newVersion = useNewVersion();
@@ -325,14 +326,17 @@ function Builder({ deal, quoteId, number, current }: { deal: DealView; quoteId: 
                 )}
                 {canEdit ? (
                   <div className="fb-com-add">
-                    <Select
+                    <AsyncSelect
                       key={picked}
                       label="Add a catalogue item"
-                      value=""
+                      value={null}
                       placeholder="+ Add from catalogue…"
+                      emptyText="No catalogue item matches"
+                      loading={catalogue.isFetching}
+                      onSearch={setCatalogueText}
                       options={catItems.map((c) => ({ value: c.id, label: `${c.name} · ${kes(c.price, c.currency)}` }))}
-                      onChange={(e) => {
-                        const item = catItems.find((c) => c.id === e.target.value);
+                      onChange={(id) => {
+                        const item = catItems.find((c) => c.id === id);
                         if (!item) return;
                         const has = rows.find((x) => x.catalogueItemId === item.id && !x.lineId);
                         edit({

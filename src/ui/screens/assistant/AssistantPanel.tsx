@@ -133,7 +133,7 @@ export function AssistantPanel({ open, onClose, enabled, ctx, respond, onConfirm
           {settingsHref ? (
             <>
               {" "}
-              A Management member can turn it on in <a href={settingsHref}>Settings, AI assistant</a>.
+              A Management member can turn it on in <Link href={settingsHref}>Settings, AI assistant</Link>.
             </>
           ) : (
             " A Management member can turn it on in Settings, AI assistant."

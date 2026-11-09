@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { apiPost, loginAs, ORG_SLUG, uniqueSuffix } from "./helpers";
 
 /**
  * M10, F6.20 to F6.23 (FIG-1378 to FIG-1381): the Communication dropdown, Chat, Mail and Video Conference on demo data. Needs the demo-screens
@@ -10,10 +11,9 @@ test.beforeEach(() => {
   test.skip(!demoServer, "needs a demo-screens server (DEMO_SCREENS, NEXT_PUBLIC_DEMO_SCREENS, ACTIVE_RELEASE=v2)");
 });
 
+/** Signs in through the real /login. The dev sign-in chips are not built into the e2e server (only `npm run preview` has them), so clicking one would wait forever. */
 async function signInAs(page: Page, email: string) {
-  await page.goto("/login");
-  await page.getByRole("button", { name: new RegExp(email.split("@")[0]!.replace("dev.", ""), "i") }).first().click();
-  await page.waitForURL(/\/o\//);
+  await loginAs(page, email);
 }
 
 const orgPath = (page: Page, path: string) => page.url().replace(/\/o\/([^/]+).*/, `/o/$1${path}`);
@@ -44,31 +44,64 @@ test.describe("Communication dropdown (F6.20)", () => {
   });
 });
 
+/** Opens a channel by name and waits until it is the open one (a click before the page has hydrated is lost, so it is retried). */
+async function openChannel(page: Page, name: RegExp) {
+  const channel = page.getByRole("button", { name });
+  await expect(async () => {
+    await channel.first().click();
+    await expect(channel.first()).toHaveAttribute("aria-current", "true", { timeout: 1000 });
+  }).toPass();
+}
+
 test.describe("Chat (F6.21)", () => {
   test("posts a message, and a payment on a shared deal is masked for Sales but shown to Finance", async ({ page }) => {
+    // The chat reads the real API: a deal, its invoice and the shared card are made through it. The amounts are distinct so each can be told apart on the page.
+    const suffix = uniqueSuffix();
+    const company = `E2E Chat Co ${suffix}`;
+    const amount = 137_000;
+    // Chat keeps its messages, so the greeting is unique per run.
+    const greeting = `Morning everyone ${suffix}`;
+    await signInAs(page, "dev.sales@figbloom.local");
+    const { company: made } = await (await apiPost(page, `/api/orgs/${ORG_SLUG}/companies`, { name: company, email: `e2e-${suffix}@example.com` })).json();
+    const ref = await (await page.request.get(`/api/orgs/${ORG_SLUG}/reference-data`)).json();
+    const stage = (key: string) => ref.pipelineStages.find((x: { key: string }) => x.key === key).id as string;
+    const deal = await (await apiPost(page, `/api/orgs/${ORG_SLUG}/deals`, { companyId: made.id, pipelineStageId: stage("NEGOTIATION"), value: 120_000, currency: "KES" })).json();
+    const origin = new URL(page.url()).origin;
+    const won = await page.request.patch(`/api/orgs/${ORG_SLUG}/deals/${deal.id}`, { data: { pipelineStageId: stage("CLOSED_WON"), handoff: { ownerLater: true } }, headers: { origin } });
+    expect(won.ok(), await won.text()).toBe(true);
+
+    // Finance raises the invoice that makes a payment due on it.
+    await page.context().clearCookies();
+    await signInAs(page, "dev.finance@figbloom.local");
+    const day = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+    const invoice = await apiPost(page, `/api/orgs/${ORG_SLUG}/invoices`, { number: `E2E-${suffix}`.toUpperCase(), amount, issuedOn: day(-40), dueOn: day(10), dealId: deal.id, sent: true });
+    expect(invoice.ok(), await invoice.text()).toBe(true);
+
+    // Sales posts in #general, then shares the deal as a card there.
+    await page.context().clearCookies();
     await signInAs(page, "dev.sales@figbloom.local");
     await page.goto(orgPath(page, "/chat"));
-    await page.getByRole("textbox", { name: "Message #general" }).fill("Morning everyone");
+    await openChannel(page, /^general/);
+    await page.getByRole("textbox", { name: "Message #general" }).fill(greeting);
     await page.getByRole("button", { name: "Send" }).click();
-    await expect(page.getByRole("log", { name: "Messages" }).getByText("Morning everyone")).toBeVisible();
-    const deal = page.getByRole("button", { name: /Kisumu Greens website/ });
-    await expect(async () => {
-      await deal.click();
-      await expect(deal).toHaveAttribute("aria-current", "true", { timeout: 1000 });
-    }).toPass();
-    await expect(page.getByText("Payment due")).toBeVisible();
-    await expect(page.getByText(/120,000/)).toHaveCount(0);
+    await expect(page.getByRole("log", { name: "Messages" }).getByText(greeting)).toBeVisible();
+    const channels = await (await page.request.get(`/api/orgs/${ORG_SLUG}/chat/channels`)).json();
+    const general = (channels.items ?? channels).find((c: { name: string | null }) => c.name === "general");
+    const shared = await apiPost(page, `/api/orgs/${ORG_SLUG}/chat/channels/${general.id}/messages`, { body: `Deal for ${company}`, card: { type: "DEAL", id: deal.id } });
+    expect(shared.ok(), await shared.text()).toBe(true);
+
+    await page.goto(orgPath(page, "/chat"));
+    await openChannel(page, /^general/);
+    // #general keeps the cards earlier runs shared, so look only at this run's card: the nearest block around its company link that has a "Payment due" row.
+    const card = () => page.getByRole("link", { name: company }).locator("xpath=ancestor::*[.//dt[normalize-space()='Payment due']][1]");
+    await expect(card()).toContainText("Payment due");
+    await expect(card()).not.toContainText(/137,000/);
 
     await page.context().clearCookies();
     await signInAs(page, "dev.finance@figbloom.local");
     await page.goto(orgPath(page, "/chat"));
-    // A click before the page has hydrated is lost, so retry it until the channel is the open one.
-    const channel = page.getByRole("button", { name: /Kisumu Greens website/ });
-    await expect(async () => {
-      await channel.click();
-      await expect(channel).toHaveAttribute("aria-current", "true", { timeout: 1000 });
-    }).toPass();
-    await expect(page.getByText(/120,000/)).toBeVisible();
+    await openChannel(page, /^general/);
+    await expect(card()).toContainText(/137,000/);
   });
 
   test("Restricted Technical sees only the channels it was added to", async ({ page }) => {

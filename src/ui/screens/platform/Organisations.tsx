@@ -7,7 +7,7 @@ import { dateShort, PageHead, SliceGate, StatusPill } from "./kit";
 import { filterOrgs, type OrgSort } from "./logic";
 import { usePlatform } from "./store";
 
-const HEAD = ["NAME", "SLUG", "STATUS", "MEMBERS", "COMPANIES", "LEADS", "DEALS", "CREATED", "FLAGS (V2)"];
+const HEAD = ["NAME", "SLUG", "STATUS", "MEMBERS", "COMPANIES", "LEADS", "DEALS", "CREATED"];
 
 /** PL2 Organisations: each organisation is a separate tenant; counts only, no business data (GET /api/platform/organizations). */
 export function Organisations() {
@@ -64,7 +64,6 @@ export function Organisations() {
                     <td>{o.leads}</td>
                     <td>{o.deals}</td>
                     <td className="fb-pl-muted2">{dateShort(o.created)}</td>
-                    <td className="fb-pl-muted2">{state.release === "v2" ? `${o.flags.assistant ? "Assistant on" : "Assistant off"} · ${o.flags.seats} seats` : "—"}</td>
                   </tr>
                 ))}
               </tbody>

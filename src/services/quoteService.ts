@@ -452,6 +452,19 @@ export async function getQuoteVersion(ctx: AuthContext, quoteId: string, version
   return presentVersion(ctx, deal, row, await loadApprovalRules(ctx.organizationId), now);
 }
 
+const MAX_DEAL_IDS_FILTER = 100;
+
+/** `dealId` as one id or a comma-separated list (at most 100). Undefined when the filter is absent or empty. */
+function parseDealIdFilter(value: string | undefined): string[] | undefined {
+  if (value === undefined) return undefined;
+  const ids = [...new Set(value.split(",").map((id) => id.trim()).filter(Boolean))];
+  if (ids.length === 0) return undefined;
+  if (ids.length > MAX_DEAL_IDS_FILTER) {
+    throw new ValidationError("dealId lists too many deals.", [{ path: "dealId", message: `Ask for at most ${MAX_DEAL_IDS_FILTER} deals at a time.` }]);
+  }
+  return ids;
+}
+
 /** Quotes on the deals the caller can open, newest change first, each with its latest version summary. */
 export async function listQuotesPage(ctx: AuthContext, filters: { dealId?: string; status?: string } = {}, request: PageRequest = {}, now = new Date()) {
   await requireFeature(ctx.organizationId, "quotes.enabled");
@@ -460,12 +473,15 @@ export async function listQuotesPage(ctx: AuthContext, filters: { dealId?: strin
     throw new ValidationError("status is not a quote status.", [{ path: "status", message: "Use DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, SENT, ACCEPTED or DECLINED." }]);
   }
   const paging = resolvePaging(request);
+  // `dealId` is one deal id or several separated by commas (the Quotes list asks for the quotes of the deals on its page in one request).
+  const asked = parseDealIdFilter(filters.dealId);
   let dealIds: string[] | undefined;
   if (!hasPermission(ctx, "deals.view.all")) {
     if (!hasPermission(ctx, "deals.view.own")) throw deny(ctx, "deals.view", ["deals.view.own", "deals.view.all"]);
-    dealIds = (await adminDb.deal.findMany({ where: { organizationId: ctx.organizationId, ownerMembershipId: ctx.membershipId }, select: { id: true } })).map((d) => d.id);
+    // A deal asked for that the caller cannot open drops out here (the answer is an empty list, never another person's quote).
+    dealIds = (await adminDb.deal.findMany({ where: { organizationId: ctx.organizationId, ownerMembershipId: ctx.membershipId, ...(asked ? { id: { in: asked } } : {}) }, select: { id: true } })).map((d) => d.id);
   }
-  const { rows, total } = await listQuotes(ctx.organizationId, { dealIds, dealId: filters.dealId, status: filters.status }, paging);
+  const { rows, total } = await listQuotes(ctx.organizationId, { dealIds, dealId: asked, status: filters.status }, paging);
   const deals = await adminDb.deal.findMany({ where: { organizationId: ctx.organizationId, id: { in: rows.map((q) => q.dealId) } }, select: { id: true, ownerMembershipId: true, company: { select: { name: true } } } });
   const dealById = new Map(deals.map((d) => [d.id, d]));
   const items = rows.map((q) => {

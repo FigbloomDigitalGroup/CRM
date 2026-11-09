@@ -47,7 +47,7 @@ Needs Michael's Resend API key. Steps, variables and the check list are in `docs
 
 - No ticket list, status or thread in the CRM, no satisfaction survey, no inbound reply handling: the platform console owns the ticket. If the console wants replies to appear in the CRM, that is a new decision.
 - A member who prefers plain email can write to the support address directly; nothing here stops that. (Showing that address inside the app needs `SUPPORT_INBOX_EMAIL` exposed to the browser; not done, ask if wanted.)
-- The existing system emails (password reset, invites, notifications) still go through SMTP (`SMTP_*`). Resend offers an SMTP relay, so they can use it by setting `SMTP_HOST=smtp.resend.com`, `SMTP_USER=resend`, `SMTP_PASS=<the key>` with no code change. Moving them to the Resend API instead is a separate piece of work.
+- The system emails (password reset, invites, notifications, platform admin links, quotes) now use the same Resend key (MVP-11, 9 Nov 2026): `src/auth/email.ts` sends through SMTP when `SMTP_HOST` is set (it wins), otherwise through the Resend API when `RESEND_API_KEY` is set, with the sender from `EMAIL_FROM` (else `SMTP_FROM`) on a domain verified in Resend. In production with neither, the app logs an ERROR at boot, `/api/health` reports `email.status: "misconfigured"`, and no link is ever logged. In production a missing support configuration also logs an error and answers the member with a 503 "not set up".
 
 ## Tests
 

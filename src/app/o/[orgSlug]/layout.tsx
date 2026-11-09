@@ -14,8 +14,6 @@ import { defaultLook, type LookInput } from "@/ui/theme/resolve";
 import { NotificationBell } from "@/ui/screens/home/Notifications";
 import { GlobalSearch } from "@/ui/screens/home/Search";
 import { ApiProvider } from "@/ui/data/hooks";
-import { demoScreensEnabled } from "@/ui/demo/enabled";
-import { OrgBanners } from "@/ui/screens/orgside/OrgBanners";
 import { OrgSwitcher } from "@/ui/screens/orgside/OrgSwitcher";
 import { SuspendedScreen } from "@/ui/screens/orgside/SuspendedScreen";
 
@@ -67,26 +65,10 @@ export default async function OrgLayout({
     );
   }
 
-  // OS1 (FIG-1166): a suspended organisation gets the paused screen instead of the shell, whatever page was asked for. Demo cookie until B6.05.
-  const demoScreens = demoScreensEnabled();
-  const demoCookies = await cookies();
-  // Banners and the organisation switcher are opt-in demo states (a platform announcement), so the
-  // default shell is the design's single-organisation one. Switch on with `document.cookie = "fb_demo_banners=1; path=/"` .
-  const demoBanners = demoScreens && demoCookies.get("fb_demo_banners")?.value === "1";
   // The switcher is real (FIG-1133): shown to anyone who belongs to more than one organisation.
   const multiOrg = me.organisations.length > 1;
-  if (demoScreens && demoCookies.get("fb_demo_suspended")?.value === "1") {
-    return (
-      <ThemeProvider initialLook={defaultLook()} initialDensity={me.preferences?.density}>
-        <NoFlashScript />
-        <ApiProvider>
-          <SuspendedScreen organisation={me.organisation?.shownName ?? me.organisation?.name ?? ""} demo />
-        </ApiProvider>
-      </ThemeProvider>
-    );
-  }
 
-  const navInput = { permissionKeys: ctx.permissionKeys, membershipId: ctx.membershipId, demoScreens, hidden: me.preferences?.sidebar.hidden ?? [] };
+  const navInput = { permissionKeys: ctx.permissionKeys, membershipId: ctx.membershipId, hidden: me.preferences?.sidebar.hidden ?? [] };
   const look: LookInput = me.look
     ? { locked: me.look.locked, toggle: me.look.toggle, colours: me.look.colours }
     : defaultLook();
@@ -143,7 +125,6 @@ export default async function OrgLayout({
         search={<GlobalSearch />}
         bell={<NotificationBell />}
         organisationSwitcher={multiOrg ? <OrgSwitcher /> : undefined}
-        banners={demoBanners ? <OrgBanners /> : undefined}
         identity={{
           name: me.user.name,
           email: me.user.email,

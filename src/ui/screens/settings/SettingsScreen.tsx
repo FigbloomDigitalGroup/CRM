@@ -10,10 +10,10 @@ import { AuditLog } from "./AuditLog";
 import { Plug as ConnectIcon, Sparkles as AiIcon } from "lucide-react";
 import { AiAssistantSettings } from "../assistant/settings/AiAssistantSettings";
 import { Connections } from "../assistant/settings/Connections";
-import { Eye as SupportEyeIcon, FileDown as DataRequestsIcon, KeyRound as TwoStepIcon } from "lucide-react";
-import { DataRequests, SupportHistory, TwoStepSettings } from "../orgside/SettingsTabs";
-import { BookOpen as CatalogueIcon, GitBranch as PipelineIcon, ListOrdered as SequenceIcon, FormInput as WebFormIcon, ShieldCheck as RulesIcon, UserCog as RolesIcon, Code2 as DevIcon } from "lucide-react";
-import { ApprovalRulesSection, CatalogueSection, DevelopersSection, PipelinesSection, RolesSection, SequencesSection, WebFormsSection } from "../settingsplus";
+import { FileDown as DataRequestsIcon, KeyRound as TwoStepIcon } from "lucide-react";
+import { DataRequests, TwoStepSettings } from "../orgside/SettingsTabs";
+import { BookOpen as CatalogueIcon, GitBranch as PipelineIcon, ListOrdered as SequenceIcon, FormInput as WebFormIcon, ShieldCheck as RulesIcon } from "lucide-react";
+import { ApprovalRulesSection, CatalogueSection, PipelinesSection, SequencesSection, WebFormsSection } from "../settingsplus";
 import { Automations } from "./Automations";
 import { Integrations } from "./Integrations";
 import { InboundEmail, WebsiteIntegration } from "./Website";
@@ -53,21 +53,18 @@ export const SETTINGS_TABS: TabDef[] = [
   { id: "security", label: "Security & access", icon: <Shield size={ICON} aria-hidden="true" />, render: (m) => <SecurityAccess matrix={m} /> },
   { id: "privacy", label: "Data & privacy", icon: <Lock size={ICON} aria-hidden="true" />, render: () => <DataPrivacy /> },
   { id: "audit", label: "Audit log", icon: <History size={ICON} aria-hidden="true" />, render: () => <AuditLog /> },
-  // Email and calendar, and the AI assistant (S6#2, FIG-1175, demo data).
+  // Email and calendar (OAuth, FIG-1175) and the AI assistant (S6#2).
   { id: "connect", label: "Email & calendar", icon: <ConnectIcon size={ICON} aria-hidden="true" />, render: () => <Connections /> },
   { id: "ai", label: "AI assistant", icon: <AiIcon size={ICON} aria-hidden="true" />, render: () => <AiAssistantSettings /> },
-  // V1.1 and V2 organisation-side sections (M10, demo data): S7#2, OS6 and the support access history.
+  // V1.1 organisation-side sections: S7#2 two-step sign-in and OS6 data requests (both on the real API).
   { id: "twofa", label: "Two-step sign-in", icon: <TwoStepIcon size={ICON} aria-hidden="true" />, render: () => <TwoStepSettings /> },
   { id: "datareq", label: "Data requests", icon: <DataRequestsIcon size={ICON} aria-hidden="true" />, render: () => <DataRequests /> },
-  { id: "supporthistory", label: "Support access history", icon: <SupportEyeIcon size={ICON} aria-hidden="true" />, render: () => <SupportHistory /> },
-  // Commercial engine and developer sections (S6#2, S8#2, FIG-1174 and FIG-1194, demo data).
+  // Commercial engine sections (S6#2, S8#2, FIG-1174). Roles & field access and Developers (FIG-1194) are V2 and are not listed.
   { id: "catalogue", label: "Service catalogue", icon: <CatalogueIcon size={ICON} aria-hidden="true" />, render: () => <CatalogueSection /> },
   { id: "pipelines", label: "Pipelines & stage rules", icon: <PipelineIcon size={ICON} aria-hidden="true" />, render: () => <PipelinesSection /> },
   { id: "sequences", label: "Follow-up sequences", icon: <SequenceIcon size={ICON} aria-hidden="true" />, render: () => <SequencesSection /> },
   { id: "webforms", label: "Web forms", icon: <WebFormIcon size={ICON} aria-hidden="true" />, render: () => <WebFormsSection /> },
   { id: "approvalrules", label: "Approval rules", icon: <RulesIcon size={ICON} aria-hidden="true" />, render: () => <ApprovalRulesSection /> },
-  { id: "roles", label: "Roles & field access", icon: <RolesIcon size={ICON} aria-hidden="true" />, render: () => <RolesSection /> },
-  { id: "developers", label: "Developers", icon: <DevIcon size={ICON} aria-hidden="true" />, render: () => <DevelopersSection /> },
 ];
 
 /**

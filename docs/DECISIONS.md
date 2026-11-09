@@ -160,3 +160,30 @@ All have the status "Taken by Claude, reversible". Full wording is in the Stage 
 | FIG-807, FIG-808 | Unmatched personal mail is ignored, shared-mailbox mail goes to Needs linking; sending needs a connected mailbox (no SMTP fallback on the mail routes); tasks reach the calendar only with `syncTasks`. |
 | FIG-1152 (B6.20) | One action kind (create a task); limits 15 per person and 500 per organisation per UTC day; default model via `ASSISTANT_MODEL`; the SDK is not in `package.json`; margins, costs and payments never enter the context. |
 | FIG-1154 (B6.22) | Card reading is a suggestion; a lead exists only after `confirmed: true`; HEIC refused; no reader means typing. |
+
+## 7. MVP on Vercel (9 Nov 2026, decided by Given)
+
+Given decided the scope and the hosting for the MVP on 9 Nov 2026. The database and file-storage choices (7.3 and 7.4) are **chosen by Given, Michael to confirm**. They sit beside, and do not replace, the 4 Nov decision in section 5 (plain PostgreSQL, no vendor-specific services, AWS later); both choices below are plain PostgreSQL and an S3-compatible store, so the move to AWS stays a dump and restore plus new connection strings.
+
+| # | Decision | Status |
+|---|---|---|
+| 7.1 | **MVP scope is V1 plus the wired V1.1 screens.** V2 is out and hidden: support access, feature flags and limits, announcements, e-signature, deposit, the roles and field-access editor, developers (API tokens, webhooks), Swahili, churn hints. | Decided by Given |
+| 7.2 | **Vercel production branch is `dev-given`.** Every other branch gets a preview deployment. Previews must never use the production database or production secrets (own Neon project, own bucket). | Decided by Given |
+| 7.3 | **Database: Neon plain PostgreSQL through the Vercel Marketplace.** The app uses the pooled URL (`APP_DATABASE_URL`, `PLATFORM_DATABASE_URL`), migrations use the direct non-pooled URL (`npm run migrate:deploy:direct`). Moving to AWS later is a dump and restore. | Chosen by Given, Michael to confirm |
+| 7.4 | **Files: an S3-compatible bucket (`STORAGE_DRIVER=s3`) with the built-in file-type checks only. No ClamAV host for the MVP.** Production would normally refuse to boot without `CLAMD_HOST` (decision 6.5); the explicit opt-out `ANTIVIRUS_MODE=builtin-only` lets it boot and logs a warning at every start. Without that variable the default is unchanged. Needs the written risk acceptance below. | Chosen by Given, Michael to confirm; risk acceptance unsigned |
+| 7.5 | **Scheduler: Vercel Cron** (`vercel.json`): jobs every 5 minutes, notifications sweep every 30 minutes, platform maintenance daily. Needs a Vercel Pro plan (Hobby allows daily crons only). | Decided by Given; plan to confirm |
+
+### 7.6 Risk acceptance: uploads without a malware scanner
+
+For Given and Michael to sign before real customer files are uploaded.
+
+> The Figbloom CRM MVP runs in production without a ClamAV (or other malware-scanning) host. Uploaded files are checked only by the built-in controls: a per-purpose allow-list of file types, content sniffing against the declared type, size limits, and a detector for the standard EICAR test file. **Real malware in an uploaded file would not be detected by the CRM.** Files are stored in a private bucket and are served only through short-lived signed links to members of the owning organisation, which limits exposure but does not remove it. Members may download a file that carries malware, and a malicious file could be sent on to a customer by a member.
+>
+> We accept this risk for the MVP only, for as long as `ANTIVIRUS_MODE=builtin-only` is set. We will provide a scanning host (`CLAMD_HOST`) and remove the opt-out before (a) the first external customer organisation is onboarded, or (b) files are shared outside the organisation by the CRM, or (c) a date agreed here: ______________, whichever is first. Until then members are told not to upload files from sources they do not trust.
+>
+> This replaces, for the MVP, the production ClamAV requirement in section 6.5 and finding S-01 of `docs/SECURITY_SIGNOFF_V1.md`; it does not waive any other item.
+
+| | Name | Date | Signature or written confirmation |
+|---|---|---|---|
+| Given Jim | | | |
+| Michael | | | |

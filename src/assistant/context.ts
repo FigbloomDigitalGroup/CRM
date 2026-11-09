@@ -141,7 +141,8 @@ export async function buildAssistantContext(ctx: AuthContext, options: { orgSlug
   const base = `/o/${options.orgSlug}`;
 
   if (may(ctx, "leads.view.own", "leads.view.all", "leads.view.shared")) {
-    const leads = (await listLeads(ctx, { includeArchived: false })).filter((l) => !l.convertedAt).slice(0, max);
+    // The filter and the cap run in the database (same order as the list): never load every lead to show a few.
+    const leads = await listLeads(ctx, { includeArchived: false, openOnly: true, take: max });
     for (const l of leads) {
       const name = [l.contact?.firstName, l.contact?.lastName].filter(Boolean).join(" ") || l.company?.name || "Lead";
       items.push({
@@ -156,7 +157,7 @@ export async function buildAssistantContext(ctx: AuthContext, options: { orgSlug
   }
 
   if (may(ctx, "deals.view.own", "deals.view.all", "deals.view.won")) {
-    const deals = (await listDeals(ctx, {})).filter((d) => d.outcome === "OPEN" || d.outcome === "WON").slice(0, max);
+    const deals = await listDeals(ctx, { outcomes: ["OPEN", "WON"], take: max });
     for (const d of deals) {
       const showValue = canSeeDealValue(ctx, d) && d.value != null && !(d as { valueMasked?: boolean }).valueMasked;
       const value = showValue ? Number(d.value) : undefined;
@@ -175,7 +176,7 @@ export async function buildAssistantContext(ctx: AuthContext, options: { orgSlug
   }
 
   if (may(ctx, "tasks.view.own", "tasks.view.all")) {
-    const tasks = (await listTasks(ctx, {})).filter((t) => t.status === "PENDING" || t.status === "IN_PROGRESS").slice(0, max);
+    const tasks = await listTasks(ctx, { statuses: ["PENDING", "IN_PROGRESS"], take: max });
     for (const t of tasks) {
       const late = t.dueAt && t.dueAt < new Date() ? daysSince(t.dueAt) : 0;
       items.push({

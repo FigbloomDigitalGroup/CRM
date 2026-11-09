@@ -8,6 +8,7 @@ import {
   MAX_MESSAGE,
   MAX_SUBJECT,
   MEMBER_HOURLY_LIMIT,
+  ORGANISATION_HOURLY_LIMIT,
   composeSupportEmail,
   createSupportRequest,
   newSupportReference,
@@ -224,6 +225,17 @@ describe("creating a request (database)", () => {
     for (let i = 0; i < MEMBER_HOURLY_LIMIT; i++) await createSupportRequest(busy, ask, { send: { fetchImpl, apiKey: KEY } });
     await expect(createSupportRequest(busy, ask, { send: { fetchImpl, apiKey: KEY } })).rejects.toBeInstanceOf(RateLimitedError);
     await expect(createSupportRequest(calm, ask, { send: { fetchImpl, apiKey: KEY } })).resolves.toMatchObject({ sent: true });
+  });
+
+  it("limits an organisation to twenty requests an hour across its members", async () => {
+    const org = await createTestOrganization("SupportOrgLimit");
+    const { fetchImpl } = fakeFetch();
+    for (let i = 0; i < ORGANISATION_HOURLY_LIMIT; i++) {
+      const member = await createTestContext(org.id, "SALES", `sr.org${i}`);
+      await createSupportRequest(member, ask, { send: { fetchImpl, apiKey: KEY } });
+    }
+    const late = await createTestContext(org.id, "SALES", "sr.orglate");
+    await expect(createSupportRequest(late, ask, { send: { fetchImpl, apiKey: KEY } })).rejects.toBeInstanceOf(RateLimitedError);
   });
 
   it("refuses a bad request before anything is sent", async () => {

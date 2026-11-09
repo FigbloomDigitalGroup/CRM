@@ -70,6 +70,33 @@ export async function listActivities(
   );
 }
 
+/**
+ * One page of activities and the total, read inside a single organisation-scoped transaction (one connection, one `set_config`) instead of
+ * two parallel ones. Same `where` as `listActivities` / `countActivities`, so a page and its total cannot disagree.
+ */
+export async function listActivitiesWithCount(
+  organizationId: string,
+  filters: ListActivitiesFilters,
+) {
+  return withOrgContext(organizationId, async (tx) => {
+    const where = {
+      organizationId,
+      companyId: filters.companyId,
+      contactId: filters.contactId,
+      leadId: filters.leadId,
+      dealId: filters.dealId,
+    };
+    const items = await tx.activity.findMany({
+      where,
+      orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+      take: filters.take,
+      skip: filters.skip,
+    });
+    const total = await tx.activity.count({ where });
+    return { items, total };
+  });
+}
+
 /** Activities matching `filters` across all pages (FIG-789). */
 export async function countActivities(
   organizationId: string,

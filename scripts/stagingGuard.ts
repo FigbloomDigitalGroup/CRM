@@ -14,7 +14,7 @@ type Env = Record<string, string | undefined>;
 
 export const STAGING_EMAIL_DOMAIN = "staging.example.com";
 
-export const UAT_ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "CUSTOMER_SUPPORT"] as const;
+export const UAT_ROLES = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"] as const;
 
 /** Anonymised users start with "u" plus hex; UAT sign-ins start with "uat-" (the refresh residue check relies on this). */
 export function uatEmail(roleKey: string): string {

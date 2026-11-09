@@ -27,7 +27,6 @@ import {
 } from "./roles";
 import type { DeliveryData, FinanceData, ManagementData, SalesTodayData, SectionAnswer, TechnicalData } from "./dash";
 import { LoaderBlock } from "../../components/loader";
-import { demoScreensEnabledClient } from "../../demo/enabled";
 
 type Kind = "management" | "sales" | "delivery" | "finance" | "technical";
 
@@ -146,7 +145,7 @@ export function HomeScreen() {
   }
 
   const quick = quickFor(kind, m.orgSlug, m.can);
-  const links = linksFor(kind, m.orgSlug, m.can, demoScreensEnabledClient());
+  const links = linksFor(kind, m.orgSlug, m.can);
   return (
     <div className="fb-home">
       <Header kind={kind} timeZone={m.timeZone} quick={quick.filter((q) => q.primary)} />
@@ -179,7 +178,7 @@ function quickFor(kind: Kind, org: string, can: (k: string) => boolean): Quick[]
 }
 
 /** The links along the foot of the page: the role's quick actions first, then the screens it works in (only what its permissions allow). */
-function linksFor(kind: Kind, org: string, can: (k: string) => boolean, demo: boolean): Quick[] {
+function linksFor(kind: Kind, org: string, can: (k: string) => boolean): Quick[] {
   const base = `/o/${org}`;
   const any = (...keys: string[]) => keys.some((k) => can(k));
   const out: Quick[] = [...quickFor(kind, org, can)];
@@ -193,7 +192,7 @@ function linksFor(kind: Kind, org: string, can: (k: string) => boolean, demo: bo
     add({ key: "n-deals", label: dealsLabel, icon: "briefcase", href: `${base}/deals` }, deals);
     add({ key: "n-tasks", label: "Tasks", icon: "check-square", href: `${base}/tasks` }, tasks);
     add({ key: "n-calendar", label: "Calendar", icon: "calendar", href: `${base}/calendar` }, tasks);
-    add({ key: "n-forecast", label: "Forecast & targets", icon: "target", href: `${base}/forecast` }, demo && any("forecast.view.all", "quotes.create", "reporting.view.own", "reporting.view.all"));
+    add({ key: "n-forecast", label: "Forecast & targets", icon: "target", href: `${base}/forecast` }, any("forecast.view.all", "quotes.create", "reporting.view.own", "reporting.view.all"));
   }
   if (kind === "delivery") {
     add({ key: "n-deals", label: dealsLabel, icon: "briefcase", href: `${base}/deals` }, deals);

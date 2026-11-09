@@ -14,6 +14,8 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
+  // Removes the records the specs create (before, and after the run); see docs/E2E_DATA_CLEANUP.md. Skipped on any database but dev/test.
+  globalSetup: "./e2e/support/global-setup.ts",
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,

@@ -193,6 +193,7 @@ export async function createSupportRequest(ctx: AuthContext, input: SupportReque
   const configured = Boolean(config) && Boolean(deps.send?.apiKey ?? resendApiKey());
   if (!configured && process.env.NODE_ENV === "production") {
     // Better an honest "not set up" than a request that disappears.
+    logger.error("Support request refused: RESEND_API_KEY, SUPPORT_EMAIL_FROM or SUPPORT_INBOX_EMAIL is not set in production.");
     throw new ApiError(503, "SERVICE_UNAVAILABLE", "Support by email is not set up yet. Please ask your Figbloom contact how to reach support.");
   }
 

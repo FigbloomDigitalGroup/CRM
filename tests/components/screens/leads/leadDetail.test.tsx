@@ -155,6 +155,40 @@ describe("the lead page", () => {
     expect(await screen.findByText("Finance")).toBeInTheDocument(); // "Your role", from the API's own explanation
   });
 
+  it("asks for the lead and everything beside it at the same time, not one stage after the other", async () => {
+    let release!: (v: unknown) => void;
+    const slowLead = new Promise((r) => (release = r));
+    const { calls } = renderScreen(<LeadDetailScreen leadId="lead-1" />, { keys: MGMT_KEYS, handlers: { ...base, getLeadsByLeadId: () => slowLead } });
+    // The lead has not answered yet, and the rest are already in flight.
+    await waitFor(() => {
+      const ids = calls.map((c) => c.id);
+      for (const id of ["getLeadsByLeadIdQualification", "getLeadsByLeadIdScore", "getTasks", "getActivities", "getAudit"]) expect(ids).toContain(id);
+    });
+    expect(calls.map((c) => c.id)).toContain("getLeadsByLeadId");
+    // The deals list needs the lead's company, so it still waits.
+    expect(calls.map((c) => c.id)).not.toContain("getDeals");
+    release(detail());
+    await screen.findByRole("heading", { level: 1, name: "Wafula Ltd" });
+    await waitFor(() => expect(calls.map((c) => c.id)).toContain("getDeals"));
+  });
+
+  it("still shows the not-found state when the lead does not exist, even though its other requests were already sent", async () => {
+    const gone = apiError(404, { message: "Lead not found" });
+    renderScreen(<LeadDetailScreen leadId="lead-1" />, {
+      keys: MGMT_KEYS,
+      handlers: { ...base, getLeadsByLeadId: gone, getLeadsByLeadIdQualification: gone, getLeadsByLeadIdScore: gone, getTasks: gone, getActivities: gone, getAudit: gone },
+    });
+    expect(await screen.findByText("We cannot find that")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1, name: "Wafula Ltd" })).toBeNull();
+  });
+
+  it("does not ask for what the role cannot see", async () => {
+    const { calls } = renderScreen(<LeadDetailScreen leadId="lead-1" />, { keys: ["leads.view.own"], handlers: base });
+    await screen.findByRole("heading", { level: 1, name: "Wafula Ltd" });
+    const ids = calls.map((c) => c.id);
+    for (const id of ["getTasks", "getActivities", "getAudit"]) expect(ids).not.toContain(id);
+  });
+
   it("has no accessibility violations", async () => {
     const { container } = renderScreen(<LeadDetailScreen leadId="lead-1" />, { keys: SALES_KEYS, handlers: base });
     await screen.findByRole("heading", { level: 1, name: "Wafula Ltd" });

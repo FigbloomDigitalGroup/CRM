@@ -1,14 +1,12 @@
-import { notFound } from "next/navigation";
-import { demoScreensEnabled } from "@/ui/demo/enabled";
-import { SignClient } from "./SignClient";
-import { demoSigningFor } from "./demoSigning";
-
 /**
- * The client's signing page (Q2, FIG-1193): open from the link in the quote email, no account. Runs on demo tokens (`demo-unsigned`, `demo-signed`,
- * `demo-deposit`) until B7.04 issues real signing links; an unknown token is a plain "link not valid" page that says nothing about any organisation.
+ * Public quote signing (FIG-1193) is V2 and is not part of the first release: no signing link is issued, so every address under /sign/ gets the same
+ * plain "not available" page. It reads nothing, names no organisation and carries no sample data. The signing screen returns with V2.
  */
-export default async function SignPage({ params }: { params: Promise<{ token: string }> }) {
-  if (!demoScreensEnabled()) notFound();
-  const { token } = await params;
-  return <SignClient quote={demoSigningFor(token)} />;
+export default function SignPage() {
+  return (
+    <main className="sgn__card" aria-labelledby="sgn-na">
+      <h1 id="sgn-na">This link is not available</h1>
+      <p>Online signing is not switched on. Please contact the person who sent you the quote.</p>
+    </main>
+  );
 }

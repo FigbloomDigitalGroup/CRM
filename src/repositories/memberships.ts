@@ -1,4 +1,4 @@
-import { MembershipStatus } from "@prisma/client";
+import { MembershipStatus, Prisma, type OrganizationStatus } from "@prisma/client";
 import { OrganizationUnavailableError } from "../auth/errors";
 import { effectivePermissionKeys } from "../auth/permissions";
 import { adminDb } from "../db/adminClient";
@@ -78,20 +78,32 @@ export async function resolveActiveMembership(
   organizationId: string,
   options: { allowOffboarding?: boolean } = {},
 ) {
-  // The feature configuration does not depend on the membership, so both are read at the same time (one round trip instead of two).
-  const [membership, config] = await Promise.all([
-    adminDb.membership.findFirst({
-      where: { userId, organizationId, status: MembershipStatus.ACTIVE },
-      include: {
-        role: { include: { rolePermissions: { include: { permission: true } } } },
-        organization: { select: { status: true, name: true } },
-      },
-    }),
+  // One statement for the membership, its role, the role's permission keys and the organisation's status (the nested Prisma `include` this
+  // replaces cost five separate statements on every request). Nothing is cached: it is read afresh on each call, so a removed membership,
+  // a changed role or a suspended organisation takes effect on the very next request. The feature configuration does not depend on the
+  // membership, so it is read at the same time.
+  const [rows, config] = await Promise.all([
+    adminDb.$queryRaw<
+      Array<{ id: string; user_id: string; organization_id: string; role_key: string; org_status: string; org_name: string; keys: string[] }>
+    >(Prisma.sql`
+      SELECT m.id, m.user_id, m.organization_id, r.key AS role_key, o.status::text AS org_status, o.name AS org_name,
+             COALESCE(array_agg(p.key) FILTER (WHERE p.key IS NOT NULL), ARRAY[]::text[]) AS keys
+      FROM memberships m
+      JOIN roles r ON r.id = m.role_id
+      JOIN organizations o ON o.id = m.organization_id
+      LEFT JOIN role_permissions rp ON rp.role_id = r.id
+      LEFT JOIN permissions p ON p.id = rp.permission_id
+      WHERE m.user_id = ${userId} AND m.organization_id = ${organizationId}
+        AND m.status = ${MembershipStatus.ACTIVE}::"MembershipStatus"
+      GROUP BY m.id, r.key, o.status, o.name
+      ORDER BY m.created_at ASC
+      LIMIT 1`),
     // B1.01/B1.03: the keys a request carries are the role's catalogue keys
     // adjusted for this organization's release, departure flags and (for
     // Customer Support) role flag.
     loadFeatureConfig(organizationId),
   ]);
+  const membership = rows[0] ?? null;
 
   if (!membership) {
     return null;
@@ -102,19 +114,19 @@ export async function resolveActiveMembership(
   // here, so a suspended, offboarding or offboarded organisation serves nothing.
   // Only the data-request routes pass `allowOffboarding`, so Management can still
   // follow their export while the organisation is leaving.
-  const lock = membership.organization.status;
+  const lock = membership.org_status as OrganizationStatus;
   if (lock === "SUSPENDED" || lock === "OFFBOARDED" || (lock === "OFFBOARDING" && !options.allowOffboarding)) {
-    throw new OrganizationUnavailableError(lock, membership.organization.name);
+    throw new OrganizationUnavailableError(lock, membership.org_name);
   }
 
   return {
     membershipId: membership.id,
-    userId: membership.userId,
-    organizationId: membership.organizationId,
-    roleKey: membership.role.key,
+    userId: membership.user_id,
+    organizationId: membership.organization_id,
+    roleKey: membership.role_key,
     permissionKeys: effectivePermissionKeys({
-      roleKey: membership.role.key,
-      catalogueKeys: membership.role.rolePermissions.map((rp) => rp.permission.key),
+      roleKey: membership.role_key,
+      catalogueKeys: membership.keys,
       config,
     }),
   };

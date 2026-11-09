@@ -2,6 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { AsyncSelect } from "../../components/forms";
 import { useApiMutation, useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { describeError } from "../../errors";
@@ -10,12 +11,17 @@ import { useRefreshDeals } from "./data";
 import type { RefData } from "./model";
 import { SideDrawer } from "./SideDrawer";
 
+/** Companies fetched per search (the picker never loads the whole directory). */
+export const COMPANY_PICKER_PAGE_SIZE = 20;
+
 /** The New deal drawer (design: CrmOverlays, `deal`). Most deals come from converting a lead; this is for a direct opportunity. */
 export function NewDealDrawer({ ref_, onClose }: { ref_: RefData | undefined; onClose: () => void }) {
   const { orgSlug } = useMember();
   const toast = useToast();
   const refresh = useRefreshDeals();
-  const companies = useApiQuery("getCompanies", { params: { orgSlug }, query: { pageSize: "100", sort: "name" } });
+  // Search as you type: the server returns one small page of companies matching the text, never the whole directory.
+  const [companyText, setCompanyText] = useState("");
+  const companies = useApiQuery("getCompanies", { params: { orgSlug }, query: { pageSize: String(COMPANY_PICKER_PAGE_SIZE), sort: "name", ...(companyText ? { q: companyText } : {}) } }, { placeholderData: (prev) => prev });
   const create = useApiMutation("postDeals");
 
   const openStages = (ref_?.stages ?? []).filter((s) => !s.isWon && !s.isLost);
@@ -68,20 +74,19 @@ export function NewDealDrawer({ ref_, onClose }: { ref_: RefData | undefined; on
         </>
       }
     >
-      <label className="fb-dm__field">
-        <span>
-          Company <span className="fb-dd__req" aria-hidden="true">*</span>
-        </span>
-        <select className="fb-dm__input" value={f.companyId} required aria-required="true" aria-invalid={fieldErrors.companyId ? true : undefined} onChange={(e) => set("companyId", e.target.value)}>
-          <option value="">{companies.isLoading ? "Loading companies…" : "Choose a company"}</option>
-          {list.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        {fieldErrors.companyId ? <span className="fb-dm__error" role="alert">{fieldErrors.companyId}</span> : null}
-      </label>
+      <AsyncSelect
+        label="Company"
+        required
+        value={f.companyId || null}
+        options={list.map((c) => ({ value: c.id, label: c.name }))}
+        loading={companies.isFetching}
+        placeholder="Search for a company"
+        emptyText="No company matches"
+        inputClassName="fb-dm__input"
+        error={fieldErrors.companyId}
+        onSearch={setCompanyText}
+        onChange={(v) => set("companyId", v ?? "")}
+      />
       <label className="fb-dm__field">
         <span>What are we selling?</span>
         <input className="fb-dm__input" value={f.notes} placeholder="e.g. CCTV for 3 branches" onChange={(e) => set("notes", e.target.value)} />

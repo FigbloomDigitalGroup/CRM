@@ -11,4 +11,5 @@ export { PlatformAdmins, PlatformSecurity } from "./AdminsSecurity";
 export { FlagsAndLimits, Announcements } from "./FlagsAnnouncements";
 export { PlatformNotFound, PlatformPreferences } from "./Misc";
 export { PlatformMobile, type MobileTab } from "./Mobile";
-export { VerifyPage, VerifyDialog } from "./Verify";
+export { VerifyDialog } from "./Verify";
+export { PlatformSignInPage, VerifyPage } from "./SignIn";

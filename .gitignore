@@ -29,3 +29,5 @@ perf-import.json
 migration-rehearsal.json
 
 .next-*/
+
+.vercel

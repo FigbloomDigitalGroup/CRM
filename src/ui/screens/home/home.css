@@ -246,10 +246,3 @@ a.fb-kpi2:hover .fb-kpi2__label { color: var(--text-2); }
   .fb-homehead__title { font-size: 23px; }
   .fb-firstrun { gap: 12px; }
 }
-
-/* Customer Support home (the design's "Support" dashboard) */
-.fb-suphome__main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
-.fb-suphome__title { font-weight: 600; font-size: 14px; color: var(--text); text-decoration: none; }
-.fb-suphome__company { font-size: 12.5px; color: var(--primary-text); text-decoration: none; }
-.fb-suphome__title:hover, .fb-suphome__company:hover { text-decoration: underline; }
-.fb-suphome__status { height: 34px; border-radius: 8px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); padding: 0 8px; font-size: 13px; }

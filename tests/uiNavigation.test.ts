@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ROLE_PERMISSIONS } from "../prisma/seedData";
+import { ROLES, ROLE_PERMISSIONS } from "../prisma/seedData";
 import { buildNav, buildQuickCreate } from "../src/ui/shell/navigation";
 import { filterNav, isActivePath, sectionBadge, sectionHasActive } from "../src/ui/shell/navModel";
 
@@ -133,6 +133,17 @@ describe("sidebar navigation per role", () => {
       expect(menu(role).join("|")).toContain("Preferences");
       if (role === "MANAGEMENT") expect(menu(role).join("|")).toContain("Settings");
       else expect(menu(role).join("|")).not.toContain("Settings");
+    }
+  });
+});
+
+describe("no Customer Support role (decision 12, FIG-1525)", () => {
+  it("offers five roles and no role sees a Support workspace, tickets or customers link", () => {
+    expect(ROLES.map((r) => r.key).sort()).toEqual(["DELIVERY", "FINANCE", "MANAGEMENT", "RESTRICTED_TECHNICAL", "SALES"]);
+    expect(Object.keys(ROLE_PERMISSIONS).sort()).toEqual(["DELIVERY", "FINANCE", "MANAGEMENT", "RESTRICTED_TECHNICAL", "SALES"]);
+    for (const role of Object.keys(ROLE_PERMISSIONS)) {
+      const items = buildNav({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1", demoScreens: true }).flatMap((s) => s.items);
+      expect(items.filter((i) => /support|ticket/i.test(`${i.key} ${i.label} ${i.path}`)), role).toEqual([]);
     }
   });
 });
