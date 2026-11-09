@@ -93,6 +93,78 @@ export function PlatformSignInPage({ call = platformCall, onDone = () => window.
   );
 }
 
+/**
+ * First step for a new platform admin (docs/PLATFORM_BOOTSTRAP.md): the single-use link carries a token; the person chooses a password here.
+ * No session is created. They sign in next at /platform/sign-in and set up the authenticator app. A new route; frozen tenant pages untouched.
+ */
+const PLATFORM_MIN_PASSWORD = 12;
+
+export function AcceptInvitePage({ token, call = platformCall }: { token: string; call?: Call }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
+
+  if (!token) {
+    return (
+      <Card title="This link is incomplete" body="Open the full link from your invitation. If it was cut off, ask for a new one.">
+        <p className="fb-pl-auth-foot">
+          <Link href="/platform/sign-in" style={{ fontWeight: 700, color: "#1a1c19", textDecoration: "underline" }}>Platform sign-in</Link>
+        </p>
+      </Card>
+    );
+  }
+
+  if (done) {
+    return (
+      <Card title="Password set" body="Your platform admin account is ready. Sign in next; you will set up your authenticator app on first sign-in.">
+        <p style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14 }}>
+          <CheckCircle2 size={18} aria-hidden="true" /> Nothing else to do on this page.
+        </p>
+        <a href="/platform/sign-in" className="fb-pl-auth-cta" style={{ display: "inline-flex", textDecoration: "none" }}>
+          Go to sign-in <ArrowRight size={17} aria-hidden="true" />
+        </a>
+      </Card>
+    );
+  }
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (password.length < PLATFORM_MIN_PASSWORD) {
+      setError(`Choose a password of at least ${PLATFORM_MIN_PASSWORD} characters.`);
+      return;
+    }
+    if (password !== confirm) {
+      setError("The two passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await call("POST", "/api/platform/auth/accept-invite", { token, password });
+      setDone(true);
+    } catch (err) {
+      const status = (err as { status?: number }).status;
+      setError(status === 400 || status === 401 || status === 404 ? "This link is not valid any more. It may have been used already or it expired. Ask for a new one." : describeError(err).body);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title="Choose your password" body={`For your Figbloom platform admin account. At least ${PLATFORM_MIN_PASSWORD} characters. You will set up your authenticator app when you sign in.`}>
+      <form onSubmit={submit} noValidate>
+        <Field label="New password" icon={<Lock size={18} aria-hidden="true" />} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        <Field label="Repeat the password" icon={<KeyRound size={18} aria-hidden="true" />} type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        <ErrorLine>{error}</ErrorLine>
+        <button type="submit" className="fb-pl-auth-cta" disabled={busy}>
+          Set password <ArrowRight size={17} aria-hidden="true" />
+        </button>
+      </form>
+    </Card>
+  );
+}
+
 interface Enrolment {
   secret: string;
   otpauthUri: string;
