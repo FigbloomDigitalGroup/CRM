@@ -1,6 +1,24 @@
 # Figbloom CRM: MVP handover pack (FIG-1557, MVP-18)
 
-Drafted 9 Nov 2026. Target hand-over: 11 Nov 2026. **This is a draft: the hosted parts (Vercel, Neon, bucket, Resend, domain) were not created when it was written. Every line marked TO CONFIRM must be checked against the live setup before Given signs.** No secrets belong in this document.
+Drafted 9 Nov 2026, updated the same day with the live setup. Target hand-over: 11 Nov 2026. **Still a draft until the smoke test (MVP-16) is done: section 0 lists what has been checked on the live site and what has not.** Every line marked TO CONFIRM must be checked before Given signs. No secrets belong in this document.
+
+## 0. The live setup on 9 Nov 2026
+
+Checked from outside, on https://figbloom-crm.vercel.app, unless marked "not checked":
+
+| Item | State |
+|---|---|
+| Address | `https://figbloom-crm.vercel.app` (the free Vercel address; no custom domain yet). Production branch `dev-given`; Vercel's own login wall is on for preview deployments only |
+| Hosting | Vercel **Hobby (free)** plan, team "Given", project `figbloom-crm`, Node 22, functions in Frankfurt (`fra1`). The Hobby terms are for personal, non-commercial use: a decision for Given before real customers |
+| Database | Neon (through the Vercel Marketplace), **free plan**, PostgreSQL 18.6, Frankfurt. Two separate databases: production and preview. All 81 migrations applied; roles `figbloom_app` and `figbloom_platform` created; five roles and 89 permissions seeded; no dev data. The app role is not a superuser, has no RLS bypass, sees 0 leads with no organisation set, and cannot read the platform identity table. We developed and tested on PostgreSQL 16; the suites that were run on 18 are listed in `docs/M14_TEST_REPORT.md` |
+| `/login`, `/platform/sign-in`, `/platform/accept-invite`, `/platform/verify` | Answer 200. `/sign/<anything>` answers 404 (signing is V2) |
+| `/api/health` | `status: ok`, `appRole: ok` (the app connects as the restricted role). **`email: misconfigured`** until the sender password is added |
+| Scheduled jobs | Vercel runs three **daily** crons (the free plan allows nothing more frequent). All three endpoints answer 401 without the secret and 200 with it; the platform audit-log check passed. **Not set up:** a free outside caller for `/api/cron/jobs` every 5 minutes (cron-job.org account needed) |
+| Platform admin | The first platform admin (`givenjim04@gmail.com`) was created and has signed in with two-step |
+| Organisations and users | **None yet.** Not created: needs the first Management user's email |
+| Email | Sender will be `givenjim04@gmail.com` through Gmail SMTP with an app password. The password is **not added yet** (needs the phone). `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_FROM`, `EMAIL_FROM` are set |
+| Files | **No bucket**, deferred by Given. File uploads show an error until a bucket and the risk acceptance in `docs/DECISIONS.md` 7.6 exist |
+| Not checked | Smoke test on the live site (MVP-16); mail or calendar connection with real accounts; Playwright on the live address; the full route walk against the hosted database (it passed locally; it needs a faster link, see `docs/M14_TEST_REPORT.md` section 5) |
 
 ## 1. What is in the MVP and what is not
 
@@ -22,10 +40,11 @@ Quotes: the Send button emails through the system sender (`EMAIL_FROM`), not thr
 Browser / phone (PWA)
       |
 Vercel (Next.js 15, production branch dev-given; other branches = previews)
-      |-- Vercel Cron -> /api/cron/jobs (5 min), /api/cron/notifications-sweep (30 min), /api/cron/platform-maintenance (daily)
+      |-- Vercel Cron (daily, free plan) -> /api/cron/jobs, /api/cron/notifications-sweep, /api/cron/platform-maintenance
+      |-- Free outside caller (cron-job.org, to set up) -> /api/cron/jobs every 5 minutes, with the secret in a header
       |-- PostgreSQL (Neon, plain Postgres): pooled URL for the app, direct URL for migrations. Roles figbloom_app (row-level security) and figbloom_platform.
-      |-- S3-compatible bucket (signed links; uploads go straight to the bucket)
-      |-- Resend (invites, resets, notifications, quotes, support requests)
+      |-- S3-compatible bucket (not set up yet; signed links; uploads go straight to the bucket)
+      |-- Email: Gmail SMTP for now (Resend is the option for a real domain): invites, resets, notifications, quotes, support requests
       |-- Sentry (errors)
       |-- Google / Microsoft OAuth (mail and calendar), Anthropic API (assistant)
 ```
@@ -48,7 +67,7 @@ One table, with where each is set and who supplies it: `docs/DEPLOYMENT.md`, sec
 | First admin | `npm run platform:bootstrap-admin <email> <name>` against the production database; one-time set-up link. Walk-through: `docs/PLATFORM_BOOTSTRAP.md`. |
 | Incidents, secrets rotation | `docs/RUNBOOKS.md`. |
 
-Vercel plan: a **Pro** plan is needed. The Hobby plan only allows daily cron jobs, so the 5-minute jobs (mail sync, scheduled sends, chat notifications, sequences) would not run.
+Vercel plan: the project runs on the free **Hobby** plan. It only allows daily cron jobs, so the 5-minute jobs (mail sync, scheduled sends, chat notifications, sequences) need either the free outside caller (section 0) or a Pro plan. Hobby is also limited to personal, non-commercial use.
 
 ## 5. Credentials hand-over (who holds what)
 
@@ -56,10 +75,11 @@ No secrets in this document. Each item is handed over in the owner's password ma
 
 | Item | Owner today | Hand-over step | Second holder |
 |---|---|---|---|
-| Vercel team and project | TO CONFIRM | Add the receiving owner as team Owner | TO CONFIRM |
-| Neon project (production and preview) | Michael (TO CONFIRM) | Transfer or add an Owner; rotate the database passwords after hand-over | TO CONFIRM |
-| S3 bucket and access keys | TO CONFIRM | New access key for the receiver; delete the old one | TO CONFIRM |
-| Resend account, API key, sending domain | Michael | Add the receiver; rotate the key | TO CONFIRM |
+| Vercel team and project | Given (Vercel team "Given", Hobby) | Add the receiving owner as team Owner (the Hobby plan allows one user: moving to Pro is needed for a second) | TO CONFIRM |
+| Neon projects (production and preview, created through the Vercel Marketplace) | Given's Vercel team (Michael to confirm the choice) | They live under the Vercel integration: add an Owner in Vercel; rotate the database passwords after hand-over (`scripts/db-admin.ts` sets them) | TO CONFIRM |
+| S3 bucket and access keys | Not created (deferred) | New bucket and key when files are switched on | TO CONFIRM |
+| Gmail sender (`givenjim04@gmail.com`) and its app password | Given | The app password is the only secret; create a new one, delete the old one in Google Account, App passwords | TO CONFIRM |
+| Resend account, API key, sending domain | Not used for now (option for a real domain) | Add the receiver; rotate the key | TO CONFIRM |
 | Google and Microsoft OAuth apps | Michael | Add the receiver as an owner of each app | TO CONFIRM |
 | Anthropic API key | Michael | Issue a new key to the receiver | TO CONFIRM |
 | Sentry | TO CONFIRM | Add the receiver as Owner | TO CONFIRM |
@@ -74,8 +94,10 @@ Not done and not waived (`docs/V1_QUALITY_GATE.md`, `docs/DECISIONS.md` section 
 - Independent penetration test.
 - Production antivirus host: the MVP runs with the built-in file-type checks only, under the risk acceptance in `docs/DECISIONS.md` section 7.6 (to be signed).
 - Off-site encrypted backups with two key holders; on-call names.
-- Restore drill on the hosted database (`docs/BACKUP_RESTORE.md` section 10).
-- V1.1 formal gates (M15: full regression and role matrix report, platform console threat model, contract freeze, Michael's sign-off) run after launch. The minimum checks before launch are in `docs/MVP_GATES.md`.
+- Restore drill on the hosted database: see `docs/BACKUP_RESTORE.md` section 10 for the result (a drill with a very small amount of data; no real data exists yet).
+- Free plans: Vercel Hobby (non-commercial terms), Neon free (small storage, compute that sleeps when idle so the first request after a pause is slow, a short point-in-time restore window: the exact window was not checked), Gmail sending limits, and a third-party free caller for the 5-minute jobs. Fine for a test with fake data; not for real customers.
+- Hosted isolation: the cross-organisation checks passed on the hosted database except the full route walk, which timed out from Kenya (`docs/M14_TEST_REPORT.md` section 5).
+- V1.1 gates (M15): the role matrix and tenant-isolation tests and the platform console security review are in `docs/PERMISSION_MATRIX_REPORT_V1_1.md`, `docs/TEST_REPORT_V1_1.md` and `docs/SECURITY_REVIEW_PLATFORM_CONSOLE.md`. The performance review and contract freeze (G2.03), and Michael's sign-off (G2.04), are still open.
 - Mail and calendar connections were not tried end to end against real Google and Microsoft accounts.
 - Quote Send goes out from the system address, not the seller's mailbox.
 - V2 items above are hidden, not built.

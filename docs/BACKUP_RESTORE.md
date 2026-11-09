@@ -188,7 +188,7 @@ No AWS service decision is made here. The move is a dump and restore:
 
 ## 10. Hosted setup on Vercel (MVP, drafted 9 Nov 2026, FIG-1556 / MVP-17)
 
-**Status: written, not yet drilled.** The database and bucket do not exist yet (MVP-02, MVP-05, MVP-07 need Michael's accounts), so no restore has been run on the hosted setup. Sections 1 to 9 describe the local Docker stack and still apply to it. The restore drill result for the hosted setup must be recorded below once it has been done.
+**Status: drilled once on 9 Nov 2026 on the live production database (very little data: 366 rows, mostly the role and permission catalogue and the first platform admin).** The result is in the table below. No bucket exists yet (deferred), so file backups are not covered. Sections 1 to 9 describe the local Docker stack and still apply to it. Not checked: the plan's automatic backup and point-in-time restore window on Neon's free plan (confirm it in the Neon console and write the number here).
 
 ### What changes on the hosted setup
 
@@ -210,7 +210,7 @@ No AWS service decision is made here. The move is a dump and restore:
 
 | Date | Run by | Source (dump or point in time) | RTO measured | RPO measured | Result / problems |
 |---|---|---|---|---|---|
-| (not yet run) | | | | | |
+| 9 Nov 2026 | Claude Code for Given, from a PC in Kenya | `pg_dump` (custom format, PostgreSQL 18 client) of the production database through the direct URL, restored with `pg_restore` into a scratch database `restore_drill` on the same Neon project | **About 14 minutes (850 s)** from dump to verified restore: dump 68.5 s, create database 5.4 s, restore 391 s, verification 384 s. The size was only 0.7 MB: the time is dominated by round trips from Kenya to Frankfurt, so from a machine near the database it would be much shorter. It will grow with real data | Data as of the moment of the dump (a manual dump has an RPO equal to its age). Neon's own point-in-time window was not checked | All 125 tables restored with identical row counts (366 rows), 81 migrations recorded, 117 tables with row-level security, the application role on the restored copy is not a superuser, has no RLS bypass and sees 0 leads with no organisation set. `pg_restore` ended with exit code 1 on one statement, `ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin ... TO neon_superuser`: permission denied. It is a Neon-internal default-privilege statement that an owner role cannot run, it is harmless for us, and the data and our own grants were all present. Do not add `--no-privileges` (it would drop the grants for `figbloom_app` and `figbloom_platform`). Scratch database and dump file deleted afterwards |
 
 ### Rollback rule when a migration has already run
 
