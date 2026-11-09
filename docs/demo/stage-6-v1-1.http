@@ -1,0 +1,76 @@
+### V1.1 backend demo (G2.04, FIG-1159). Run `npm run dev`, `npm run migrate:deploy` and `npm run seed:dev` against a database on release V1.1
+### (set ACTIVE_RELEASE="v1.1", or move one organisation with the platform console). Dev accounts: sign in as each role and send the requests
+### with that session cookie (the dev chips on the login page do this). Replace {{dealId}}, {{quoteId}}, {{approvalId}} with ids from the previous answer.
+### The same walk-through runs in the V1.1 tests: tests/v11PermissionDenial.test.ts (who may do what), tests/apiWalkV11.test.ts (the role matrix).
+
+@base = http://localhost:3000
+@org = figbloom
+
+### 1. QUOTES. As Sales: build a quote on a deal you own, with a discount above the approval limit
+POST {{base}}/api/orgs/{{org}}/deals/{{dealId}}/quote
+Content-Type: application/json
+
+{ "lines": [ { "catalogueItemId": "{{itemId}}", "quantity": 4 } ], "discountPercent": 25 }
+
+###
+GET {{base}}/api/orgs/{{org}}/quotes/{{quoteId}}
+
+### 2. APPROVALS. As Sales: ask for approval. The quote cannot be sent until someone else approves.
+POST {{base}}/api/orgs/{{org}}/quotes/{{quoteId}}/versions/1/request-approval
+Content-Type: application/json
+
+{}
+
+### As Sales again: deciding your own request is refused (403)
+POST {{base}}/api/orgs/{{org}}/approvals/{{approvalId}}/decision
+Content-Type: application/json
+
+{ "approve": true }
+
+### As Management: the inbox, then approve
+GET {{base}}/api/orgs/{{org}}/approvals
+
+###
+POST {{base}}/api/orgs/{{org}}/approvals/{{approvalId}}/decision
+Content-Type: application/json
+
+{ "approve": true }
+
+### As Delivery or Finance: the quote is hidden (404), and a write is refused
+GET {{base}}/api/orgs/{{org}}/quotes/{{quoteId}}
+
+### 3. ASSISTANT. Needs the assistant switched on for the organisation (Settings, or the assistant.enabled toggle). Not available to Restricted Technical (403).
+POST {{base}}/api/orgs/{{org}}/assistant/ask
+Content-Type: application/json
+
+{ "question": "What needs attention today?" }
+
+### Management only: who asked what
+GET {{base}}/api/orgs/{{org}}/assistant/audit
+
+### 4. PLATFORM CONSOLE. Separate sign-in (password, then a second step). The first admin comes from `npm run platform:bootstrap-admin -- <email> "<name>"`.
+POST {{base}}/api/platform/auth/sign-in
+Content-Type: application/json
+
+{ "email": "michael@example.com", "password": "<the password chosen from the invitation link>" }
+
+###
+POST {{base}}/api/platform/auth/two-step/verify
+Content-Type: application/json
+
+{ "code": "123456" }
+
+### Counts only: no customer name, value or payment anywhere in these answers
+GET {{base}}/api/platform/home
+
+###
+GET {{base}}/api/platform/organizations
+
+### The audit log, and a check that its hash chain is intact
+GET {{base}}/api/platform/audit
+
+###
+POST {{base}}/api/platform/audit/verify
+
+### A tenant Management user calling any /api/platform route gets 404, and a platform admin calling any /api/orgs route gets a refusal (tests/platformTenantDenialV11.test.ts)
+GET {{base}}/api/platform/organizations

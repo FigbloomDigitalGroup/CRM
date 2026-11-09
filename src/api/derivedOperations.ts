@@ -1,4 +1,7 @@
 import accessMatrix from "./contract/accessMatrix.json";
+import accessMatrixV11 from "./contract/accessMatrixV11.json";
+import responseShapesV11 from "./contract/responseShapesV11.json";
+import routeSchemasV11 from "./contract/routeSchemasV11.json";
 import responseShapes from "./contract/responseShapes.json";
 import routeSchemas from "./contract/routeSchemas.json";
 import type { JsonSchema } from "./jsonSchema";
@@ -17,6 +20,21 @@ const ROLES: string[] = (accessMatrix as { roles: string[] }).roles;
 const ROWS = (accessMatrix as { rows: Record<string, string> }).rows;
 const SCHEMAS = routeSchemas as Record<string, { body?: JsonSchema; query?: JsonSchema }>;
 const SHAPES = responseShapes as Record<string, JsonSchema>;
+const ROWS_V11 = (accessMatrixV11 as { rows: Record<string, string> }).rows;
+const SCHEMAS_V11 = routeSchemasV11 as Record<string, { body?: JsonSchema; query?: JsonSchema }>;
+const SHAPES_V11 = responseShapesV11 as Record<string, JsonSchema>;
+
+/**
+ * A V1.1 route answers "not in your release" to everybody in the V1 recording above, so that recording says nothing about who may use it, what it
+ * accepts or what it returns. For exactly those routes (closed to every role in V1, open to someone in a V1.1 organisation) the contract is built
+ * from the V1.1 recording (tests/apiWalkV11.test.ts, G2.03). Every other route keeps its V1 recording, which the V1.1 walk proves unchanged.
+ */
+export function fromV11Recording(key: string): boolean {
+  const v1 = ROWS[key];
+  const v11 = ROWS_V11[key];
+  return v1 === "D".repeat(ROLES.length) && v11 !== undefined && v11 !== v1;
+}
+const rowOf = (key: string): string | undefined => (fromV11Recording(key) ? ROWS_V11[key] : ROWS[key]);
 
 /** Routes that take a file upload rather than JSON. */
 const MULTIPART = new Set([
@@ -53,13 +71,13 @@ function tagFor(path: string): string {
 
 /** `{ ROLE: "A" | "D" | "H" | "V" }` from the walk: reached, refused, hidden (404), or reached but failed a rule. */
 export function roleOutcomesFor(key: string): Record<string, string> | null {
-  const row = ROWS[key];
+  const row = rowOf(key);
   if (!row) return null;
   return Object.fromEntries(ROLES.map((r, i) => [r, row[i]!]));
 }
 
 export function allowedRolesFor(key: string): string[] | null {
-  const row = ROWS[key];
+  const row = rowOf(key);
   if (!row) return null;
   return ROLES.filter((_, i) => row[i] !== "D" && row[i] !== "U");
 }
@@ -79,7 +97,7 @@ export function derivedOperations(documented: Set<string>): DerivedOperation[] {
     if (documented.has(key)) continue;
     const [METHOD, path] = key.split(" ") as [string, string];
     const method = METHOD.toLowerCase();
-    const recorded = SCHEMAS[key] ?? {};
+    const recorded = (fromV11Recording(key) ? SCHEMAS_V11[key] : SCHEMAS[key]) ?? {};
     const parameters: Record<string, unknown>[] = [];
     for (const name of path.match(/\{(\w+)\}/g) ?? []) {
       parameters.push({ name: name.slice(1, -1), in: "path", required: true, schema: { type: "string" } });
@@ -90,7 +108,7 @@ export function derivedOperations(documented: Set<string>): DerivedOperation[] {
       parameters.push({ name, in: "query", required: queryRequired.has(name), schema });
     }
     const isCsv = /\/export(\/|$)|\/export$|-export$/.test(path) && METHOD === "GET";
-    const shape = SHAPES[key];
+    const shape = fromV11Recording(key) ? SHAPES_V11[key] : SHAPES[key];
     const roles = allowedRolesFor(key);
     const responses: Record<string, unknown> = {
       200: {

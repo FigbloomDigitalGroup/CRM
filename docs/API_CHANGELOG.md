@@ -14,6 +14,12 @@ To change the API on purpose:
 A change that removes or renames a path, field or enum value, narrows what a role may do, or makes an optional field required is **breaking** and
 needs a new major version (`API_VERSION` in `src/api/openapi.ts`). Additions are minor. Wording-only and documentation changes are patches.
 
+## 1.1.0 — V1.1 routes described from a V1.1 walk, merged with the V2 routes (G2.03, 10 Nov 2026)
+
+contract-hash: 9ec64d4c8a94158d9ee48fa45605d357370311a219595fb9430853524787644e
+
+Documentation only, still version 1.1.0 and before the `api-v1.1` tag. The V1.1 routes are described from a walk of every route as each role on a V1.1 organisation (real allowed roles, request schemas, response shapes; see the amended V1.1 section below), now combined with the V2 routes added in M17. No route, status code or behaviour changed.
+
 ## 1.1.0 — V2 backend routes, additive (M17, Nov 2026)
 
 contract-hash: 07436fd0247605dd10a8f3fba1bfe37cbbacea589023f1bc631cc6105a1a1f2d
@@ -22,7 +28,9 @@ Additive only (still version 1.1.0, behind `release.v2`): support access (reques
 
 ## 1.1.0 — V1.1 backend, additive (Nov 2026)
 
-contract-hash: 4e9574fcb63fc8271f29a675bcca6977956eedf4ebd6729ac16f91a76ca5ae82
+contract-hash: d744bd6ed6b4173259cdba95931b5964a4ef19ad68353d7f1135e457c9f93b0b
+
+Amended before the `api-v1.1` tag (9 Nov 2026, G2.03, FIG-1158), so no caller can have depended on the earlier text: the V1.1 routes were recorded on a V1 organisation, where every one answers "not in your release", so the contract listed them as refused for every role (`x-allowed-roles: []`) with no request or response schema. They are now described from a walk of every route as each role on a V1.1 organisation (`tests/apiWalkV11.test.ts`, recorded in `src/api/contract/*V11.json`): the roles the permission model lets through, the request schema each route validates against, and the shape of its answer. The mock server serves the V1.1 examples for those routes (`src/api/contractExamples.ts`). No route, status code or behaviour changed; only the documentation of V1.1 routes did. Platform console, sign-in and two-step routes remain outside the contract (`src/api/accountOperations.ts`); they are not organisation routes and the platform walls are held by `tests/platformTenantDenialV11.test.ts`.
 
 Minor version: nothing existing was removed or renamed, so V1 callers keep working.
 

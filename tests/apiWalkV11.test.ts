@@ -18,8 +18,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import type { z } from "zod";
 import type { AuthContext } from "../src/auth/context";
 import { hasPermission } from "../src/auth/context";
+import { inferSchema } from "../src/api/jsonSchema";
 
 const current: { ctx: AuthContext | null } = { ctx: null };
 vi.mock("../src/auth/requestContext", async (importOriginal) => {
@@ -40,11 +42,15 @@ vi.mock("../src/app/api/_lib/validation", async () => (await import("./helpers/v
 import { discoverRoutes, fillParams, invoke, isOrganisationRoute } from "./helpers/routeHarness";
 import { bodyHints, walkRoute } from "./helpers/routeWalker";
 import { idFor, ROLE_KEYS, SENTINEL_PATTERNS, type RoleKey } from "./helpers/world";
+import { createStabiliser } from "./helpers/stable";
 import { buildWorldV11, type WorldV11 } from "./helpers/worldV11";
 
 const GOLDEN = "src/api/contract/accessMatrixV11.json";
 const V1_GOLDEN = "src/api/contract/accessMatrix.json";
 const REPORT = "docs/PERMISSION_MATRIX_REPORT_V1_1.md";
+const SCHEMAS = "src/api/contract/routeSchemasV11.json";
+const SHAPES = "src/api/contract/responseShapesV11.json";
+const EXAMPLES = "src/api/contract/examplesV11.json";
 const UPDATE = process.env.UPDATE_API_SNAPSHOTS === "1";
 
 /** Roles with nothing to lose go first, so a mutation by a role that is allowed cannot change what a refused role would have seen. */
@@ -76,6 +82,10 @@ describe("generated authorization matrix on a V1.1 organisation (G2.01)", () => 
   const unavailable = new Set<string>();
   const leaks: string[] = [];
   const serverErrors: string[] = [];
+  // What the contract is built from (src/api/derivedOperations.ts): the request schemas each route validated against, the shape and an example of each answer.
+  const requestSchemas: Record<string, { body?: unknown; query?: unknown }> = {};
+  const examples: Record<string, Partial<Record<RoleKey, unknown>>> = {};
+  const shapes: Record<string, unknown> = {};
 
   beforeAll(async () => {
     world = await buildWorldV11("WalkV11");
@@ -84,6 +94,7 @@ describe("generated authorization matrix on a V1.1 organisation (G2.01)", () => 
     const routes = discoverRoutes().filter(isOrganisationRoute);
     const jobs = routes.flatMap((route) => route.methods.map((method) => ({ route, method }))).sort((a, b) => Number(a.method !== "GET") - Number(b.method !== "GET") || a.route.path.localeCompare(b.route.path));
     let dirty = false;
+    const stable = createStabiliser();
     const canSeeDealValue = (ctx: AuthContext) => hasPermission(ctx, "deals.view.value") || ctx.membershipId === world.ctx.SALES.membershipId;
     const canSeePayments = (ctx: AuthContext) => hasPermission(ctx, "finance.view.payments");
     const canSeeCost = (ctx: AuthContext) => hasPermission(ctx, "deals.margin") || hasPermission(ctx, "catalogue.manage");
@@ -116,6 +127,19 @@ describe("generated authorization matrix on a V1.1 organisation (G2.01)", () => 
         if (!canSeeDealValue(ctx) && SENTINEL_PATTERNS.dealValue.test(res.text)) leaks.push(`${role} ${key} shows a deal value`);
         if (!canSeePayments(ctx) && (SENTINEL_PATTERNS.invoiceAmount.test(res.text) || SENTINEL_PATTERNS.invoiceNumber.test(res.text))) leaks.push(`${role} ${key} shows a payment`);
         if (!canSeeCost(ctx) && res.status < 300 && COST_PATTERN.test(res.text)) leaks.push(`${role} ${key} shows a cost or margin figure`);
+        if (res.bodySchema || res.querySchema) {
+          const entry = (requestSchemas[key] ??= {});
+          const { z } = await import("zod");
+          const toJson = (schema: z.ZodType) => z.toJSONSchema(schema, { io: "input", unrepresentable: "any", target: "draft-2020-12" });
+          if (res.bodySchema && !entry.body) entry.body = toJson(res.bodySchema);
+          if (res.querySchema && !entry.query) entry.query = toJson(res.querySchema);
+        }
+        if (res.status < 300 && res.json !== null) {
+          (examples[key] ??= {})[role] = stable.value(res.json);
+          shapes[`${key}|${role}`] = inferSchema(stable.value(res.json));
+        } else if (res.status < 300 && route.path.includes("export") && res.text) {
+          (examples[key] ??= {})[role] = stable.text(res.text.split("\n").slice(0, 3).join("\n"));
+        }
       }
       cells[key] = ROLE_KEYS.map((r) => row[r]).join("");
     }
@@ -133,6 +157,9 @@ describe("generated authorization matrix on a V1.1 organisation (G2.01)", () => 
     if (UPDATE) {
       writeJson(GOLDEN, { roles: ROLE_KEYS, release: "v1.1", legend: { A: "reached", D: "403", H: "404", V: "400", E: "5xx", U: "401" }, rows: Object.fromEntries(Object.entries(cells).sort()) });
       writeReport(cells, readJson<{ rows: Record<string, string> }>(V1_GOLDEN)?.rows ?? {});
+      writeJson(SCHEMAS, Object.fromEntries(Object.entries(requestSchemas).sort()));
+      writeJson(SHAPES, buildShapes(shapes));
+      writeJson(EXAMPLES, buildExamples(examples));
       return;
     }
     const golden = readJson<{ rows: Record<string, string> }>(GOLDEN);
@@ -205,3 +232,32 @@ function writeReport(cells: Record<string, string>, v1: Record<string, string>) 
   mkdirSync("docs", { recursive: true });
   writeFileSync(REPORT, lines.join("\n"));
 }
+
+/** One response shape per route: the Management answer when there is one, else the first role that got an answer. */
+function buildShapes(shapes: Record<string, unknown>) {
+  const out: Record<string, unknown> = {};
+  for (const [composite, shape] of Object.entries(shapes).sort()) {
+    const [key, role] = composite.split("|") as [string, RoleKey];
+    if (!(key in out) || role === "MANAGEMENT") out[key] = shape;
+  }
+  return out;
+}
+
+/** Examples per route: `default` is Management's answer (else the first), `same` the roles that got exactly it, and a role is listed on its own when its answer differs (masked, or its own records). */
+function buildExamples(examples: Record<string, Partial<Record<RoleKey, unknown>>>) {
+  const out: Record<string, Record<string, unknown>> = {};
+  for (const [key, byRole] of Object.entries(examples).sort()) {
+    const first = byRole.MANAGEMENT ?? Object.values(byRole)[0];
+    // `same` names the roles whose real answer equals `default`; any other role is listed separately, or has no recorded answer.
+    const same: string[] = [];
+    const entry: Record<string, unknown> = { default: first, same };
+    for (const role of ROLE_KEYS) {
+      if (!(role in byRole)) continue;
+      if (JSON.stringify(byRole[role]) === JSON.stringify(first)) same.push(role);
+      else entry[role] = byRole[role];
+    }
+    out[key] = entry;
+  }
+  return out;
+}
+

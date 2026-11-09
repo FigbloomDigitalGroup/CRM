@@ -435,7 +435,44 @@ export interface Operations {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      discount: {
+        enabled: boolean;
+        thresholdPercent: number;
+        [key: string]: unknown;
+      };
+      export: {
+        enabled: boolean;
+        thresholdRows: number;
+        [key: string]: unknown;
+      };
+      largeDeal: {
+        enabled: boolean;
+        thresholdAmount: number;
+        currency: string;
+        [key: string]: unknown;
+      };
+      deletion: {
+        enabled: boolean;
+        locked: boolean;
+        [key: string]: unknown;
+      };
+      defaults: {
+        discount: {
+          enabled: boolean;
+          thresholdPercent: number;
+          [key: string]: unknown;
+        };
+        largeDeal: {
+          enabled: boolean;
+          thresholdAmount: number;
+          currency: string;
+          [key: string]: unknown;
+        };
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
   };
   patchApprovalRules: {
     params: { orgSlug: string };
@@ -457,7 +494,44 @@ export interface Operations {
         enabled?: boolean;
       };
     };
-    response: unknown;
+    response: {
+      discount: {
+        enabled: boolean;
+        thresholdPercent: number;
+        [key: string]: unknown;
+      };
+      export: {
+        enabled: boolean;
+        thresholdRows: number;
+        [key: string]: unknown;
+      };
+      largeDeal: {
+        enabled: boolean;
+        thresholdAmount: number;
+        currency: string;
+        [key: string]: unknown;
+      };
+      deletion: {
+        enabled: boolean;
+        locked: boolean;
+        [key: string]: unknown;
+      };
+      defaults: {
+        discount: {
+          enabled: boolean;
+          thresholdPercent: number;
+          [key: string]: unknown;
+        };
+        largeDeal: {
+          enabled: boolean;
+          thresholdAmount: number;
+          currency: string;
+          [key: string]: unknown;
+        };
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
   };
   getApprovals: {
     params: { orgSlug: string };
@@ -472,19 +546,117 @@ export interface Operations {
       pageSize?: string;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id: string;
+        source: string;
+        kind: string;
+        kindLabel: string;
+        status: string;
+        title: string;
+        summary: string;
+        requestedBy: {
+          membershipId: string;
+          name: string;
+          [key: string]: unknown;
+        };
+        requestedAt: string;
+        requesterNote?: unknown | null;
+        decidedBy?: unknown | null;
+        decidedAt?: unknown | null;
+        decisionReason?: unknown | null;
+        subject: {
+          type: string;
+          id: string;
+          dealId: unknown;
+          [key: string]: unknown;
+        };
+        canDecide: boolean;
+        resumeError?: unknown | null;
+        resumed: boolean;
+        [key: string]: unknown;
+      }>;
+      page: number;
+      pageSize: number;
+      total: number;
+      pageCount: number;
+      nextCursor?: unknown | null;
+      pending: number;
+      canDecide: boolean;
+      [key: string]: unknown;
+    };
   };
   getApprovalsByApprovalId: {
     params: { orgSlug: string; approvalId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      source: string;
+      kind: string;
+      kindLabel: string;
+      status: string;
+      title: string;
+      summary: string;
+      requestedBy: {
+        membershipId: string;
+        name: string;
+        [key: string]: unknown;
+      };
+      requestedAt: string;
+      requesterNote?: unknown | null;
+      decidedBy?: unknown | null;
+      decidedAt?: unknown | null;
+      decisionReason?: unknown | null;
+      subject: {
+        type: string;
+        id: string;
+        dealId: string;
+        [key: string]: unknown;
+      };
+      canDecide: boolean;
+      resumeError?: unknown | null;
+      resumed: boolean;
+      [key: string]: unknown;
+    };
   };
   postApprovalsByApprovalIdCancel: {
     params: { orgSlug: string; approvalId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      source: string;
+      kind: string;
+      kindLabel: string;
+      status: string;
+      title: string;
+      summary: string;
+      requestedBy: {
+        membershipId: string;
+        name: string;
+        [key: string]: unknown;
+      };
+      requestedAt: string;
+      requesterNote?: unknown | null;
+      decidedBy: {
+        membershipId: string;
+        name: string;
+        [key: string]: unknown;
+      };
+      decidedAt: string;
+      decisionReason: string;
+      subject: {
+        type: string;
+        id: string;
+        dealId: string;
+        [key: string]: unknown;
+      };
+      canDecide: boolean;
+      resumeError?: unknown | null;
+      resumed: boolean;
+      [key: string]: unknown;
+    };
   };
   postApprovalsByApprovalIdDecision: {
     params: { orgSlug: string; approvalId: string };
@@ -493,49 +665,199 @@ export interface Operations {
       approve: boolean;
       reason?: string;
     };
-    response: unknown;
+    response: {
+      id: string;
+      source: string;
+      kind: string;
+      kindLabel: string;
+      status: string;
+      title: string;
+      summary: string;
+      requestedBy: {
+        membershipId: string;
+        name: string;
+        [key: string]: unknown;
+      };
+      requestedAt: string;
+      requesterNote?: unknown | null;
+      decidedBy: {
+        membershipId: string;
+        name: string;
+        [key: string]: unknown;
+      };
+      decidedAt: string;
+      decisionReason: string;
+      subject: {
+        type: string;
+        id: string;
+        dealId: string;
+        [key: string]: unknown;
+      };
+      canDecide: boolean;
+      resumeError?: unknown | null;
+      resumed: boolean;
+      [key: string]: unknown;
+    };
   };
   postAssistantAsk: {
     params: { orgSlug: string };
     query: undefined;
-    body: undefined;
+    body: {
+      question: string;
+      record?: {
+        kind: "lead" | "deal" | "company";
+        id: string;
+      } | null;
+    };
     response: unknown;
   };
   getAssistantAudit: {
     params: { orgSlug: string };
-    query: undefined;
+    query: {
+      limit?: string;
+      cursor?: string;
+      sort?: string;
+      page?: string;
+      pageSize?: string;
+    };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id: string;
+        at: string;
+        who: string;
+        question: string;
+        answer: string;
+        status: string;
+        basis?: unknown | null;
+        model?: unknown | null;
+        tokens: {
+          input?: unknown | null;
+          output?: unknown | null;
+          [key: string]: unknown;
+        };
+        contextCounts: {
+          [key: string]: unknown;
+        };
+        injectionFlags: Array<unknown>;
+        redactions: number;
+        feedback?: unknown | null;
+        proposals: Array<{
+          kind: string;
+          status: string;
+          [key: string]: unknown;
+        }>;
+        [key: string]: unknown;
+      }>;
+      page: number;
+      pageSize: number;
+      total: number;
+      pageCount: number;
+      nextCursor?: unknown | null;
+      [key: string]: unknown;
+    };
   };
   postAssistantProposalsByProposalIdConfirm: {
     params: { orgSlug: string; proposalId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      status: string;
+      task: {
+        id: string;
+        title: string;
+        dueAt?: unknown | null;
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
   };
   postAssistantProposalsByProposalIdDismiss: {
     params: { orgSlug: string; proposalId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      status: string;
+      [key: string]: unknown;
+    };
   };
   postAssistantRequestsByRequestIdFeedback: {
     params: { orgSlug: string; requestId: string };
     query: undefined;
-    body: undefined;
-    response: unknown;
+    body: {
+      value: "up" | "down";
+    };
+    response: {
+      requestId: string;
+      feedback: string;
+      [key: string]: unknown;
+    };
   };
   getAssistantSettings: {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      enabled: boolean;
+      providerConfigured: boolean;
+      options: {
+        summaries: boolean;
+        drafts: boolean;
+        scoring: boolean;
+        retention: boolean;
+        [key: string]: unknown;
+      };
+      limits: {
+        perUser: number;
+        perOrganisation: number;
+        [key: string]: unknown;
+      };
+      usage: {
+        today: number;
+        remaining: number;
+        organisationToday: number;
+        [key: string]: unknown;
+      };
+      canConfigure: boolean;
+      [key: string]: unknown;
+    };
   };
   putAssistantSettings: {
     params: { orgSlug: string };
     query: undefined;
-    body: undefined;
-    response: unknown;
+    body: {
+      enabled?: boolean;
+      summaries?: boolean;
+      drafts?: boolean;
+      scoring?: boolean;
+      retention?: boolean;
+      dailyLimitPerUser?: number;
+      dailyLimitPerOrg?: number;
+    };
+    response: {
+      enabled: boolean;
+      providerConfigured: boolean;
+      options: {
+        summaries: boolean;
+        drafts: boolean;
+        scoring: boolean;
+        retention: boolean;
+        [key: string]: unknown;
+      };
+      limits: {
+        perUser: number;
+        perOrganisation: number;
+        [key: string]: unknown;
+      };
+      usage: {
+        today: number;
+        remaining: number;
+        organisationToday: number;
+        [key: string]: unknown;
+      };
+      canConfigure: boolean;
+      [key: string]: unknown;
+    };
   };
   deleteAttachmentsByAttachmentId: {
     params: { orgSlug: string; attachmentId: string };
@@ -788,7 +1110,32 @@ export interface Operations {
       pageSize?: string;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id: string;
+        sku?: unknown | null;
+        name: string;
+        description?: unknown | null;
+        kind: string;
+        unit: string;
+        price: number;
+        currency: string;
+        taxable: boolean;
+        status: string;
+        cost: number;
+        marginPct: number;
+        costMasked: boolean;
+        createdAt: string;
+        updatedAt: string;
+        [key: string]: unknown;
+      }>;
+      page: number;
+      pageSize: number;
+      total: number;
+      pageCount: number;
+      nextCursor?: unknown | null;
+      [key: string]: unknown;
+    };
   };
   postCatalogue: {
     params: { orgSlug: string };
@@ -805,13 +1152,47 @@ export interface Operations {
       taxable?: boolean;
       status?: string;
     };
-    response: unknown;
+    response: {
+      id: string;
+      sku?: unknown | null;
+      name: string;
+      description?: unknown | null;
+      kind: string;
+      unit: string;
+      price: number;
+      currency: string;
+      taxable: boolean;
+      status: string;
+      cost?: unknown | null;
+      marginPct?: unknown | null;
+      costMasked: boolean;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   getCatalogueByItemId: {
     params: { orgSlug: string; itemId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      sku?: unknown | null;
+      name: string;
+      description?: unknown | null;
+      kind: string;
+      unit: string;
+      price: number;
+      currency: string;
+      taxable: boolean;
+      status: string;
+      cost: number;
+      marginPct: number;
+      costMasked: boolean;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   patchCatalogueByItemId: {
     params: { orgSlug: string; itemId: string };
@@ -828,7 +1209,24 @@ export interface Operations {
       taxable?: boolean;
       status?: string;
     };
-    response: unknown;
+    response: {
+      id: string;
+      sku?: unknown | null;
+      name: string;
+      description?: unknown | null;
+      kind: string;
+      unit: string;
+      price: number;
+      currency: string;
+      taxable: boolean;
+      status: string;
+      cost: number;
+      marginPct: number;
+      costMasked: boolean;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   getChatChannels: {
     params: { orgSlug: string };
@@ -841,7 +1239,30 @@ export interface Operations {
       pageSize?: string;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id: string;
+        kind: string;
+        name: string;
+        description?: unknown | null;
+        private: boolean;
+        record?: unknown | null;
+        archived: boolean;
+        memberCount: number;
+        joined: boolean;
+        role: string;
+        unread: number;
+        mentions: number;
+        lastSeq: number;
+        lastMessageAt: string;
+        partner?: unknown | null;
+        createdAt: string;
+        [key: string]: unknown;
+      }>;
+      unreadTotal: number;
+      mentionTotal: number;
+      [key: string]: unknown;
+    };
   };
   postChatChannels: {
     params: { orgSlug: string };
@@ -868,7 +1289,25 @@ export interface Operations {
     params: { orgSlug: string; channelId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      kind: string;
+      name: string;
+      description?: unknown | null;
+      private: boolean;
+      record?: unknown | null;
+      archived: boolean;
+      memberCount: number;
+      joined: boolean;
+      role: string;
+      unread: number;
+      mentions: number;
+      lastSeq: number;
+      lastMessageAt: string;
+      partner?: unknown | null;
+      createdAt: string;
+      [key: string]: unknown;
+    };
   };
   patchChatChannelsByChannelId: {
     params: { orgSlug: string; channelId: string };
@@ -878,25 +1317,74 @@ export interface Operations {
       description?: string | null;
       archived?: boolean;
     };
-    response: unknown;
+    response: {
+      id: string;
+      kind: string;
+      name: string;
+      description?: unknown | null;
+      private: boolean;
+      record?: unknown | null;
+      archived: boolean;
+      memberCount: number;
+      joined: boolean;
+      role: string;
+      unread: number;
+      mentions: number;
+      lastSeq: number;
+      lastMessageAt: string;
+      partner?: unknown | null;
+      createdAt: string;
+      [key: string]: unknown;
+    };
   };
   postChatChannelsByChannelIdJoin: {
     params: { orgSlug: string; channelId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      kind: string;
+      name: string;
+      description?: unknown | null;
+      private: boolean;
+      record?: unknown | null;
+      archived: boolean;
+      memberCount: number;
+      joined: boolean;
+      role: string;
+      unread: number;
+      mentions: number;
+      lastSeq: number;
+      lastMessageAt: string;
+      partner?: unknown | null;
+      createdAt: string;
+      [key: string]: unknown;
+    };
   };
   postChatChannelsByChannelIdLeave: {
     params: { orgSlug: string; channelId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      ok: boolean;
+      [key: string]: unknown;
+    };
   };
   getChatChannelsByChannelIdMembers: {
     params: { orgSlug: string; channelId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        membershipId: string;
+        name: string;
+        role: string;
+        joinedAt: string;
+        presence: string;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   postChatChannelsByChannelIdMembers: {
     params: { orgSlug: string; channelId: string };
@@ -920,7 +1408,31 @@ export interface Operations {
       limit?: string;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id: string;
+        channelId: string;
+        seq: number;
+        authorMembershipId: string;
+        authorName: string;
+        body: string;
+        deleted: boolean;
+        erased: boolean;
+        card?: unknown | null;
+        mentions: Array<unknown>;
+        attachments: Array<unknown>;
+        reactions: Array<unknown>;
+        canDelete: boolean;
+        createdAt: string;
+        updatedAt: string;
+        [key: string]: unknown;
+      }>;
+      hasMore: boolean;
+      lastSeq: number;
+      oldestSeq: number;
+      newestSeq: number;
+      [key: string]: unknown;
+    };
   };
   postChatChannelsByChannelIdMessages: {
     params: { orgSlug: string; channelId: string };
@@ -940,7 +1452,10 @@ export interface Operations {
     params: { orgSlug: string; channelId: string; messageId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      ok: boolean;
+      [key: string]: unknown;
+    };
   };
   getChatChannelsByChannelIdMessagesByMessageIdAttachmentsByFileId: {
     params: { orgSlug: string; channelId: string; messageId: string; fileId: string };
@@ -954,7 +1469,24 @@ export interface Operations {
       emoji: string;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      channelId: string;
+      seq: number;
+      authorMembershipId: string;
+      authorName: string;
+      body: string;
+      deleted: boolean;
+      erased: boolean;
+      card?: unknown | null;
+      mentions: Array<unknown>;
+      attachments: Array<unknown>;
+      reactions: Array<unknown>;
+      canDelete: boolean;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   postChatChannelsByChannelIdMessagesByMessageIdReactions: {
     params: { orgSlug: string; channelId: string; messageId: string };
@@ -962,7 +1494,29 @@ export interface Operations {
     body: {
       emoji: string;
     };
-    response: unknown;
+    response: {
+      id: string;
+      channelId: string;
+      seq: number;
+      authorMembershipId: string;
+      authorName: string;
+      body: string;
+      deleted: boolean;
+      erased: boolean;
+      card?: unknown | null;
+      mentions: Array<unknown>;
+      attachments: Array<unknown>;
+      reactions: Array<{
+        emoji: string;
+        count: number;
+        mine: boolean;
+        [key: string]: unknown;
+      }>;
+      canDelete: boolean;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   postChatChannelsByChannelIdRead: {
     params: { orgSlug: string; channelId: string };
@@ -970,19 +1524,38 @@ export interface Operations {
     body: {
       upToSeq?: number;
     };
-    response: unknown;
+    response: {
+      channelId: string;
+      lastSeq: number;
+      unread: number;
+      mentions: number;
+      [key: string]: unknown;
+    };
   };
   postChatChannelsByChannelIdTyping: {
     params: { orgSlug: string; channelId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      ok: boolean;
+      [key: string]: unknown;
+    };
   };
   getChatPeople: {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        membershipId: string;
+        name: string;
+        roleName: string;
+        presence: string;
+        you: boolean;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   postChatPresence: {
     params: { orgSlug: string };
@@ -990,7 +1563,12 @@ export interface Operations {
     body: {
       status?: "ONLINE" | "AWAY";
     };
-    response: unknown;
+    response: {
+      ok: boolean;
+      status: string;
+      expiresInSeconds: number;
+      [key: string]: unknown;
+    };
   };
   getChatSearch: {
     params: { orgSlug: string };
@@ -1003,7 +1581,16 @@ export interface Operations {
       pageSize?: string;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<unknown>;
+      page: number;
+      pageSize: number;
+      total: number;
+      pageCount: number;
+      nextCursor?: unknown | null;
+      tooShort: boolean;
+      [key: string]: unknown;
+    };
   };
   getChatSync: {
     params: { orgSlug: string };
@@ -1012,13 +1599,42 @@ export interface Operations {
       waitSeconds?: string;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      serverTime: string;
+      channels: Array<{
+        channelId: string;
+        lastSeq: number;
+        unread: number;
+        mentions: number;
+        archived: boolean;
+        typing: Array<unknown>;
+        [key: string]: unknown;
+      }>;
+      messages: Array<unknown>;
+      more: boolean;
+      updated: Array<unknown>;
+      online: Array<{
+        membershipId: string;
+        status: string;
+        [key: string]: unknown;
+      }>;
+      unreadTotal: number;
+      mentionTotal: number;
+      [key: string]: unknown;
+    };
   };
   getChatUnread: {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      unread: number;
+      mentions: number;
+      channels: {
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
   };
   listChurnHints: {
     params: { orgSlug: string };
@@ -1065,7 +1681,29 @@ export interface Operations {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      commands: Array<{
+        id: string;
+        kind: string;
+        group: string;
+        title: string;
+        path: string;
+        hint: unknown;
+        [key: string]: unknown;
+      }>;
+      search: {
+        types: Array<string>;
+        minQueryLength: number;
+        path: string;
+        [key: string]: unknown;
+      };
+      shortcuts: Array<{
+        label: string;
+        keys: string;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   deleteCommentsByCommentId: {
     params: { orgSlug: string; commentId: string };
@@ -1123,33 +1761,120 @@ export interface Operations {
   };
   getCommunicationsMailDrafts: {
     params: { orgSlug: string };
-    query: undefined;
+    query: {
+      status?: string;
+    };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<unknown>;
+      [key: string]: unknown;
+    };
   };
   postCommunicationsMailDrafts: {
     params: { orgSlug: string };
     query: undefined;
-    body: undefined;
-    response: unknown;
+    body: {
+      to?: Array<string>;
+      cc?: Array<string>;
+      subject?: string;
+      body?: string;
+      replyToCommunicationId?: string;
+      attachmentIds?: Array<string>;
+      companyId?: string;
+      contactId?: string;
+      leadId?: string;
+      dealId?: string;
+    };
+    response: {
+      id: string;
+      to: Array<unknown>;
+      cc: Array<unknown>;
+      subject: string;
+      body: string;
+      status: string;
+      scheduledAt?: unknown | null;
+      sentAt?: unknown | null;
+      communicationId?: unknown | null;
+      replyToCommunicationId?: unknown | null;
+      companyId?: unknown | null;
+      contactId?: unknown | null;
+      leadId?: unknown | null;
+      dealId?: unknown | null;
+      attachmentIds: Array<unknown>;
+      lastError?: unknown | null;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   deleteCommunicationsMailDraftsByDraftId: {
     params: { orgSlug: string; draftId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      [key: string]: unknown;
+    };
   };
   getCommunicationsMailDraftsByDraftId: {
     params: { orgSlug: string; draftId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      to: Array<string>;
+      cc: Array<unknown>;
+      subject: string;
+      body: string;
+      status: string;
+      scheduledAt?: unknown | null;
+      sentAt?: unknown | null;
+      communicationId?: unknown | null;
+      replyToCommunicationId?: unknown | null;
+      companyId?: unknown | null;
+      contactId?: unknown | null;
+      leadId?: unknown | null;
+      dealId?: unknown | null;
+      attachmentIds: Array<unknown>;
+      lastError?: unknown | null;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   patchCommunicationsMailDraftsByDraftId: {
     params: { orgSlug: string; draftId: string };
     query: undefined;
-    body: undefined;
-    response: unknown;
+    body: {
+      to?: Array<string>;
+      cc?: Array<string>;
+      subject?: string;
+      body?: string;
+      replyToCommunicationId?: string;
+      attachmentIds?: Array<string>;
+      companyId?: string;
+      contactId?: string;
+      leadId?: string;
+      dealId?: string;
+    };
+    response: {
+      id: string;
+      to: Array<string>;
+      cc: Array<unknown>;
+      subject: string;
+      body: string;
+      status: string;
+      scheduledAt?: unknown | null;
+      sentAt?: unknown | null;
+      communicationId?: unknown | null;
+      replyToCommunicationId?: unknown | null;
+      companyId?: unknown | null;
+      contactId?: unknown | null;
+      leadId?: unknown | null;
+      dealId?: unknown | null;
+      attachmentIds: Array<unknown>;
+      lastError?: unknown | null;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   deleteCommunicationsMailDraftsByDraftIdSchedule: {
     params: { orgSlug: string; draftId: string };
@@ -1160,7 +1885,9 @@ export interface Operations {
   postCommunicationsMailDraftsByDraftIdSchedule: {
     params: { orgSlug: string; draftId: string };
     query: undefined;
-    body: undefined;
+    body: {
+      sendAt: string;
+    };
     response: unknown;
   };
   postCommunicationsMailDraftsByDraftIdSend: {
@@ -1171,20 +1898,65 @@ export interface Operations {
   };
   getCommunicationsMailRecordCard: {
     params: { orgSlug: string };
-    query: undefined;
+    query: {
+      dealId?: string;
+      companyId?: string;
+      leadId?: string;
+      contactId?: string;
+    };
     body: undefined;
-    response: unknown;
+    response: {
+      kind: string;
+      id: string;
+      name: string;
+      stage: string;
+      outcome: string;
+      value: number;
+      currency: string;
+      valueMasked: boolean;
+      margin?: unknown | null;
+      marginMasked: boolean;
+      paymentDue?: unknown | null;
+      paymentsMasked: boolean;
+      [key: string]: unknown;
+    };
   };
   postCommunicationsMailSend: {
     params: { orgSlug: string };
     query: undefined;
-    body: undefined;
+    body: {
+      to: Array<string>;
+      cc?: Array<string>;
+      subject: string;
+      body: string;
+      replyToCommunicationId?: string;
+      attachmentIds?: Array<string>;
+      companyId?: string;
+      contactId?: string;
+      leadId?: string;
+      dealId?: string;
+    };
     response: unknown;
   };
   postCommunicationsMeetings: {
     params: { orgSlug: string };
     query: undefined;
-    body: undefined;
+    body: {
+      title: string;
+      start: string;
+      end?: string;
+      description?: string;
+      attendees?: Array<string>;
+      withVideo?: boolean;
+      link: {
+        type: "Lead" | "Deal" | "Company" | "Contact";
+        id: string;
+      };
+      followUp?: {
+        title: string;
+        dueAt?: string;
+      };
+    };
     response: unknown;
   };
   deleteCommunicationsMeetingsByActivityId: {
@@ -1196,7 +1968,11 @@ export interface Operations {
   patchCommunicationsMeetingsByActivityId: {
     params: { orgSlug: string; activityId: string };
     query: undefined;
-    body: undefined;
+    body: {
+      start?: string;
+      end?: string;
+      title?: string;
+    };
     response: unknown;
   };
   postCommunicationsSendEmail: {
@@ -4193,7 +4969,41 @@ export interface Operations {
     params: { orgSlug: string; dealId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      number: string;
+      dealId: string;
+      currency: string;
+      currentVersion: number;
+      versions: Array<{
+        version: number;
+        status: string;
+        locked: boolean;
+        expired: boolean;
+        discountPercent: number;
+        validUntil: string;
+        currency: string;
+        subtotal: number;
+        discountAmount: number;
+        total: number;
+        marginPct: number;
+        amountMasked: boolean;
+        marginMasked: boolean;
+        approvalRequired?: unknown | null;
+        submittedAt: string;
+        approvedAt?: unknown | null;
+        decidedByMembershipId?: unknown | null;
+        decisionReason?: unknown | null;
+        sentAt?: unknown | null;
+        respondedAt?: unknown | null;
+        createdByMembershipId: string;
+        createdAt: string;
+        [key: string]: unknown;
+      }>;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   postDealsByDealIdQuote: {
     params: { orgSlug: string; dealId: string };
@@ -4591,20 +5401,101 @@ export interface Operations {
   };
   getForecast: {
     params: { orgSlug: string };
-    query: undefined;
+    query: {
+      scope?: "mine" | "team";
+      month?: string;
+      months?: number;
+    };
     body: undefined;
-    response: unknown;
+    response: {
+      scope: string;
+      month: string;
+      months: number;
+      asOf: string;
+      currency: string;
+      valueMasked: boolean;
+      stages: Array<{
+        id: string;
+        key: string;
+        name: string;
+        probability: number;
+        probabilitySet: boolean;
+        count: number;
+        full: string;
+        weighted: string;
+        [key: string]: unknown;
+      }>;
+      pipeline: {
+        count: number;
+        full: string;
+        weighted: string;
+        [key: string]: unknown;
+      };
+      buckets: Array<{
+        month: string;
+        count: number;
+        full: string;
+        weighted: string;
+        [key: string]: unknown;
+      }>;
+      earlier: {
+        count: number;
+        full: string;
+        weighted: string;
+        [key: string]: unknown;
+      };
+      later: {
+        count: number;
+        full: string;
+        weighted: string;
+        [key: string]: unknown;
+      };
+      unscheduled: {
+        count: number;
+        full: string;
+        weighted: string;
+        [key: string]: unknown;
+      };
+      won: {
+        count: number;
+        total: string;
+        [key: string]: unknown;
+      };
+      people: Array<unknown>;
+      team: {
+        targetSource: string;
+        state: string;
+        target?: unknown | null;
+        won: string;
+        weighted: string;
+        forecast: string;
+        shortBy: string;
+        attainmentPercent?: unknown | null;
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
   };
   getForecastTargets: {
     params: { orgSlug: string };
-    query: undefined;
+    query: {
+      month?: string;
+    };
     body: undefined;
-    response: unknown;
+    response: {
+      month: string;
+      items: Array<unknown>;
+      [key: string]: unknown;
+    };
   };
   putForecastTargets: {
     params: { orgSlug: string };
     query: undefined;
-    body: undefined;
+    body: {
+      month: string;
+      membershipId: string | null;
+      amount: number | string | null;
+    };
     response: unknown;
   };
   getHandoffSettings: {
@@ -4676,7 +5567,17 @@ export interface Operations {
       page?: string;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        slug: string;
+        title: string;
+        area: string;
+        summary: string;
+        [key: string]: unknown;
+      }>;
+      tips?: unknown | null;
+      [key: string]: unknown;
+    };
   };
   getHelpBySlug: {
     params: { orgSlug: string; slug: string };
@@ -4730,19 +5631,77 @@ export interface Operations {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id?: unknown | null;
+        kind: string;
+        provider?: unknown | null;
+        state: string;
+        stateReason: string;
+        accountEmail?: unknown | null;
+        shared: boolean;
+        mine: boolean;
+        scopes: Array<unknown>;
+        connectedAt?: unknown | null;
+        lastSyncedAt?: unknown | null;
+        lastError?: unknown | null;
+        settings: {
+          [key: string]: unknown;
+        };
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   deleteIntegrationsConnectionsByConnectionId: {
     params: { orgSlug: string; connectionId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      kind: string;
+      provider: string;
+      state: string;
+      stateReason: string;
+      accountEmail: string;
+      shared: boolean;
+      mine: boolean;
+      scopes: Array<unknown>;
+      connectedAt: string;
+      lastSyncedAt?: unknown | null;
+      lastError?: unknown | null;
+      settings: {
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
   };
   patchIntegrationsConnectionsByConnectionId: {
     params: { orgSlug: string; connectionId: string };
     query: undefined;
-    body: undefined;
-    response: unknown;
+    body: {
+      calendarId?: string | null;
+      excludedAddresses?: Array<string>;
+      syncEnabled?: boolean;
+    };
+    response: {
+      id: string;
+      kind: string;
+      provider: string;
+      state: string;
+      stateReason: string;
+      accountEmail: string;
+      shared: boolean;
+      mine: boolean;
+      scopes: Array<unknown>;
+      connectedAt: string;
+      lastSyncedAt?: unknown | null;
+      lastError?: unknown | null;
+      settings: {
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
   };
   getIntegrationsConnectionsByConnectionIdCalendars: {
     params: { orgSlug: string; connectionId: string };
@@ -4754,18 +5713,48 @@ export interface Operations {
     params: { orgSlug: string; connectionId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      queued: boolean;
+      jobId: string;
+      [key: string]: unknown;
+    };
   };
   getIntegrationsConnectionsOrganization: {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id: string;
+        kind: string;
+        provider: string;
+        state: string;
+        stateReason: string;
+        accountEmail: string;
+        shared: boolean;
+        mine: boolean;
+        scopes: Array<unknown>;
+        connectedAt: string;
+        lastSyncedAt?: unknown | null;
+        lastError?: unknown | null;
+        settings: {
+          [key: string]: unknown;
+        };
+        memberName: string;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   postIntegrationsConnectionsStart: {
     params: { orgSlug: string };
     query: undefined;
-    body: undefined;
+    body: {
+      kind: string;
+      provider: string;
+      shared?: boolean;
+      loginHint?: string;
+    };
     response: unknown;
   };
   getIntegrationsInboundEmailKey: {
@@ -6956,7 +7945,10 @@ export interface Operations {
     params: { orgSlug: string; membershipId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      reset: boolean;
+      [key: string]: unknown;
+    };
   };
   postMembershipsByMembershipIdUnlock: {
     params: { orgSlug: string; membershipId: string };
@@ -7252,7 +8244,44 @@ export interface Operations {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id: string;
+        key: string;
+        name: string;
+        isDefault: boolean;
+        isActive: boolean;
+        serviceIds: Array<unknown>;
+        stages: Array<{
+          id: string;
+          key: string;
+          name: string;
+          sequence: number;
+          probability?: unknown | null;
+          stalledAfterDays?: unknown | null;
+          isWon: boolean;
+          isLost: boolean;
+          isActive: boolean;
+          rules: Array<unknown>;
+          [key: string]: unknown;
+        }>;
+        [key: string]: unknown;
+      }>;
+      ruleTypes: Array<{
+        type: string;
+        label: string;
+        [key: string]: unknown;
+      }>;
+      fields: {
+        value: string;
+        expectedCloseDate: string;
+        primaryContactId: string;
+        serviceId: string;
+        notes: string;
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
   };
   postPipelines: {
     params: { orgSlug: string };
@@ -7272,7 +8301,28 @@ export interface Operations {
     params: { orgSlug: string; pipelineId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      key: string;
+      name: string;
+      isDefault: boolean;
+      isActive: boolean;
+      serviceIds: Array<unknown>;
+      stages: Array<{
+        id: string;
+        key: string;
+        name: string;
+        sequence: number;
+        probability?: unknown | null;
+        stalledAfterDays?: unknown | null;
+        isWon: boolean;
+        isLost: boolean;
+        isActive: boolean;
+        rules: Array<unknown>;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   patchPipelinesByPipelineId: {
     params: { orgSlug: string; pipelineId: string };
@@ -7283,7 +8333,28 @@ export interface Operations {
       isDefault?: boolean;
       serviceIds?: Array<string>;
     };
-    response: unknown;
+    response: {
+      id: string;
+      key: string;
+      name: string;
+      isDefault: boolean;
+      isActive: boolean;
+      serviceIds: Array<unknown>;
+      stages: Array<{
+        id: string;
+        key: string;
+        name: string;
+        sequence: number;
+        probability?: unknown | null;
+        stalledAfterDays?: unknown | null;
+        isWon: boolean;
+        isLost: boolean;
+        isActive: boolean;
+        rules: Array<unknown>;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   postPipelinesByPipelineIdStages: {
     params: { orgSlug: string; pipelineId: string };
@@ -7293,7 +8364,28 @@ export interface Operations {
       probability?: number | null;
       position?: number;
     };
-    response: unknown;
+    response: {
+      id: string;
+      key: string;
+      name: string;
+      isDefault: boolean;
+      isActive: boolean;
+      serviceIds: Array<unknown>;
+      stages: Array<{
+        id: string;
+        key: string;
+        name: string;
+        sequence: number;
+        probability?: unknown | null;
+        stalledAfterDays?: unknown | null;
+        isWon: boolean;
+        isLost: boolean;
+        isActive: boolean;
+        rules: Array<unknown>;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   patchPipelinesByPipelineIdStagesByStageId: {
     params: { orgSlug: string; pipelineId: string; stageId: string };
@@ -7304,7 +8396,28 @@ export interface Operations {
       stalledAfterDays?: number | null;
       isActive?: boolean;
     };
-    response: unknown;
+    response: {
+      id: string;
+      key: string;
+      name: string;
+      isDefault: boolean;
+      isActive: boolean;
+      serviceIds: Array<unknown>;
+      stages: Array<{
+        id: string;
+        key: string;
+        name: string;
+        sequence: number;
+        probability?: unknown | null;
+        stalledAfterDays?: unknown | null;
+        isWon: boolean;
+        isLost: boolean;
+        isActive: boolean;
+        rules: Array<unknown>;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   putPipelinesByPipelineIdStagesByStageIdRules: {
     params: { orgSlug: string; pipelineId: string; stageId: string };
@@ -7316,7 +8429,12 @@ export interface Operations {
         fields?: Array<string>;
       }>;
     };
-    response: unknown;
+    response: {
+      stageId: string;
+      rules: Array<unknown>;
+      impact: string;
+      [key: string]: unknown;
+    };
   };
   putPipelinesByPipelineIdStagesReorder: {
     params: { orgSlug: string; pipelineId: string };
@@ -7663,32 +8781,86 @@ export interface Operations {
   postQuickCaptureCards: {
     params: { orgSlug: string };
     query: undefined;
-    body: undefined;
+    body: {
+      name: string;
+      mimeType: string;
+      sizeBytes: number;
+      checksumSha256?: string;
+    };
     response: unknown;
   };
   deleteQuickCaptureCardsByCaptureId: {
     params: { orgSlug: string; captureId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      status: string;
+      fileId: string;
+      fields?: unknown | null;
+      unsure: Array<unknown>;
+      note?: unknown | null;
+      leadId?: unknown | null;
+      contactId?: unknown | null;
+      outcome?: unknown | null;
+      [key: string]: unknown;
+    };
   };
   getQuickCaptureCardsByCaptureId: {
     params: { orgSlug: string; captureId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      status: string;
+      fileId: string;
+      fields?: unknown | null;
+      unsure: Array<unknown>;
+      note?: unknown | null;
+      leadId?: unknown | null;
+      contactId?: unknown | null;
+      outcome?: unknown | null;
+      [key: string]: unknown;
+    };
   };
   postQuickCaptureCardsByCaptureIdConfirm: {
     params: { orgSlug: string; captureId: string };
     query: undefined;
-    body: undefined;
+    body: {
+      confirmed: boolean;
+      fields: {
+        name: string;
+        company?: string;
+        title?: string;
+        phone?: string;
+        email?: string;
+        website?: string;
+        note?: string;
+      };
+      duplicateDecision?: "OPEN_EXISTING" | "CREATE_ANYWAY" | "MERGE";
+      duplicateId?: string;
+      serviceId?: string;
+      sourceId?: string;
+    };
     response: unknown;
   };
   postQuickCaptureCardsByCaptureIdExtract: {
     params: { orgSlug: string; captureId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      status: string;
+      fileId: string;
+      fields?: unknown | null;
+      unsure: Array<unknown>;
+      note?: unknown | null;
+      leadId?: unknown | null;
+      contactId?: unknown | null;
+      outcome?: unknown | null;
+      duplicates: Array<unknown>;
+      [key: string]: unknown;
+    };
   };
   quickLog: {
     params: { orgSlug: string };
@@ -7736,7 +8908,12 @@ export interface Operations {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      requireForProposalSent: boolean;
+      validityDays: number;
+      defaultTerms: string;
+      [key: string]: unknown;
+    };
   };
   patchQuoteSettings: {
     params: { orgSlug: string };
@@ -7746,7 +8923,12 @@ export interface Operations {
       validityDays?: number;
       defaultTerms?: string;
     };
-    response: unknown;
+    response: {
+      requireForProposalSent: boolean;
+      validityDays: number;
+      defaultTerms: string;
+      [key: string]: unknown;
+    };
   };
   getQuotes: {
     params: { orgSlug: string };
@@ -7760,19 +8942,98 @@ export interface Operations {
       pageSize?: string;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id: string;
+        number: string;
+        dealId: string;
+        companyName: string;
+        currency: string;
+        latest: {
+          version: number;
+          status: string;
+          locked: boolean;
+          expired: boolean;
+          discountPercent: number;
+          validUntil: string;
+          currency: string;
+          subtotal: number;
+          discountAmount: number;
+          total: number;
+          marginPct: number;
+          amountMasked: boolean;
+          marginMasked: boolean;
+          approvalRequired?: unknown | null;
+          submittedAt: string;
+          approvedAt?: unknown | null;
+          decidedByMembershipId?: unknown | null;
+          decisionReason?: unknown | null;
+          sentAt?: unknown | null;
+          respondedAt?: unknown | null;
+          createdByMembershipId: string;
+          createdAt: string;
+          [key: string]: unknown;
+        };
+        updatedAt: string;
+        [key: string]: unknown;
+      }>;
+      page: number;
+      pageSize: number;
+      total: number;
+      pageCount: number;
+      nextCursor?: unknown | null;
+      [key: string]: unknown;
+    };
   };
   getQuotesByQuoteId: {
     params: { orgSlug: string; quoteId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      number: string;
+      dealId: string;
+      currency: string;
+      currentVersion: number;
+      versions: Array<{
+        version: number;
+        status: string;
+        locked: boolean;
+        expired: boolean;
+        discountPercent: number;
+        validUntil: string;
+        currency: string;
+        subtotal: number;
+        discountAmount: number;
+        total: number;
+        marginPct: number;
+        amountMasked: boolean;
+        marginMasked: boolean;
+        approvalRequired?: unknown | null;
+        submittedAt: string;
+        approvedAt?: unknown | null;
+        decidedByMembershipId?: unknown | null;
+        decisionReason?: unknown | null;
+        sentAt?: unknown | null;
+        respondedAt?: unknown | null;
+        createdByMembershipId: string;
+        createdAt: string;
+        [key: string]: unknown;
+      }>;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   postQuotesByQuoteIdSharesByShareIdRevoke: {
     params: { orgSlug: string; quoteId: string; shareId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      revokedAt: string;
+      [key: string]: unknown;
+    };
   };
   postQuotesByQuoteIdVersions: {
     params: { orgSlug: string; quoteId: string };
@@ -7786,19 +9047,88 @@ export interface Operations {
     params: { orgSlug: string; quoteId: string; version: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      version: number;
+      status: string;
+      locked: boolean;
+      expired: boolean;
+      discountPercent: number;
+      validUntil: string;
+      terms: string;
+      currency: string;
+      lines: Array<{
+        id: string;
+        position: number;
+        catalogueItemId: string;
+        description: string;
+        unit: string;
+        quantity: number;
+        taxable: boolean;
+        unitPrice: number;
+        lineTotal: number;
+        unitCost: number;
+        [key: string]: unknown;
+      }>;
+      subtotal: number;
+      discountAmount: number;
+      total: number;
+      cost: number;
+      marginPct: number;
+      amountMasked: boolean;
+      marginMasked: boolean;
+      approvalRequired: boolean;
+      submittedAt: string;
+      approvedAt?: unknown | null;
+      decidedByMembershipId?: unknown | null;
+      decisionReason?: unknown | null;
+      sentAt?: unknown | null;
+      respondedAt?: unknown | null;
+      createdByMembershipId: string;
+      createdAt: string;
+      [key: string]: unknown;
+    };
   };
   putQuotesByQuoteIdVersionsByVersion: {
     params: { orgSlug: string; quoteId: string; version: string };
     query: undefined;
-    body: undefined;
+    body: {
+      lines?: Array<{
+        lineId?: string;
+        catalogueItemId?: string;
+        description?: string;
+        unit?: string;
+        quantity: number | string;
+        unitPrice?: number | string;
+        taxable?: boolean;
+      }>;
+      discountPercent?: number | string;
+      validUntil?: string;
+      terms?: string | null;
+    };
     response: unknown;
   };
   getQuotesByQuoteIdVersionsByVersionActivity: {
     params: { orgSlug: string; quoteId: string; version: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      shares: Array<{
+        id: string;
+        recipientEmail: string;
+        expiresAt: string;
+        revokedAt?: unknown | null;
+        viewCount: number;
+        firstViewedAt?: unknown | null;
+        lastViewedAt?: unknown | null;
+        createdAt: string;
+        createdByMembershipId: string;
+        documentSha256: string;
+        active: boolean;
+        [key: string]: unknown;
+      }>;
+      events: Array<unknown>;
+      [key: string]: unknown;
+    };
   };
   postQuotesByQuoteIdVersionsByVersionApplyToDeal: {
     params: { orgSlug: string; quoteId: string; version: string };
@@ -7810,24 +9140,75 @@ export interface Operations {
     params: { orgSlug: string; quoteId: string; version: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      source: string;
+      html: string;
+      sha256: string;
+      [key: string]: unknown;
+    };
   };
   postQuotesByQuoteIdVersionsByVersionRequestApproval: {
     params: { orgSlug: string; quoteId: string; version: string };
     query: undefined;
-    body: undefined;
-    response: unknown;
+    body: {
+      note?: string;
+      sendOnApproval?: {
+        to?: string;
+        subject?: string;
+        body?: string;
+        templateId?: string;
+        linkExpiresInDays?: number;
+      };
+    };
+    response: {
+      id: string;
+      source: string;
+      kind: string;
+      kindLabel: string;
+      status: string;
+      title: string;
+      summary: string;
+      requestedBy: {
+        membershipId: string;
+        name: string;
+        [key: string]: unknown;
+      };
+      requestedAt: string;
+      requesterNote?: unknown | null;
+      decidedBy?: unknown | null;
+      decidedAt?: unknown | null;
+      decisionReason?: unknown | null;
+      subject: {
+        type: string;
+        id: string;
+        dealId: string;
+        [key: string]: unknown;
+      };
+      canDecide: boolean;
+      resumeError?: unknown | null;
+      resumed: boolean;
+      [key: string]: unknown;
+    };
   };
   postQuotesByQuoteIdVersionsByVersionResponse: {
     params: { orgSlug: string; quoteId: string; version: string };
     query: undefined;
-    body: undefined;
+    body: {
+      outcome: "ACCEPTED" | "DECLINED";
+      note?: string;
+    };
     response: unknown;
   };
   postQuotesByQuoteIdVersionsByVersionSend: {
     params: { orgSlug: string; quoteId: string; version: string };
     query: undefined;
-    body: undefined;
+    body: {
+      to?: string;
+      subject?: string;
+      body?: string;
+      templateId?: string;
+      linkExpiresInDays?: number;
+    };
     response: unknown;
   };
   listRecurringServices: {
@@ -9088,13 +10469,24 @@ export interface Operations {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      required: boolean;
+      trustedDeviceDays: number;
+      yourTwoStepIsOn: boolean;
+      [key: string]: unknown;
+    };
   };
   patchSecurityTwoStepPolicy: {
     params: { orgSlug: string };
     query: undefined;
-    body: undefined;
-    response: unknown;
+    body: {
+      required: boolean;
+    };
+    response: {
+      required: boolean;
+      signedOut: number;
+      [key: string]: unknown;
+    };
   };
   getSequenceEnrollments: {
     params: { orgSlug: string };
@@ -9110,25 +10502,112 @@ export interface Operations {
       pageSize?: string;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id: string;
+        sequenceId: string;
+        sequenceName: string;
+        subjectType: string;
+        leadId: string;
+        dealId?: unknown | null;
+        status: string;
+        nextPosition: number;
+        nextRunAt: string;
+        enrolledAt: string;
+        lastStepAt?: unknown | null;
+        pausedAt?: unknown | null;
+        pauseReason?: unknown | null;
+        endedAt?: unknown | null;
+        endReason?: unknown | null;
+        [key: string]: unknown;
+      }>;
+      page: number;
+      pageSize: number;
+      total: number;
+      pageCount: number;
+      nextCursor?: unknown | null;
+      [key: string]: unknown;
+    };
   };
   getSequenceEnrollmentsByEnrollmentId: {
     params: { orgSlug: string; enrollmentId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      sequenceId: string;
+      sequenceName: string;
+      subjectType: string;
+      leadId: string;
+      dealId?: unknown | null;
+      status: string;
+      nextPosition: number;
+      nextRunAt: string;
+      enrolledAt: string;
+      lastStepAt?: unknown | null;
+      pausedAt?: unknown | null;
+      pauseReason?: unknown | null;
+      endedAt?: unknown | null;
+      endReason?: unknown | null;
+      runs: Array<{
+        id: string;
+        at: string;
+        kind: string;
+        position?: unknown | null;
+        outcome?: unknown | null;
+        result: string;
+        taskId?: unknown | null;
+        communicationId?: unknown | null;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   postSequenceEnrollmentsByEnrollmentIdEnd: {
     params: { orgSlug: string; enrollmentId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      sequenceId: string;
+      sequenceName?: unknown | null;
+      subjectType: string;
+      leadId: string;
+      dealId?: unknown | null;
+      status: string;
+      nextPosition: number;
+      nextRunAt?: unknown | null;
+      enrolledAt: string;
+      lastStepAt?: unknown | null;
+      pausedAt?: unknown | null;
+      pauseReason?: unknown | null;
+      endedAt: string;
+      endReason: string;
+      [key: string]: unknown;
+    };
   };
   postSequenceEnrollmentsByEnrollmentIdPause: {
     params: { orgSlug: string; enrollmentId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      sequenceId: string;
+      sequenceName?: unknown | null;
+      subjectType: string;
+      leadId: string;
+      dealId?: unknown | null;
+      status: string;
+      nextPosition: number;
+      nextRunAt: string;
+      enrolledAt: string;
+      lastStepAt?: unknown | null;
+      pausedAt: string;
+      pauseReason: string;
+      endedAt?: unknown | null;
+      endReason?: unknown | null;
+      [key: string]: unknown;
+    };
   };
   postSequenceEnrollmentsByEnrollmentIdResume: {
     params: { orgSlug: string; enrollmentId: string };
@@ -9140,12 +10619,45 @@ export interface Operations {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id: string;
+        name: string;
+        description?: unknown | null;
+        subjectType: string;
+        trigger: string;
+        isActive: boolean;
+        exitRules: Array<string>;
+        running: number;
+        steps: Array<{
+          position: number;
+          dayOffset: number;
+          kind: string;
+          title: string;
+          description?: unknown | null;
+          priority: string;
+          emailTemplateId?: unknown | null;
+          emailMode: string;
+          [key: string]: unknown;
+        }>;
+        createdAt: string;
+        updatedAt: string;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   postSequences: {
     params: { orgSlug: string };
     query: undefined;
-    body: undefined;
+    body: {
+      name: string;
+      description?: string | null;
+      subjectType: string;
+      trigger?: string;
+      exitRules?: unknown;
+      steps: unknown;
+    };
     response: unknown;
   };
   deleteSequencesBySequenceId: {
@@ -9158,13 +10670,66 @@ export interface Operations {
     params: { orgSlug: string; sequenceId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      name: string;
+      description?: unknown | null;
+      subjectType: string;
+      trigger: string;
+      isActive: boolean;
+      exitRules: Array<string>;
+      running: number;
+      steps: Array<{
+        position: number;
+        dayOffset: number;
+        kind: string;
+        title: string;
+        description?: unknown | null;
+        priority: string;
+        emailTemplateId?: unknown | null;
+        emailMode: string;
+        [key: string]: unknown;
+      }>;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   patchSequencesBySequenceId: {
     params: { orgSlug: string; sequenceId: string };
     query: undefined;
-    body: undefined;
-    response: unknown;
+    body: {
+      name?: string;
+      description?: string | null;
+      trigger?: string;
+      isActive?: boolean;
+      exitRules?: unknown;
+      steps?: unknown;
+    };
+    response: {
+      id: string;
+      name: string;
+      description?: unknown | null;
+      subjectType: string;
+      trigger: string;
+      isActive: boolean;
+      exitRules: Array<string>;
+      running: number;
+      steps: Array<{
+        position: number;
+        dayOffset: number;
+        kind: string;
+        title: string;
+        description?: unknown | null;
+        priority: string;
+        emailTemplateId?: unknown | null;
+        emailMode: string;
+        [key: string]: unknown;
+      }>;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   postSequencesBySequenceIdEnrollments: {
     params: { orgSlug: string; sequenceId: string };
@@ -9714,7 +11279,10 @@ export interface Operations {
       pinned?: "true" | "false";
     };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<unknown>;
+      [key: string]: unknown;
+    };
   };
   postViews: {
     params: { orgSlug: string };
@@ -9734,13 +11302,35 @@ export interface Operations {
     params: { orgSlug: string; viewId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      [key: string]: unknown;
+    };
   };
   getViewsByViewId: {
     params: { orgSlug: string; viewId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      entity: string;
+      name: string;
+      scope: string;
+      filters: {
+        [key: string]: unknown;
+      };
+      sort?: unknown | null;
+      columns?: unknown | null;
+      hiddenParts: number;
+      mine: boolean;
+      ownerName: string;
+      canEdit: boolean;
+      pinned: boolean;
+      pinPosition?: unknown | null;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   patchViewsByViewId: {
     params: { orgSlug: string; viewId: string };
@@ -9752,7 +11342,26 @@ export interface Operations {
       sort?: unknown;
       columns?: unknown;
     };
-    response: unknown;
+    response: {
+      id: string;
+      entity: string;
+      name: string;
+      scope: string;
+      filters: {
+        [key: string]: unknown;
+      };
+      sort?: unknown | null;
+      columns?: unknown | null;
+      hiddenParts: number;
+      mine: boolean;
+      ownerName: string;
+      canEdit: boolean;
+      pinned: boolean;
+      pinPosition?: unknown | null;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   putViewsByViewIdPin: {
     params: { orgSlug: string; viewId: string };
@@ -9760,7 +11369,26 @@ export interface Operations {
     body: {
       pinned: boolean;
     };
-    response: unknown;
+    response: {
+      id: string;
+      entity: string;
+      name: string;
+      scope: string;
+      filters: {
+        [key: string]: unknown;
+      };
+      sort?: unknown | null;
+      columns?: unknown | null;
+      hiddenParts: number;
+      mine: boolean;
+      ownerName: string;
+      canEdit: boolean;
+      pinned: boolean;
+      pinPosition?: unknown | null;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   putViewsPinnedOrder: {
     params: { orgSlug: string };
@@ -9768,13 +11396,40 @@ export interface Operations {
     body: {
       ids: Array<string>;
     };
-    response: unknown;
+    response: {
+      items: Array<unknown>;
+      [key: string]: unknown;
+    };
   };
   getWebForms: {
     params: { orgSlug: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<{
+        id: string;
+        name: string;
+        status: string;
+        publicKey: string;
+        fields: Array<{
+          key: string;
+          maps: string;
+          type: string;
+          label: string;
+          required: boolean;
+          [key: string]: unknown;
+        }>;
+        leadSourceKey?: unknown | null;
+        successMessage: string;
+        allowedOrigins: Array<unknown>;
+        honeypotFieldName: string;
+        captchaConfigured: boolean;
+        createdAt: string;
+        updatedAt: string;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   postWebForms: {
     params: { orgSlug: string };
@@ -9784,24 +11439,73 @@ export interface Operations {
       fields?: unknown;
       leadSourceKey?: string | null;
       successMessage?: string;
-      language?: string;
       allowedOrigins?: unknown;
       honeypotFieldName?: string;
       captchaSecret?: string | null;
     };
-    response: unknown;
+    response: {
+      id: string;
+      name: string;
+      status: string;
+      publicKey: string;
+      fields: Array<{
+        key: string;
+        maps: string;
+        type: string;
+        label: string;
+        required: boolean;
+        [key: string]: unknown;
+      }>;
+      leadSourceKey?: unknown | null;
+      successMessage: string;
+      allowedOrigins: Array<unknown>;
+      honeypotFieldName: string;
+      captchaConfigured: boolean;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   deleteWebFormsByFormId: {
     params: { orgSlug: string; formId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      [key: string]: unknown;
+    };
   };
   getWebFormsByFormId: {
     params: { orgSlug: string; formId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      name: string;
+      status: string;
+      publicKey: string;
+      fields: Array<{
+        key: string;
+        maps: string;
+        type: string;
+        label: string;
+        required: boolean;
+        [key: string]: unknown;
+      }>;
+      leadSourceKey?: unknown | null;
+      successMessage: string;
+      allowedOrigins: Array<unknown>;
+      honeypotFieldName: string;
+      captchaConfigured: boolean;
+      createdAt: string;
+      updatedAt: string;
+      last30Days: {
+        accepted: number;
+        rejected: number;
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
   };
   patchWebFormsByFormId: {
     params: { orgSlug: string; formId: string };
@@ -9812,18 +11516,59 @@ export interface Operations {
       fields?: unknown;
       leadSourceKey?: string | null;
       successMessage?: string;
-      language?: string;
       allowedOrigins?: unknown;
       honeypotFieldName?: string;
       captchaSecret?: string | null;
     };
-    response: unknown;
+    response: {
+      id: string;
+      name: string;
+      status: string;
+      publicKey: string;
+      fields: Array<{
+        key: string;
+        maps: string;
+        type: string;
+        label: string;
+        required: boolean;
+        [key: string]: unknown;
+      }>;
+      leadSourceKey?: unknown | null;
+      successMessage: string;
+      allowedOrigins: Array<unknown>;
+      honeypotFieldName: string;
+      captchaConfigured: boolean;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   postWebFormsByFormIdRotateKey: {
     params: { orgSlug: string; formId: string };
     query: undefined;
     body: undefined;
-    response: unknown;
+    response: {
+      id: string;
+      name: string;
+      status: string;
+      publicKey: string;
+      fields: Array<{
+        key: string;
+        maps: string;
+        type: string;
+        label: string;
+        required: boolean;
+        [key: string]: unknown;
+      }>;
+      leadSourceKey?: unknown | null;
+      successMessage: string;
+      allowedOrigins: Array<unknown>;
+      honeypotFieldName: string;
+      captchaConfigured: boolean;
+      createdAt: string;
+      updatedAt: string;
+      [key: string]: unknown;
+    };
   };
   getWebFormsByFormIdSubmissions: {
     params: { orgSlug: string; formId: string };
@@ -9837,7 +11582,15 @@ export interface Operations {
       pageSize?: string;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      items: Array<unknown>;
+      page: number;
+      pageSize: number;
+      total: number;
+      pageCount: number;
+      nextCursor?: unknown | null;
+      [key: string]: unknown;
+    };
   };
   getWebhooks: {
     params: { orgSlug: string };
@@ -9974,7 +11727,18 @@ export interface Operations {
       limit?: number;
     };
     body: undefined;
-    response: unknown;
+    response: {
+      release: string;
+      items: Array<{
+        id: string;
+        release: string;
+        date: string;
+        title: string;
+        detail: string;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    };
   };
   ingestMailgunInbound: {
     params: Record<string, never>;
@@ -10074,19 +11838,19 @@ export const operations = {
   getApiTokens: { method: "GET", path: "/api/orgs/{orgSlug}/api-tokens", tag: "Api Tokens", summary: "GET /api-tokens", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   postApiTokens: { method: "POST", path: "/api/orgs/{orgSlug}/api-tokens", tag: "Api Tokens", summary: "POST /api-tokens", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   deleteApiTokensByTokenId: { method: "DELETE", path: "/api/orgs/{orgSlug}/api-tokens/{tokenId}", tag: "Api Tokens", summary: "DELETE /api-tokens/{tokenId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getApprovalRules: { method: "GET", path: "/api/orgs/{orgSlug}/approval-rules", tag: "Approval Rules", summary: "GET /approval-rules", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchApprovalRules: { method: "PATCH", path: "/api/orgs/{orgSlug}/approval-rules", tag: "Approval Rules", summary: "PATCH /approval-rules", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getApprovals: { method: "GET", path: "/api/orgs/{orgSlug}/approvals", tag: "Approvals", summary: "GET /approvals", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getApprovalsByApprovalId: { method: "GET", path: "/api/orgs/{orgSlug}/approvals/{approvalId}", tag: "Approvals", summary: "GET /approvals/{approvalId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postApprovalsByApprovalIdCancel: { method: "POST", path: "/api/orgs/{orgSlug}/approvals/{approvalId}/cancel", tag: "Approvals", summary: "POST /approvals/{approvalId}/cancel", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postApprovalsByApprovalIdDecision: { method: "POST", path: "/api/orgs/{orgSlug}/approvals/{approvalId}/decision", tag: "Approvals", summary: "POST /approvals/{approvalId}/decision", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postAssistantAsk: { method: "POST", path: "/api/orgs/{orgSlug}/assistant/ask", tag: "Assistant", summary: "POST /assistant/ask", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getAssistantAudit: { method: "GET", path: "/api/orgs/{orgSlug}/assistant/audit", tag: "Assistant", summary: "GET /assistant/audit", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postAssistantProposalsByProposalIdConfirm: { method: "POST", path: "/api/orgs/{orgSlug}/assistant/proposals/{proposalId}/confirm", tag: "Assistant", summary: "POST /assistant/proposals/{proposalId}/confirm", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postAssistantProposalsByProposalIdDismiss: { method: "POST", path: "/api/orgs/{orgSlug}/assistant/proposals/{proposalId}/dismiss", tag: "Assistant", summary: "POST /assistant/proposals/{proposalId}/dismiss", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postAssistantRequestsByRequestIdFeedback: { method: "POST", path: "/api/orgs/{orgSlug}/assistant/requests/{requestId}/feedback", tag: "Assistant", summary: "POST /assistant/requests/{requestId}/feedback", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getAssistantSettings: { method: "GET", path: "/api/orgs/{orgSlug}/assistant/settings", tag: "Assistant", summary: "GET /assistant/settings", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  putAssistantSettings: { method: "PUT", path: "/api/orgs/{orgSlug}/assistant/settings", tag: "Assistant", summary: "PUT /assistant/settings", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getApprovalRules: { method: "GET", path: "/api/orgs/{orgSlug}/approval-rules", tag: "Approval Rules", summary: "GET /approval-rules", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
+  patchApprovalRules: { method: "PATCH", path: "/api/orgs/{orgSlug}/approval-rules", tag: "Approval Rules", summary: "PATCH /approval-rules", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getApprovals: { method: "GET", path: "/api/orgs/{orgSlug}/approvals", tag: "Approvals", summary: "GET /approvals", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getApprovalsByApprovalId: { method: "GET", path: "/api/orgs/{orgSlug}/approvals/{approvalId}", tag: "Approvals", summary: "GET /approvals/{approvalId}", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postApprovalsByApprovalIdCancel: { method: "POST", path: "/api/orgs/{orgSlug}/approvals/{approvalId}/cancel", tag: "Approvals", summary: "POST /approvals/{approvalId}/cancel", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postApprovalsByApprovalIdDecision: { method: "POST", path: "/api/orgs/{orgSlug}/approvals/{approvalId}/decision", tag: "Approvals", summary: "POST /approvals/{approvalId}/decision", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  postAssistantAsk: { method: "POST", path: "/api/orgs/{orgSlug}/assistant/ask", tag: "Assistant", summary: "POST /assistant/ask", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  getAssistantAudit: { method: "GET", path: "/api/orgs/{orgSlug}/assistant/audit", tag: "Assistant", summary: "GET /assistant/audit", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  postAssistantProposalsByProposalIdConfirm: { method: "POST", path: "/api/orgs/{orgSlug}/assistant/proposals/{proposalId}/confirm", tag: "Assistant", summary: "POST /assistant/proposals/{proposalId}/confirm", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  postAssistantProposalsByProposalIdDismiss: { method: "POST", path: "/api/orgs/{orgSlug}/assistant/proposals/{proposalId}/dismiss", tag: "Assistant", summary: "POST /assistant/proposals/{proposalId}/dismiss", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postAssistantRequestsByRequestIdFeedback: { method: "POST", path: "/api/orgs/{orgSlug}/assistant/requests/{requestId}/feedback", tag: "Assistant", summary: "POST /assistant/requests/{requestId}/feedback", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  getAssistantSettings: { method: "GET", path: "/api/orgs/{orgSlug}/assistant/settings", tag: "Assistant", summary: "GET /assistant/settings", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  putAssistantSettings: { method: "PUT", path: "/api/orgs/{orgSlug}/assistant/settings", tag: "Assistant", summary: "PUT /assistant/settings", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   deleteAttachmentsByAttachmentId: { method: "DELETE", path: "/api/orgs/{orgSlug}/attachments/{attachmentId}", tag: "Attachments", summary: "DELETE /attachments/{attachmentId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   postAttachmentsByAttachmentIdComplete: { method: "POST", path: "/api/orgs/{orgSlug}/attachments/{attachmentId}/complete", tag: "Attachments", summary: "POST /attachments/{attachmentId}/complete", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getAttachmentsByAttachmentIdDownload: { method: "GET", path: "/api/orgs/{orgSlug}/attachments/{attachmentId}/download", tag: "Attachments", summary: "GET /attachments/{attachmentId}/download", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
@@ -10100,55 +11864,55 @@ export const operations = {
   listAutomationRuns: { method: "GET", path: "/api/orgs/{orgSlug}/automations/runs", tag: "Automations", summary: "The run log: each run with its rule, record and result", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
   getCalendar: { method: "GET", path: "/api/orgs/{orgSlug}/calendar", tag: "Calendar", summary: "GET /calendar", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   postCalendar: { method: "POST", path: "/api/orgs/{orgSlug}/calendar", tag: "Calendar", summary: "POST /calendar", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
-  getCatalogue: { method: "GET", path: "/api/orgs/{orgSlug}/catalogue", tag: "Catalogue", summary: "GET /catalogue", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postCatalogue: { method: "POST", path: "/api/orgs/{orgSlug}/catalogue", tag: "Catalogue", summary: "POST /catalogue", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getCatalogueByItemId: { method: "GET", path: "/api/orgs/{orgSlug}/catalogue/{itemId}", tag: "Catalogue", summary: "GET /catalogue/{itemId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchCatalogueByItemId: { method: "PATCH", path: "/api/orgs/{orgSlug}/catalogue/{itemId}", tag: "Catalogue", summary: "PATCH /catalogue/{itemId}", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getChatChannels: { method: "GET", path: "/api/orgs/{orgSlug}/chat/channels", tag: "Chat", summary: "GET /chat/channels", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postChatChannels: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels", tag: "Chat", summary: "POST /chat/channels", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  deleteChatChannelsByChannelId: { method: "DELETE", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}", tag: "Chat", summary: "DELETE /chat/channels/{channelId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getChatChannelsByChannelId: { method: "GET", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}", tag: "Chat", summary: "GET /chat/channels/{channelId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchChatChannelsByChannelId: { method: "PATCH", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}", tag: "Chat", summary: "PATCH /chat/channels/{channelId}", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postChatChannelsByChannelIdJoin: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/join", tag: "Chat", summary: "POST /chat/channels/{channelId}/join", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postChatChannelsByChannelIdLeave: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/leave", tag: "Chat", summary: "POST /chat/channels/{channelId}/leave", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getChatChannelsByChannelIdMembers: { method: "GET", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/members", tag: "Chat", summary: "GET /chat/channels/{channelId}/members", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postChatChannelsByChannelIdMembers: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/members", tag: "Chat", summary: "POST /chat/channels/{channelId}/members", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  deleteChatChannelsByChannelIdMembersByMembershipId: { method: "DELETE", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/members/{membershipId}", tag: "Chat", summary: "DELETE /chat/channels/{channelId}/members/{membershipId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getChatChannelsByChannelIdMessages: { method: "GET", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages", tag: "Chat", summary: "GET /chat/channels/{channelId}/messages", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postChatChannelsByChannelIdMessages: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages", tag: "Chat", summary: "POST /chat/channels/{channelId}/messages", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  deleteChatChannelsByChannelIdMessagesByMessageId: { method: "DELETE", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages/{messageId}", tag: "Chat", summary: "DELETE /chat/channels/{channelId}/messages/{messageId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getChatChannelsByChannelIdMessagesByMessageIdAttachmentsByFileId: { method: "GET", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages/{messageId}/attachments/{fileId}", tag: "Chat", summary: "GET /chat/channels/{channelId}/messages/{messageId}/attachments/{fileId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  deleteChatChannelsByChannelIdMessagesByMessageIdReactions: { method: "DELETE", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages/{messageId}/reactions", tag: "Chat", summary: "DELETE /chat/channels/{channelId}/messages/{messageId}/reactions", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postChatChannelsByChannelIdMessagesByMessageIdReactions: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages/{messageId}/reactions", tag: "Chat", summary: "POST /chat/channels/{channelId}/messages/{messageId}/reactions", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postChatChannelsByChannelIdRead: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/read", tag: "Chat", summary: "POST /chat/channels/{channelId}/read", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postChatChannelsByChannelIdTyping: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/typing", tag: "Chat", summary: "POST /chat/channels/{channelId}/typing", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getChatPeople: { method: "GET", path: "/api/orgs/{orgSlug}/chat/people", tag: "Chat", summary: "GET /chat/people", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postChatPresence: { method: "POST", path: "/api/orgs/{orgSlug}/chat/presence", tag: "Chat", summary: "POST /chat/presence", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getChatSearch: { method: "GET", path: "/api/orgs/{orgSlug}/chat/search", tag: "Chat", summary: "GET /chat/search", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getChatSync: { method: "GET", path: "/api/orgs/{orgSlug}/chat/sync", tag: "Chat", summary: "GET /chat/sync", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getChatUnread: { method: "GET", path: "/api/orgs/{orgSlug}/chat/unread", tag: "Chat", summary: "GET /chat/unread", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getCatalogue: { method: "GET", path: "/api/orgs/{orgSlug}/catalogue", tag: "Catalogue", summary: "GET /catalogue", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
+  postCatalogue: { method: "POST", path: "/api/orgs/{orgSlug}/catalogue", tag: "Catalogue", summary: "POST /catalogue", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getCatalogueByItemId: { method: "GET", path: "/api/orgs/{orgSlug}/catalogue/{itemId}", tag: "Catalogue", summary: "GET /catalogue/{itemId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
+  patchCatalogueByItemId: { method: "PATCH", path: "/api/orgs/{orgSlug}/catalogue/{itemId}", tag: "Catalogue", summary: "PATCH /catalogue/{itemId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getChatChannels: { method: "GET", path: "/api/orgs/{orgSlug}/chat/channels", tag: "Chat", summary: "GET /chat/channels", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postChatChannels: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels", tag: "Chat", summary: "POST /chat/channels", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  deleteChatChannelsByChannelId: { method: "DELETE", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}", tag: "Chat", summary: "DELETE /chat/channels/{channelId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","RESTRICTED_TECHNICAL"] },
+  getChatChannelsByChannelId: { method: "GET", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}", tag: "Chat", summary: "GET /chat/channels/{channelId}", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  patchChatChannelsByChannelId: { method: "PATCH", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}", tag: "Chat", summary: "PATCH /chat/channels/{channelId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","RESTRICTED_TECHNICAL"] },
+  postChatChannelsByChannelIdJoin: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/join", tag: "Chat", summary: "POST /chat/channels/{channelId}/join", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postChatChannelsByChannelIdLeave: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/leave", tag: "Chat", summary: "POST /chat/channels/{channelId}/leave", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getChatChannelsByChannelIdMembers: { method: "GET", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/members", tag: "Chat", summary: "GET /chat/channels/{channelId}/members", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postChatChannelsByChannelIdMembers: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/members", tag: "Chat", summary: "POST /chat/channels/{channelId}/members", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","RESTRICTED_TECHNICAL"] },
+  deleteChatChannelsByChannelIdMembersByMembershipId: { method: "DELETE", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/members/{membershipId}", tag: "Chat", summary: "DELETE /chat/channels/{channelId}/members/{membershipId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","RESTRICTED_TECHNICAL"] },
+  getChatChannelsByChannelIdMessages: { method: "GET", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages", tag: "Chat", summary: "GET /chat/channels/{channelId}/messages", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postChatChannelsByChannelIdMessages: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages", tag: "Chat", summary: "POST /chat/channels/{channelId}/messages", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  deleteChatChannelsByChannelIdMessagesByMessageId: { method: "DELETE", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages/{messageId}", tag: "Chat", summary: "DELETE /chat/channels/{channelId}/messages/{messageId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","RESTRICTED_TECHNICAL"] },
+  getChatChannelsByChannelIdMessagesByMessageIdAttachmentsByFileId: { method: "GET", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages/{messageId}/attachments/{fileId}", tag: "Chat", summary: "GET /chat/channels/{channelId}/messages/{messageId}/attachments/{fileId}", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  deleteChatChannelsByChannelIdMessagesByMessageIdReactions: { method: "DELETE", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages/{messageId}/reactions", tag: "Chat", summary: "DELETE /chat/channels/{channelId}/messages/{messageId}/reactions", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postChatChannelsByChannelIdMessagesByMessageIdReactions: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/messages/{messageId}/reactions", tag: "Chat", summary: "POST /chat/channels/{channelId}/messages/{messageId}/reactions", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postChatChannelsByChannelIdRead: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/read", tag: "Chat", summary: "POST /chat/channels/{channelId}/read", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postChatChannelsByChannelIdTyping: { method: "POST", path: "/api/orgs/{orgSlug}/chat/channels/{channelId}/typing", tag: "Chat", summary: "POST /chat/channels/{channelId}/typing", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getChatPeople: { method: "GET", path: "/api/orgs/{orgSlug}/chat/people", tag: "Chat", summary: "GET /chat/people", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postChatPresence: { method: "POST", path: "/api/orgs/{orgSlug}/chat/presence", tag: "Chat", summary: "POST /chat/presence", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getChatSearch: { method: "GET", path: "/api/orgs/{orgSlug}/chat/search", tag: "Chat", summary: "GET /chat/search", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getChatSync: { method: "GET", path: "/api/orgs/{orgSlug}/chat/sync", tag: "Chat", summary: "GET /chat/sync", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getChatUnread: { method: "GET", path: "/api/orgs/{orgSlug}/chat/unread", tag: "Chat", summary: "GET /chat/unread", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   listChurnHints: { method: "GET", path: "/api/orgs/{orgSlug}/churn-hints", tag: "Assistant", summary: "Churn hints for the customers you own (Management: all), each with its reasons, shown only as far as your role may see the data behind them (ai.use; V2; assistant and its churn option on)", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   dismissChurnHint: { method: "POST", path: "/api/orgs/{orgSlug}/churn-hints/{hintId}/dismiss", tag: "Assistant", summary: "Dismiss a hint; it returns only when the customer's situation changes", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   rateChurnHint: { method: "POST", path: "/api/orgs/{orgSlug}/churn-hints/{hintId}/feedback", tag: "Assistant", summary: "Say whether a hint was useful", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   refreshChurnHints: { method: "POST", path: "/api/orgs/{orgSlug}/churn-hints/refresh", tag: "Assistant", summary: "Look at the organisation's customers again now (the nightly job does the same)", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getCommands: { method: "GET", path: "/api/orgs/{orgSlug}/commands", tag: "Commands", summary: "GET /commands", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getCommands: { method: "GET", path: "/api/orgs/{orgSlug}/commands", tag: "Commands", summary: "GET /commands", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   deleteCommentsByCommentId: { method: "DELETE", path: "/api/orgs/{orgSlug}/comments/{commentId}", tag: "Comments", summary: "DELETE /comments/{commentId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   editComment: { method: "PATCH", path: "/api/orgs/{orgSlug}/comments/{commentId}", tag: "Comments", summary: "Edit your own comment (soft: marked edited; only newly mentioned people are notified)", contentType: "json", errors: [400,401,403,404,409], allowedRoles: ["MANAGEMENT"] },
   getCommunications: { method: "GET", path: "/api/orgs/{orgSlug}/communications", tag: "Communications", summary: "GET /communications", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   postCommunications: { method: "POST", path: "/api/orgs/{orgSlug}/communications", tag: "Communications", summary: "POST /communications", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
-  getCommunicationsMailDrafts: { method: "GET", path: "/api/orgs/{orgSlug}/communications/mail/drafts", tag: "Communications", summary: "GET /communications/mail/drafts", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postCommunicationsMailDrafts: { method: "POST", path: "/api/orgs/{orgSlug}/communications/mail/drafts", tag: "Communications", summary: "POST /communications/mail/drafts", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  deleteCommunicationsMailDraftsByDraftId: { method: "DELETE", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}", tag: "Communications", summary: "DELETE /communications/mail/drafts/{draftId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getCommunicationsMailDraftsByDraftId: { method: "GET", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}", tag: "Communications", summary: "GET /communications/mail/drafts/{draftId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchCommunicationsMailDraftsByDraftId: { method: "PATCH", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}", tag: "Communications", summary: "PATCH /communications/mail/drafts/{draftId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  deleteCommunicationsMailDraftsByDraftIdSchedule: { method: "DELETE", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}/schedule", tag: "Communications", summary: "DELETE /communications/mail/drafts/{draftId}/schedule", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postCommunicationsMailDraftsByDraftIdSchedule: { method: "POST", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}/schedule", tag: "Communications", summary: "POST /communications/mail/drafts/{draftId}/schedule", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postCommunicationsMailDraftsByDraftIdSend: { method: "POST", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}/send", tag: "Communications", summary: "POST /communications/mail/drafts/{draftId}/send", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getCommunicationsMailRecordCard: { method: "GET", path: "/api/orgs/{orgSlug}/communications/mail/record-card", tag: "Communications", summary: "GET /communications/mail/record-card", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postCommunicationsMailSend: { method: "POST", path: "/api/orgs/{orgSlug}/communications/mail/send", tag: "Communications", summary: "POST /communications/mail/send", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postCommunicationsMeetings: { method: "POST", path: "/api/orgs/{orgSlug}/communications/meetings", tag: "Communications", summary: "POST /communications/meetings", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  deleteCommunicationsMeetingsByActivityId: { method: "DELETE", path: "/api/orgs/{orgSlug}/communications/meetings/{activityId}", tag: "Communications", summary: "DELETE /communications/meetings/{activityId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchCommunicationsMeetingsByActivityId: { method: "PATCH", path: "/api/orgs/{orgSlug}/communications/meetings/{activityId}", tag: "Communications", summary: "PATCH /communications/meetings/{activityId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getCommunicationsMailDrafts: { method: "GET", path: "/api/orgs/{orgSlug}/communications/mail/drafts", tag: "Communications", summary: "GET /communications/mail/drafts", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
+  postCommunicationsMailDrafts: { method: "POST", path: "/api/orgs/{orgSlug}/communications/mail/drafts", tag: "Communications", summary: "POST /communications/mail/drafts", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
+  deleteCommunicationsMailDraftsByDraftId: { method: "DELETE", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}", tag: "Communications", summary: "DELETE /communications/mail/drafts/{draftId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
+  getCommunicationsMailDraftsByDraftId: { method: "GET", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}", tag: "Communications", summary: "GET /communications/mail/drafts/{draftId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
+  patchCommunicationsMailDraftsByDraftId: { method: "PATCH", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}", tag: "Communications", summary: "PATCH /communications/mail/drafts/{draftId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
+  deleteCommunicationsMailDraftsByDraftIdSchedule: { method: "DELETE", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}/schedule", tag: "Communications", summary: "DELETE /communications/mail/drafts/{draftId}/schedule", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
+  postCommunicationsMailDraftsByDraftIdSchedule: { method: "POST", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}/schedule", tag: "Communications", summary: "POST /communications/mail/drafts/{draftId}/schedule", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
+  postCommunicationsMailDraftsByDraftIdSend: { method: "POST", path: "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}/send", tag: "Communications", summary: "POST /communications/mail/drafts/{draftId}/send", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
+  getCommunicationsMailRecordCard: { method: "GET", path: "/api/orgs/{orgSlug}/communications/mail/record-card", tag: "Communications", summary: "GET /communications/mail/record-card", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postCommunicationsMailSend: { method: "POST", path: "/api/orgs/{orgSlug}/communications/mail/send", tag: "Communications", summary: "POST /communications/mail/send", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postCommunicationsMeetings: { method: "POST", path: "/api/orgs/{orgSlug}/communications/meetings", tag: "Communications", summary: "POST /communications/meetings", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
+  deleteCommunicationsMeetingsByActivityId: { method: "DELETE", path: "/api/orgs/{orgSlug}/communications/meetings/{activityId}", tag: "Communications", summary: "DELETE /communications/meetings/{activityId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
+  patchCommunicationsMeetingsByActivityId: { method: "PATCH", path: "/api/orgs/{orgSlug}/communications/meetings/{activityId}", tag: "Communications", summary: "PATCH /communications/meetings/{activityId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
   postCommunicationsSendEmail: { method: "POST", path: "/api/orgs/{orgSlug}/communications/send-email", tag: "Communications", summary: "POST /communications/send-email", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   getCompanies: { method: "GET", path: "/api/orgs/{orgSlug}/companies", tag: "Companies", summary: "GET /companies", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postCompanies: { method: "POST", path: "/api/orgs/{orgSlug}/companies", tag: "Companies", summary: "POST /companies", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
@@ -10260,9 +12024,9 @@ export const operations = {
   getDealsByDealIdProposals: { method: "GET", path: "/api/orgs/{orgSlug}/deals/{dealId}/proposals", tag: "Deals", summary: "GET /deals/{dealId}/proposals", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postDealsByDealIdProposals: { method: "POST", path: "/api/orgs/{orgSlug}/deals/{dealId}/proposals", tag: "Deals", summary: "POST /deals/{dealId}/proposals", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   patchDealsByDealIdProposalsByProposalId: { method: "PATCH", path: "/api/orgs/{orgSlug}/deals/{dealId}/proposals/{proposalId}", tag: "Deals", summary: "PATCH /deals/{dealId}/proposals/{proposalId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
-  getDealsByDealIdQuote: { method: "GET", path: "/api/orgs/{orgSlug}/deals/{dealId}/quote", tag: "Deals", summary: "GET /deals/{dealId}/quote", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postDealsByDealIdQuote: { method: "POST", path: "/api/orgs/{orgSlug}/deals/{dealId}/quote", tag: "Deals", summary: "POST /deals/{dealId}/quote", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postDealsByDealIdRequestApproval: { method: "POST", path: "/api/orgs/{orgSlug}/deals/{dealId}/request-approval", tag: "Deals", summary: "POST /deals/{dealId}/request-approval", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  getDealsByDealIdQuote: { method: "GET", path: "/api/orgs/{orgSlug}/deals/{dealId}/quote", tag: "Deals", summary: "GET /deals/{dealId}/quote", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postDealsByDealIdQuote: { method: "POST", path: "/api/orgs/{orgSlug}/deals/{dealId}/quote", tag: "Deals", summary: "POST /deals/{dealId}/quote", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  postDealsByDealIdRequestApproval: { method: "POST", path: "/api/orgs/{orgSlug}/deals/{dealId}/request-approval", tag: "Deals", summary: "POST /deals/{dealId}/request-approval", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postDealsByDealIdRestore: { method: "POST", path: "/api/orgs/{orgSlug}/deals/{dealId}/restore", tag: "Deals", summary: "POST /deals/{dealId}/restore", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   getDealsByDealIdTags: { method: "GET", path: "/api/orgs/{orgSlug}/deals/{dealId}/tags", tag: "Deals", summary: "GET /deals/{dealId}/tags", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   patchDealsByDealIdTags: { method: "PATCH", path: "/api/orgs/{orgSlug}/deals/{dealId}/tags", tag: "Deals", summary: "PATCH /deals/{dealId}/tags", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
@@ -10283,23 +12047,23 @@ export const operations = {
   completeFileUpload: { method: "POST", path: "/api/orgs/{orgSlug}/files/{fileId}/complete", tag: "Files", summary: "Finish an upload: checks size, type, content and checksum, scans for malware, then makes the file ready", contentType: "json", errors: [400,401,404,409,503], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL"] },
   getFilesByFileIdContent: { method: "GET", path: "/api/orgs/{orgSlug}/files/{fileId}/content", tag: "Files", summary: "GET /files/{fileId}/content", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL"] },
   getFileDownloadLink: { method: "GET", path: "/api/orgs/{orgSlug}/files/{fileId}/download", tag: "Files", summary: "A signed download link, valid for about a minute", contentType: "json", errors: [401,404,409], allowedRoles: ["MANAGEMENT","SALES","FINANCE","RESTRICTED_TECHNICAL"] },
-  getForecast: { method: "GET", path: "/api/orgs/{orgSlug}/forecast", tag: "Forecast", summary: "GET /forecast", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getForecastTargets: { method: "GET", path: "/api/orgs/{orgSlug}/forecast/targets", tag: "Forecast", summary: "GET /forecast/targets", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  putForecastTargets: { method: "PUT", path: "/api/orgs/{orgSlug}/forecast/targets", tag: "Forecast", summary: "PUT /forecast/targets", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getForecast: { method: "GET", path: "/api/orgs/{orgSlug}/forecast", tag: "Forecast", summary: "GET /forecast", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getForecastTargets: { method: "GET", path: "/api/orgs/{orgSlug}/forecast/targets", tag: "Forecast", summary: "GET /forecast/targets", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  putForecastTargets: { method: "PUT", path: "/api/orgs/{orgSlug}/forecast/targets", tag: "Forecast", summary: "PUT /forecast/targets", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getHandoffSettings: { method: "GET", path: "/api/orgs/{orgSlug}/handoff-settings", tag: "Handoff Settings", summary: "GET /handoff-settings", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   putHandoffSettings: { method: "PUT", path: "/api/orgs/{orgSlug}/handoff-settings", tag: "Handoff Settings", summary: "PUT /handoff-settings", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getHandoffs: { method: "GET", path: "/api/orgs/{orgSlug}/handoffs", tag: "Handoffs", summary: "GET /handoffs", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
-  getHelp: { method: "GET", path: "/api/orgs/{orgSlug}/help", tag: "Help", summary: "GET /help", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getHelpBySlug: { method: "GET", path: "/api/orgs/{orgSlug}/help/{slug}", tag: "Help", summary: "GET /help/{slug}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getHelp: { method: "GET", path: "/api/orgs/{orgSlug}/help", tag: "Help", summary: "GET /help", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getHelpBySlug: { method: "GET", path: "/api/orgs/{orgSlug}/help/{slug}", tag: "Help", summary: "GET /help/{slug}", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   postImports: { method: "POST", path: "/api/orgs/{orgSlug}/imports", tag: "Imports", summary: "POST /imports", contentType: "multipart", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   listIntegrations: { method: "GET", path: "/api/orgs/{orgSlug}/integrations", tag: "Integrations", summary: "Integrations registry: Connected, Not connected or Planned, each derived from real signals (Management)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
-  getIntegrationsConnections: { method: "GET", path: "/api/orgs/{orgSlug}/integrations/connections", tag: "Integrations", summary: "GET /integrations/connections", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  deleteIntegrationsConnectionsByConnectionId: { method: "DELETE", path: "/api/orgs/{orgSlug}/integrations/connections/{connectionId}", tag: "Integrations", summary: "DELETE /integrations/connections/{connectionId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchIntegrationsConnectionsByConnectionId: { method: "PATCH", path: "/api/orgs/{orgSlug}/integrations/connections/{connectionId}", tag: "Integrations", summary: "PATCH /integrations/connections/{connectionId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getIntegrationsConnectionsByConnectionIdCalendars: { method: "GET", path: "/api/orgs/{orgSlug}/integrations/connections/{connectionId}/calendars", tag: "Integrations", summary: "GET /integrations/connections/{connectionId}/calendars", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postIntegrationsConnectionsByConnectionIdSync: { method: "POST", path: "/api/orgs/{orgSlug}/integrations/connections/{connectionId}/sync", tag: "Integrations", summary: "POST /integrations/connections/{connectionId}/sync", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getIntegrationsConnectionsOrganization: { method: "GET", path: "/api/orgs/{orgSlug}/integrations/connections/organization", tag: "Integrations", summary: "GET /integrations/connections/organization", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postIntegrationsConnectionsStart: { method: "POST", path: "/api/orgs/{orgSlug}/integrations/connections/start", tag: "Integrations", summary: "POST /integrations/connections/start", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getIntegrationsConnections: { method: "GET", path: "/api/orgs/{orgSlug}/integrations/connections", tag: "Integrations", summary: "GET /integrations/connections", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  deleteIntegrationsConnectionsByConnectionId: { method: "DELETE", path: "/api/orgs/{orgSlug}/integrations/connections/{connectionId}", tag: "Integrations", summary: "DELETE /integrations/connections/{connectionId}", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  patchIntegrationsConnectionsByConnectionId: { method: "PATCH", path: "/api/orgs/{orgSlug}/integrations/connections/{connectionId}", tag: "Integrations", summary: "PATCH /integrations/connections/{connectionId}", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getIntegrationsConnectionsByConnectionIdCalendars: { method: "GET", path: "/api/orgs/{orgSlug}/integrations/connections/{connectionId}/calendars", tag: "Integrations", summary: "GET /integrations/connections/{connectionId}/calendars", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postIntegrationsConnectionsByConnectionIdSync: { method: "POST", path: "/api/orgs/{orgSlug}/integrations/connections/{connectionId}/sync", tag: "Integrations", summary: "POST /integrations/connections/{connectionId}/sync", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getIntegrationsConnectionsOrganization: { method: "GET", path: "/api/orgs/{orgSlug}/integrations/connections/organization", tag: "Integrations", summary: "GET /integrations/connections/organization", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
+  postIntegrationsConnectionsStart: { method: "POST", path: "/api/orgs/{orgSlug}/integrations/connections/start", tag: "Integrations", summary: "POST /integrations/connections/start", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getIntegrationsInboundEmailKey: { method: "GET", path: "/api/orgs/{orgSlug}/integrations/inbound-email-key", tag: "Integrations", summary: "GET /integrations/inbound-email-key", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   postIntegrationsInboundEmailKey: { method: "POST", path: "/api/orgs/{orgSlug}/integrations/inbound-email-key", tag: "Integrations", summary: "POST /integrations/inbound-email-key", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   postIntegrationsInboundEmailKeyRevoke: { method: "POST", path: "/api/orgs/{orgSlug}/integrations/inbound-email-key/revoke", tag: "Integrations", summary: "POST /integrations/inbound-email-key/revoke", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
@@ -10379,7 +12143,7 @@ export const operations = {
   postMembershipsByMembershipIdRemove: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/remove", tag: "Memberships", summary: "POST /memberships/{membershipId}/remove", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   postMembershipsByMembershipIdResendInvite: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/resend-invite", tag: "Memberships", summary: "POST /memberships/{membershipId}/resend-invite", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   postMembershipsByMembershipIdRole: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/role", tag: "Memberships", summary: "POST /memberships/{membershipId}/role", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
-  postMembershipsByMembershipIdTwoStepReset: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/two-step-reset", tag: "Memberships", summary: "POST /memberships/{membershipId}/two-step-reset", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  postMembershipsByMembershipIdTwoStepReset: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/two-step-reset", tag: "Memberships", summary: "POST /memberships/{membershipId}/two-step-reset", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   postMembershipsByMembershipIdUnlock: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/unlock", tag: "Memberships", summary: "POST /memberships/{membershipId}/unlock", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   postMergesByMergeIdUndo: { method: "POST", path: "/api/orgs/{orgSlug}/merges/{mergeId}/undo", tag: "Merges", summary: "POST /merges/{mergeId}/undo", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getMyWork: { method: "GET", path: "/api/orgs/{orgSlug}/my-work", tag: "My Work", summary: "GET /my-work", contentType: "json", errors: [400,401,403,404], allowedRoles: ["RESTRICTED_TECHNICAL"] },
@@ -10394,14 +12158,14 @@ export const operations = {
   reversePayment: { method: "POST", path: "/api/orgs/{orgSlug}/payments/{paymentId}/reverse", tag: "Payments", summary: "Reverse a payment recorded by mistake, with a reason; the record stays", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","FINANCE"] },
   listWonDealPayments: { method: "GET", path: "/api/orgs/{orgSlug}/payments/deals", tag: "Payments", summary: "Won deals with invoiced and received totals and the next follow-up note", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","FINANCE"] },
   getPaymentSummary: { method: "GET", path: "/api/orgs/{orgSlug}/payments/summary", tag: "Payments", summary: "Due this week, overdue, collected this month, still owing", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","FINANCE"] },
-  getPipelines: { method: "GET", path: "/api/orgs/{orgSlug}/pipelines", tag: "Pipelines", summary: "GET /pipelines", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postPipelines: { method: "POST", path: "/api/orgs/{orgSlug}/pipelines", tag: "Pipelines", summary: "POST /pipelines", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getPipelinesByPipelineId: { method: "GET", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}", tag: "Pipelines", summary: "GET /pipelines/{pipelineId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchPipelinesByPipelineId: { method: "PATCH", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}", tag: "Pipelines", summary: "PATCH /pipelines/{pipelineId}", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postPipelinesByPipelineIdStages: { method: "POST", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages", tag: "Pipelines", summary: "POST /pipelines/{pipelineId}/stages", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  patchPipelinesByPipelineIdStagesByStageId: { method: "PATCH", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/{stageId}", tag: "Pipelines", summary: "PATCH /pipelines/{pipelineId}/stages/{stageId}", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  putPipelinesByPipelineIdStagesByStageIdRules: { method: "PUT", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/{stageId}/rules", tag: "Pipelines", summary: "PUT /pipelines/{pipelineId}/stages/{stageId}/rules", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  putPipelinesByPipelineIdStagesReorder: { method: "PUT", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/reorder", tag: "Pipelines", summary: "PUT /pipelines/{pipelineId}/stages/reorder", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  getPipelines: { method: "GET", path: "/api/orgs/{orgSlug}/pipelines", tag: "Pipelines", summary: "GET /pipelines", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  postPipelines: { method: "POST", path: "/api/orgs/{orgSlug}/pipelines", tag: "Pipelines", summary: "POST /pipelines", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getPipelinesByPipelineId: { method: "GET", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}", tag: "Pipelines", summary: "GET /pipelines/{pipelineId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  patchPipelinesByPipelineId: { method: "PATCH", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}", tag: "Pipelines", summary: "PATCH /pipelines/{pipelineId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  postPipelinesByPipelineIdStages: { method: "POST", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages", tag: "Pipelines", summary: "POST /pipelines/{pipelineId}/stages", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  patchPipelinesByPipelineIdStagesByStageId: { method: "PATCH", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/{stageId}", tag: "Pipelines", summary: "PATCH /pipelines/{pipelineId}/stages/{stageId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  putPipelinesByPipelineIdStagesByStageIdRules: { method: "PUT", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/{stageId}/rules", tag: "Pipelines", summary: "PUT /pipelines/{pipelineId}/stages/{stageId}/rules", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  putPipelinesByPipelineIdStagesReorder: { method: "PUT", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/reorder", tag: "Pipelines", summary: "PUT /pipelines/{pipelineId}/stages/reorder", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getPrivacyOverview: { method: "GET", path: "/api/orgs/{orgSlug}/privacy", tag: "Data and privacy", summary: "Export rights, retention with documented defaults, legal hold, open requests (Management)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
   listExportApprovals: { method: "GET", path: "/api/orgs/{orgSlug}/privacy/export-approvals", tag: "Data and privacy", summary: "Export approval requests (Management sees all; others their own)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   requestExportApproval: { method: "POST", path: "/api/orgs/{orgSlug}/privacy/export-approvals", tag: "Data and privacy", summary: "Ask Management to approve one bulk export above the threshold", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
@@ -10430,27 +12194,27 @@ export const operations = {
   getPwaManifest: { method: "GET", path: "/api/orgs/{orgSlug}/pwa/manifest", tag: "PWA", summary: "The web app manifest for this organisation (its name and colours)", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getPwaVersion: { method: "GET", path: "/api/orgs/{orgSlug}/pwa/version", tag: "PWA", summary: "The cache version an installed app compares with its own, and what may be queued offline", contentType: "json", errors: [401], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   quickCapture: { method: "POST", path: "/api/orgs/{orgSlug}/quick-capture", tag: "Quick capture", summary: "Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and creates nothing; resend with duplicateDecision to open the existing record, create anyway or merge.", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
-  postQuickCaptureCards: { method: "POST", path: "/api/orgs/{orgSlug}/quick-capture/cards", tag: "Quick Capture", summary: "POST /quick-capture/cards", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  deleteQuickCaptureCardsByCaptureId: { method: "DELETE", path: "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}", tag: "Quick Capture", summary: "DELETE /quick-capture/cards/{captureId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getQuickCaptureCardsByCaptureId: { method: "GET", path: "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}", tag: "Quick Capture", summary: "GET /quick-capture/cards/{captureId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postQuickCaptureCardsByCaptureIdConfirm: { method: "POST", path: "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}/confirm", tag: "Quick Capture", summary: "POST /quick-capture/cards/{captureId}/confirm", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postQuickCaptureCardsByCaptureIdExtract: { method: "POST", path: "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}/extract", tag: "Quick Capture", summary: "POST /quick-capture/cards/{captureId}/extract", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  postQuickCaptureCards: { method: "POST", path: "/api/orgs/{orgSlug}/quick-capture/cards", tag: "Quick Capture", summary: "POST /quick-capture/cards", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  deleteQuickCaptureCardsByCaptureId: { method: "DELETE", path: "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}", tag: "Quick Capture", summary: "DELETE /quick-capture/cards/{captureId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getQuickCaptureCardsByCaptureId: { method: "GET", path: "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}", tag: "Quick Capture", summary: "GET /quick-capture/cards/{captureId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postQuickCaptureCardsByCaptureIdConfirm: { method: "POST", path: "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}/confirm", tag: "Quick Capture", summary: "POST /quick-capture/cards/{captureId}/confirm", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postQuickCaptureCardsByCaptureIdExtract: { method: "POST", path: "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}/extract", tag: "Quick Capture", summary: "POST /quick-capture/cards/{captureId}/extract", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   quickLog: { method: "POST", path: "/api/orgs/{orgSlug}/quick-log", tag: "Conversations", summary: "One-tap log of a call or WhatsApp message. Send an Idempotency-Key: a double tap logs once.", contentType: "json", errors: [400,401,403,404,422], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
   getQuickLogPrompt: { method: "GET", path: "/api/orgs/{orgSlug}/quick-log/prompt", tag: "Conversations", summary: "What the call or WhatsApp prompt needs: the number and its tel: and wa.me links, or NO_PHONE_ON_FILE", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
-  getQuoteSettings: { method: "GET", path: "/api/orgs/{orgSlug}/quote-settings", tag: "Quote Settings", summary: "GET /quote-settings", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchQuoteSettings: { method: "PATCH", path: "/api/orgs/{orgSlug}/quote-settings", tag: "Quote Settings", summary: "PATCH /quote-settings", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getQuotes: { method: "GET", path: "/api/orgs/{orgSlug}/quotes", tag: "Quotes", summary: "GET /quotes", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getQuotesByQuoteId: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}", tag: "Quotes", summary: "GET /quotes/{quoteId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postQuotesByQuoteIdSharesByShareIdRevoke: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/shares/{shareId}/revoke", tag: "Quotes", summary: "POST /quotes/{quoteId}/shares/{shareId}/revoke", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postQuotesByQuoteIdVersions: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getQuotesByQuoteIdVersionsByVersion: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  putQuotesByQuoteIdVersionsByVersion: { method: "PUT", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}", tag: "Quotes", summary: "PUT /quotes/{quoteId}/versions/{version}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getQuotesByQuoteIdVersionsByVersionActivity: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/activity", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}/activity", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postQuotesByQuoteIdVersionsByVersionApplyToDeal: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/apply-to-deal", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/apply-to-deal", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getQuotesByQuoteIdVersionsByVersionPreview: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/preview", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}/preview", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postQuotesByQuoteIdVersionsByVersionRequestApproval: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/request-approval", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/request-approval", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postQuotesByQuoteIdVersionsByVersionResponse: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/response", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/response", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postQuotesByQuoteIdVersionsByVersionSend: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/send", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/send", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  getQuoteSettings: { method: "GET", path: "/api/orgs/{orgSlug}/quote-settings", tag: "Quote Settings", summary: "GET /quote-settings", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  patchQuoteSettings: { method: "PATCH", path: "/api/orgs/{orgSlug}/quote-settings", tag: "Quote Settings", summary: "PATCH /quote-settings", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getQuotes: { method: "GET", path: "/api/orgs/{orgSlug}/quotes", tag: "Quotes", summary: "GET /quotes", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getQuotesByQuoteId: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}", tag: "Quotes", summary: "GET /quotes/{quoteId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postQuotesByQuoteIdSharesByShareIdRevoke: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/shares/{shareId}/revoke", tag: "Quotes", summary: "POST /quotes/{quoteId}/shares/{shareId}/revoke", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  postQuotesByQuoteIdVersions: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  getQuotesByQuoteIdVersionsByVersion: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  putQuotesByQuoteIdVersionsByVersion: { method: "PUT", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}", tag: "Quotes", summary: "PUT /quotes/{quoteId}/versions/{version}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  getQuotesByQuoteIdVersionsByVersionActivity: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/activity", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}/activity", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postQuotesByQuoteIdVersionsByVersionApplyToDeal: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/apply-to-deal", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/apply-to-deal", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  getQuotesByQuoteIdVersionsByVersionPreview: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/preview", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}/preview", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postQuotesByQuoteIdVersionsByVersionRequestApproval: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/request-approval", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/request-approval", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  postQuotesByQuoteIdVersionsByVersionResponse: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/response", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/response", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  postQuotesByQuoteIdVersionsByVersionSend: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/send", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/send", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   listRecurringServices: { method: "GET", path: "/api/orgs/{orgSlug}/recurring-services", tag: "Renewals", summary: "Recurring services with their derived renewal state; the value is masked like a deal's", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   createRecurringService: { method: "POST", path: "/api/orgs/{orgSlug}/recurring-services", tag: "Renewals", summary: "Add a recurring service for a company", contentType: "json", errors: [400,401,403,404,422], allowedRoles: ["MANAGEMENT","SALES"] },
   getRecurringService: { method: "GET", path: "/api/orgs/{orgSlug}/recurring-services/{serviceId}", tag: "Renewals", summary: "One recurring service", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
@@ -10507,19 +12271,19 @@ export const operations = {
   getSecuritySessionPolicy: { method: "GET", path: "/api/orgs/{orgSlug}/security/session-policy", tag: "Security", summary: "GET /security/session-policy", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   patchSecuritySessionPolicy: { method: "PATCH", path: "/api/orgs/{orgSlug}/security/session-policy", tag: "Security", summary: "PATCH /security/session-policy", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getSecuritySignInEvents: { method: "GET", path: "/api/orgs/{orgSlug}/security/sign-in-events", tag: "Security", summary: "GET /security/sign-in-events", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
-  getSecurityTwoStepPolicy: { method: "GET", path: "/api/orgs/{orgSlug}/security/two-step-policy", tag: "Security", summary: "GET /security/two-step-policy", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchSecurityTwoStepPolicy: { method: "PATCH", path: "/api/orgs/{orgSlug}/security/two-step-policy", tag: "Security", summary: "PATCH /security/two-step-policy", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getSequenceEnrollments: { method: "GET", path: "/api/orgs/{orgSlug}/sequence-enrollments", tag: "Sequence Enrollments", summary: "GET /sequence-enrollments", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getSequenceEnrollmentsByEnrollmentId: { method: "GET", path: "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}", tag: "Sequence Enrollments", summary: "GET /sequence-enrollments/{enrollmentId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postSequenceEnrollmentsByEnrollmentIdEnd: { method: "POST", path: "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}/end", tag: "Sequence Enrollments", summary: "POST /sequence-enrollments/{enrollmentId}/end", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postSequenceEnrollmentsByEnrollmentIdPause: { method: "POST", path: "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}/pause", tag: "Sequence Enrollments", summary: "POST /sequence-enrollments/{enrollmentId}/pause", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postSequenceEnrollmentsByEnrollmentIdResume: { method: "POST", path: "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}/resume", tag: "Sequence Enrollments", summary: "POST /sequence-enrollments/{enrollmentId}/resume", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getSequences: { method: "GET", path: "/api/orgs/{orgSlug}/sequences", tag: "Sequences", summary: "GET /sequences", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postSequences: { method: "POST", path: "/api/orgs/{orgSlug}/sequences", tag: "Sequences", summary: "POST /sequences", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  deleteSequencesBySequenceId: { method: "DELETE", path: "/api/orgs/{orgSlug}/sequences/{sequenceId}", tag: "Sequences", summary: "DELETE /sequences/{sequenceId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getSequencesBySequenceId: { method: "GET", path: "/api/orgs/{orgSlug}/sequences/{sequenceId}", tag: "Sequences", summary: "GET /sequences/{sequenceId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchSequencesBySequenceId: { method: "PATCH", path: "/api/orgs/{orgSlug}/sequences/{sequenceId}", tag: "Sequences", summary: "PATCH /sequences/{sequenceId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postSequencesBySequenceIdEnrollments: { method: "POST", path: "/api/orgs/{orgSlug}/sequences/{sequenceId}/enrollments", tag: "Sequences", summary: "POST /sequences/{sequenceId}/enrollments", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  getSecurityTwoStepPolicy: { method: "GET", path: "/api/orgs/{orgSlug}/security/two-step-policy", tag: "Security", summary: "GET /security/two-step-policy", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
+  patchSecurityTwoStepPolicy: { method: "PATCH", path: "/api/orgs/{orgSlug}/security/two-step-policy", tag: "Security", summary: "PATCH /security/two-step-policy", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getSequenceEnrollments: { method: "GET", path: "/api/orgs/{orgSlug}/sequence-enrollments", tag: "Sequence Enrollments", summary: "GET /sequence-enrollments", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getSequenceEnrollmentsByEnrollmentId: { method: "GET", path: "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}", tag: "Sequence Enrollments", summary: "GET /sequence-enrollments/{enrollmentId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postSequenceEnrollmentsByEnrollmentIdEnd: { method: "POST", path: "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}/end", tag: "Sequence Enrollments", summary: "POST /sequence-enrollments/{enrollmentId}/end", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postSequenceEnrollmentsByEnrollmentIdPause: { method: "POST", path: "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}/pause", tag: "Sequence Enrollments", summary: "POST /sequence-enrollments/{enrollmentId}/pause", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postSequenceEnrollmentsByEnrollmentIdResume: { method: "POST", path: "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}/resume", tag: "Sequence Enrollments", summary: "POST /sequence-enrollments/{enrollmentId}/resume", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getSequences: { method: "GET", path: "/api/orgs/{orgSlug}/sequences", tag: "Sequences", summary: "GET /sequences", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
+  postSequences: { method: "POST", path: "/api/orgs/{orgSlug}/sequences", tag: "Sequences", summary: "POST /sequences", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  deleteSequencesBySequenceId: { method: "DELETE", path: "/api/orgs/{orgSlug}/sequences/{sequenceId}", tag: "Sequences", summary: "DELETE /sequences/{sequenceId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getSequencesBySequenceId: { method: "GET", path: "/api/orgs/{orgSlug}/sequences/{sequenceId}", tag: "Sequences", summary: "GET /sequences/{sequenceId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
+  patchSequencesBySequenceId: { method: "PATCH", path: "/api/orgs/{orgSlug}/sequences/{sequenceId}", tag: "Sequences", summary: "PATCH /sequences/{sequenceId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  postSequencesBySequenceIdEnrollments: { method: "POST", path: "/api/orgs/{orgSlug}/sequences/{sequenceId}/enrollments", tag: "Sequences", summary: "POST /sequences/{sequenceId}/enrollments", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
   getSettingsOverview: { method: "GET", path: "/api/orgs/{orgSlug}/settings/overview", tag: "Settings", summary: "Settings landing page: profile, member counts by state, integration states (Management)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
   getSignals: { method: "GET", path: "/api/orgs/{orgSlug}/signals", tag: "Dashboard", summary: "Adoption, stalled deals, deals past close date and overdue tasks (stored values; sections by role)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getSupportAccess: { method: "GET", path: "/api/orgs/{orgSlug}/support-access", tag: "Support Access", summary: "GET /support-access", contentType: "json", errors: [401,403,404], allowedRoles: [] },
@@ -10550,20 +12314,20 @@ export const operations = {
   postTasksByTaskIdRestore: { method: "POST", path: "/api/orgs/{orgSlug}/tasks/{taskId}/restore", tag: "Tasks", summary: "POST /tasks/{taskId}/restore", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
   getTasksGroups: { method: "GET", path: "/api/orgs/{orgSlug}/tasks/groups", tag: "Tasks", summary: "GET /tasks/groups", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
   getTasksGroupsByGroup: { method: "GET", path: "/api/orgs/{orgSlug}/tasks/groups/{group}", tag: "Tasks", summary: "GET /tasks/groups/{group}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
-  getViews: { method: "GET", path: "/api/orgs/{orgSlug}/views", tag: "Views", summary: "GET /views", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postViews: { method: "POST", path: "/api/orgs/{orgSlug}/views", tag: "Views", summary: "POST /views", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  deleteViewsByViewId: { method: "DELETE", path: "/api/orgs/{orgSlug}/views/{viewId}", tag: "Views", summary: "DELETE /views/{viewId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getViewsByViewId: { method: "GET", path: "/api/orgs/{orgSlug}/views/{viewId}", tag: "Views", summary: "GET /views/{viewId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchViewsByViewId: { method: "PATCH", path: "/api/orgs/{orgSlug}/views/{viewId}", tag: "Views", summary: "PATCH /views/{viewId}", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  putViewsByViewIdPin: { method: "PUT", path: "/api/orgs/{orgSlug}/views/{viewId}/pin", tag: "Views", summary: "PUT /views/{viewId}/pin", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  putViewsPinnedOrder: { method: "PUT", path: "/api/orgs/{orgSlug}/views/pinned-order", tag: "Views", summary: "PUT /views/pinned-order", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  getWebForms: { method: "GET", path: "/api/orgs/{orgSlug}/web-forms", tag: "Web Forms", summary: "GET /web-forms", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  postWebForms: { method: "POST", path: "/api/orgs/{orgSlug}/web-forms", tag: "Web Forms", summary: "POST /web-forms", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  deleteWebFormsByFormId: { method: "DELETE", path: "/api/orgs/{orgSlug}/web-forms/{formId}", tag: "Web Forms", summary: "DELETE /web-forms/{formId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getWebFormsByFormId: { method: "GET", path: "/api/orgs/{orgSlug}/web-forms/{formId}", tag: "Web Forms", summary: "GET /web-forms/{formId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  patchWebFormsByFormId: { method: "PATCH", path: "/api/orgs/{orgSlug}/web-forms/{formId}", tag: "Web Forms", summary: "PATCH /web-forms/{formId}", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
-  postWebFormsByFormIdRotateKey: { method: "POST", path: "/api/orgs/{orgSlug}/web-forms/{formId}/rotate-key", tag: "Web Forms", summary: "POST /web-forms/{formId}/rotate-key", contentType: "json", errors: [401,403,404], allowedRoles: [] },
-  getWebFormsByFormIdSubmissions: { method: "GET", path: "/api/orgs/{orgSlug}/web-forms/{formId}/submissions", tag: "Web Forms", summary: "GET /web-forms/{formId}/submissions", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  getViews: { method: "GET", path: "/api/orgs/{orgSlug}/views", tag: "Views", summary: "GET /views", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  postViews: { method: "POST", path: "/api/orgs/{orgSlug}/views", tag: "Views", summary: "POST /views", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  deleteViewsByViewId: { method: "DELETE", path: "/api/orgs/{orgSlug}/views/{viewId}", tag: "Views", summary: "DELETE /views/{viewId}", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getViewsByViewId: { method: "GET", path: "/api/orgs/{orgSlug}/views/{viewId}", tag: "Views", summary: "GET /views/{viewId}", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  patchViewsByViewId: { method: "PATCH", path: "/api/orgs/{orgSlug}/views/{viewId}", tag: "Views", summary: "PATCH /views/{viewId}", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  putViewsByViewIdPin: { method: "PUT", path: "/api/orgs/{orgSlug}/views/{viewId}/pin", tag: "Views", summary: "PUT /views/{viewId}/pin", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  putViewsPinnedOrder: { method: "PUT", path: "/api/orgs/{orgSlug}/views/pinned-order", tag: "Views", summary: "PUT /views/pinned-order", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getWebForms: { method: "GET", path: "/api/orgs/{orgSlug}/web-forms", tag: "Web Forms", summary: "GET /web-forms", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
+  postWebForms: { method: "POST", path: "/api/orgs/{orgSlug}/web-forms", tag: "Web Forms", summary: "POST /web-forms", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  deleteWebFormsByFormId: { method: "DELETE", path: "/api/orgs/{orgSlug}/web-forms/{formId}", tag: "Web Forms", summary: "DELETE /web-forms/{formId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getWebFormsByFormId: { method: "GET", path: "/api/orgs/{orgSlug}/web-forms/{formId}", tag: "Web Forms", summary: "GET /web-forms/{formId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
+  patchWebFormsByFormId: { method: "PATCH", path: "/api/orgs/{orgSlug}/web-forms/{formId}", tag: "Web Forms", summary: "PATCH /web-forms/{formId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  postWebFormsByFormIdRotateKey: { method: "POST", path: "/api/orgs/{orgSlug}/web-forms/{formId}/rotate-key", tag: "Web Forms", summary: "POST /web-forms/{formId}/rotate-key", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getWebFormsByFormIdSubmissions: { method: "GET", path: "/api/orgs/{orgSlug}/web-forms/{formId}/submissions", tag: "Web Forms", summary: "GET /web-forms/{formId}/submissions", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getWebhooks: { method: "GET", path: "/api/orgs/{orgSlug}/webhooks", tag: "Webhooks", summary: "GET /webhooks", contentType: "json", errors: [401,403,404], allowedRoles: [] },
   postWebhooks: { method: "POST", path: "/api/orgs/{orgSlug}/webhooks", tag: "Webhooks", summary: "POST /webhooks", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   deleteWebhooksByEndpointId: { method: "DELETE", path: "/api/orgs/{orgSlug}/webhooks/{endpointId}", tag: "Webhooks", summary: "DELETE /webhooks/{endpointId}", contentType: "json", errors: [401,403,404], allowedRoles: [] },
@@ -10577,7 +12341,7 @@ export const operations = {
   postWebsiteLeadAssignmentRules: { method: "POST", path: "/api/orgs/{orgSlug}/website-lead-assignment-rules", tag: "Website Lead Assignment Rules", summary: "POST /website-lead-assignment-rules", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postWebsiteLeadAssignmentRulesByRuleId: { method: "POST", path: "/api/orgs/{orgSlug}/website-lead-assignment-rules/{ruleId}", tag: "Website Lead Assignment Rules", summary: "POST /website-lead-assignment-rules/{ruleId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postWebsiteLeadAssignmentRulesByRuleIdMove: { method: "POST", path: "/api/orgs/{orgSlug}/website-lead-assignment-rules/{ruleId}/move", tag: "Website Lead Assignment Rules", summary: "POST /website-lead-assignment-rules/{ruleId}/move", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
-  getWhatsNew: { method: "GET", path: "/api/orgs/{orgSlug}/whats-new", tag: "Whats New", summary: "GET /whats-new", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
+  getWhatsNew: { method: "GET", path: "/api/orgs/{orgSlug}/whats-new", tag: "Whats New", summary: "GET /whats-new", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   ingestMailgunInbound: { method: "POST", path: "/api/public/inbound/mailgun", tag: "Public", summary: "Mailgun inbound route (BCC-to-CRM). Mailgun forwards the received email as a form; the signature is verified and the organisation is found from the recipient BCC address.", contentType: "json", errors: [401,404,429], allowedRoles: null },
   ingestInboundEmail: { method: "POST", path: "/api/public/orgs/{orgSlug}/communications/inbound", tag: "Public", summary: "Inbound email (BCC-to-CRM) webhook. Authenticated by the organisation's inbound token in a header or the `token` query parameter.", contentType: "json", errors: [400,401,429], allowedRoles: null },
   submitWebsiteLead: { method: "POST", path: "/api/public/orgs/{orgSlug}/leads", tag: "Public", summary: "Website lead capture. Authenticated by the organisation's website key in `x-figbloom-api-key`; rate limited per IP and per key; optional origin allow-list, honeypot and captcha.", contentType: "json", errors: [400,401,403,413,429], allowedRoles: null },
