@@ -16,7 +16,7 @@ needs a new major version (`API_VERSION` in `src/api/openapi.ts`). Additions are
 
 ## 1.1.0 — V2 backend routes, additive (M17, Nov 2026)
 
-contract-hash: 817dbbd1b6679eda76de6e52571cba9fe8deada74db1cd17fd152774db40fbe3
+contract-hash: 07436fd0247605dd10a8f3fba1bfe37cbbacea589023f1bc631cc6105a1a1f2d
 
 Additive only (still version 1.1.0, behind `release.v2`): support access (request, approve, open, end, page-view log), per-organisation flags and limits, announcements and dismissals, e-signature signing (`/api/public/sign/{token}`), per-document client language, custom roles and field rules (`/roles*`), churn hints (`/churn-hints*`), API token and webhook management. The public `/api/v1/*` API has its own document at `/api/v1/openapi.json`. Existing routes keep their behaviour.
 

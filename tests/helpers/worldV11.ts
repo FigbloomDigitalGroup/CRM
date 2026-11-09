@@ -171,7 +171,8 @@ export async function buildWorldV11(prefix = "WalkV11"): Promise<WorldV11> {
   const pipeline = await adminDb.pipeline.findFirst({ where: { organizationId: org } });
   if (pipeline) {
     ids.pipelineId = pipeline.id;
-    const stage = await adminDb.pipelineStage.findFirst({ where: { organizationId: org } });
+    // An open stage, the first by sequence: with no ordering the walk could be handed Closed Lost, which refuses every rule (a flaky matrix cell).
+    const stage = await adminDb.pipelineStage.findFirst({ where: { organizationId: org, isWon: false, isLost: false, isActive: true }, orderBy: { sequence: "asc" } });
     if (stage) ids.stageId = stage.id;
     world.v11Records.push("pipeline and stage");
   } else missing.push("pipeline: the organisation has none");

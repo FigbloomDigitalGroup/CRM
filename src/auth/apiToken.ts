@@ -6,6 +6,7 @@ import { requireFeature } from "../services/featureService";
 import type { AuthContext } from "./context";
 import { ForbiddenError, UnauthorizedError } from "./errors";
 import { enforceRateLimit } from "./rateLimiter";
+import { recordApiCall } from "../services/orgLimitService";
 
 /**
  * Personal API tokens for the public REST API (FIG-805, `docs/M17_LANE_C_PUBLIC_API_WEBHOOKS.md`).
@@ -97,6 +98,9 @@ export async function authenticateApiToken(request: Request, scope: string, opti
   if (!options.skipScope && !token.scopes.includes(scope)) {
     throw new ForbiddenError(`token scope ${scope}`, { roleKey: ctx.roleKey, organizationId: ctx.organizationId, permissionKeys: [scope] });
   }
+
+  // The organisation's monthly API-call limit (FIG-1184): counted after the token is known good, so bad tokens never use the allowance.
+  if (!options.skipScope) await recordApiCall(token.organizationId);
 
   if (!token.lastUsedAt || Date.now() - token.lastUsedAt.getTime() > LAST_USED_GRANULARITY_MS) {
     // Best effort: a failed bookkeeping write must not fail the request.

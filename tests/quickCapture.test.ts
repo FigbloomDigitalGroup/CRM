@@ -243,7 +243,8 @@ describe("speed (FIG-1065: round trip under 300 ms p95)", () => {
     }
     // Same number every time, however many leads already exist, and no more than the budget below.
     expect(new Set(calls).size).toBe(1);
-    expect(calls[0]).toBeLessThanOrEqual(16);
+    // 16 until M17: FIG-804 adds one indexed lookup of the organisation's webhook endpoints for the lead.created event (constant, not per lead).
+    expect(calls[0]).toBeLessThanOrEqual(17);
     timings.sort((a, b) => a - b);
     expect(timings[Math.floor(timings.length * 0.95)]!).toBeLessThan(600);
   });

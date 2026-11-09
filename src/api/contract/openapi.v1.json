@@ -15,6 +15,12 @@
       "name": "Activities"
     },
     {
+      "name": "Announcements"
+    },
+    {
+      "name": "Api Tokens"
+    },
+    {
       "name": "Approval Rules"
     },
     {
@@ -243,6 +249,9 @@
       "name": "Support"
     },
     {
+      "name": "Support Access"
+    },
+    {
       "name": "Support Requests"
     },
     {
@@ -259,6 +268,9 @@
     },
     {
       "name": "Web Forms"
+    },
+    {
+      "name": "Webhooks"
     },
     {
       "name": "Website Lead Assignment Rules"
@@ -2448,6 +2460,529 @@
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/announcements": {
+      "get": {
+        "operationId": "getAnnouncements",
+        "summary": "GET /announcements",
+        "tags": [
+          "Announcements"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/announcements/{announcementId}/dismiss": {
+      "post": {
+        "operationId": "postAnnouncementsByAnnouncementIdDismiss",
+        "summary": "POST /announcements/{announcementId}/dismiss",
+        "tags": [
+          "Announcements"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "announcementId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/api-tokens": {
+      "get": {
+        "operationId": "getApiTokens",
+        "summary": "GET /api-tokens",
+        "tags": [
+          "Api Tokens"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      },
+      "post": {
+        "operationId": "postApiTokens",
+        "summary": "POST /api-tokens",
+        "tags": [
+          "Api Tokens"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "scopes": {
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "companies:read",
+                        "companies:write",
+                        "contacts:read",
+                        "contacts:write",
+                        "leads:read",
+                        "leads:write",
+                        "deals:read",
+                        "deals:write",
+                        "activities:read",
+                        "activities:write",
+                        "tasks:read",
+                        "tasks:write"
+                      ]
+                    }
+                  },
+                  "expiresInDays": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365
+                  }
+                },
+                "required": [
+                  "name",
+                  "scopes"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (`fieldErrors` lists the fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/api-tokens/{tokenId}": {
+      "delete": {
+        "operationId": "deleteApiTokensByTokenId",
+        "summary": "DELETE /api-tokens/{tokenId}",
+        "tags": [
+          "Api Tokens"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tokenId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
           "RESTRICTED_TECHNICAL": "D"
@@ -9208,6 +9743,14 @@
             "sessionCookie": []
           }
         ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
         "parameters": [
           {
             "name": "orgSlug",
@@ -9317,6 +9860,14 @@
             "sessionCookie": []
           }
         ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
         "parameters": [
           {
             "name": "orgSlug",
@@ -9437,6 +9988,14 @@
             "sessionCookie": []
           }
         ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
         "parameters": [
           {
             "name": "orgSlug",
@@ -9567,6 +10126,14 @@
             "sessionCookie": []
           }
         ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
         "parameters": [
           {
             "name": "orgSlug",
@@ -69362,13 +69929,38 @@
                     "stalledDeals": {
                       "type": "array",
                       "items": {}
+                    },
+                    "counts": {
+                      "type": "object",
+                      "properties": {
+                        "dueToday": {
+                          "type": "integer"
+                        },
+                        "overdue": {
+                          "type": "integer"
+                        },
+                        "newLeads": {
+                          "type": "integer"
+                        },
+                        "stalledDeals": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "dueToday",
+                        "overdue",
+                        "newLeads",
+                        "stalledDeals"
+                      ],
+                      "additionalProperties": true
                     }
                   },
                   "required": [
                     "dueToday",
                     "overdue",
                     "newLeads",
-                    "stalledDeals"
+                    "stalledDeals",
+                    "counts"
                   ],
                   "additionalProperties": true
                 }
@@ -71557,6 +72149,14 @@
             "sessionCookie": []
           }
         ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
         "parameters": [
           {
             "name": "orgSlug",
@@ -71648,6 +72248,14 @@
             "sessionCookie": []
           }
         ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
         "parameters": [
           {
             "name": "orgSlug",
@@ -71797,6 +72405,14 @@
             "sessionCookie": []
           }
         ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
         "parameters": [
           {
             "name": "orgSlug",
@@ -71888,6 +72504,14 @@
             "sessionCookie": []
           }
         ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
         "parameters": [
           {
             "name": "orgSlug",
@@ -72027,6 +72651,14 @@
             "sessionCookie": []
           }
         ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
         "parameters": [
           {
             "name": "orgSlug",
@@ -72120,6 +72752,14 @@
             "sessionCookie": []
           }
         ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
         "parameters": [
           {
             "name": "orgSlug",
@@ -72205,6 +72845,14 @@
             "sessionCookie": []
           }
         ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
         "parameters": [
           {
             "name": "orgSlug",
@@ -75306,6 +75954,480 @@
               }
             }
           }
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/support-access": {
+      "get": {
+        "operationId": "getSupportAccess",
+        "summary": "GET /support-access",
+        "tags": [
+          "Support Access"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/support-access/{grantId}": {
+      "get": {
+        "operationId": "getSupportAccessByGrantId",
+        "summary": "GET /support-access/{grantId}",
+        "tags": [
+          "Support Access"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "grantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/support-access/{grantId}/decision": {
+      "post": {
+        "operationId": "postSupportAccessByGrantIdDecision",
+        "summary": "POST /support-access/{grantId}/decision",
+        "tags": [
+          "Support Access"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "grantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/support-access/{grantId}/end": {
+      "post": {
+        "operationId": "postSupportAccessByGrantIdEnd",
+        "summary": "POST /support-access/{grantId}/end",
+        "tags": [
+          "Support Access"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "grantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/support-access/banner": {
+      "get": {
+        "operationId": "getSupportAccessBanner",
+        "summary": "GET /support-access/banner",
+        "tags": [
+          "Support Access"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
         }
       }
     },
@@ -80257,6 +81379,9 @@
                   "successMessage": {
                     "type": "string"
                   },
+                  "language": {
+                    "type": "string"
+                  },
                   "allowedOrigins": {},
                   "honeypotFieldName": {
                     "type": "string"
@@ -80600,6 +81725,9 @@
                   "successMessage": {
                     "type": "string"
                   },
+                  "language": {
+                    "type": "string"
+                  },
                   "allowedOrigins": {},
                   "honeypotFieldName": {
                     "type": "string"
@@ -80910,6 +82038,997 @@
                 "schema": {
                   "$ref": "#/components/schemas/ErrorEnvelope"
                 }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/webhooks": {
+      "get": {
+        "operationId": "getWebhooks",
+        "summary": "GET /webhooks",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      },
+      "post": {
+        "operationId": "postWebhooks",
+        "summary": "POST /webhooks",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "events": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "lead.created",
+                        "lead.assigned",
+                        "lead.converted",
+                        "deal.stage_changed",
+                        "deal.won",
+                        "deal.lost",
+                        "contact.created",
+                        "company.created",
+                        "task.created"
+                      ]
+                    }
+                  },
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "url",
+                  "events"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (`fieldErrors` lists the fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/webhooks/{endpointId}": {
+      "delete": {
+        "operationId": "deleteWebhooksByEndpointId",
+        "summary": "DELETE /webhooks/{endpointId}",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      },
+      "get": {
+        "operationId": "getWebhooksByEndpointId",
+        "summary": "GET /webhooks/{endpointId}",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      },
+      "patch": {
+        "operationId": "patchWebhooksByEndpointId",
+        "summary": "PATCH /webhooks/{endpointId}",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "events": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "lead.created",
+                        "lead.assigned",
+                        "lead.converted",
+                        "deal.stage_changed",
+                        "deal.won",
+                        "deal.lost",
+                        "contact.created",
+                        "company.created",
+                        "task.created"
+                      ]
+                    }
+                  },
+                  "description": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "PAUSED"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (`fieldErrors` lists the fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/webhooks/{endpointId}/deliveries": {
+      "get": {
+        "operationId": "getWebhooksByEndpointIdDeliveries",
+        "summary": "GET /webhooks/{endpointId}/deliveries",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/webhooks/{endpointId}/deliveries/{deliveryId}/retry": {
+      "post": {
+        "operationId": "postWebhooksByEndpointIdDeliveriesByDeliveryIdRetry",
+        "summary": "POST /webhooks/{endpointId}/deliveries/{deliveryId}/retry",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "deliveryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/webhooks/{endpointId}/rotate-secret": {
+      "post": {
+        "operationId": "postWebhooksByEndpointIdRotateSecret",
+        "summary": "POST /webhooks/{endpointId}/rotate-secret",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/webhooks/{endpointId}/test": {
+      "post": {
+        "operationId": "postWebhooksByEndpointIdTest",
+        "summary": "POST /webhooks/{endpointId}/test",
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endpointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },

@@ -6,7 +6,7 @@
  * isolation, in the service layer and in the database (RLS); and the generated OpenAPI document.
  */
 import { createHash } from "node:crypto";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 // The document route reads the browser session through next/headers when no token is sent; here nobody is signed in.
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined, getAll: () => [] }), headers: async () => new Headers() }));
@@ -17,6 +17,8 @@ import { withOrgContext } from "../src/db/orgScopedClient";
 import { createCompany } from "../src/services/companyService";
 import { createDeal } from "../src/services/dealService";
 import { createApiToken, listApiTokens, revokeApiToken } from "../src/services/apiTokenService";
+import { updateOrganizationFlags } from "../src/services/platformFlagsService";
+import { makePlatformAdmin, removeTestPlatformAdmins } from "./helpers/platform";
 import { createTestContext, createTestOrganization, getPipelineStageId, getLeadStatusId } from "./helpers/fixtures";
 import { apiRequest, createV2Organization, params, v2World } from "./helpers/laneC";
 import { GET as listCompaniesRoute, POST as createCompanyRoute } from "../src/app/api/v1/companies/route";
@@ -42,6 +44,10 @@ beforeAll(async () => {
   mgmtToken = m.token;
   mgmtTokenId = m.id;
   salesToken = (await createApiToken(world.sales, { name: "Sales script", scopes: ALL_SCOPES })).token;
+});
+
+afterAll(async () => {
+  await removeTestPlatformAdmins();
 });
 
 describe("tokens: stored hashed, shown once, with expiry and revocation", () => {
@@ -169,6 +175,25 @@ describe("authentication", () => {
     expect(res.status).toBe(429);
     expect(((await res.json()) as { code: string }).code).toBe("RATE_LIMITED");
     // Another token is not affected.
+    expect((await listCompaniesRoute(apiRequest("/api/v1/companies", mgmtToken))).status).toBe(200);
+  });
+});
+
+describe("the organisation's monthly API-call limit (FIG-1184)", () => {
+  it("counts calls made with a token and answers 429 with a friendly message once the limit is used", async () => {
+    const org = await createV2Organization("LaneC Limit");
+    const mgmt = await createTestContext(org.id, "MANAGEMENT", "lanec.limit");
+    const { token } = await createApiToken(mgmt, { name: "Limited", scopes: ["companies:read"] });
+    const admin = await makePlatformAdmin("lanec-limit-admin");
+    await updateOrganizationFlags(admin.actor, org.id, { limits: { apiCallsPerMonth: 2 }, reason: "Test limit for the public API" });
+    expect((await listCompaniesRoute(apiRequest("/api/v1/companies", token))).status).toBe(200);
+    expect((await listCompaniesRoute(apiRequest("/api/v1/companies", token))).status).toBe(200);
+    const refused = await listCompaniesRoute(apiRequest("/api/v1/companies", token));
+    expect(refused.status).toBe(429);
+    const body = (await refused.json()) as { code: string; message: string };
+    expect(body.code).toBe("RATE_LIMITED");
+    expect(body.message).toMatch(/API calls/);
+    // Another organisation is not affected.
     expect((await listCompaniesRoute(apiRequest("/api/v1/companies", mgmtToken))).status).toBe(200);
   });
 });

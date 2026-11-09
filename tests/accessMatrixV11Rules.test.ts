@@ -44,7 +44,9 @@ describe("the V1.1 matrix against the reviewed rules (G2.01)", () => {
   });
 
   it("keeps the V1 routes that are closed to everyone in V1 (a V1.1 feature) from being closed to Management in V1.1", () => {
-    const stillClosed = Object.keys(v1).filter((key) => v1[key] === "DDDDD" && v11[key]?.[0] === "D");
+    // The V2 route families (M17) are closed in V1.1 as well: they open with release.v2 and are walked under that release in their own tests.
+    const V2_FAMILY = /\/api\/orgs\/\{orgSlug\}\/(roles|churn-hints|support-access|announcements|webhooks|api-tokens)(\/|$)/;
+    const stillClosed = Object.keys(v1).filter((key) => !V2_FAMILY.test(key) && v1[key] === "DDDDD" && v11[key]?.[0] === "D");
     expect(stillClosed).toEqual([]);
   });
 
