@@ -507,7 +507,7 @@ function hashToken(token: string): string {
 }
 
 /**
- * Puts the look back to the brand defaults, Forest on White, with the light/dark
+ * Puts the look back to the brand defaults, Sky on White, with the light/dark
  * pair at White and Dark and comfortable density. Only the appearance resets;
  * start page, sidebar and date/time choices stay. Returns a one-time undo token
  * good for ten minutes. When the organisation has switched personalisation off,

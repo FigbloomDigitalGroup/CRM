@@ -20,7 +20,7 @@ describe("Preferences · Appearance (F4.01, AP2)", () => {
     renderPrefs(<PreferencesScreen />, client);
     expect(screen.getByRole("tab", { name: /Appearance/ })).toHaveAttribute("aria-selected", "true");
     for (const name of ["Profile", "Notifications", "Security"]) expect(screen.getByRole("tab", { name })).toBeInTheDocument();
-    expect(await screen.findByRole("radio", { name: /Forest/ })).toBeChecked();
+    expect(await screen.findByRole("radio", { name: /Sky \(default\)/ })).toBeChecked();
   });
 
   it("a theme changes the app at once and is saved to the account", async () => {
@@ -71,7 +71,7 @@ describe("Preferences · Appearance (F4.01, AP2)", () => {
       return <PreferencesScreen />;
     }
     renderPrefs(<Host />, client);
-    await screen.findByRole("radio", { name: /Forest/ });
+    await screen.findByRole("radio", { name: /Sky \(default\)/ });
     await userEvent.click(screen.getByRole("button", { name: /Reset to default/ }));
     const dialog = await screen.findByRole("dialog", { name: "Reset appearance to default?" });
     expect(calls.some((c) => c.id === "resetMyAppearance")).toBe(false);
@@ -114,7 +114,7 @@ describe("Preferences · Appearance (F4.01, AP2)", () => {
   it("has no accessibility violations", async () => {
     const { client } = stubClient({ getMyPreferences: () => prefsView() });
     const { container } = renderPrefs(<PreferencesScreen />, client);
-    await screen.findByRole("radio", { name: /Forest/ });
+    await screen.findByRole("radio", { name: /Sky \(default\)/ });
     expect(await violations(container)).toEqual([]);
   });
 });

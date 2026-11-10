@@ -33,7 +33,7 @@ test("a theme and density apply at once and follow the account to a second devic
   await first.getByRole("button", { name: "Reset to default" }).click();
   await first.getByRole("dialog", { name: "Reset appearance to default?" }).getByRole("button", { name: "Reset" }).click();
   await expect(first.getByText("Appearance reset to default.")).toBeVisible();
-  await expect(first.getByRole("radio", { name: /Forest/ })).toBeChecked();
+  await expect(first.getByRole("radio", { name: /Sky \(default\)/ })).toBeChecked();
   await expect(first.locator(".fb-app")).toHaveAttribute("data-fb-density", "comfortable");
   await expect(first.locator(".fb-app")).toHaveAttribute("data-fb-text", "DEFAULT");
 });

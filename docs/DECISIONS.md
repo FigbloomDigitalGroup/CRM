@@ -187,3 +187,12 @@ For Given and Michael to sign before real customer files are uploaded.
 |---|---|---|---|
 | Given Jim | Given Jim | 10 Nov 2026 | Written confirmation in the Claude Code session, 10 Nov 2026, recorded here by Claude Code at his instruction. No date was set for condition (c): conditions (a) and (b) apply |
 | Michael | Given Jim, on Michael's behalf | 10 Nov 2026 | Given Jim stated in the same session that he signs off on Michael's behalf. **Michael himself has not signed**; he can countersign in this row |
+
+## 8. Sky is the default theme, and the sign-in pages follow it (10 Nov 2026, decided by Given)
+
+Given asked for the Sky theme (sidebar `#1C4E6E`, accent `#2A7BB0`, highlight `#E3F0FA`) to be the system default on every dashboard, and for the sign-in pages to move from green to sky blue.
+
+- **Default theme.** `BRAND_THEME` is `SKY` (was `FOREST`). It is what a member sees until they pick a theme, what "Reset to default" restores, and what a new organisation starts with (`organizations.default_theme` column default). Migration `20261125090000_sky_default_theme` also moves organisations still on `FOREST` to `SKY`. A member's own theme choice is untouched. Forest remains one of the ten themes.
+- **Frozen sign-in pages (hard rule 1), approved exception.** Given approved changing their colours only. No frozen file changed (their hashes in `tests/uiGuards.test.ts` and the `pre-makeover` comparison still hold): the greens live in `src/app/globals.css`, where the hero gradient, the "Sign in" button, the badge, and the focus rings now use sky blues. Layout, markup and behaviour are as before. The five pages x two widths baselines in `e2e/frozen-auth.spec.ts-snapshots/` must be re-recorded in the same pull request (`npx playwright test e2e/frozen-auth.spec.ts --update-snapshots`, once on Windows and once for the Linux baselines CI uses).
+- Status greens (success, "won", the orange brand accent) are unchanged; the logo mark is unchanged.
+- Left as is on purpose: the contract example files and the OpenAPI summary "Back to Forest on White" (the contract is signed off; the summary text is corrected at the next contract regeneration).
