@@ -1,4 +1,4 @@
-import { findPageColour, lookColours } from "@/preferences/catalogue";
+import { BRAND_PAGE_COLOUR, BRAND_THEME, findPageColour, lookColours } from "@/preferences/catalogue";
 import { buildPalette, type SchemeLook } from "./palette";
 
 /**
@@ -56,7 +56,7 @@ export interface LookInput {
 }
 
 export function defaultLook(): LookInput {
-  const base = lookColours("FOREST", "WHITE");
+  const base = lookColours(BRAND_THEME, BRAND_PAGE_COLOUR);
   return {
     locked: false,
     toggle: { light: "WHITE", dark: "DARK" },

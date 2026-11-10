@@ -56,8 +56,8 @@ export const HOUR_FORMATS = ["H12", "H24"] as const;
 export const FIRST_DAYS_OF_WEEK = ["MON", "SUN", "SAT"] as const;
 export const DATE_FORMATS = ["DMY", "MDY", "YMD"] as const;
 
-/** The brand defaults: Forest on White (what "Reset" restores, exactly). */
-export const BRAND_THEME = "FOREST";
+/** The brand defaults: Sky on White (what "Reset" restores, exactly). Sky became the default on 10 Nov 2026 (Given); Forest is still a choice. */
+export const BRAND_THEME = "SKY";
 export const BRAND_PAGE_COLOUR = "WHITE";
 export const BRAND_TOGGLE_LIGHT = "WHITE";
 export const BRAND_TOGGLE_DARK = "DARK";

@@ -308,19 +308,19 @@ describe("reset and undo", () => {
     });
   }
 
-  it("goes back to Forest on White exactly, keeping start page and date/time choices", async () => {
+  it("goes back to Sky on White exactly, keeping start page and date/time choices", async () => {
     const { sales, mgmt, org } = await setup();
     await updateOrganizationLook(mgmt, { defaultTheme: "OCEAN" });
     await customised(sales);
     const { preferences, undo } = await prefs.resetMyAppearance(sales);
     expect(preferences.appearance).toMatchObject({
-      theme: "FOREST",
+      theme: "SKY",
       pageColour: "WHITE",
       toggle: { light: "WHITE", dark: "DARK" },
       density: "COMFORTABLE",
       ownColours: null,
     });
-    expect(preferences.appearance.effective.colours).toMatchObject({ sidebar: "#203E2A", accent: "#275B3A", page: { hex: "#FAF9F7" } });
+    expect(preferences.appearance.effective.colours).toMatchObject({ sidebar: "#1C4E6E", accent: "#2A7BB0", page: { hex: "#FAF9F7" } });
     expect(preferences.startPage.key).toBe("leads");
     expect(preferences.regional.hourFormat).toBe("H24");
     expect(undo.expiresInSeconds).toBe(600);
@@ -389,7 +389,7 @@ describe("reset and undo", () => {
     const reset = await resetRoute.POST(new Request("http://x", { method: "POST" }), params);
     expect(reset.status).toBe(200);
     const body = await reset.json();
-    expect(body.preferences.appearance.theme).toBe("FOREST");
+    expect(body.preferences.appearance.theme).toBe("SKY");
     const undo = await undoRoute.POST(new Request("http://x", { method: "POST", body: JSON.stringify({ token: body.undo.token }) }), params);
     expect(undo.status).toBe(200);
     expect((await undo.json()).appearance.theme).toBe("SAND");

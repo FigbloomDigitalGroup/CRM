@@ -6,7 +6,7 @@
 
 .fb-pl {
   --pl-bg: #faf9f7; --pl-surface: #ffffff; --pl-surface-2: #f6f5f1; --pl-surface-3: #f1f0ec; --pl-border: #e9e7e1; --pl-border-strong: #dcd9d1;
-  --pl-text: #1b1d1a; --pl-text-2: #5f625c; --pl-text-3: #6f726c; --pl-primary: #275b3a; --pl-primary-soft: #e9f1eb; --pl-primary-text: #275b3a;
+  --pl-text: #1b1d1a; --pl-text-2: #5f625c; --pl-text-3: #6f726c; --pl-primary: #1d5f8f; --pl-primary-soft: #e3f0fa; --pl-primary-text: #1d5f8f;
   --pl-orange: #ff9400; --pl-orange-text: #a95a06; --pl-orange-soft: #fdf2e3; --pl-red: #c0403b; --pl-red-soft: #fbeceb;
   --pl-blue: #3a69a8; --pl-blue-soft: #eaf0f8; --pl-purple: #7650b0; --pl-purple-soft: #f1ecf8; --pl-purple-btn: #7650b0;
   --pl-overlay: rgba(24, 30, 25, 0.38); --pl-shadow-sm: 0 1px 2px rgba(25, 35, 27, 0.04), 0 1px 3px rgba(25, 35, 27, 0.05);
@@ -262,10 +262,10 @@
 .fb-pl-auth-input:focus { border-color: #1a1c19; background: #fff; box-shadow: 0 0 0 4px rgba(32, 62, 42, 0.08); }
 .fb-pl-auth-wrap { position: relative; display: block; }
 .fb-pl-auth-wrap svg { position: absolute; left: 18px; top: 16px; color: #7a7c76; }
-.fb-pl-auth-cta { margin-top: 22px; width: 100%; height: 54px; border: 0; border-radius: 999px; background: #203e2a; color: #fff; font-size: 15.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; }
-.fb-pl-auth-alt { margin-top: 12px; border: 0; background: transparent; padding: 0; color: #203e2a; font-weight: 700; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
+.fb-pl-auth-cta { margin-top: 22px; width: 100%; height: 54px; border: 0; border-radius: 999px; background: #1c4e6e; color: #fff; font-size: 15.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.fb-pl-auth-alt { margin-top: 12px; border: 0; background: transparent; padding: 0; color: #1c4e6e; font-weight: 700; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
 .fb-pl-auth-err { margin-top: 14px; display: flex; gap: 8px; align-items: center; padding: 10px 14px; border-radius: 12px; background: #fbeceb; color: #a3332f; font-size: 13px; font-weight: 500; }
-.fb-pl-auth-note { margin-top: 14px; display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; border-radius: 14px; background: #eef3ef; color: #203e2a; font-size: 13.5px; line-height: 1.45; }
+.fb-pl-auth-note { margin-top: 14px; display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; border-radius: 14px; background: #eef4f9; color: #1c4e6e; font-size: 13.5px; line-height: 1.45; }
 .fb-pl-auth-foot { margin: 26px 0 0; text-align: center; font-size: 14px; color: #5f625c; }
 .fb-pl-nf { padding: 80px 0; text-align: center; }
 

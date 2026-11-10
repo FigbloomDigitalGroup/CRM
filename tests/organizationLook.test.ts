@@ -78,12 +78,12 @@ describe("organisation look", () => {
       shownName: org.name,
       displayName: null,
       logoUrl: null,
-      defaultTheme: "FOREST",
+      defaultTheme: "SKY",
       defaultPageColour: "WHITE",
       showLogoOnClientPages: false,
       allowPersonalisation: true,
     });
-    expect(view.colours.accent).toBe("#275B3A");
+    expect(view.colours.accent).toBe("#2A7BB0");
   });
 
   it("is changed by Management and read by everyone, with an audit trail", async () => {
@@ -100,7 +100,7 @@ describe("organisation look", () => {
 
     const events = await adminDb.auditEvent.findMany({ where: { organizationId: org.id, action: "organization.look_updated" } });
     expect(events).toHaveLength(1);
-    expect(events[0]!.previousValue).toMatchObject({ defaultTheme: "FOREST" });
+    expect(events[0]!.previousValue).toMatchObject({ defaultTheme: "SKY" });
     expect(events[0]!.newValue).toMatchObject({ defaultTheme: "OCEAN", showLogoOnClientPages: true });
 
     // Clearing the display name falls back to the organisation's name; saving the same values again is a quiet no-op.
@@ -111,9 +111,9 @@ describe("organisation look", () => {
 
   it("is not for other roles to change, and the denial names the permission", async () => {
     const { sales } = await setup();
-    const err = await look.updateOrganizationLook(sales, { defaultTheme: "SKY" }).catch((e: unknown) => e);
+    const err = await look.updateOrganizationLook(sales, { defaultTheme: "OCEAN" }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ForbiddenError);
-    expect((await look.getOrganizationLook(sales)).defaultTheme).toBe("FOREST");
+    expect((await look.getOrganizationLook(sales)).defaultTheme).toBe("SKY");
   });
 
   it("explains invalid values", async () => {
@@ -124,7 +124,7 @@ describe("organisation look", () => {
     expect(found.map((i) => i.path).sort()).toEqual(["defaultPageColour", "defaultTheme", "displayName"]);
     expect(found.find((i) => i.path === "defaultPageColour")!.message).toContain("specific page colour");
     await expect(look.updateOrganizationLook(mgmt, {})).rejects.toThrow(/at least one/);
-    expect((await look.getOrganizationLook(mgmt)).defaultTheme).toBe("FOREST");
+    expect((await look.getOrganizationLook(mgmt)).defaultTheme).toBe("SKY");
   });
 
   it("switches personalisation through the one toggle, audited as a toggle", async () => {
@@ -202,12 +202,12 @@ describe("through the routes", () => {
     const { mgmt, sales } = await setup();
     current.ctx = sales;
     expect((await lookRoute.GET(new Request("http://x"), params)).status).toBe(200);
-    const denied = await lookRoute.PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify({ defaultTheme: "SKY" }) }), params);
+    const denied = await lookRoute.PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify({ defaultTheme: "OCEAN" }) }), params);
     expect(denied.status).toBe(403);
     current.ctx = mgmt;
-    const ok = await lookRoute.PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify({ defaultTheme: "SKY" }) }), params);
+    const ok = await lookRoute.PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify({ defaultTheme: "OCEAN" }) }), params);
     expect(ok.status).toBe(200);
-    expect((await ok.json()).defaultTheme).toBe("SKY");
+    expect((await ok.json()).defaultTheme).toBe("OCEAN");
     const unknown = await lookRoute.PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify({ colour: "red" }) }), params);
     expect(unknown.status).toBe(400);
   });

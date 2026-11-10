@@ -67,7 +67,7 @@ model Organization {
   /// `personalisation.allowed` toggle, not a column.
   displayName           String?  @map("display_name")
   logoFileId            String?  @map("logo_file_id")
-  defaultTheme          String   @default("FOREST") @map("default_theme")
+  defaultTheme          String   @default("SKY") @map("default_theme")
   defaultPageColour     String   @default("WHITE") @map("default_page_colour")
   showLogoOnClientPages Boolean  @default(false) @map("show_logo_on_client_pages")
 

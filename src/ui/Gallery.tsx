@@ -92,7 +92,7 @@ export function Gallery() {
   const [confirm, setConfirm] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [owner, setOwner] = useState<string | null>("s1");
-  const [theme, setTheme] = useState("FOREST");
+  const [theme, setTheme] = useState("SKY");
   const [colour, setColour] = useState("#1F7A4D");
   const [narrow, setNarrow] = useState(false);
   const [chipOn, setChipOn] = useState(true);

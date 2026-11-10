@@ -4,7 +4,7 @@ import { Lock, Monitor, Smartphone } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { PAGE_COLOURS, THEMES, findPageColour, findTheme, lookColours } from "@/preferences/catalogue";
+import { BRAND_THEME, PAGE_COLOURS, THEMES, findPageColour, findTheme, lookColours } from "@/preferences/catalogue";
 import { ConfirmDialog, ErrorState, LoadingState, Select, useAppearance, useApiMutation, useMember, useToast } from "@/ui";
 import { DEFAULT_DEVICE, TEXT_SIZES, type LookInput, type TextSize } from "@/ui/theme/resolve";
 import { usePreferencesQuery, useSavePreferences } from "./hooks";
@@ -165,7 +165,7 @@ export function AppearanceTab({ resetOpen, onResetClose }: { resetOpen: boolean;
                   </span>
                 </span>
                 <span className="fb-prefs__themename">
-                  <span>{t.label}{t.key === "FOREST" ? " (default)" : ""}</span>
+                  <span>{t.label}{t.key === BRAND_THEME ? " (default)" : ""}</span>
                   {on ? <span className="fb-prefs__selected">Selected</span> : null}
                 </span>
               </button>
@@ -280,7 +280,7 @@ export function AppearanceTab({ resetOpen, onResetClose }: { resetOpen: boolean;
         body={
           locked
             ? "Density goes back to comfortable, text size to default and accessibility to off. The look stays your organisation’s shared look. Your profile and notifications don’t change."
-            : "Theme goes back to Forest on White, density to comfortable, text size to default and accessibility to off. Your profile and notifications don’t change. You can undo this for a few minutes."
+            : "Theme goes back to Sky on White, density to comfortable, text size to default and accessibility to off. Your profile and notifications don’t change. You can undo this for a few minutes."
         }
         confirmLabel="Reset"
         onConfirm={doReset}

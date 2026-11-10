@@ -119,7 +119,7 @@ describe("Stage 1 exit gate: every role, one organisation", () => {
     const undoToken = undo.token as string;
     expect(typeof undoToken).toBe("string");
     clearMeContextCache();
-    expect((await (await contextRoute.GET(new Request("http://x/api/me/context"))).json()).look.theme).toBe("FOREST");
+    expect((await (await contextRoute.GET(new Request("http://x/api/me/context"))).json()).look.theme).toBe("SKY");
     const undone = await undoRoute.POST(json("POST", { token: undoToken }), params);
     expect(undone.status).toBe(200);
     clearMeContextCache();
