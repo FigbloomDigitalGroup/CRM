@@ -23,6 +23,15 @@ describe("Preferences · Appearance (F4.01, AP2)", () => {
     expect(await screen.findByRole("radio", { name: /Sky \(default\)/ })).toBeChecked();
   });
 
+  it("Sky (default) is the first theme in the picker, ahead of Forest", async () => {
+    const { client } = stubClient({ getMyPreferences: () => prefsView() });
+    renderPrefs(<AppearanceTab resetOpen={false} onResetClose={() => undefined} />, client);
+    await screen.findByRole("radio", { name: /Sky \(default\)/ });
+    const names = screen.getAllByRole("radio", { name: /^(Sky|Forest|Ocean)/ }).map((r) => r.textContent ?? "");
+    expect(names[0]).toMatch(/^Sky \(default\)/);
+    expect(names.findIndex((n) => n.startsWith("Forest"))).toBeGreaterThan(0);
+  });
+
   it("a theme changes the app at once and is saved to the account", async () => {
     const { client, calls } = stubClient({ getMyPreferences: () => prefsView(), updateMyPreferences: ({ body }) => prefsView({ appearance: { ...prefsView().appearance, theme: (body as { theme: string }).theme, effective: { ...prefsView().appearance.effective, theme: "OCEAN", colours: { sidebar: "#14365C", accent: "#1F5FA3", highlight: "#E1EEF8", page: { key: "WHITE", label: "White", hex: "#FAF9F7", dark: false } } } } }) });
     renderPrefs(<AppearanceTab resetOpen={false} onResetClose={() => undefined} />, client);

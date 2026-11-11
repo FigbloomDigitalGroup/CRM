@@ -58,6 +58,11 @@ export const DATE_FORMATS = ["DMY", "MDY", "YMD"] as const;
 
 /** The brand defaults: Sky on White (what "Reset" restores, exactly). Sky became the default on 10 Nov 2026 (Given); Forest is still a choice. */
 export const BRAND_THEME = "SKY";
+/** The themes as a picker shows them: the brand default first, the rest in catalogue order. (The catalogue order itself is part of the API contract, so the order is applied here, not there.) */
+export function themesDefaultFirst(): ThemeDef[] {
+  return [...THEMES].sort((a, b) => Number(b.key === BRAND_THEME) - Number(a.key === BRAND_THEME));
+}
+
 export const BRAND_PAGE_COLOUR = "WHITE";
 export const BRAND_TOGGLE_LIGHT = "WHITE";
 export const BRAND_TOGGLE_DARK = "DARK";
