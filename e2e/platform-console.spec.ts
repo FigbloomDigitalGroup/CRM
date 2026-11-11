@@ -97,7 +97,9 @@ test.describe("Platform console on the real API", () => {
 test.describe("PL14: the verify step", () => {
   test("opened without a pending sign-in it says so and signs nobody in", async ({ page }) => {
     await page.goto("/platform/verify");
-    await expect(page.getByRole("heading", { name: "Verify it’s you" })).toBeVisible();
+    // The page first shows "Verify it’s you / One moment" while it asks the server what the pending sign-in needs, then settles. Wait for the settled state, not the loading one (asserting the loading heading raced the server's answer and failed whenever it answered fast).
+    await expect(page.getByRole("heading", { name: "Sign in again" })).toBeVisible();
+    await expect(page.getByText("This sign-in has expired or was never started.")).toBeVisible();
     await expect(page.getByLabel("Authenticator code")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Platform home" })).toHaveCount(0);
   });
