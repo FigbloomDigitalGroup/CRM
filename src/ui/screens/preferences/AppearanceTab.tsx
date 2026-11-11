@@ -4,7 +4,7 @@ import { Lock, Monitor, Smartphone } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { BRAND_THEME, PAGE_COLOURS, THEMES, findPageColour, findTheme, lookColours } from "@/preferences/catalogue";
+import { BRAND_THEME, PAGE_COLOURS, findPageColour, findTheme, lookColours, themesDefaultFirst } from "@/preferences/catalogue";
 import { ConfirmDialog, ErrorState, LoadingState, Select, useAppearance, useApiMutation, useMember, useToast } from "@/ui";
 import { DEFAULT_DEVICE, TEXT_SIZES, type LookInput, type TextSize } from "@/ui/theme/resolve";
 import { usePreferencesQuery, useSavePreferences } from "./hooks";
@@ -152,7 +152,7 @@ export function AppearanceTab({ resetOpen, onResetClose }: { resetOpen: boolean;
         <div className="fb-prefs__cardhead"><h2 id="prefs-themes">Themes</h2><Scope where="account" /></div>
         <p className="fb-prefs__hint">A sidebar colour paired with an accent. Status colours never change.</p>
         <div className="fb-prefs__themes" role="radiogroup" aria-label="Theme" aria-describedby={locked ? "prefs-locked-why" : undefined}>
-          {THEMES.map((t) => {
+          {themesDefaultFirst().map((t) => {
             const on = eff.theme === t.key;
             return (
               <button key={t.key} type="button" role="radio" aria-checked={on} aria-disabled={locked || undefined} title={locked ? LOCKED_REASON : undefined} className="fb-prefs__theme" data-on={on} onClick={() => pickTheme(t.key)}>

@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { THEMES } from "@/preferences/catalogue";
+import { THEMES, themesDefaultFirst } from "@/preferences/catalogue";
 import { Button, Checkbox, FormErrorSummary, Input, Select, fieldErrorMap } from "../..";
 import { describeError } from "../../errors";
 import { newIdempotencyKey, putSignedUpload } from "../../data/client";
@@ -171,7 +171,7 @@ function LookForm({ initial }: { initial: NonNullable<ReturnType<typeof useApiQu
         <Select
           label="Default theme for new members"
           value={look.defaultTheme}
-          options={THEMES.map((t) => ({ value: t.key, label: t.label }))}
+          options={themesDefaultFirst().map((t) => ({ value: t.key, label: t.label }))}
           onChange={(e) => { const key = e.target.value; update.mutate({ params: { orgSlug }, body: { defaultTheme: key } }, { onSuccess: () => report.ok(`New members start with ${THEMES.find((t) => t.key === key)?.label ?? "that theme"}.`) } as never); }}
         />
       </div>
