@@ -278,7 +278,7 @@ jobs:
 ```
 
 **Vercel** (`vercel.json`; Vercel sends `Authorization: Bearer $CRON_SECRET` itself
-when the `CRON_SECRET` environment variable is set; a 5-minute schedule needs a plan that allows it)
+when the `CRON_SECRET` environment variable is set). The 5-minute schedule below needs **Vercel Pro**; the Hobby plan rejects it and the repository's `vercel.json` therefore holds daily entries plus an outside 5-minute caller (see "Scheduled work on Vercel"):
 
 ```json
 {
@@ -536,12 +536,12 @@ Decided by Given on 9 Nov 2026, Michael to confirm (`docs/DECISIONS.md` section 
 
 | File | Purpose |
 |---|---|
-| `vercel.json` | Build command `prisma generate && next build` (migrations never run in a build), function `maxDuration` for the long routes, and the three cron entries. |
+| `vercel.json` | Build command `prisma generate && next build` (migrations never run in a build), function `maxDuration` for the long routes, and the three cron entries (daily, the Hobby plan limit). |
 | `prisma/schema.prisma` | `binaryTargets = ["native", "rhel-openssl-3.0.x"]`, so the query engine for the Vercel runtime is bundled. |
 | `next.config.js` | Unchanged and still applies: security headers, the `/sw.js` headers, the Sentry build wrapper (source map upload only with `SENTRY_AUTH_TOKEN`). |
 | `scripts/migrate-deploy-direct.ts` | `npm run migrate:deploy:direct`: runs `prisma migrate deploy` through `DIRECT_URL`. |
 
-**Why there is no `directUrl` in the Prisma datasource.** Prisma then makes a `DIRECT_URL` variable mandatory for every command (`generate`, `validate`, the test suite, CI), which would break every setup that has only `DATABASE_URL`. Instead `npm run migrate:deploy:direct` copies `DIRECT_URL` onto `DATABASE_URL` for that one command. With `DIRECT_URL` unset it behaves exactly like `npm run migrate:deploy`. Run it from a trusted computer, never from the Vercel build.
+**Why there is no `directUrl` in the Prisma datasource (closing decision for MVP-05: deliberately not added).** Prisma then makes a `DIRECT_URL` variable mandatory for every command (`generate`, `validate`, the test suite, CI), which would break every setup that has only `DATABASE_URL`. Instead `npm run migrate:deploy:direct` copies `DIRECT_URL` onto `DATABASE_URL` for that one command. With `DIRECT_URL` unset it behaves exactly like `npm run migrate:deploy`. Run it from a trusted computer, never from the Vercel build.
 
 **Connection strings on Neon.** `APP_DATABASE_URL` (what the running app queries through, role `figbloom_app`) and `PLATFORM_DATABASE_URL` (role `figbloom_platform`) use Neon's **pooled** host (the host name containing `-pooler`) with `?sslmode=require&pgbouncer=true&connection_limit=1`. `DATABASE_URL` (owner role) is the **direct** host, used only by scripts and migrations; `DIRECT_URL` is the same direct owner URL. Row-level security keys on the organisation set per transaction, which works through the transaction-mode pooler; step 9 below proves it on the hosted database.
 
@@ -587,23 +587,25 @@ One table, covering `.env.example` and every `process.env` read in `src/`. **Pro
 | `PLATFORM_DATABASE_URL` S | required | required | Given (Neon) | `figbloom_platform`, **pooled** host. The platform console fails closed without it. |
 | `APP_DB_ROLE`, `PLATFORM_DB_ROLE` | optional | optional | | Role names; defaults `figbloom_app`, `figbloom_platform`. |
 | `TEST_DATABASE_URL`, `TEST_APP_DATABASE_URL`, `TEST_PLATFORM_DATABASE_URL` | never | never | | Test suite only. |
-| `STORAGE_DRIVER` | `s3` | `s3` | Given | Required in production. |
+| `STORAGE_DRIVER` | `s3` (target); **`local` on the MVP test deployment, 11 Nov 2026** | `s3` | Given | Required in production: unset makes the app page shell fail ("STORAGE_DRIVER must be set"). The test deployment uses `local` because no bucket exists yet; files then live in the server's scratch folder and are **lost** (see `docs/MVP_HANDOVER.md` section 0). Replace with `s3` before real use. |
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` | required | required | Given | AWS example: `https://s3.<region>.amazonaws.com`. Preview uses its own bucket. |
 | `S3_ACCESS_KEY_ID` S, `S3_SECRET_ACCESS_KEY` S | required | required | Given | Key limited to this bucket (`docs/STORAGE.md`). |
 | `S3_FORCE_PATH_STYLE` | `false` | `false` | Given | Virtual-hosted style on Amazon S3. |
 | `S3_PUBLIC_ENDPOINT` | unset | unset | | Only when browsers reach the store at another host than the server. |
-| `STORAGE_LOCAL_DIR`, `STORAGE_SIGNING_SECRET` | not used | not used | | Local driver only (Vercel's disk is not persistent). |
+| `STORAGE_LOCAL_DIR`, `STORAGE_SIGNING_SECRET` (the secret is S) | not used with `s3`; **set on the MVP test deployment** (`/tmp/figbloom-files` and a random secret) | not used | Given | **Set in production today** (test only). Local driver only: Vercel's disk is not persistent, so files are lost when the server instance is recycled and are not shared between instances. Fake-data test only. |
 | `CLAMD_HOST`, `CLAMD_PORT` | unset | unset | | No ClamAV host in the MVP. |
 | `ANTIVIRUS_MODE` | `builtin-only` | optional | Given | Opt-out of the ClamAV requirement; needs the written risk acceptance in `docs/DECISIONS.md` section 7. Without it and without `CLAMD_HOST`, production refuses to boot. A warning is logged at every boot while it is active. Remove it when a ClamAV host exists. |
 | `CRON_SECRET` S | required | required | Given | 32+ random characters. Vercel sends it as `Authorization: Bearer` on cron calls. Unset: the cron routes answer 500. |
-| `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` | `30` | optional | | Match the cron interval. |
+| `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` | unset (default `15`) | optional | | Match the interval at which `/api/cron/jobs` is called. Unset in the MVP production. |
 | `TWO_STEP_ENCRYPTION_KEY` S | required | required | Given | `openssl rand -base64 32`. |
 | `INTEGRATION_ENCRYPTION_KEY` S | required | required | Given | `openssl rand -base64 32`. Without it no mail or calendar token can be stored. |
 | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` S | for Gmail and Calendar | optional | Given (Google Cloud) | Redirect `${APP_BASE_URL}/api/integrations/oauth/callback`. |
 | `MICROSOFT_OAUTH_CLIENT_ID`, `MICROSOFT_OAUTH_CLIENT_SECRET` S, `MICROSOFT_OAUTH_TENANT` | for Outlook | optional | Given (Entra) | Same redirect. Tenant default `common`. |
-| `RESEND_API_KEY` S | required | optional | Michael or Given | Support requests by email. |
-| `SUPPORT_EMAIL_FROM` | required | optional | Given | Must use a domain verified in Resend. |
-| `SUPPORT_INBOX_EMAIL` | required | optional | Michael | Where support requests arrive. |
+| `RESEND_API_KEY` S | required (**test key today**: a free Resend account) | optional | Michael or Given | Support requests by email. Replace with a key from the real account at changeover. |
+| `SUPPORT_EMAIL_FROM` | required (**test value today**: `onboarding@resend.dev`) | optional | Given | Must use a domain verified in Resend. `onboarding@resend.dev` works only for the Resend account owner's own address. |
+| `SUPPORT_INBOX_EMAIL` | required (**test value today**: Given's Gmail) | optional | Michael | Where support requests arrive. |
+| Support email changeover | | | | When testing ends: (1) add the Figbloom domain in Resend and publish the SPF and DKIM records until it shows "verified"; (2) set `SUPPORT_EMAIL_FROM` to an address on it; (3) set `SUPPORT_INBOX_EMAIL` to Michael's support mailbox; (4) create a key under the real Resend account (Sending access only) and replace `RESEND_API_KEY`; (5) redeploy and send one test request. |
+| `POSTGRES_*`, `PG*`, `NEON_*`, `VITE_NEON_AUTH_URL` | present | present | Neon integration | Created by the Neon integration in Vercel. **The app does not read them**; they can stay (do not delete them while the integration is connected, they are managed by it). The app uses `DATABASE_URL`, `APP_DATABASE_URL` and `PLATFORM_DATABASE_URL`. |
 | `RESEND_API_KEY` S, `EMAIL_FROM` | required for invites, resets and quotes (unless SMTP is used) | optional | Michael | Sender domain must be verified in Resend. In production links are never logged; without a provider, `/api/health` reports `email: misconfigured`. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS` S, `SMTP_FROM` | optional alternative to Resend | optional | Given | If `SMTP_HOST` is set it wins over Resend. |
 | `MAILGUN_INBOUND_SIGNING_KEY` S, `INBOUND_EMAIL_DOMAIN`, `INBOUND_EMAIL_ADDRESS_SECRET` S | optional | optional | Given | BCC-to-CRM. Unset: inbound calls are refused. |
@@ -647,7 +649,9 @@ One table, covering `.env.example` and every `process.env` read in `src/`. **Pro
 
 ### Scheduled work on Vercel
 
-`vercel.json` holds the three entries: `/api/cron/jobs` every 5 minutes, `/api/cron/notifications-sweep` every 30 minutes, `/api/cron/platform-maintenance` daily at 03:00 UTC. Each route checks `Authorization: Bearer $CRON_SECRET` (constant-time compare, fails closed when unset); Vercel sends that header itself once `CRON_SECRET` is set in the project. Each function is allowed 300 seconds, and the job runner stops starting new jobs after 25 seconds. **Vercel Hobby allows one cron run per day, so a Pro plan is required** (mail sync every 5 minutes and queued sends depend on it). Nothing in production depends on `npm run jobs:worker`. Vercel runs crons only against the production deployment.
+`vercel.json` currently holds three **daily** entries, because Vercel Hobby rejects anything more frequent: `/api/cron/jobs` at 02:00 UTC, `/api/cron/notifications-sweep` at 02:30 and `/api/cron/platform-maintenance` at 03:00. Each route checks `Authorization: Bearer $CRON_SECRET` (constant-time compare, fails closed when unset); Vercel sends that header itself once `CRON_SECRET` is set in the project. Each function is allowed 300 seconds, and the job runner stops starting new jobs after 25 seconds.
+
+**On the Hobby plan the 5-minute runner is an outside caller.** The MVP uses a free cron-job.org job: `GET https://figbloom-crm.vercel.app/api/cron/jobs` every 5 minutes with the header `Authorization: Bearer <CRON_SECRET>` (mail sync, scheduled sends, chat notifications and sequences depend on it). On **Pro**, put `{ "path": "/api/cron/jobs", "schedule": "*/5 * * * *" }` in `vercel.json` and drop the outside caller. Nothing in production depends on `npm run jobs:worker`. Vercel runs crons only against the production deployment.
 
 ### Domain, DNS, OAuth and email
 
