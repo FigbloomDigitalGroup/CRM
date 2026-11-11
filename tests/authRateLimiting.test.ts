@@ -118,6 +118,71 @@ describe("authService.login: rate limiting (FIG-784)", () => {
   });
 });
 
+describe("authService.login: only failed attempts count (D-3)", () => {
+  it("does not block 20 successful sign-ins by different users from one shared IP, with the default limits", async () => {
+    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_IP;
+    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL;
+    delete process.env.LOGIN_RATE_LIMIT_WINDOW_MS;
+    const ip = uniqueIp();
+    for (let i = 0; i < 20; i++) {
+      const user = await createUserWithPassword();
+      const { userId } = await authService.login(user.email, PASSWORD, null, ip);
+      expect(userId).toBe(user.id);
+    }
+  }, 180_000);
+
+  it("does not block one person who signs in successfully more often than the per-email failure limit", async () => {
+    process.env.LOGIN_RATE_LIMIT_WINDOW_MS = "600000";
+    process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL = "3";
+    process.env.LOGIN_RATE_LIMIT_MAX_PER_IP = "1000";
+    const user = await createUserWithPassword();
+    const ip = uniqueIp();
+    for (let i = 0; i < 8; i++) {
+      const { userId } = await authService.login(user.email, PASSWORD, null, ip);
+      expect(userId).toBe(user.id);
+    }
+  });
+
+  it("still blocks repeated failures against one account, using the default per-email limit of 5", async () => {
+    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_IP;
+    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL;
+    delete process.env.LOGIN_RATE_LIMIT_WINDOW_MS;
+    const user = await createUserWithPassword();
+    for (let i = 0; i < 5; i++) {
+      await expect(authService.login(user.email, "wrong-password", null, uniqueIp())).rejects.toThrow(UnauthorizedError);
+    }
+    await expect(authService.login(user.email, PASSWORD, null, uniqueIp())).rejects.toThrow(RateLimitedError);
+  });
+
+  it("still blocks a single IP that fails across many accounts, at the default threshold of 100", async () => {
+    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_IP;
+    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL;
+    delete process.env.LOGIN_RATE_LIMIT_WINDOW_MS;
+    const ip = uniqueIp();
+    // Record 99 earlier failures directly (the limiter is what is under test, not 99 password checks), then fail for real.
+    await adminDb.authRateLimitAttempt.createMany({
+      data: Array.from({ length: 99 }, () => ({ action: "LOGIN" as const, scope: "ip", key: ip })),
+    });
+    await expect(authService.login(`nobody-${randomUUID()}@example.test`, "wrong", null, ip)).rejects.toThrow(UnauthorizedError);
+    // That was the 100th failure: the next attempt, even with a correct password, is refused.
+    const user = await createUserWithPassword();
+    await expect(authService.login(user.email, PASSWORD, null, ip)).rejects.toThrow(RateLimitedError);
+  });
+
+  it("a successful sign-in does not add to the IP's failure count", async () => {
+    process.env.LOGIN_RATE_LIMIT_WINDOW_MS = "600000";
+    process.env.LOGIN_RATE_LIMIT_MAX_PER_IP = "2";
+    process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL = "1000";
+    const user = await createUserWithPassword();
+    const ip = uniqueIp();
+    await authService.login(user.email, PASSWORD, null, ip);
+    await authService.login(user.email, PASSWORD, null, ip);
+    await authService.login(user.email, PASSWORD, null, ip);
+    const recorded = await adminDb.authRateLimitAttempt.count({ where: { action: "LOGIN", scope: "ip", key: ip } });
+    expect(recorded).toBe(0);
+  });
+});
+
 describe("authService.signup: rate limiting (FIG-784)", () => {
   it("locks out further signup attempts for the same email once the per-email limit is hit, even once the email is already taken", async () => {
     process.env.SIGNUP_RATE_LIMIT_WINDOW_MS = "600000";

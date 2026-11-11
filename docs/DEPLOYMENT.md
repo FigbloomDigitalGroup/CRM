@@ -307,9 +307,11 @@ sidecar, no Redis, nothing extra to deploy.
 
 | Action | Window | Max per IP | Max per email |
 |---|---|---|---|
-| Login | 15 min | 20 | 5 |
+| Login (failed attempts only) | 15 min | 100 | 5 |
 | Signup | 1 hour | 10 | 3 |
 | Password-reset request | 1 hour | 10 | 3 |
+
+**Login counts failed attempts only (D-3, 11 Nov 2026).** A successful sign-in never counts toward either limit, so an office or mobile carrier behind one shared address, or one person signing in often, is not locked out. The checks run before any password work and a failed attempt is recorded afterwards. Per account the limit stays at 5 failures in 15 minutes (the same as the account lockout). Per address it is 100 failures in 15 minutes, up from 20 counting every attempt: far more than people mistyping can reach, yet one address can still only try 400 passwords an hour, and no single account more than 5 per 15 minutes. Behind Vercel set `TRUSTED_PROXY_HOPS=1`; the address used is then the last `X-Forwarded-For` entry, which Vercel sets to the real client address.
 
 Once a limit is hit, every further attempt for that IP or email within the
 window gets the same generic 429 (`"Too many requests. Please try again
