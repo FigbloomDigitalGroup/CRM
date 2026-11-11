@@ -1,6 +1,6 @@
 # Figbloom CRM: MVP handover pack (FIG-1557, MVP-18)
 
-State on **11 Nov 2026**. The live address is https://figbloom-crm.vercel.app. This pack is written for whoever receives the MVP (Michael, or someone he names): it should be enough to run, deploy, support and demo it. **No secrets belong in this document.** Lines marked **FILL IN** need a person to complete them. The live smoke test (MVP-16) results are added to section 0 when that test finishes; until then section 0 says what has and has not been checked.
+State on **11 Nov 2026**. The live address is https://figbloom-crm.vercel.app. This pack is written for whoever receives the MVP (Michael, or someone he names): it should be enough to run, deploy, support and demo it. **No secrets belong in this document.** Lines marked **FILL IN** need a person to complete them. The live smoke test (MVP-16) results are in section 0.
 
 This is a **test deployment on free plans with fake data**. It is not ready for real customers: see sections 6 and 7 for what changes first.
 
@@ -11,7 +11,7 @@ This is a **test deployment on free plans with fake data**. It is not ready for 
 | Address | `https://figbloom-crm.vercel.app` (free Vercel address, no custom domain). Production branch `dev-given`. Vercel's own login wall is on for preview deployments only. |
 | Hosting | Vercel **Hobby (free)**, team "Given", project `figbloom-crm`, Node 22, functions in Frankfurt (`fra1`). Hobby is for personal, non-commercial use: a decision before real customers. |
 | Database | Neon **free plan** through the Vercel Marketplace, PostgreSQL 18.6, Frankfurt. Two separate databases: production and preview. Roles `figbloom_app` (no superuser, no RLS bypass) and `figbloom_platform`. Row-level security checked on the hosted database. |
-| Migrations | **89 of 90 applied.** On 10 Nov 8 migrations (`20261121090000` to `20261124100000`) had been missed, which broke the webhook and support-access jobs until they were applied. The newest, `20261125090000_sky_default_theme` (default theme becomes Sky), was merged on 10 Nov and is **not yet applied**: run section 4 "Run migrations" before relying on it. |
+| Migrations | **All 90 applied** (checked 11 Nov 2026). On 10 Nov 8 migrations (`20261121090000` to `20261124100000`) had been missed, which broke the webhook and support-access jobs until they were applied. The newest, `20261125090000_sky_default_theme` (default theme becomes Sky), was applied on 11 Nov. After every merge that adds a migration, run section 4 "Run migrations" and then `npm run db:grant-role`. |
 | Scheduled jobs | Vercel runs three **daily** crons (the Hobby limit). The real 5-minute runner is **cron-job.org** (free), calling `GET /api/cron/jobs` with the `Authorization: Bearer` header. Checked 10 Nov: the job queue runs and its jobs succeed. |
 | Email (system) | Gmail SMTP from `givenjim04@gmail.com` with an app password stored in Vercel. Password reset arrives (confirmed 11 Nov). `/api/health` reports `email: ok`. |
 | Email (support requests) | Resend free account, sender `onboarding@resend.dev`, inbox `givenjim04@gmail.com`. One real request arrived on 11 Nov with its reference in the subject (FIG-1524). |
@@ -19,7 +19,7 @@ This is a **test deployment on free plans with fake data**. It is not ready for 
 | Platform admin | `givenjim04@gmail.com`, two-step sign-in. |
 | First organisation | "Figbloom Digital Group" (`figbloom-digital-group`), Management user `givenjim04@gmail.com` (invite accepted 11 Nov). |
 | Dev things | No dev account, dev chip or demo route in production. `ALLOW_DEV_ACCOUNTS`, `DEMO_SCREENS`, `NEXT_PUBLIC_DEMO_SCREENS` are not set. |
-| Smoke test (MVP-16) | **Results to be added here when the run finishes.** |
+| Smoke test (MVP-16) | **Run on production on 11 Nov 2026 with fake data, then all test data removed.** Passed: sign-in for the four non-Management roles and a second organisation; the main journey (lead, deal, quote, won, handoff, invoice, payment, renewal, task, calendar, chat, search, notifications, reports); masking of deal values, invoices and payments across 24 API surfaces and 21 pages per role (positive control: Finance saw the test values; a Sales user sees only their own deals); 62 cross-organisation checks in both directions; support requests from each role; mobile at 375 px, PWA manifest and offline page; no dev chips, dev accounts or demo routes; security headers; health check. Defects found and fixed the same day, then re-tested live: D-2 (Connect mailbox answered 500 when Google or Microsoft is not set up, now a plain message), D-3 (sign-in limit locked out a shared office address, now only failed attempts count: 5 per account and 100 per address per 15 minutes), D-4 (health sweep time looked stale). **Known and accepted by Given: D-1** (export downloads and uploads fail or vanish, because production uses a temporary file folder until a bucket exists, MVP-07 in M16). **Not tested:** push delivery, Sentry, the assistant, card capture, web forms from a real site, platform suspend and reactivate through the console (done in the database on the test organisation only; Given confirmed platform sign-in with two-step works). Details: `docs/LATER_VERSIONS.md`. |
 
 ## 1. What is in the MVP and what is not
 
@@ -110,7 +110,7 @@ Waived or accepted for the test (`docs/DECISIONS.md` sections 6 and 7). **Given 
 - **Files are not durable** (temporary scratch folder, section 0). Do not rely on uploads. No real antivirus host (built-in checks only).
 - **Two background jobs need a storage setting:** `files.purge` and `privacy.retention` failed with "STORAGE_DRIVER must be set" on 10 Nov, before the temporary storage setting existed (11 Nov). They should now succeed; confirm in `background_jobs` after the next daily run. If `STORAGE_DRIVER` is ever removed they fail again.
 - **`/api/health` sweep field** (fixed 11 Nov 2026, D-4): it now follows the newest successful `notifications.sweep` job as well as the older record.
-- **One migration pending on production:** `20261125090000_sky_default_theme` (section 0).
+- **No migration pending** (all 90 applied on 11 Nov 2026).
 - **Restore window on Neon free:** Given confirmed a restore window exists. **FILL IN the exact window (hours or days) from the Neon console, Backup and Restore.** A restore drill on the hosted database was done on 9 Nov with very little data (`docs/BACKUP_RESTORE.md` section 10); one harmless message about Neon-internal default privileges appears on restore.
 - **Free plans:** Vercel Hobby (non-commercial terms; daily crons only), Neon free (small storage, compute sleeps when idle so the first request after a pause is slow), Gmail sending limits, Resend test sender (delivers only to the account owner), a third-party free caller for the 5-minute jobs. Fine for fake data, not for real customers.
 - Kenya Data Protection Act registration and lawyer review; processor agreements; independent penetration test; off-site encrypted backups with two key holders; on-call names (`docs/V1_QUALITY_GATE.md`, `docs/DECISIONS.md` section 6).
@@ -131,7 +131,7 @@ Do these in this order when testing is over.
 5. **OAuth.** If mail and calendar are wanted: create the Google and Microsoft apps, register `https://<domain>/api/integrations/oauth/callback`, set the client ids and secrets, and connect one real mailbox.
 6. **5-minute jobs.** Either keep cron-job.org (change its URL to the new domain) or move to Vercel Pro and put the 5-minute schedule back in `vercel.json`.
 7. **Plans.** Vercel Hobby is non-commercial: move to Pro before real customers. Neon free: move to a paid plan or to AWS (plain PostgreSQL, so a dump and restore; `docs/BACKUP_RESTORE.md` section 8), then check backup retention.
-8. **Accounts.** Remove the test users and "Smoke Test Org B" if present, rotate every secret that appeared in a screenshot or chat, and follow section 5 for the hand-over of each account.
+8. **Accounts.** The smoke-test users and "Smoke Test Org B" were deleted on 11 Nov 2026. Rotate every secret that appeared in a screenshot or chat, and follow section 5 for the hand-over of each account.
 9. **Sign-offs.** Michael reads `docs/DECISIONS.md` section 7 and records his own line; the on-behalf-of entries by Given stay as history.
 
 ## 8. Demo script (about 10 minutes, five roles plus platform admin)
