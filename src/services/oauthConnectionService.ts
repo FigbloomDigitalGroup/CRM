@@ -5,7 +5,8 @@ import { hasPermission, requirePermission } from "../auth/context";
 import { NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { getOAuthProvider } from "../integrations/oauth/providers";
-import { OAuthInvalidGrantError, SCOPES, type ConnectionKind, type OAuthProviderKey, type TokenSet } from "../integrations/oauth/types";
+import { ApiError } from "../lib/apiErrors";
+import { OAuthInvalidGrantError, OAuthNotConfiguredError, SCOPES, type ConnectionKind, type OAuthProviderKey, type TokenSet } from "../integrations/oauth/types";
 import { hashToken, openSecret, sealSecret } from "../lib/secretBox";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { requireFeature } from "./featureService";
@@ -122,13 +123,23 @@ export async function startConnection(ctx: AuthContext, input: { kind: string; p
   const codeVerifier = randomBytes(48).toString("base64url");
   const scopes = SCOPES[input.provider][input.kind];
   const provider = getOAuthProvider(input.provider);
-  const authorizationUrl = provider.buildAuthorizationUrl({
-    state,
-    codeChallenge: pkceChallenge(codeVerifier),
-    scopes,
-    redirectUri: redirectUriFor(),
-    loginHint: input.loginHint,
-  });
+  let authorizationUrl: string;
+  try {
+    authorizationUrl = provider.buildAuthorizationUrl({
+      state,
+      codeChallenge: pkceChallenge(codeVerifier),
+      scopes,
+      redirectUri: redirectUriFor(),
+      loginHint: input.loginHint,
+    });
+  } catch (err) {
+    // No client id/secret for this provider on this deployment: say so plainly (503) instead of a 500, and store nothing.
+    if (err instanceof OAuthNotConfiguredError) {
+      const name = input.provider === "GOOGLE" ? "Google" : "Microsoft";
+      throw new ApiError(503, "SERVICE_UNAVAILABLE", `${name} sign-in is not set up for this organisation yet. Ask your administrator to set it up, or try the other provider.`);
+    }
+    throw err;
+  }
   await adminDb.oAuthState.create({
     data: {
       organizationId: ctx.organizationId,

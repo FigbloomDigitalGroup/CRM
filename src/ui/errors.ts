@@ -57,6 +57,10 @@ export function describeError(err: unknown): DescribedError {
   }
   if (status === 404) return { ...base, kind: "notFound", title: copy.error.notFound.title, body: copy.error.notFound.body };
   if (status === 409) return { ...base, kind: "conflict", title: copy.error.conflict.title, body: e.envelope?.message || copy.error.conflict.body };
+  // A 503 the API raised on purpose ("not set up yet", "could not be scanned") carries a message written for people; any other 503 stays generic.
+  if (status === 503 && e.envelope?.code === "SERVICE_UNAVAILABLE" && e.envelope.message) {
+    return { ...base, kind: "server", title: copy.error.title, body: e.envelope.message, retryable: true };
+  }
   if (status === 429) return { ...base, kind: "rateLimited", title: copy.error.rateLimited.title, body: copy.error.rateLimited.body, retryable: true };
   if (status === 400 || status === 422) {
     const fieldErrors = e.envelope?.fieldErrors ?? [];

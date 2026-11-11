@@ -1,5 +1,5 @@
 import type { AuthorizationRequest, OAuthProviderClient, OAuthProviderKey, TokenSet } from "./types";
-import { OAuthInvalidGrantError, OAuthTransientError } from "./types";
+import { OAuthInvalidGrantError, OAuthNotConfiguredError, OAuthTransientError } from "./types";
 
 /**
  * The real Google and Microsoft OAuth clients (FIG-1153, B6.21): authorization-code flow with PKCE, refresh, revoke.
@@ -43,7 +43,7 @@ function credentials(provider: OAuthProviderKey): { clientId: string; clientSecr
   const prefix = provider === "GOOGLE" ? "GOOGLE" : "MICROSOFT";
   const clientId = process.env[`${prefix}_OAUTH_CLIENT_ID`];
   const clientSecret = process.env[`${prefix}_OAUTH_CLIENT_SECRET`];
-  if (!clientId || !clientSecret) throw new OAuthTransientError(`${provider === "GOOGLE" ? "Google" : "Microsoft"} sign-in is not configured for this deployment.`);
+  if (!clientId || !clientSecret) throw new OAuthNotConfiguredError(provider);
   return { clientId, clientSecret };
 }
 

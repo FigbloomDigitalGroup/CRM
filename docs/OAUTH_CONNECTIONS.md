@@ -38,6 +38,8 @@ The framework behind mail sync (`docs/MAIL_AND_CALENDAR_SYNC.md`) and meeting li
 
 `GOOGLE_OAUTH_CLIENT_ID/SECRET`, `MICROSOFT_OAUTH_CLIENT_ID/SECRET` (optional `MICROSOFT_OAUTH_TENANT`), `INTEGRATION_ENCRYPTION_KEY`, `APP_BASE_URL`; register `${APP_BASE_URL}/api/integrations/oauth/callback` as the redirect address. See `.env.example`.
 
+**A provider with no client id and secret (D-2, MVP-16 smoke test, 11 Nov 2026).** `POST /integrations/connections/start` answers `503` with code `SERVICE_UNAVAILABLE` and a plain message ("Google sign-in is not set up for this organisation yet. Ask your administrator to set it up, or try the other provider."), stores no sign-in state, and names no variable. The screens show that message instead of the generic failure text. The V1 contract's code list is unchanged.
+
 ## Screen to wire
 
 `src/ui/screens/assistant/settings/Connections.tsx` (Settings, Email & calendar) is wired to the real API since 9 Nov 2026 (MVP-12, FIG-1551): `start` (opens the provider's own sign-in), the status call and `DELETE`. Mail and Video (`src/ui/screens/communication/api.ts`, `useConnection`) read the status and start the connection. Not yet tried end to end against a real Google or Microsoft account (needs the OAuth keys).
