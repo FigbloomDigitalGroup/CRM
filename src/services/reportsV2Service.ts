@@ -100,12 +100,21 @@ interface Built {
   chart: { type: "bar" | "donut"; metric: string; label?: string; fallbackMetric?: string; compare?: string };
   /** Columns that hold money, hidden for a caller who may not see values. */
   valueColumns?: string[];
+  /** Rows (by label) whose figures are money, for a report that keeps money in a row and not in a column. Hidden for a caller who may not see values (rule 7). */
+  valueRows?: string[];
 }
 
 function assemble(key: ReportKey | "MY_METRICS", ctx: AuthContext, built: Built, scope: "organisation" | "own", range: ReportResult["range"], canSeeValue: boolean): ReportResult {
   const valueColumns = new Set(built.valueColumns ?? []);
-  const hide = !canSeeValue && valueColumns.size > 0;
-  const rows = built.rows.map((row) => (hide ? Object.fromEntries(Object.entries(row).map(([k, v]) => [k, valueColumns.has(k) ? null : v])) : row));
+  const valueRows = new Set(built.valueRows ?? []);
+  const hide = !canSeeValue && (valueColumns.size > 0 || valueRows.size > 0);
+  const rowLabelKey = built.chart.label ?? "label";
+  const rows = built.rows.map((row) => {
+    if (!hide) return row;
+    // A money row keeps its label and loses every figure; any other row loses only its money columns.
+    const moneyRow = valueRows.has(String(row[rowLabelKey] ?? ""));
+    return Object.fromEntries(Object.entries(row).map(([k, v]) => [k, (moneyRow && k !== rowLabelKey) || valueColumns.has(k) ? null : v]));
+  });
   const totals = built.totals ? (hide ? Object.fromEntries(Object.entries(built.totals).map(([k, v]) => [k, valueColumns.has(k) ? null : v])) : built.totals) : null;
   const metric = hide && valueColumns.has(built.chart.metric) ? (built.chart.fallbackMetric ?? built.chart.metric) : built.chart.metric;
   const labelKey = built.chart.label ?? "label";
@@ -246,6 +255,7 @@ async function buildReport(ctx: AuthContext, key: ReportKey, window: Window, now
         ],
         chart: { type: "bar", metric: "thisMonth", compare: "lastMonth" },
         valueColumns: [],
+        valueRows: ["Won value"],
       };
     }
     case "CUSTOMERS": {

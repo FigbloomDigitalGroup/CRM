@@ -45,6 +45,8 @@ How to read it: **A** must be done before real customer data or real users. **B*
 ### B1. V2 screens and features (hidden in the MVP, MVP-13)
 Break-glass support access, platform flags and limits, announcements and the other V2 screens named in `docs/RESTRUCTURE_LOG.md` and issue FIG-1192. They exist as built or partly built; the MVP hides every link to them. Backend V2 (M17) and V2 QA (M18) are still to do. Finish, wire to the real API, test, then show them.
 
+- **Deposit request through a payment provider (B7.05, FIG-1187): cancelled by Given on 11 Nov 2026** (`docs/DECISIONS.md` 9.1). Signed quotes stay status-only. Reopen as a new issue only when payments are approved and a provider and sandbox keys exist.
+
 ### B2. V1.1 gates and quality (M15 and M16)
 - Gates: G2.01, G2.02 and G2.04 are passed or signed (`docs/V1_1_BACKEND_GATE.md`). **G2.03 (performance) is waived** by Given on 11 Nov 2026 (`docs/RESTRUCTURE_LOG.md` W7): measure the forecast, assistant-context and chat fixes from `docs/PERF_V1_1.md` on the staging stack. (MVP-15)
 - UAT with real people, the manual accessibility and device passes, and design approval of the baselines (waived to hypercare, decision 6.12).
