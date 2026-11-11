@@ -11,7 +11,7 @@ import {
   consumePasswordResetToken,
   createPasswordResetToken,
 } from "../auth/passwordResetToken";
-import { clearRateLimit, enforceRateLimit, type RateLimitRule } from "../auth/rateLimiter";
+import { checkRateLimit, clearRateLimit, enforceRateLimit, recordRateLimitHits, type RateLimitRule } from "../auth/rateLimiter";
 import {
   createSession,
   resolveSessionUserId,
@@ -81,13 +81,24 @@ function normalizeEmailForRateLimit(email: string): string {
   return email.trim().toLowerCase();
 }
 
+/**
+ * Sign-in limits count FAILED attempts only (D-3, 11 Nov 2026). Before, every
+ * attempt counted, so an office behind one address (or one person signing in
+ * repeatedly) got 429 on correct passwords. Per email: 5 failures in 15 minutes
+ * (as before, in line with the account lockout). Per IP: 100 failures in 15
+ * minutes, which a shared office or mobile-carrier address will not reach by
+ * mistyping, but which still stops one address spraying guesses across accounts
+ * (each account is further capped at 5 by the email rule).
+ */
+const LOGIN_DEFAULT_MAX_FAILURES_PER_IP = 100;
+
 function loginRateLimitRules(ipAddress: string | null, email: string): RateLimitRule[] {
   return [
     {
       scope: "ip",
       key: ipAddress,
       windowMs: envInt("LOGIN_RATE_LIMIT_WINDOW_MS", 15 * 60_000),
-      max: envInt("LOGIN_RATE_LIMIT_MAX_PER_IP", 20),
+      max: envInt("LOGIN_RATE_LIMIT_MAX_PER_IP", LOGIN_DEFAULT_MAX_FAILURES_PER_IP),
     },
     {
       scope: "email",
@@ -276,8 +287,27 @@ export async function startSignIn(
   place?: string | null,
   trustedDeviceToken?: string | null,
 ): Promise<SignedInSession | TwoStepPending> {
-  await enforceRateLimit("LOGIN", loginRateLimitRules(ipAddress ?? null, email));
+  const rules = loginRateLimitRules(ipAddress ?? null, email);
+  // Checked before any real work; recorded only when the attempt fails (below), so successful sign-ins never count.
+  await checkRateLimit("LOGIN", rules);
+  try {
+    return await signInChecked(email, password, userAgent, ipAddress, place, trustedDeviceToken);
+  } catch (err) {
+    if (err instanceof UnauthorizedError || err instanceof RateLimitedError) {
+      await recordRateLimitHits("LOGIN", rules);
+    }
+    throw err;
+  }
+}
 
+async function signInChecked(
+  email: string,
+  password: string,
+  userAgent?: string | null,
+  ipAddress?: string | null,
+  place?: string | null,
+  trustedDeviceToken?: string | null,
+): Promise<SignedInSession | TwoStepPending> {
   const client = clientOf(userAgent, ipAddress, place);
   const user = await adminDb.user.findUnique({ where: { email } });
 
