@@ -188,7 +188,7 @@ No AWS service decision is made here. The move is a dump and restore:
 
 ## 10. Hosted setup on Vercel (MVP, drafted 9 Nov 2026, FIG-1556 / MVP-17)
 
-**Status: drilled once on 9 Nov 2026 on the live production database (very little data: 366 rows, mostly the role and permission catalogue and the first platform admin).** The result is in the table below. No bucket exists yet (deferred), so file backups are not covered. Sections 1 to 9 describe the local Docker stack and still apply to it. Not checked: the plan's automatic backup and point-in-time restore window on Neon's free plan (confirm it in the Neon console and write the number here).
+**Status: drilled once on 9 Nov 2026 on the live production database (very little data: 366 rows, mostly the role and permission catalogue and the first platform admin).** The result is in the table below. No bucket exists yet (deferred), so file backups are not covered. Sections 1 to 9 describe the local Docker stack and still apply to it. Neon's free plan keeps a point-in-time restore window (Given confirmed it exists in the Neon console on 11 Nov 2026). **FILL IN: the exact window shown in the console (Backup and Restore), in hours or days: ______.** It is short on the free plan, so keep the manual `pg_dump` habit below.
 
 ### What changes on the hosted setup
 

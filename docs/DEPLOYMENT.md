@@ -278,7 +278,7 @@ jobs:
 ```
 
 **Vercel** (`vercel.json`; Vercel sends `Authorization: Bearer $CRON_SECRET` itself
-when the `CRON_SECRET` environment variable is set; a 5-minute schedule needs a plan that allows it)
+when the `CRON_SECRET` environment variable is set). The 5-minute schedule below needs **Vercel Pro**; the Hobby plan rejects it and the repository's `vercel.json` therefore holds daily entries plus an outside 5-minute caller (see "Scheduled work on Vercel"):
 
 ```json
 {
@@ -536,7 +536,7 @@ Decided by Given on 9 Nov 2026, Michael to confirm (`docs/DECISIONS.md` section 
 
 | File | Purpose |
 |---|---|
-| `vercel.json` | Build command `prisma generate && next build` (migrations never run in a build), function `maxDuration` for the long routes, and the three cron entries. |
+| `vercel.json` | Build command `prisma generate && next build` (migrations never run in a build), function `maxDuration` for the long routes, and the three cron entries (daily, the Hobby plan limit). |
 | `prisma/schema.prisma` | `binaryTargets = ["native", "rhel-openssl-3.0.x"]`, so the query engine for the Vercel runtime is bundled. |
 | `next.config.js` | Unchanged and still applies: security headers, the `/sw.js` headers, the Sentry build wrapper (source map upload only with `SENTRY_AUTH_TOKEN`). |
 | `scripts/migrate-deploy-direct.ts` | `npm run migrate:deploy:direct`: runs `prisma migrate deploy` through `DIRECT_URL`. |
@@ -587,12 +587,12 @@ One table, covering `.env.example` and every `process.env` read in `src/`. **Pro
 | `PLATFORM_DATABASE_URL` S | required | required | Given (Neon) | `figbloom_platform`, **pooled** host. The platform console fails closed without it. |
 | `APP_DB_ROLE`, `PLATFORM_DB_ROLE` | optional | optional | | Role names; defaults `figbloom_app`, `figbloom_platform`. |
 | `TEST_DATABASE_URL`, `TEST_APP_DATABASE_URL`, `TEST_PLATFORM_DATABASE_URL` | never | never | | Test suite only. |
-| `STORAGE_DRIVER` | `s3` | `s3` | Given | Required in production. |
+| `STORAGE_DRIVER` | `s3` (target); **`local` on the MVP test deployment, 11 Nov 2026** | `s3` | Given | Required in production: unset makes the app page shell fail ("STORAGE_DRIVER must be set"). The test deployment uses `local` because no bucket exists yet; files then live in the server's scratch folder and are **lost** (see `docs/MVP_HANDOVER.md` section 0). Replace with `s3` before real use. |
 | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET` | required | required | Given | AWS example: `https://s3.<region>.amazonaws.com`. Preview uses its own bucket. |
 | `S3_ACCESS_KEY_ID` S, `S3_SECRET_ACCESS_KEY` S | required | required | Given | Key limited to this bucket (`docs/STORAGE.md`). |
 | `S3_FORCE_PATH_STYLE` | `false` | `false` | Given | Virtual-hosted style on Amazon S3. |
 | `S3_PUBLIC_ENDPOINT` | unset | unset | | Only when browsers reach the store at another host than the server. |
-| `STORAGE_LOCAL_DIR`, `STORAGE_SIGNING_SECRET` | not used | not used | | Local driver only (Vercel's disk is not persistent). |
+| `STORAGE_LOCAL_DIR`, `STORAGE_SIGNING_SECRET` (the secret is S) | not used with `s3`; **set on the MVP test deployment** (`/tmp/figbloom-files` and a random secret) | not used | Given | Local driver only. Vercel's disk is not persistent, so this is for a fake-data test only. |
 | `CLAMD_HOST`, `CLAMD_PORT` | unset | unset | | No ClamAV host in the MVP. |
 | `ANTIVIRUS_MODE` | `builtin-only` | optional | Given | Opt-out of the ClamAV requirement; needs the written risk acceptance in `docs/DECISIONS.md` section 7. Without it and without `CLAMD_HOST`, production refuses to boot. A warning is logged at every boot while it is active. Remove it when a ClamAV host exists. |
 | `CRON_SECRET` S | required | required | Given | 32+ random characters. Vercel sends it as `Authorization: Bearer` on cron calls. Unset: the cron routes answer 500. |
@@ -647,7 +647,9 @@ One table, covering `.env.example` and every `process.env` read in `src/`. **Pro
 
 ### Scheduled work on Vercel
 
-`vercel.json` holds the three entries: `/api/cron/jobs` every 5 minutes, `/api/cron/notifications-sweep` every 30 minutes, `/api/cron/platform-maintenance` daily at 03:00 UTC. Each route checks `Authorization: Bearer $CRON_SECRET` (constant-time compare, fails closed when unset); Vercel sends that header itself once `CRON_SECRET` is set in the project. Each function is allowed 300 seconds, and the job runner stops starting new jobs after 25 seconds. **Vercel Hobby allows one cron run per day, so a Pro plan is required** (mail sync every 5 minutes and queued sends depend on it). Nothing in production depends on `npm run jobs:worker`. Vercel runs crons only against the production deployment.
+`vercel.json` currently holds three **daily** entries, because Vercel Hobby rejects anything more frequent: `/api/cron/jobs` at 02:00 UTC, `/api/cron/notifications-sweep` at 02:30 and `/api/cron/platform-maintenance` at 03:00. Each route checks `Authorization: Bearer $CRON_SECRET` (constant-time compare, fails closed when unset); Vercel sends that header itself once `CRON_SECRET` is set in the project. Each function is allowed 300 seconds, and the job runner stops starting new jobs after 25 seconds.
+
+**On the Hobby plan the 5-minute runner is an outside caller.** The MVP uses a free cron-job.org job: `GET https://figbloom-crm.vercel.app/api/cron/jobs` every 5 minutes with the header `Authorization: Bearer <CRON_SECRET>` (mail sync, scheduled sends, chat notifications and sequences depend on it). On **Pro**, put `{ "path": "/api/cron/jobs", "schedule": "*/5 * * * *" }` in `vercel.json` and drop the outside caller. Nothing in production depends on `npm run jobs:worker`. Vercel runs crons only against the production deployment.
 
 ### Domain, DNS, OAuth and email
 
