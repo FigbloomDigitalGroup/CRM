@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { ApiError, buildErrorResponse } from "../src/lib/apiErrors";
 import { ForbiddenError, NotFoundError, ValidationError } from "../src/auth/errors";
 import { adminDb } from "../src/db/adminClient";
 import { getUnscopedAppClientForTests, withOrgContext } from "../src/db/orgScopedClient";
@@ -179,6 +180,56 @@ describe("starting a connection", () => {
     await expect(startConnection(sales, { kind: "EMAIL", provider: "GOOGLE", shared: true })).rejects.toBeInstanceOf(ForbiddenError);
     await expect(startConnection(sales, { kind: "EMAIL", provider: "YAHOO" })).rejects.toBeInstanceOf(ValidationError);
     await expect(startConnection(sales, { kind: "FAX", provider: "GOOGLE" })).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
+describe("a provider this deployment has no client id for (D-2)", () => {
+  const VARS = ["GOOGLE_OAUTH_CLIENT_ID", "GOOGLE_OAUTH_CLIENT_SECRET", "MICROSOFT_OAUTH_CLIENT_ID", "MICROSOFT_OAUTH_CLIENT_SECRET"] as const;
+  const saved: Record<string, string | undefined> = {};
+  beforeEach(() => {
+    for (const v of VARS) {
+      saved[v] = process.env[v];
+      delete process.env[v];
+    }
+    setOAuthProviderFactory(null); // the real clients, which read the environment
+  });
+  afterEach(() => {
+    for (const v of VARS) {
+      if (saved[v] === undefined) delete process.env[v];
+      else process.env[v] = saved[v];
+    }
+  });
+
+  it("answers 503 with a plain message for both providers, and stores no sign-in state", async () => {
+    const { sales, org } = await setup();
+    for (const provider of ["GOOGLE", "MICROSOFT"] as const) {
+      const err = await startConnection(sales, { kind: "EMAIL", provider }).catch((e) => e);
+      expect(err).toBeInstanceOf(ApiError);
+      expect(err).toMatchObject({ status: 503, code: "SERVICE_UNAVAILABLE" });
+      expect(err.message).toContain(provider === "GOOGLE" ? "Google" : "Microsoft");
+      expect(err.message).toMatch(/not set up/);
+      // Nothing that names a setting or a value leaks into the message.
+      expect(err.message).not.toMatch(/OAUTH|CLIENT_ID|SECRET|process\.env/);
+    }
+    expect(await adminDb.oAuthState.count({ where: { organizationId: org.id } })).toBe(0);
+  });
+
+  it("is turned into the standard error envelope with status 503, not a 500", async () => {
+    const { sales } = await setup();
+    const err = await startConnection(sales, { kind: "CALENDAR", provider: "GOOGLE" }).catch((e) => e);
+    const { status, body } = await buildErrorResponse(err, "req_test");
+    expect(status).toBe(503);
+    expect(body).toMatchObject({ code: "SERVICE_UNAVAILABLE", requestId: "req_test", fieldErrors: [] });
+    expect(body.message).toMatch(/Google sign-in is not set up/);
+  });
+
+  it("still starts normally once the provider has a client id and secret", async () => {
+    process.env.GOOGLE_OAUTH_CLIENT_ID = "fake-client-id.test";
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET = "fake-client-secret";
+    const { sales } = await setup();
+    const started = await startConnection(sales, { kind: "EMAIL", provider: "GOOGLE" });
+    expect(started.authorizationUrl).toContain("accounts.google.com");
+    expect(started.authorizationUrl).not.toContain("fake-client-secret");
   });
 });
 

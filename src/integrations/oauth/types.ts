@@ -41,6 +41,18 @@ export class OAuthTransientError extends Error {
   }
 }
 
+/**
+ * The deployment has no client id and secret for this provider (`GOOGLE_OAUTH_*` / `MICROSOFT_OAUTH_*` unset). It is a kind of transient
+ * error, so every place that already treats a provider problem as "try again later" keeps working; starting a connection turns it into a
+ * clear 503 instead of a 500. The message names the provider only: no variable name, no value.
+ */
+export class OAuthNotConfiguredError extends OAuthTransientError {
+  constructor(readonly provider: OAuthProviderKey) {
+    super(`${provider === "GOOGLE" ? "Google" : "Microsoft"} sign-in is not configured for this deployment.`);
+    this.name = "OAuthNotConfiguredError";
+  }
+}
+
 export interface OAuthProviderClient {
   readonly key: OAuthProviderKey;
   buildAuthorizationUrl(request: AuthorizationRequest): string;

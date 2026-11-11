@@ -32,6 +32,17 @@ describe("describeError", () => {
     expect(describeError(new Error("secret stack trace")).body).toBe(copy.error.body);
   });
 
+  it("shows the message of a 503 the API raised on purpose (SERVICE_UNAVAILABLE), for example a sign-in provider that is not set up", () => {
+    const message = "Google sign-in is not set up for this organisation yet. Ask your administrator to set it up, or try the other provider.";
+    const d = describeError(api(503, { code: "SERVICE_UNAVAILABLE", message }));
+    expect(d.kind).toBe("server");
+    expect(d.body).toBe(message);
+    expect(d.reference).toBe("req_1");
+    // Without that code the message is still never shown.
+    expect(describeError(api(503, { message })).body).toBe(copy.error.body);
+    expect(describeError(api(500, { code: "SERVICE_UNAVAILABLE", message })).body).toBe(copy.error.body);
+  });
+
   it("keeps the request id as the reference support needs", () => {
     expect(describeError(api(500)).reference).toBe("req_1");
     expect(describeError(new Error("x")).reference).toBeNull();

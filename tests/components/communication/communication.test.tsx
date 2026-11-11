@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROLE_PERMISSIONS } from "../../../prisma/seedData";
+import { copy } from "../../../src/ui";
 import { mentionQuery, mentionsIn } from "../../../src/ui/screens/communication/api";
 import { ChatWorkspace } from "../../../src/ui/screens/communication/ChatWorkspace";
 import { MailWorkspace } from "../../../src/ui/screens/communication/MailWorkspace";
@@ -144,6 +145,20 @@ describe("Mail (F6.22) reads and writes the API", () => {
     mail({}, false);
     expect(await screen.findByText(/Your mailbox is not connected/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Compose/ })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("tells the person plainly when the sign-in provider is not set up (D-2), instead of a generic failure", async () => {
+    const user = userEvent.setup();
+    const message = "Google sign-in is not set up for this organisation yet. Ask your administrator to set it up, or try the other provider.";
+    const { calls } = mail(
+      { postIntegrationsConnectionsStart: () => { throw apiError(503, message, { code: "SERVICE_UNAVAILABLE" }); } },
+      false,
+    );
+    await user.click(await screen.findByRole("button", { name: "Connect mailbox" }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Connect" }));
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(screen.queryByText(copy.error.body)).not.toBeInTheDocument();
+    expect(calls.find((c) => c.id === "postIntegrationsConnectionsStart")?.args).toMatchObject({ body: { kind: "EMAIL", provider: "GOOGLE" } });
   });
 
   it("sends through the API with the recipients, subject and record it was given", async () => {
