@@ -48,3 +48,44 @@ See the "Verification" section at the end of this file, filled in after the fina
   - `quickCapture` database-call budget raised from 16 to 17: **a deliberate change**, one indexed webhook-endpoint lookup per created lead (FIG-804), constant per capture.
 - Found and fixed during integration: the organisation's monthly API-call limit (FIG-1184) was never called from the API-token guard. It now is (`authenticateApiToken`), with a test (`tests/publicApi.test.ts`).
 - Not run: e2e (Playwright), the performance suite, the 50k-lead run. Nothing in M17 changes a frozen page.
+
+## Close-out (11 Nov 2026)
+
+Branch `makeover/m17-closeout`. Four independent agent passes, each on its own test database, wrote their evidence in these files:
+
+| Issue | Evidence | Result |
+|---|---|---|
+| FIG-1183 B7.01 support access | `docs/M17_CLOSEOUT_B7_01.md`, `tests/m17closeSupportAccess.test.ts` (16 tests) | Every scope bullet and criterion proven. No bug found. |
+| FIG-1188 B7.06 roles and field access | `docs/M17_CLOSEOUT_B7_06.md`, `tests/m17closeRolesB706.test.ts` (14 tests) | Backend proven. Field visibility covers `deal.value` only: **accepted by Given, 11 Nov 2026** (`docs/DECISIONS.md` 9.2). The Roles screen is still on demo data and hidden (M18). |
+| FIG-1189 B7.07 Swahili | `docs/M17_CLOSEOUT_B7_07.md`, `tests/m17closeSwahili.test.ts` (14), `tests/components/commercial/m17closeSwahiliSign.test.tsx` (5, 3 snapshots) | Every criterion met except "reviewed translations": **a native speaker has not reviewed the Swahili** (`TRANSLATION_REVIEW.sw` is `PENDING_HUMAN_REVIEW`). |
+| FIG-1187 B7.05 deposit request | `docs/DECISIONS.md` 9.1 | **Cancelled by Given**, 11 Nov 2026. |
+| FIG-1191 G3.01 security review | `docs/M17_SECURITY_REVIEW_G3_01.md`, six `tests/g301Review*.test.ts` files | An agent that did not write the code reviewed it. About 115 defences confirmed; 10 gaps found. **It is an AI code read with targeted tests, not a penetration test, and does not replace Michael's approval.** |
+
+### The High finding, fixed
+
+**R-1 (rule 7).** `GET /api/orgs/{slug}/reports/v2` (default report "This month against last month") showed the total "Won value" to any role holding `reporting.view.all` without `deals.view.value`, including a custom role with the deal value hidden. The report keeps money in a row, and the masking only hid money columns. Fixed in `src/services/reportsV2Service.ts`: a report can declare `valueRows`, and `assemble` blanks every figure on those rows and reports `valueMasked: true`. The CSV export builds from the same function. The reviewer's `it.fails` test is now a passing test, the route crawl no longer excuses this route, and a service test checks both the masked role and Management (not over-masked).
+
+### Open findings (not fixed, for Given and Michael)
+
+| ID | Severity | What | Where it stands |
+|---|---|---|---|
+| W-1 | Medium | A webhook endpoint is built "as its creator" only for deal values. Contact, lead, company and task payloads go out whatever the creator's role is now. | `it.fails` test in `tests/g301ReviewWebhooks.test.ts`. Needs a decision. |
+| P-1 | Medium | The public API pages every record the token owner may view (100 per call, 120 calls per minute) with no export permission, approval or audit entry. The 500-row cap and `export.bulk` are bypassed. Browser lists behave the same way. | Decision for Michael. |
+| A-1 | Low | The per-address API limit uses the first `X-Forwarded-For` entry, not the trusted-hop entry. | `TRUSTED_PROXY_HOPS` is set on Vercel production (name seen; value not read). Not fixed. |
+| S-1, S-2 | Low | The schema owner role can approve and open a support grant at the database level; `support_access_open` takes the window start from the caller. | Needs a migration. Not fixed. |
+| G-1 | Low | With no readable client address every per-address limit is skipped. | Production sets `TRUSTED_PROXY_HOPS`. |
+| E-1, SC-1, H-1 | Low | Signer name accepts bidi-override characters; a token with `activities:read` reads timelines without record scopes; two rarely used IPv6 ranges not blocked by the SSRF guard. | Not fixed. |
+
+Each `it.fails` test carries a `FINDING` comment; when a gap is fixed, change `it.fails` to `it`.
+
+### Still open (human steps, not done)
+
+- Michael's approval, and the `backend-v2` tag (tags are placed only when Given asks).
+- A native review of the Swahili text.
+- A real independent security review or penetration test of the public endpoints.
+- Confirm on AWS that the owner role bypasses RLS.
+- Wiring the V2 screens to these routes (M18).
+
+### Verification
+
+`npm run typecheck` and `npm run lint` clean. The full suite runs in CI on the pull request (six shards). The new files were run alone on their own databases: B7.01 16 of 16, B7.06 14 of 14 (with the existing role tests, 44 of 44), B7.07 14 of 14 and 5 of 5, the six review files plus the existing public API, signature and role tests 187 passed and 10 expected failures.
