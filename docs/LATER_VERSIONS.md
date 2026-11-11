@@ -46,7 +46,7 @@ How to read it: **A** must be done before real customer data or real users. **B*
 Break-glass support access, platform flags and limits, announcements and the other V2 screens named in `docs/RESTRUCTURE_LOG.md` and issue FIG-1192. They exist as built or partly built; the MVP hides every link to them. Backend V2 (M17) and V2 QA (M18) are still to do. Finish, wire to the real API, test, then show them.
 
 ### B2. V1.1 gates and quality (M15 and M16)
-- Gates G2.01 (per-role walk), G2.02, G2.03 and G2.04, which stay with the M15 and M16 session. (MVP-15)
+- Gates: G2.01, G2.02 and G2.04 are passed or signed (`docs/V1_1_BACKEND_GATE.md`). **G2.03 (performance) is waived** by Given on 11 Nov 2026 (`docs/RESTRUCTURE_LOG.md` W7): measure the forecast, assistant-context and chat fixes from `docs/PERF_V1_1.md` on the staging stack. (MVP-15)
 - UAT with real people, the manual accessibility and device passes, and design approval of the baselines (waived to hypercare, decision 6.12).
 - Three Major masking and rule 9 findings (D-V11-03 to D-V11-05), the Ocean contrast defect, the daily-cron finding and the intermittent matrix cell (D-V11-11), listed in `docs/V11_TEST_REPORT.md`.
 - Screens still on demo data, if any remain (MVP-12). Search for `demo/`.
@@ -59,7 +59,6 @@ Break-glass support access, platform flags and limits, announcements and the oth
 ## C. Quality and tidy-up
 - **Sign-in rate limit numbers** (D-3, PR #51): review the limits after real use. A shared office address must not lock out a team, and brute-force protection must stay strict per account.
 - **Health check** now follows the 15-minute job (D-4, PR #49). Check `lastCompletedAt` moves after the next deploy.
-- **The handover pack line "89 of 90 migrations applied"** is out of date: all 90 are applied (`sky_default_theme` was applied on 11 Nov).
 - **Prisma shows an update notice** (`prisma@latest`). Plan the upgrade with the Vitest decision.
 - **`directUrl`** is deliberately not in the Prisma datasource; `scripts/migrate-deploy-direct.ts` maps `DIRECT_URL` for that one command. Keep it that way, or revisit if the tooling changes.
 - **Migrations are forward-only.** Keep to the expand-and-contract rule (`docs/RUNBOOKS.md`). Always run `npm run migrate:deploy:direct` then `npm run db:grant-role` after a merge that adds a migration: on 10 Nov, 8 migrations had not been applied and jobs failed.
