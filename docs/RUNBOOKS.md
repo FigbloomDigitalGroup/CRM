@@ -91,6 +91,7 @@ Restore the pre-change backup into a new empty database and point the app at it.
 3. `createdb figbloom_restore_<date>` then `pg_restore --no-owner --no-privileges -d figbloom_restore_<date> before-<version>.dump`.
 4. Run `npm run db:bootstrap-role` and `npm run db:grant-role` against the restored database (`APP_DB_PASSWORD` from the secret store). Roles are not inside a dump of one database; without this step the app cannot connect.
 5. Verify: row counts against the numbers you recorded before the release (`npx tsx scripts/reconcile-counts.ts --source <url> --target <url>`, schema-owner URLs, exit code 0 means no difference), row-level security still on (`SELECT relrowsecurity FROM pg_class WHERE relname = 'organizations';` returns `t`).
+5b. Platform audit check: `DATABASE_URL=<restored database> npm run audit:anchor -- check <the .audit.jsonl taken with that backup> --database` must exit 0 ([BACKUP_RESTORE.md](BACKUP_RESTORE.md) section 11). A difference means the platform audit log was changed after the copy was taken: stop and treat it as a security incident (section 8).
 6. Point `DATABASE_URL` and `APP_DATABASE_URL` in the secret store at the restored database, start the **previous** image, run the smoke test.
 7. Unfreeze, announce, and write down what was lost (the time window between the backup and the freeze).
 
