@@ -181,6 +181,8 @@ services:
     entrypoint: ["/bin/sh", "/ops/backup-nightly.sh"]
     volumes:
       - ./ops/backup/backup-nightly.sh:/ops/backup-nightly.sh:ro
+      - ./ops/backup/audit-export.sql:/ops/audit-export.sql:ro
+      - ./ops/backup/audit-verified-head.sql:/ops/audit-verified-head.sql:ro
       - figbloom_crm_staging_backups:/backups
 
   # Serves the backup metrics file to Prometheus (read-only view of the backups volume's metrics folder).

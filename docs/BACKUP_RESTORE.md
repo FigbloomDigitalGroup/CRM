@@ -88,6 +88,7 @@ Never restore over a live database.
 4. Run `npm run db:bootstrap-role` and `npm run db:grant-role` against it (`APP_DB_PASSWORD` from the secret store).
 5. If the dump is from an older release: `npm run migrate:deploy`.
 6. Verify: row counts per table against the source or the backup log, row-level security enabled with all policies, the cross-organisation test passes, then a login and a smoke run. The script below does steps 2, 3 and the checks for you.
+   Also run the platform audit check (section 11): `DATABASE_URL=<restored database> npm run audit:anchor -- check <backup's .audit.jsonl> --database`. It must exit 0; if it does not, the restored platform audit log differs from its copy and nobody uses this database until that is explained.
 7. For production recovery only: stop the app, take a dump of the broken database first (evidence), swap the connection string to the restored database, start the app, run the smoke suite.
 
 ### The scripted drill
@@ -221,3 +222,38 @@ Migrations are forward-only. A rollback of the code must still work with the new
 3. **Contract:** drop the old column only in a later release, after the new code has run in production without a rollback.
 
 If a bad migration has already run: (1) promote the previous deployment only if it is compatible with the new schema; (2) if not, fix forward with a new migration; (3) restore from backup into a scratch database and copy the lost rows back only when data was destroyed. Declare an incident (RUNBOOKS section 8) before restoring anything.
+
+## 11. Platform audit anchor (FIG-1566, finding F-03)
+
+**Why.** The platform audit log is hash-chained by a database trigger, but the chain lives in the same database as its rows. Someone who owns the database can switch the triggers off, rewrite the log and recompute every hash, and the database's own verification (`verifyAuditChain`) would still pass. A copy of the log and of the head of its chain, kept somewhere else, makes such a rewrite visible.
+
+**What the backup now carries.** Beside every nightly dump (`ops/backup/backup-nightly.sh`) the script writes, from one snapshot of the database:
+
+| File | Holds |
+|---|---|
+| `figbloom-<stamp>.audit.jsonl` | Every row of `platform_audit_events`, oldest first, one JSON line each, then one last line stating the row count, the head `seq` and the head hash. The columns are the exact text Postgres feeds to the hash, so the check can recompute every hash without Postgres. |
+| `figbloom-<stamp>.audit.head` | That last line alone: the **stored head**. This small file is the one to keep apart (section 9). |
+| `figbloom-<stamp>.audit.verified-head.json` | The head the last *passing* verification run recorded in `platform_audit_verifications` (empty when none has passed yet). |
+| `figbloom-<stamp>.audit.jsonl.sha256` | Checksum of the export, as for the dump. |
+
+The files follow the dump through retention (daily, weekly, monthly) and are removed with it. A failed audit export fails the whole backup and raises the same alert as a failed dump: a dump never sits without its anchor. The export holds no values, payments or secrets (the log is built that way, `platformAuditService.ts`), but it does hold admin e-mail addresses and organisation slugs: handle it as you would the dump.
+
+**The restore check.**
+
+```bash
+# on a machine with the repository; DATABASE_URL is only needed for --database
+npm run audit:anchor -- check path/to/figbloom-<stamp>.audit.jsonl
+npm run audit:anchor -- check path/to/figbloom-<stamp>.audit.jsonl --database    # DATABASE_URL = the restored database
+npm run audit:anchor -- check <file> --head-file /somewhere/else/figbloom-<stamp>.audit.head   # the head kept apart
+```
+
+It recomputes the chain from the file (the same recipe as `platform_audit_row_hash()`, with a test that proves the two agree on real rows) and fails, with exit code 1 and the reason, when: a row was changed, removed, inserted or reordered; the head line is missing or does not match the rows; the stored head or the verified head does not match; or, with `--database`, any exported row is missing or different in the restored database (the database may have *newer* rows, never fewer or different ones). Run it after every restore drill and every real restore, and read its exit code: **a restored database that does not agree with its off-database copy is not to be trusted until that is explained.**
+
+**On the hosted database (Neon).** There is no nightly script there yet (section 10), so take the anchor by hand or from any scheduler that can run the repository: `DATABASE_URL=<direct, non-pooled URL> npm run audit:anchor -- export --out platform-audit-<date>.jsonl`. It runs in a read-only transaction, prints only the row count and head hash, and writes `.head`, `.verified-head.json` and `.sha256` beside the file. Checked read-only against the production database on 11 Nov 2026: 5 rows, head seq 5, the export verified and agreed with the database.
+
+**Honest limits.**
+
+- **Not yet off-site and not yet encrypted.** The nightly files sit on the same volume as the dumps, and this repository has no off-site or encrypted copy step (the open M12 item, sections 4, 6 and 9). Until a person provides the second location and the keys, the anchor sits *beside* the database it guards against and only protects you from a rewrite once a copy has left the host. The cheapest real step today: copy the `.audit.head` file (about 150 bytes) somewhere the database owner cannot write, for example the e-mail inbox of two people, after each backup or at least weekly.
+- It detects a rewrite or truncation of rows that were already in a copy. Rows rewritten before the first copy was taken, and rows added after the last copy, are not covered.
+- The hash is unkeyed (finding F-03 as written): someone who holds *both* the database and every copy can still rewrite both. The anchor raises the cost, it does not remove the root of trust.
+- There is no scheduled restore check yet; it is a command a person runs after a restore (RUNBOOKS, restore).

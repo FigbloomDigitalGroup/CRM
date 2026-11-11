@@ -13,8 +13,14 @@
 #   RETENTION_DAILY / RETENTION_WEEKLY / RETENTION_MONTHLY   14 / 8 / 12
 #   BACKUP_RUN_ONCE       true: take one backup and exit with its result (used for tests)
 #
+# Platform audit anchor (FIG-1566, finding F-03): beside every dump it also writes figbloom-<stamp>.audit.jsonl (the platform audit log
+# and the head of its hash chain, one snapshot), .audit.head (the head line alone), .audit.verified-head.json (the head the last passing
+# verification run recorded) and a checksum. The restore check is `npm run audit:anchor -- check <file> --database`
+# (docs/BACKUP_RESTORE.md section 11). A failed audit export fails the backup: the anchor is the point.
+#
 # Limits, by design: the copies are on this host's volume, not off the host, and are not encrypted. Copying them to a second location and
-# encrypting them needs storage and keys that only a person can provide (docs/BACKUP_RESTORE.md sections 4, 6 and 9).
+# encrypting them needs storage and keys that only a person can provide (docs/BACKUP_RESTORE.md sections 4, 6 and 9). Until that exists the
+# audit anchor sits beside the database it is meant to guard against: it only helps once a copy of it is kept somewhere else.
 set -u
 
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
@@ -23,6 +29,7 @@ KEEP_D="${RETENTION_DAILY:-14}"
 KEEP_W="${RETENTION_WEEKLY:-8}"
 KEEP_M="${RETENTION_MONTHLY:-12}"
 DB="${PGDATABASE:?PGDATABASE is required}"
+AUDIT_SQL_DIR="${AUDIT_SQL_DIR:-$(dirname "$0")}"   # holds audit-export.sql and audit-verified-head.sql (FIG-1566)
 export PGCONNECT_TIMEOUT=15
 mkdir -p "$BACKUP_DIR/daily" "$BACKUP_DIR/weekly" "$BACKUP_DIR/monthly" "$BACKUP_DIR/metrics"
 log() { echo "[backup $(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"; }
@@ -59,7 +66,30 @@ write_metrics() { # status last_success size duration
 
 # Keep the newest $2 dumps in $1 (and their checksum files); delete the rest.
 prune() {
-  ls -1t "$BACKUP_DIR/$1"/*.dump 2>/dev/null | tail -n +"$(( $2 + 1 ))" | while read -r f; do rm -f "$f" "$f.sha256"; log "pruned $f"; done
+  ls -1t "$BACKUP_DIR/$1"/*.dump 2>/dev/null | tail -n +"$(( $2 + 1 ))" | while read -r f; do
+    rm -f "$f" "$f.sha256" "${f%.dump}.audit.jsonl" "${f%.dump}.audit.jsonl.sha256" "${f%.dump}.audit.head" "${f%.dump}.audit.verified-head.json"
+    log "pruned $f"
+  done
+}
+
+# The audit anchor files that belong to a dump, for copying to the weekly and monthly folders.
+copy_audit_files() { # dump-path destination-dir
+  base="${1%.dump}"
+  for suffix in .audit.jsonl .audit.jsonl.sha256 .audit.head .audit.verified-head.json; do cp "$base$suffix" "$2/"; done
+}
+
+# Writes the platform audit anchor next to dump $1 (FIG-1566). Returns non-zero, after logging why, if any part fails.
+write_audit_anchor() { # dump-path
+  base="${1%.dump}"
+  part="$base.audit.jsonl.partial"
+  if ! psql -X -At -v ON_ERROR_STOP=1 -f "$AUDIT_SQL_DIR/audit-export.sql" "$DB" > "$part"; then log "FAILED: platform audit export"; rm -f "$part"; return 1; fi
+  last=$(tail -n 1 "$part")
+  case "$last" in *'"kind" : "head"'*) ;; *) log "FAILED: the platform audit export has no head line"; rm -f "$part"; return 1 ;; esac
+  printf '%s\n' "$last" > "$base.audit.head"
+  psql -X -At -v ON_ERROR_STOP=1 -f "$AUDIT_SQL_DIR/audit-verified-head.sql" "$DB" > "$base.audit.verified-head.json" || { log "FAILED: platform audit verified head"; rm -f "$part"; return 1; }
+  mv "$part" "$base.audit.jsonl"
+  ( cd "$(dirname "$base")" && sha256sum "$(basename "$base").audit.jsonl" > "$(basename "$base").audit.jsonl.sha256" )
+  return 0
 }
 
 # Last known success survives a restart (read from the existing metrics file).
@@ -77,11 +107,16 @@ run_backup() {
   if ! pg_restore --list "$tmpf" > /dev/null; then log "FAILED: the dump cannot be read back"; rm -f "$tmpf"; write_metrics 0 "$(last_success)" "$(last_size)" "$(last_dur)"; return 1; fi
   size=$(wc -c < "$tmpf" | tr -d ' ')
   if [ "$size" -lt 1024 ]; then log "FAILED: dump is only $size bytes"; rm -f "$tmpf"; write_metrics 0 "$(last_success)" "$(last_size)" "$(last_dur)"; return 1; fi
+  # The audit anchor is written against the final name; a failure removes everything of this attempt, so a dump never sits without its anchor.
+  if ! write_audit_anchor "$final"; then
+    rm -f "$tmpf" "${final%.dump}.audit.jsonl" "${final%.dump}.audit.head" "${final%.dump}.audit.verified-head.json" "${final%.dump}.audit.jsonl.sha256"
+    write_metrics 0 "$(last_success)" "$(last_size)" "$(last_dur)"; return 1
+  fi
   mv "$tmpf" "$final"
   ( cd "$BACKUP_DIR/daily" && sha256sum "$(basename "$final")" > "$final.sha256" )
   # weekly (Sunday) and monthly (the 1st) copies
-  [ "$(date -u +%u)" = "7" ] && cp "$final" "$BACKUP_DIR/weekly/" && cp "$final.sha256" "$BACKUP_DIR/weekly/"
-  [ "$(date -u +%d)" = "01" ] && cp "$final" "$BACKUP_DIR/monthly/" && cp "$final.sha256" "$BACKUP_DIR/monthly/"
+  [ "$(date -u +%u)" = "7" ] && cp "$final" "$BACKUP_DIR/weekly/" && cp "$final.sha256" "$BACKUP_DIR/weekly/" && copy_audit_files "$final" "$BACKUP_DIR/weekly"
+  [ "$(date -u +%d)" = "01" ] && cp "$final" "$BACKUP_DIR/monthly/" && cp "$final.sha256" "$BACKUP_DIR/monthly/" && copy_audit_files "$final" "$BACKUP_DIR/monthly"
   prune daily "$KEEP_D"; prune weekly "$KEEP_W"; prune monthly "$KEEP_M"
   end=$(date -u +%s)
   write_metrics 1 "$end" "$size" "$(( end - start ))"

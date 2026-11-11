@@ -24,6 +24,7 @@
     "platform:bootstrap-admin": "tsx scripts/platform-bootstrap-admin.ts",
     "smoke:prod": "playwright test -c e2e/smoke/playwright.smoke.config.ts --grep @smoke",
     "backup:drill": "tsx scripts/backup-drill.ts",
+    "audit:anchor": "tsx scripts/platform-audit-anchor.ts",
     "reconcile:counts": "tsx scripts/reconcile-counts.ts",
     "pilot:report": "tsx scripts/adoption-report.ts",
     "staging:build": "docker build -t figbloom-crm:staging .",
