@@ -7,6 +7,7 @@ import {
 } from "../jobs/handlers/notificationSweep";
 import {
   getJobRunState,
+  getJobTypeOutcome,
   releaseJobLock,
   tryAcquireJobLock,
   type ScheduledJobRunState,
@@ -131,9 +132,48 @@ export async function runNotificationsSweep(
   }
 }
 
-/** Read-only status for `/api/health` and anything else that wants to show the last successful sweep time (FIG-783 AC). */
+/** Shown instead of the job's own error: `/api/health` is public and a raw error can name tables or hosts. */
+export const SWEEP_JOB_FAILED_MESSAGE = "The latest scheduled notifications sweep failed; see the job log.";
+
+export interface NotificationsSweepStatusOptions {
+  /**
+   * Which background job type to read the scheduled runs from. Defaults to the real sweep job when `jobKey` is the
+   * real key, and to none otherwise -- a test-only seam like `RunNotificationsSweepOptions.jobKey`, so a test can use
+   * a disposable type instead of reading every organisation's real sweep rows.
+   */
+  jobType?: string;
+}
+
+/**
+ * Read-only status for `/api/health` and anything else that wants to show the last successful sweep time (FIG-783 AC).
+ *
+ * The sweep now runs two ways: the legacy, throttled route (`/api/cron/notifications-sweep`, which records its run in
+ * `scheduled_job_runs`) and the job framework (`/api/cron/jobs`: one `notifications.sweep` background job per
+ * organisation every `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES`). On a host with only the second (the Vercel MVP), the legacy
+ * row moves once a day at best, so `lastCompletedAt` is the later of the two. The shape is unchanged.
+ */
 export async function getNotificationsSweepStatus(
   jobKey: string = NOTIFICATIONS_SWEEP_JOB_KEY,
+  options: NotificationsSweepStatusOptions = {},
 ): Promise<ScheduledJobRunState | null> {
-  return getJobRunState(jobKey);
+  const legacy = await getJobRunState(jobKey);
+  const jobType = options.jobType ?? (jobKey === NOTIFICATIONS_SWEEP_JOB_KEY ? NOTIFICATIONS_SWEEP_JOB_TYPE : undefined);
+  if (!jobType) return legacy;
+
+  const outcome = await getJobTypeOutcome(jobType);
+  if (outcome.lastSucceededAt === null && !outcome.failedSinceLastSuccess) return legacy;
+
+  const legacyAt = legacy?.completedAt ?? null;
+  const completedAt =
+    outcome.lastSucceededAt !== null && (legacyAt === null || outcome.lastSucceededAt > legacyAt)
+      ? outcome.lastSucceededAt
+      : legacyAt;
+  const lastError = legacy?.lastError ?? (outcome.failedSinceLastSuccess ? SWEEP_JOB_FAILED_MESSAGE : null);
+  return {
+    jobKey,
+    status: legacy?.status ?? "IDLE",
+    startedAt: legacy?.startedAt ?? null,
+    completedAt,
+    lastError,
+  };
 }
