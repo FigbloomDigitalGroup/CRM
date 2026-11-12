@@ -16,7 +16,7 @@ Facts only. Verified against the code on branch `makeover/m17-closeout`.
 | No internal value (rule 7) in either language | document and page are built from explicit field lists with no cost field | new "quote document, stored share and signing page data carry no cost or margin" (cost 11,000 exists on the line, absent from en and sw output); component test "no cost, margin or internal wording" | Met |
 | Signed record keeps the language the signer saw | `signQuote` stores `language` and the consent wording in that language, both inside the seal | `quoteSignature.test.ts` "keeps the language the client saw"; new: switched to English, unsupported `fr`, no language given | Met |
 | Snapshot tests per locale | snapshots | quote document: `clientLanguage.test.ts` (en, sw, existing). Signing page: new component snapshots en, sw, expired-sw. Web form definition: new inline snapshots en, sw | Met |
-| Reviewed translations | `TRANSLATION_REVIEW.sw = "PENDING_HUMAN_REVIEW"` | `clientLanguage.test.ts` pins the PENDING status | **Not met: human step, no sign-off recorded** |
+| Reviewed translations | `TRANSLATION_REVIEW.sw = "PENDING_HUMAN_REVIEW"` | `clientLanguage.test.ts` pins the status | **Met (12 Nov 2026): reviewed and approved by a native Swahili speaker (Given); `TRANSLATION_REVIEW.sw = "COMPLETE"`.** The Swahili captcha line is still missing on purpose, so that one line shows in English (the fallback) |
 
 ## Hard-coded English found (not fixed, reported)
 
@@ -44,4 +44,4 @@ None. All existing Swahili text was written by the build team and is unreviewed 
 
 ## Recommended state
 
-**In Review.** "Reviewed translations" is in scope and needs a native speaker; the code records `PENDING_HUMAN_REVIEW`, not a sign-off. Open for a person: review the Swahili in `src/lib/clientText.ts`, supply `form.captcha`, run `vitest -u` for the snapshots if wording changes, then flip `TRANSLATION_REVIEW.sw`.
+**Done (12 Nov 2026): native-speaker sign-off recorded.** Earlier state, kept for the record: **In Review.** "Reviewed translations" is in scope and needs a native speaker; the code records `PENDING_HUMAN_REVIEW`, not a sign-off. Open for a person: review the Swahili in `src/lib/clientText.ts`, supply `form.captcha`, run `vitest -u` for the snapshots if wording changes, then flip `TRANSLATION_REVIEW.sw`.
