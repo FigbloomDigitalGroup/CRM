@@ -4,6 +4,15 @@ Written 9 Nov 2026. A plan and a set of checklists. **Nothing in it has been don
 
 Related: `docs/MIGRATION_REHEARSAL.md` (V0 to V1 rehearsal, the method reused here), `docs/RUNBOOKS.md` (deploy, rollback, migrations, incidents), `docs/DEPLOYMENT.md` ("Go-live checklist for V1.1 features", "Scheduled work"), `docs/VERCEL_SETUP.md`, `docs/FEATURE_FLAGS.md`, `docs/GO_LIVE.md` (V1 hypercare model), `docs/DECISIONS.md` sections 5 to 7, `docs/M13_CLOSEOUT.md`, `docs/M14_TEST_REPORT.md`, `docs/PERMISSION_MATRIX_REPORT_V1_1.md`, `docs/UAT_V1_1.md`.
 
+## 0. Close-out (12 Nov 2026, Given)
+
+Given directed the close of Q2.03 (UAT, signed 12 Nov, `docs/UAT_V1_1.md`) and Q2.04 on 12 Nov 2026. The facts, so nobody reads more into "closed" than is true:
+
+- **What happened:** V1.1 went out inside the MVP on Vercel on 11 Nov 2026 (https://figbloom-crm.vercel.app, `dev-given`, Neon, all 90 migrations applied, production smoke test passed with fixes D-2 to D-4 merged and re-tested, G2.03 waived by Given, V2 hidden; `docs/MVP_HANDOVER.md`). The scheduler is cron-job.org calling `/api/cron/jobs` every 5 minutes, which answers gate 9. G2.04 was already closed (Given, 11 Nov).
+- **What this plan describes and was not done as written:** the migration rehearsal on a restored copy of the target (section 4), the per-organisation rollout stages (section 5), the formal hypercare period and the retrospective (sections 9 and 12) were written for an AWS cutover. The MVP release replaced that route. **They were not run.** Given accepted this by closing the issue; they move to `docs/LATER_VERSIONS.md` for the move to real use.
+- **Still open and not a V1.1 blocker (Given's call, 12 Nov):** the written risk acceptance for uploads without a malware scanner (gate 7), Michael's own lines on the sign-offs, design approval of the V1.1 visual baselines, the manual screen-reader and real-device pass, Linux baselines.
+- **Approvals:** UAT accepted by Given (12 Nov 2026). Closing the release issue was directed by Given. Michael has not signed himself.
+
 ## 1. Scope and dates
 
 - Scope of the MVP: V1 plus the wired V1.1 screens; V2 is out and hidden (`DECISIONS.md` 7.1).

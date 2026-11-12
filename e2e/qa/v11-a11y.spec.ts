@@ -70,10 +70,7 @@ test.describe("V1.1 axe sweep, organisation screens", () => {
   for (const look of LOOKS.filter((l) => LOOK_NAMES.has(l.name))) {
     test(`${look.name}: no serious or critical violation on the core V1.1 screens`, async ({ browser }) => {
       test.setTimeout(300_000);
-      // D-V11-01 (docs/V11_TEST_REPORT.md): Chat avatar initials fail colour contrast in the Ocean theme (--primary-text on --primary-soft). The fix is in the shared
-      // theme tokens, which every V1 baseline uses, so it is Given's and design's call. Expected to fail until then: when it is fixed this test reports "passed
-      // unexpectedly" and this line is deleted.
-      test.fail(look.name === "theme-ocean", "D-V11-01: Chat avatar contrast in the Ocean theme");
+      // D-V11-01 was fixed (12 Nov 2026): a chat rule turned the avatar initials grey; see docs/V11_TEST_REPORT.md.
       const context = await browser.newContext(look.viewport ? { viewport: look.viewport } : {});
       const page = await context.newPage();
       await applyDevice(page, look.device);

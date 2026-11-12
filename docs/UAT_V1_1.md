@@ -126,7 +126,11 @@ Release approval (see `docs/V1_1_RELEASE.md` section 11):
 | Given | | | |
 | Michael | | | |
 
-UAT sign-off is recorded by Management. Status: **not started**. Owner: Given (to arrange sessions and participants), not done.
+UAT sign-off is recorded by Management. Status: **signed off by Given, 12 Nov 2026** (see the record below). The table above was left unfilled on purpose and stays as the template.
+
+### Sign-off recorded 12 Nov 2026
+
+Given, who owns this sign-off, accepted all three UAT sessions (Script A Management, Script B Sales, Script C Platform admin) on 12 Nov 2026 and told Claude to close the issues that waited for them. **What this record does and does not say:** it records Given's acceptance. It does not contain per-session notes, participant names or a defect log from the sessions: none were given to Claude, so none are invented here. No Blocker or Major was reported to Claude by the sessions. The Major findings that were open before the sign-off (D-V11-01, D-V11-03 to D-V11-05) are resolved in `docs/V11_TEST_REPORT.md` section 5, by a fix (D-V11-01) or by Given's decision (the others).
 
 ## What these scripts do not cover
 
