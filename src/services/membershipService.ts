@@ -1,4 +1,5 @@
 import { invalidateMeContext } from "./meContextCache";
+import { emitTeamActivity } from "./teamActivityNotifier";
 import { findAssignableRole } from "../repositories/roles";
 import { withAvatars } from "./profileService";
 import { requiredFeatureForRole, roleIsAvailable } from "../auth/permissions";
@@ -146,6 +147,7 @@ export async function inviteMember(
     entityId: membership.id,
     metadata: { email: user.email, roleKey: role.key },
   });
+  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "MEMBER_CHANGE", actorMembershipId: ctx.membershipId, entityType: "Membership", entityId: membership.id, label: user.name, route: "settings", detail: { action: "INVITED" } });
 
   return { membershipId: membership.id };
 }
@@ -366,6 +368,8 @@ export async function removeMember(ctx: AuthContext, membershipId: string) {
     throw new ReassignmentRequiredError(checklist);
   }
 
+  const removedUser = await adminDb.user.findUnique({ where: { id: membership.userId }, select: { name: true } });
+  const removedName = removedUser?.name ?? "a team member";
   const updated = await removeMembership(membershipId, ctx.membershipId);
   const sessionsRevoked = await endSessionsForLostAccess(
     ctx.organizationId,
@@ -382,6 +386,7 @@ export async function removeMember(ctx: AuthContext, membershipId: string) {
     previousValue: { status: membership.status, roleKey: membership.role.key },
     metadata: { sessionsRevoked },
   });
+  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "MEMBER_CHANGE", actorMembershipId: ctx.membershipId, entityType: "Membership", entityId: membershipId, label: removedName, route: "settings", detail: { action: "REMOVED" } });
 
   invalidateMeContext({ organizationId: ctx.organizationId });
   return updated;

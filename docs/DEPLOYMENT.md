@@ -307,11 +307,11 @@ sidecar, no Redis, nothing extra to deploy.
 
 | Action | Window | Max per IP | Max per email |
 |---|---|---|---|
-| Login (failed attempts only) | 15 min | 100 | 5 |
+| Login (failed attempts only, P2-02) | 1 hour ceilings | 300 | 200 (a wait, never a block) |
 | Signup | 1 hour | 10 | 3 |
-| Password-reset request | 1 hour | 10 | 3 |
+| Password-reset request | 1 hour | 10 | 30 (and 3 per IP + email pair) |
 
-**Login counts failed attempts only (D-3, 11 Nov 2026).** A successful sign-in never counts toward either limit, so an office or mobile carrier behind one shared address, or one person signing in often, is not locked out. The checks run before any password work and a failed attempt is recorded afterwards. Per account the limit stays at 5 failures in 15 minutes (the same as the account lockout). Per address it is 100 failures in 15 minutes, up from 20 counting every attempt: far more than people mistyping can reach, yet one address can still only try 400 passwords an hour, and no single account more than 5 per 15 minutes. Behind Vercel set `TRUSTED_PROXY_HOPS=1`; the address used is then the last `X-Forwarded-For` entry, which Vercel sets to the real client address.
+**Sign-in never locks a real person out (P2-02, 12 Nov 2026).** Failures are counted per IP + email pair, per IP and per email, and only failures count (a success clears the pair). After 3 failures from one pair the wait before the next try grows 1, 2, 4 ... up to 30 seconds; the person gets a clear "please wait N seconds" message in the normal error slot and the right password works once the wait is over. Per IP the ceiling is 300 failures in the window (a hard block until it passes); per email across all addresses the ceiling (200) only applies the longest wait and writes a security event (`auth.rate_limit_ceiling`, plus a log line). The old 5-per-email block and the 5-failure account lock are gone, so nobody can lock someone else out. A device with a live trusted-device cookie skips every wait. Details and tuning: `docs/SIGN_IN_RATE_LIMIT.md`. Settings: `LOGIN_RATE_LIMIT_WINDOW_MS` (60 min, ceilings window), `LOGIN_RATE_LIMIT_MAX_PER_IP` (300), `LOGIN_RATE_LIMIT_MAX_PER_EMAIL` (200), `LOGIN_DELAY_WINDOW_MS` (15 min), `LOGIN_DELAY_FREE_ATTEMPTS` (3), `LOGIN_DELAY_BASE_SECONDS` (1), `LOGIN_DELAY_MAX_SECONDS` (30), `LOCKOUT_MAX_FAILURES` (200, now only the account-level wait/alert threshold), `PASSWORD_RESET_RATE_LIMIT_MAX_PER_PAIR` (3). Behind Vercel set `TRUSTED_PROXY_HOPS=1`; the address used is then the last `X-Forwarded-For` entry, which Vercel sets to the real client address.
 
 Once a limit is hit, every further attempt for that IP or email within the
 window gets the same generic 429 (`"Too many requests. Please try again

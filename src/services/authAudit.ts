@@ -7,6 +7,7 @@ export type AuthAuditAction =
   | "auth.password_reset"
   | "auth.locked_out"
   | "auth.unlocked"
+  | "auth.rate_limit_ceiling"
   | "auth.session_revoked"
   | "auth.other_sessions_revoked"
   | "auth.session_extended"

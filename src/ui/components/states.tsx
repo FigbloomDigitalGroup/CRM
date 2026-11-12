@@ -3,6 +3,7 @@
 import { Archive, FileX, Lock, WifiOff, TriangleAlert, Inbox } from "lucide-react";
 import type { ReactNode } from "react";
 import { copy } from "../copy";
+import { useContactSupport } from "../data/supportContext";
 import { describeError, type Denial } from "../errors";
 import { Banner } from "./basics";
 import { Tooltip } from "./overlays";
@@ -71,6 +72,7 @@ export function NoAccess({ area, denial }: { area: string; denial?: Denial | nul
 /** An error for a whole page or panel, with retry and the reference. A 403 becomes the explained no-access state, a 401 asks to sign in. */
 export function ErrorState({ error, area = "This page", onRetry, signInHref = "/login" }: { error: unknown; area?: string; onRetry?: () => void; signInHref?: string }) {
   const d = describeError(error);
+  const support = useContactSupport();
   if (d.kind === "noAccess") return <NoAccess area={area} denial={d.denial} />;
   return (
     <div className="fb-empty" role="alert">
@@ -84,6 +86,11 @@ export function ErrorState({ error, area = "This page", onRetry, signInHref = "/
           <a className="fb-btn fb-btn--primary" href={signInHref}>{copy.error.signedOut.action}</a>
         ) : d.retryable && onRetry ? (
           <button type="button" className="fb-btn fb-btn--secondary" onClick={onRetry}>{copy.error.retry}</button>
+        ) : null}
+        {support && d.kind !== "signedOut" && d.kind !== "offline" ? (
+          <button type="button" className="fb-btn fb-btn--secondary" data-testid="support-entry-error" onClick={support.open}>
+            {copy.error.contactSupport}
+          </button>
         ) : null}
         {d.reference ? <span className="fb-ref">{copy.error.reference(d.reference)}</span> : null}
       </div>

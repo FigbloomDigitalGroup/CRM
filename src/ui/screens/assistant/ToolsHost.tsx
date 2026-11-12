@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { useToast } from "../../components/toast";
 import { useMember } from "../../data/member";
+import { useContactSupport } from "../../data/supportContext";
 import { CommandPalette } from "../palette/CommandPalette";
 import { gotoShortcut } from "../palette/items";
 import { HelpPanel } from "../palette/HelpPanel";
@@ -92,6 +93,7 @@ export function ToolsOverlays() {
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const toast = useToast();
+  const support = useContactSupport();
   const enabled = toolsEnabled();
   const settingsQuery = useAssistantSettings(enabled && panel === "assistant");
   const settings = settingsQuery.data as AssistantSettingsDto | undefined;
@@ -160,7 +162,12 @@ export function ToolsOverlays() {
         orgSlug={orgSlug}
         permissionKeys={keys}
         onNavigate={go}
-        onRun={(run) => store.set(run === "assistant" ? "assistant" : "help")}
+        onRun={(run) => {
+          if (run === "support" && support) {
+            store.set(null);
+            support.open();
+          } else store.set(run === "assistant" ? "assistant" : "help");
+        }}
       />
       <AssistantPanel open={panel === "assistant"} onClose={() => store.set(null)} enabled={settings?.enabled ?? false} ctx={ctx} respond={actions.respond} onConfirmAction={confirmAction} onDismissAction={actions.dismiss} onFeedback={actions.feedback} usage={settings ? { today: settings.usage.today, limit: settings.limits.perUser } : null} unavailable={unavailable} loading={settingsQuery.isLoading} settingsHref={member.can("configuration.manage") ? `/o/${orgSlug}/settings?tab=ai` : undefined} />
       <HelpPanel open={panel === "help"} onClose={() => store.set(null)} pathname={pathname} orgSlug={orgSlug} />

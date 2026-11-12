@@ -19,6 +19,7 @@ import { STAGE2_OPERATIONS } from "./stage2Operations";
 import { STAGE3_OPERATIONS } from "./stage3Operations";
 import { STAGE4_OPERATIONS } from "./stage4Operations";
 import { V2_OPERATIONS_D } from "./v2OperationsD";
+import { TEAM_OPERATIONS } from "./teamOperations";
 import {
   ExtendSessionResponseSchema,
   MyProfileSchema,
@@ -331,6 +332,7 @@ export const OPERATIONS: OperationDef[] = [
   ...STAGE3_OPERATIONS,
   ...STAGE4_OPERATIONS,
   ...V2_OPERATIONS_D,
+  ...TEAM_OPERATIONS,
 ];
 
 function json(schema: z.ZodType) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, LogOut, Menu as MenuIcon, Moon, Plus, Sun, User, Users } from "lucide-react";
+import { ChevronDown, LifeBuoy, LogOut, Menu as MenuIcon, Moon, Plus, Sun, User, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -9,6 +9,7 @@ import { Avatar, Banner } from "../components/basics";
 import { Menu, Popover, type MenuItem } from "../components/overlays";
 import { useToast } from "../components/toast";
 import { useApi } from "../data/hooks";
+import { useContactSupport } from "../data/supportContext";
 import { useAppearanceOptional } from "../theme/ThemeProvider";
 import type { QuickCreateItem } from "./navModel";
 
@@ -207,6 +208,7 @@ export function UserMenu({ identity }: { identity: IdentityInfo }) {
   const api = useApi();
   const router = useRouter();
   const appearance = useAppearanceOptional();
+  const support = useContactSupport();
   const [busy, setBusy] = useState(false);
 
   async function signOut() {
@@ -265,6 +267,11 @@ export function UserMenu({ identity }: { identity: IdentityInfo }) {
               }}
             >
               {dark ? <Sun size={16} aria-hidden="true" /> : <Moon size={16} aria-hidden="true" />} {dark ? "Light mode" : "Dark mode"}
+            </button>
+          ) : null}
+          {support ? (
+            <button type="button" className="fb-menuitem" data-testid="support-entry-usermenu" onClick={() => { close(); support.open(); }}>
+              <LifeBuoy size={16} aria-hidden="true" /> Contact support
             </button>
           ) : null}
           <button type="button" className="fb-menuitem fb-menuitem--danger" aria-disabled={busy || undefined} onClick={signOut}>

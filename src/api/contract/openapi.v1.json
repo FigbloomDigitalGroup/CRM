@@ -264,6 +264,9 @@
       "name": "Tasks"
     },
     {
+      "name": "Team"
+    },
+    {
       "name": "Views"
     },
     {
@@ -56423,6 +56426,68 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "teamActivity": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "event": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "channels": {
+                            "type": "object",
+                            "properties": {
+                              "inApp": {
+                                "type": "boolean"
+                              },
+                              "email": {
+                                "type": "boolean"
+                              },
+                              "push": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "inApp",
+                              "email",
+                              "push"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "mode": {
+                            "type": "string",
+                            "enum": [
+                              "INSTANT",
+                              "HOURLY",
+                              "DAILY"
+                            ]
+                          },
+                          "defaultMode": {
+                            "type": "string",
+                            "enum": [
+                              "INSTANT",
+                              "HOURLY",
+                              "DAILY"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "event",
+                          "label",
+                          "description",
+                          "channels",
+                          "mode",
+                          "defaultMode"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -56562,6 +56627,35 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991
+                  },
+                  "teamActivity": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "inApp": {
+                          "type": "boolean"
+                        },
+                        "email": {
+                          "type": "boolean"
+                        },
+                        "push": {
+                          "type": "boolean"
+                        },
+                        "mode": {
+                          "type": "string",
+                          "enum": [
+                            "INSTANT",
+                            "HOURLY",
+                            "DAILY"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    }
                   }
                 },
                 "additionalProperties": false
@@ -56771,6 +56865,68 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "teamActivity": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "event": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "channels": {
+                            "type": "object",
+                            "properties": {
+                              "inApp": {
+                                "type": "boolean"
+                              },
+                              "email": {
+                                "type": "boolean"
+                              },
+                              "push": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "inApp",
+                              "email",
+                              "push"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "mode": {
+                            "type": "string",
+                            "enum": [
+                              "INSTANT",
+                              "HOURLY",
+                              "DAILY"
+                            ]
+                          },
+                          "defaultMode": {
+                            "type": "string",
+                            "enum": [
+                              "INSTANT",
+                              "HOURLY",
+                              "DAILY"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "event",
+                          "label",
+                          "description",
+                          "channels",
+                          "mode",
+                          "defaultMode"
+                        ],
+                        "additionalProperties": false
+                      }
                     }
                   },
                   "required": [
@@ -87298,6 +87454,1691 @@
           "DELIVERY": "A",
           "FINANCE": "D",
           "RESTRICTED_TECHNICAL": "A"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/team/attention": {
+      "get": {
+        "operationId": "getTeamAttention",
+        "summary": "Quiet leads, overdue tasks and stuck deals across the team. Management only",
+        "tags": [
+          "Team"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-allowed-roles": [
+          "MANAGEMENT"
+        ],
+        "x-role-outcomes": {
+          "MANAGEMENT": "A",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "staleDays": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "access": {
+                      "type": "object",
+                      "properties": {
+                        "leads": {
+                          "type": "boolean"
+                        },
+                        "deals": {
+                          "type": "boolean"
+                        },
+                        "tasks": {
+                          "type": "boolean"
+                        },
+                        "values": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "leads",
+                        "deals",
+                        "tasks",
+                        "values"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "staleLeads": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "company": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "contact": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "lastTouchAt": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "ownerMembershipId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "ownerName": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "company",
+                                  "contact",
+                                  "lastTouchAt",
+                                  "ownerMembershipId",
+                                  "ownerName"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "items"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "overdueTasks": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "title": {
+                                    "type": "string"
+                                  },
+                                  "dueAt": {
+                                    "type": "string"
+                                  },
+                                  "ownerMembershipId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "ownerName": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "title",
+                                  "dueAt",
+                                  "ownerMembershipId",
+                                  "ownerName"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "items"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "stuckDeals": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "id": {
+                                    "type": "string"
+                                  },
+                                  "company": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "stage": {
+                                    "type": "string"
+                                  },
+                                  "daysQuiet": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  "value": {
+                                    "type": "object",
+                                    "properties": {
+                                      "amount": {
+                                        "type": [
+                                          "string",
+                                          "null"
+                                        ]
+                                      },
+                                      "masked": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "amount",
+                                      "masked"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  "ownerMembershipId": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "ownerName": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "id",
+                                  "company",
+                                  "stage",
+                                  "daysQuiet",
+                                  "value",
+                                  "ownerMembershipId",
+                                  "ownerName"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "items"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "staleDays",
+                    "access",
+                    "staleLeads",
+                    "overdueTasks",
+                    "stuckDeals"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (`fieldErrors` lists the fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/team/members": {
+      "get": {
+        "operationId": "listTeamMembers",
+        "summary": "Team members with per-person open leads, deals, tasks and last activity; filter by role, status and name; sortable and paged. Management only",
+        "tags": [
+          "Team"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-allowed-roles": [
+          "MANAGEMENT"
+        ],
+        "x-role-outcomes": {
+          "MANAGEMENT": "A",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "today",
+                "7d",
+                "30d"
+              ]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "A role key, for example SALES.",
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "INACTIVE",
+                "PENDING"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "A field, or -field for descending: name, role, status, lastActive, openLeads, openDeals, overdueTasks, tasksToday, newLeads.",
+              "type": "string",
+              "maxLength": 32
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "range": {
+                      "type": "string",
+                      "enum": [
+                        "today",
+                        "7d",
+                        "30d"
+                      ]
+                    },
+                    "access": {
+                      "type": "object",
+                      "properties": {
+                        "leads": {
+                          "type": "boolean"
+                        },
+                        "deals": {
+                          "type": "boolean"
+                        },
+                        "tasks": {
+                          "type": "boolean"
+                        },
+                        "values": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "leads",
+                        "deals",
+                        "tasks",
+                        "values"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "membershipId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "email": {
+                            "type": "string"
+                          },
+                          "initials": {
+                            "type": "string"
+                          },
+                          "avatarUrl": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "role": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "name"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "ACTIVE",
+                              "INACTIVE",
+                              "PENDING"
+                            ]
+                          },
+                          "lastActiveAt": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "openLeads": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "openDeals": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "openDealsValue": {
+                            "type": "object",
+                            "properties": {
+                              "amount": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "masked": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "amount",
+                              "masked"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "tasksDueToday": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "overdueTasks": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "newLeads": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "stuckDeals": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "membershipId",
+                          "name",
+                          "email",
+                          "initials",
+                          "avatarUrl",
+                          "role",
+                          "status",
+                          "lastActiveAt",
+                          "openLeads",
+                          "openDeals",
+                          "openDealsValue",
+                          "tasksDueToday",
+                          "overdueTasks",
+                          "newLeads",
+                          "stuckDeals"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "page": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "pageSize": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "pageCount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "roles": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "key",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "range",
+                    "access",
+                    "items",
+                    "page",
+                    "pageSize",
+                    "total",
+                    "pageCount",
+                    "nextCursor",
+                    "roles"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (`fieldErrors` lists the fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/team/members/{membershipId}": {
+      "get": {
+        "operationId": "getTeamMember",
+        "summary": "One member: recent sales activity from the audit trail, open leads, deals and tasks, 30-day trend. Management only",
+        "tags": [
+          "Team"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-allowed-roles": [
+          "MANAGEMENT"
+        ],
+        "x-role-outcomes": {
+          "MANAGEMENT": "A",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "today",
+                "7d",
+                "30d"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "range": {
+                      "type": "string",
+                      "enum": [
+                        "today",
+                        "7d",
+                        "30d"
+                      ]
+                    },
+                    "access": {
+                      "type": "object",
+                      "properties": {
+                        "leads": {
+                          "type": "boolean"
+                        },
+                        "deals": {
+                          "type": "boolean"
+                        },
+                        "tasks": {
+                          "type": "boolean"
+                        },
+                        "values": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "leads",
+                        "deals",
+                        "tasks",
+                        "values"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "member": {
+                      "type": "object",
+                      "properties": {
+                        "membershipId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        },
+                        "initials": {
+                          "type": "string"
+                        },
+                        "avatarUrl": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "role": {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "ACTIVE",
+                            "INACTIVE",
+                            "PENDING"
+                          ]
+                        },
+                        "lastActiveAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "openLeads": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "openDeals": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "openDealsValue": {
+                          "type": "object",
+                          "properties": {
+                            "amount": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "masked": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "masked"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "tasksDueToday": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "overdueTasks": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "newLeads": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "stuckDeals": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "membershipId",
+                        "name",
+                        "email",
+                        "initials",
+                        "avatarUrl",
+                        "role",
+                        "status",
+                        "lastActiveAt",
+                        "openLeads",
+                        "openDeals",
+                        "openDealsValue",
+                        "tasksDueToday",
+                        "overdueTasks",
+                        "newLeads",
+                        "stuckDeals"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "recentActivity": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "entityType": {
+                            "type": "string"
+                          },
+                          "entityId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "at": {
+                            "type": "string"
+                          },
+                          "path": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "action",
+                          "label",
+                          "entityType",
+                          "entityId",
+                          "at",
+                          "path"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "openLeads": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "company": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "contact": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "temperature": {
+                                "type": "string"
+                              },
+                              "nextFollowUpAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "stale": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "company",
+                              "contact",
+                              "temperature",
+                              "nextFollowUpAt",
+                              "stale"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "openDeals": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "company": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "stage": {
+                                "type": "string"
+                              },
+                              "expectedCloseDate": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "stuck": {
+                                "type": "boolean"
+                              },
+                              "value": {
+                                "type": "object",
+                                "properties": {
+                                  "amount": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "masked": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "amount",
+                                  "masked"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "company",
+                              "stage",
+                              "expectedCloseDate",
+                              "stuck",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "tasks": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "dueAt": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "overdue": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "title",
+                              "dueAt",
+                              "overdue"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "trend": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "start": {
+                            "type": "string"
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "start",
+                          "count"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "range",
+                    "access",
+                    "member",
+                    "recentActivity",
+                    "openLeads",
+                    "openDeals",
+                    "tasks",
+                    "trend"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (`fieldErrors` lists the fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/team/summary": {
+      "get": {
+        "operationId": "getTeamSummary",
+        "summary": "The team summary strip and workload balance for a date range (today, 7d, 30d). Management only",
+        "tags": [
+          "Team"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-allowed-roles": [
+          "MANAGEMENT"
+        ],
+        "x-role-outcomes": {
+          "MANAGEMENT": "A",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "today",
+                "7d",
+                "30d"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "range": {
+                      "type": "string",
+                      "enum": [
+                        "today",
+                        "7d",
+                        "30d"
+                      ]
+                    },
+                    "rangeStart": {
+                      "type": "string"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "staleDays": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "access": {
+                      "type": "object",
+                      "properties": {
+                        "leads": {
+                          "type": "boolean"
+                        },
+                        "deals": {
+                          "type": "boolean"
+                        },
+                        "tasks": {
+                          "type": "boolean"
+                        },
+                        "values": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "leads",
+                        "deals",
+                        "tasks",
+                        "values"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "membersActive": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "membersTotal": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "openLeads": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "openDeals": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "openDealsValue": {
+                          "type": "object",
+                          "properties": {
+                            "amount": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "masked": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "amount",
+                            "masked"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "overdueTasks": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "newLeads": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "dealsWon": {
+                          "type": "object",
+                          "properties": {
+                            "count": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "value": {
+                              "type": "object",
+                              "properties": {
+                                "amount": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "masked": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "amount",
+                                "masked"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "count",
+                            "value"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "unassignedLeads": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "membersActive",
+                        "membersTotal",
+                        "openLeads",
+                        "openDeals",
+                        "openDealsValue",
+                        "overdueTasks",
+                        "newLeads",
+                        "dealsWon",
+                        "unassignedLeads"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "workload": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "membershipId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "openLeads": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "membershipId",
+                          "name",
+                          "openLeads"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "range",
+                    "rangeStart",
+                    "generatedAt",
+                    "staleDays",
+                    "access",
+                    "summary",
+                    "workload"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (`fieldErrors` lists the fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
         }
       }
     },

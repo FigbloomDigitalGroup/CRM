@@ -23,11 +23,13 @@ import {
   Users,
   Wallet,
   ChartColumn,
+  LifeBuoy,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { FigbloomLogo } from "./Logo";
+import { useContactSupport } from "../data/supportContext";
 import { cx } from "../internal";
 import { filterNav, isActivePath, sectionBadge, sectionHasActive, type NavIcon, type NavItem, type NavSection } from "./navModel";
 
@@ -84,6 +86,7 @@ export function Sidebar({
   onMobileClose?: () => void;
 }) {
   const pathname = usePathname();
+  const support = useContactSupport();
   const base = `/o/${orgSlug}`;
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [query, setQuery] = useState("");
@@ -215,6 +218,14 @@ export function Sidebar({
           {query ? null : extra}
           {query && shown.length === 0 ? <p className="fb-sidebar__text" style={{ padding: "8px 10px", opacity: 0.8 }}>No matching pages.</p> : null}
         </nav>
+        {support ? (
+          <div className="fb-sidebar__support">
+            <button type="button" className="fb-navlink" title={collapsed ? "Support" : undefined} data-testid="support-entry-sidebar" onClick={() => { onMobileClose?.(); support.open(); }}>
+              <span aria-hidden="true" className="fb-navlink__icon"><LifeBuoy size={18} /></span>
+              <span className="fb-sidebar__text">Support</span>
+            </button>
+          </div>
+        ) : null}
         {footer ? <div className="fb-sidebar__foot">{footer}</div> : null}
       </aside>
     </>

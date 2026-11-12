@@ -1,4 +1,5 @@
 import type { ApprovalRequest, Prisma } from "@prisma/client";
+import { emitTeamActivity } from "./teamActivityNotifier";
 import type { AuthContext } from "../auth/context";
 import { deny, hasPermission, requireOwnedRecordPermission, requirePermission } from "../auth/context";
 import { NotFoundError, ValidationError, type ValidationIssue } from "../auth/errors";
@@ -422,6 +423,7 @@ export async function requestDiscountApproval(ctx: AuthContext, quoteId: string,
     requesterNote: clip(input.note),
   });
   await recordAuditEvent({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: "approval.requested", entityType: "ApprovalRequest", entityId: created.id, metadata: { kind: "DISCOUNT", quote: quote.number, version: row.version, discountPercent: pct } });
+  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "DISCOUNT_REQUESTED", actorMembershipId: ctx.membershipId, entityType: "ApprovalRequest", entityId: created.id, label: `${quote.number} v${row.version}: ${pct}%`, route: "approvals", detail: { summary: `A ${pct}% discount is above the ${rules.discount.thresholdPercent}% that needs approval.` } });
   await emailApprovers(ctx.organizationId, ctx.membershipId, "A discount needs your approval", `${quote.number} version ${row.version} has a ${pct}% discount. Open the approvals inbox to decide.`);
   return presentRow(ctx, created, await namesOf(ctx.organizationId, [ctx.membershipId]), now);
 }

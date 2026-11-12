@@ -102,6 +102,8 @@ export interface PushNotificationInput {
   title: string;
   body: string;
   link: string;
+  /** FIG-1600: the caller already checked the person's own choice (team activity has its own per-event preferences), so skip the per-type push preference. */
+  skipTypePreference?: boolean;
 }
 
 export type PushResult = { sent: number; revoked: number; skipped?: "NO_DEVICE" | "NOT_WANTED" | "QUIET_HOURS" | "NOT_CONFIGURED" };
@@ -112,6 +114,7 @@ export async function pushToMember(input: PushNotificationInput, now = new Date(
     const t = transport();
     if (!t) return { sent: 0, revoked: 0, skipped: "NOT_CONFIGURED" };
     const found = await listSubscriptionsForSend(input.organizationId, input.membershipId, input.type);
+    if (input.skipTypePreference) found.wantsPush = true;
     if (found.subs.length === 0) return { sent: 0, revoked: 0, skipped: "NO_DEVICE" };
     if (!found.wantsPush) return { sent: 0, revoked: 0, skipped: "NOT_WANTED" };
 

@@ -17,7 +17,7 @@ describe("sidebar navigation per role", () => {
   it("Management sees the whole workspace and the organisation reports", () => {
     expect(menu("MANAGEMENT")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Leads, Deals, Tasks, Calendar",
+      "Sales workspace: Leads, Deals, Tasks, Calendar, Team",
       "Customers: Companies, Contacts",
       "Communication: Conversations, Mail, Chat, Video Conference",
       "After the sale: Handoffs, Renewals, Payments",

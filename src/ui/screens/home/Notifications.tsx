@@ -4,6 +4,7 @@ import { Bell } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Avatar } from "../../components/basics";
 import { ErrorState, NoAccess } from "../../components/states";
 import { describeError } from "../../errors";
 import { useApiMutation, useApiQuery } from "../../data/hooks";
@@ -20,6 +21,8 @@ interface Notice {
   title: string;
   body: string;
   deepLink: string | null;
+  /** Who did it (team activity); the photo is the initials until profile photos exist (P2-05). */
+  actorName?: string | null;
   read: boolean;
   createdAt: string;
 }
@@ -37,6 +40,7 @@ const TYPES: Record<string, { label: string; icon: string; tone: "orange" | "red
   LEAD_POOL: { label: "Shared lead pool", icon: "globe", tone: "orange", group: "web" },
   PAYMENT_OVERDUE: { label: "Payment overdue", icon: "wallet", tone: "red", group: "pay" },
   DORMANT_CUSTOMER: { label: "Quiet customer", icon: "clock", tone: "orange", group: "other" },
+  TEAM_ACTIVITY: { label: "Team activity", icon: "users", tone: "blue", group: "other" },
 };
 const FALLBACK = { label: "Notification", icon: "bell", tone: "green" as const, group: "other" };
 const info = (type: string) => TYPES[type] ?? FALLBACK;
@@ -256,9 +260,13 @@ export function NotificationCentre() {
               const t = info(n.type);
               return (
                 <li key={n.id} className="fb-notifs__row" data-unread={n.read ? undefined : "true"}>
-                  <span className={`fb-tile fb-tone--${t.tone}`} style={{ width: 36, height: 36, borderRadius: 11 }} aria-hidden="true">
-                    <HIcon name={t.icon} size={17} />
-                  </span>
+                  {n.actorName ? (
+                    <Avatar name={n.actorName} size={36} />
+                  ) : (
+                    <span className={`fb-tile fb-tone--${t.tone}`} style={{ width: 36, height: 36, borderRadius: 11 }} aria-hidden="true">
+                      <HIcon name={t.icon} size={17} />
+                    </span>
+                  )}
                   <div className="fb-notifs__main">
                     <div className="fb-notifs__kind">
                       {t.label} · {ago(n.createdAt)}

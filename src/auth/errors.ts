@@ -136,9 +136,12 @@ export class ValidationError extends Error {
 
 /** Maps to 429 (see handleRoute.ts) -- rate/abuse limiting (FIG-594). */
 export class RateLimitedError extends Error {
-  constructor(message = "Too many requests. Please try again later.") {
+  /** When the caller may try again, in whole seconds, if known (sign-in wait, P2-02). */
+  readonly retryAfterSeconds?: number;
+  constructor(message = "Too many requests. Please try again later.", retryAfterSeconds?: number) {
     super(message);
     this.name = "RateLimitedError";
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 

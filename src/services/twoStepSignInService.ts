@@ -5,7 +5,7 @@ import type { StoredChallenge } from "../auth/twoStep/engine";
 import { tenantTwoStep } from "../auth/twoStep/stores";
 import { adminDb } from "../db/adminClient";
 import { getAccessState } from "./accessStateService";
-import { completeSignIn, incrementFailedSignIn, lockoutPolicy, type SignedInSession } from "./authService";
+import { accountWaitSeconds, completeSignIn, incrementFailedSignIn, lockoutPolicy, type SignedInSession } from "./authService";
 import { recordAuthAuditEvent } from "./authAudit";
 import { sendSecurityAlert } from "./securityAlertService";
 import { recordSignInEvent } from "./signInEventService";
@@ -35,9 +35,11 @@ async function limitStep(userId: string, ip: string | null, action: "TWO_STEP_VE
 async function loadUser(challenge: StoredChallenge) {
   const user = await adminDb.user.findUnique({ where: { id: challenge.subjectId } });
   if (!user || user.status !== "ACTIVE") throw new UnauthorizedError("This sign-in has expired. Sign in again.");
-  if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
+  // A reached ceiling is a wait, not a lock (P2-02): same rule as the password step.
+  const wait = accountWaitSeconds(user);
+  if (wait > 0) {
     await recordSignInEvent({ userId: user.id, email: user.email, outcome: "FAILURE", reason: "LOCKED", client: clientOf(challenge) });
-    throw new RateLimitedError();
+    throw new RateLimitedError(`Too many attempts. Please wait ${wait} second${wait === 1 ? "" : "s"} and try again.`, wait);
   }
   return user;
 }

@@ -46,6 +46,7 @@ The scheduler call `/api/cron/jobs` must fire **every 5 minutes or less**: `mail
 | `webhooks.deliver` | Signed outbound webhook deliveries and retries with backoff (1, 3, 9, 27 minutes up to 6 hours, dead after 8 attempts) (`docs/M17_LANE_C_PUBLIC_API_WEBHOOKS.md`) | on demand, retried by the 5-minute sweep |
 | `churn.hints.refresh` | Rules-based churn hints for customer owners (`docs/M17_LANE_D_ROLES_AND_CHURN.md`) | daily |
 | `support_access.expire` | Ends support access windows that ran out (`docs/M17_LANE_A_SUPPORT_FLAGS_ANNOUNCEMENTS.md`) | every 5 minutes or less |
+| `team_activity.digest` | Hourly and daily team activity digests for Management, grouped (`docs/TEAM_ACTIVITY_NOTIFICATIONS.md`) | every 5 minutes or less |
 
 `data.import` and `data.export` run once (`maxAttempts: 1`): the handler records its own failure on the `data_runs` row, and repeating an import would only repeat work.
 

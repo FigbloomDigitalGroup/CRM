@@ -139,10 +139,12 @@ describe("account lockout (B1.05)", () => {
     const { org, user } = await lockedUser();
     const lockedUntil = (await adminDb.user.findUniqueOrThrow({ where: { id: user.id } })).lockedUntil!;
 
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date(lockedUntil.getTime() - 1000));
-    await expect(authService.login(user.email, PASSWORD, UA, uniqueIp())).rejects.toThrow(RateLimitedError);
+    // P2-02: reaching the ceiling is a wait, not a lock; the refusal carries the wait in seconds.
+    const refused = await authService.login(user.email, PASSWORD, UA, uniqueIp()).catch((e) => e);
+    expect(refused).toBeInstanceOf(RateLimitedError);
+    expect((refused as RateLimitedError).retryAfterSeconds).toBeGreaterThan(0);
 
+    vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(lockedUntil.getTime() + 1000));
     const result = await authService.login(user.email, PASSWORD, UA, uniqueIp());
     expect(result.userId).toBe(user.id);
@@ -152,6 +154,15 @@ describe("account lockout (B1.05)", () => {
     expect(
       await adminDb.auditEvent.count({ where: { organizationId: org.id, action: "auth.unlocked", entityId: user.id } }),
     ).toBe(1);
+  });
+
+  it("a reached ceiling never locks the person out: after the wait the right password signs in, even inside the lock window (P2-02)", async () => {
+    const { user } = await lockedUser();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(Date.now() + 31_000));
+    expect((await authService.login(user.email, PASSWORD, UA, uniqueIp())).userId).toBe(user.id);
+    const row = await adminDb.user.findUniqueOrThrow({ where: { id: user.id } });
+    expect(row.lockedUntil).toBeNull();
   });
 
   it("can be unlocked by Management straight away, which also clears the email's login window", async () => {

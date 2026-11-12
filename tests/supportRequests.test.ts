@@ -188,6 +188,20 @@ describe("creating a request (database)", () => {
     }
   });
 
+  it("sent from the app's Support entry points: carries the page, role and organisation, and nothing from the page's query or deal data (FIG-1594)", async () => {
+    const org = await createTestOrganization("SupportEntry");
+    const ctx = await createTestContext(org.id, "RESTRICTED_TECHNICAL", "sr.entry");
+    const { calls, fetchImpl } = fakeFetch();
+    const result = await createSupportRequest(ctx, { ...ask, pagePath: "/o/acme/deals/d-1?value=900000&token=abc#pay" }, { send: { fetchImpl, apiKey: KEY } });
+    expect(result.sent).toBe(true);
+    const text = String(calls[0]!.body.text);
+    expect(text).toContain("Page:          /o/acme/deals/d-1\n");
+    expect(text).toContain("Organisation:");
+    expect(text).toContain("(Restricted Technical)");
+    expect(text).not.toMatch(/900000|token=abc|#pay/);
+    expect(calls[0]!.body.subject).toContain(result.reference);
+  });
+
   it("answers 503 and sends nothing when Resend refuses, without showing the cause", async () => {
     const org = await createTestOrganization("SupportRefused");
     const ctx = await createTestContext(org.id, "SALES", "sr.refused");

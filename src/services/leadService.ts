@@ -1,4 +1,5 @@
 import { LIFECYCLE_KEYS, transitionCompany } from "./lifecycleService";
+import { emitTeamActivity, leadLabelFor } from "./teamActivityNotifier";
 import { assertConvertStageAllowed } from "./dealStageGate";
 import type { Prisma } from "@prisma/client";
 import { assertWritable, cleanArchiveReason } from "../lib/archive";
@@ -190,6 +191,7 @@ export async function createLead(
 
   await rescoreLeadQuietly(ctx.organizationId, lead.id);
   await emitWebhookEvent({ organizationId: ctx.organizationId, type: "lead.created", record: lead });
+  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "LEAD_CREATED", actorMembershipId: ctx.membershipId, entityType: "Lead", entityId: lead.id, label: await leadLabelFor(ctx.organizationId, lead), route: `leads/${lead.id}` });
   return { lead, possibleDuplicates, duplicates: found.candidates, hiddenDuplicates: found.hiddenCount };
 }
 

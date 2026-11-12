@@ -1,4 +1,5 @@
 import type { Contact, Prisma } from "@prisma/client";
+import { emitTeamActivity } from "./teamActivityNotifier";
 import { canAssignAccountOwner, canWorkAccounts } from "../auth/accountAccess";
 import { assertWritable, cleanArchiveReason } from "../lib/archive";
 import { findDuplicates } from "./duplicateService";
@@ -170,6 +171,7 @@ export async function createContact(
   }
 
   await emitWebhookEvent({ organizationId: ctx.organizationId, type: "contact.created", record: contact });
+  await emitTeamActivity({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, eventKey: "CONTACT_CREATED", entityType: "Contact", entityId: contact.id, label: [contact.firstName, contact.lastName].filter(Boolean).join(" "), route: `contacts/${contact.id}` });
   return { contact, possibleDuplicates, duplicates: found.candidates, hiddenDuplicates: found.hiddenCount };
 }
 

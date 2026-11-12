@@ -7,6 +7,7 @@ import { PwaClient } from "../screens/mobile/PwaClient";
 import { ToolsOverlays, ToolsTriggers } from "../screens/assistant/ToolsHost";
 import { SavedViewsNav } from "../screens/views/SavedViewsNav";
 import { OfflineBanner } from "../components/states";
+import { SupportProvider } from "../screens/palette/SupportContext";
 import { ToastProvider } from "../components/toast";
 import { connectivity, watchBrowserConnectivity } from "../data/connectivity";
 import { ApiProvider, useApi } from "../data/hooks";
@@ -106,7 +107,9 @@ export function AppShell(props: AppShellProps) {
   return (
     <ApiProvider>
       <ToastProvider>
-        <ShellOrPhone {...props} />
+        <SupportProvider>
+          <ShellOrPhone {...props} />
+        </SupportProvider>
         {/* The service worker, install offer, offline queue sender and the phone redirect (F4.12, FIG-791): signed-in app only. */}
         <PwaClient />
       </ToastProvider>

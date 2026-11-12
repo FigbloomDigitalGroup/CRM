@@ -118,7 +118,7 @@ async function dispatch(
 }
 
 /** Attempts one delivery now; updates its own status/attempts/backoff on failure rather than throwing to the caller -- a notification failure must never fail the business action that triggered it. */
-async function attemptDelivery(
+export async function attemptDelivery(
   organizationId: string,
   delivery: {
     id: string;
@@ -530,8 +530,9 @@ export async function filterByPreferences(
     ctx.organizationId,
     ctx.membershipId,
   );
+  // TEAM_ACTIVITY rows (FIG-1600) are only created when the person's own team-activity choice has in-app on.
   const enabled = rows.filter(
-    (r) => preferences[r.type as NotificationTypeKey].inAppEnabled,
+    (r) => r.type === "TEAM_ACTIVITY" || preferences[r.type as NotificationTypeKey].inAppEnabled,
   );
 
   const leadIds = [
@@ -626,7 +627,7 @@ export async function retryDueDeliveries(
     // B1.11: a held email is re-checked against quiet hours and the cap at the moment it would
     // leave, so a morning flush of overnight emails cannot blow through the daily limit.
     if (delivery.notification) {
-      const plan = await planEmail(organizationId, delivery.notification.membershipId, delivery.notification.type);
+      const plan = await planEmail(organizationId, delivery.notification.membershipId, delivery.notification.type as NotificationTypeKey);
       if (plan.action === "defer") {
         await rescheduleDelivery(organizationId, delivery.id, { nextAttemptAt: plan.until });
         deferred++;

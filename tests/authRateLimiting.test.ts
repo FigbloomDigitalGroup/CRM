@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { hashPassword } from "../src/auth/password";
 import { RateLimitedError, UnauthorizedError, ValidationError } from "../src/auth/errors";
 import { adminDb } from "../src/db/adminClient";
+import { growingDelaySeconds, loginThrottleConfig } from "../src/auth/loginThrottle";
 import * as authService from "../src/services/authService";
+import { trustThisDevice } from "../src/services/twoStepService";
 import { createTestUser } from "./helpers/fixtures";
 
 const PASSWORD = "correct-horse-battery";
@@ -24,97 +26,192 @@ function uniqueIp(): string {
 
 const originalEnv = { ...process.env };
 afterEach(() => {
+  vi.useRealTimers();
   process.env = { ...originalEnv };
 });
 
-describe("authService.login: rate limiting (FIG-784)", () => {
-  it("locks out further attempts for the same email once the per-email limit is hit -- even with the correct password", async () => {
-    process.env.LOGIN_RATE_LIMIT_WINDOW_MS = "600000";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL = "3";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_IP = "1000";
+const WRONG = "S3cret-wrong-guess-zz";
 
+/** n failed sign-ins from one address. The first three go through the real path; more would be refused by the growing wait, so the rest are recorded the way a failure is. */
+async function failures(email: string, ip: string, n: number) {
+  for (let i = 0; i < Math.min(n, 3); i++) {
+    await expect(authService.login(email, WRONG, null, ip)).rejects.toThrow(UnauthorizedError);
+  }
+  if (n > 3) {
+    const e = email.trim().toLowerCase();
+    const rows = Array.from({ length: n - 3 }, () => [
+      { action: "LOGIN" as const, scope: "pair", key: `${ip}|${e}` },
+      { action: "LOGIN" as const, scope: "email", key: e },
+      { action: "LOGIN" as const, scope: "ip", key: ip },
+    ]).flat();
+    await adminDb.authRateLimitAttempt.createMany({ data: rows });
+  }
+}
+
+async function advance(ms: number) {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(Date.now() + ms));
+}
+
+describe("growingDelaySeconds: the rule maths (P2-02)", () => {
+  const cfg = { freeAttempts: 3, baseSeconds: 1, maxSeconds: 30 };
+  it("is zero for the free attempts, then 1, 2, 4, 8, 16, capped at the maximum", () => {
+    expect([0, 1, 2, 3].map((n) => growingDelaySeconds(n, cfg))).toEqual([0, 0, 0, 0]);
+    expect([4, 5, 6, 7, 8, 9, 10, 500].map((n) => growingDelaySeconds(n, cfg))).toEqual([1, 2, 4, 8, 16, 30, 30, 30]);
+  });
+  it("reads its settings from the environment", () => {
+    process.env.LOGIN_DELAY_FREE_ATTEMPTS = "1";
+    process.env.LOGIN_DELAY_MAX_SECONDS = "5";
+    expect([1, 2, 3, 4, 9].map((n) => growingDelaySeconds(n))).toEqual([0, 1, 2, 4, 5]);
+  });
+  it("has safe defaults: ceilings of 300 per address and 200 per email", () => {
+    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_IP;
+    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL;
+    expect(loginThrottleConfig()).toMatchObject({ maxPerIp: 300, maxPerEmail: 200, freeAttempts: 3, maxSeconds: 30 });
+  });
+});
+
+describe("authService.login: growing wait instead of a lock (P2-02)", () => {
+  it("wrong passwords for an email from address A never stop a correct sign-in from address B", async () => {
     const user = await createUserWithPassword();
-
-    for (let i = 0; i < 3; i++) {
-      await expect(
-        authService.login(user.email, "wrong-password", null, uniqueIp()),
-      ).rejects.toThrow(UnauthorizedError);
-    }
-
-    // The 4th attempt is locked out regardless of using the CORRECT
-    // password now -- this is what makes it a lockout, not just "wrong
-    // passwords keep failing."
-    await expect(
-      authService.login(user.email, PASSWORD, null, uniqueIp()),
-    ).rejects.toThrow(RateLimitedError);
+    await failures(user.email, uniqueIp(), 12);
+    const { userId } = await authService.login(user.email, PASSWORD, null, uniqueIp());
+    expect(userId).toBe(user.id);
   });
 
-  it("locks out further attempts from the same IP once the per-IP limit is hit, across different emails", async () => {
-    process.env.LOGIN_RATE_LIMIT_WINDOW_MS = "600000";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_IP = "3";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL = "1000";
-
+  it("from the same address the wait is short and clear, then the correct password signs in (no hard lockout)", async () => {
+    const user = await createUserWithPassword();
     const ip = uniqueIp();
-    for (let i = 0; i < 3; i++) {
-      await expect(
-        authService.login(`nobody-${randomUUID()}@example.test`, "wrong", null, ip),
-      ).rejects.toThrow(UnauthorizedError);
-    }
+    await failures(user.email, ip, 6);
+    const refused = await authService.login(user.email, PASSWORD, null, ip).catch((e) => e);
+    expect(refused).toBeInstanceOf(RateLimitedError);
+    expect((refused as RateLimitedError).retryAfterSeconds).toBeGreaterThan(0);
+    expect((refused as RateLimitedError).retryAfterSeconds).toBeLessThanOrEqual(30);
+    expect((refused as Error).message).toMatch(/wait \d+ seconds? and try again/i);
 
-    await expect(
-      authService.login(`nobody-${randomUUID()}@example.test`, "wrong", null, ip),
-    ).rejects.toThrow(RateLimitedError);
+    await advance(31_000);
+    expect((await authService.login(user.email, PASSWORD, null, ip)).userId).toBe(user.id);
   });
 
-  it("rate-limits a real and a nonexistent email identically -- the lockout itself doesn't reveal whether the account exists", async () => {
-    process.env.LOGIN_RATE_LIMIT_WINDOW_MS = "600000";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL = "2";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_IP = "1000";
+  it("the wait does not grow forever: after 40 failures it is still at most the maximum", async () => {
+    const user = await createUserWithPassword();
+    const ip = uniqueIp();
+    await adminDb.authRateLimitAttempt.createMany({
+      data: Array.from({ length: 40 }, () => ({ action: "LOGIN" as const, scope: "pair", key: `${ip}|${user.email.toLowerCase()}` })),
+    });
+    const refused = await authService.login(user.email, PASSWORD, null, ip).catch((e) => e);
+    expect((refused as RateLimitedError).retryAfterSeconds).toBeLessThanOrEqual(30);
+    await advance(31_000);
+    expect((await authService.login(user.email, PASSWORD, null, ip)).userId).toBe(user.id);
+  });
 
-    const realUser = await createUserWithPassword();
+  it("a successful sign-in clears the pair counter", async () => {
+    const user = await createUserWithPassword();
+    const ip = uniqueIp();
+    await failures(user.email, ip, 3);
+    expect(await adminDb.authRateLimitAttempt.count({ where: { scope: "pair", key: `${ip}|${user.email.toLowerCase()}` } })).toBe(3);
+    await authService.login(user.email, PASSWORD, null, ip);
+    expect(await adminDb.authRateLimitAttempt.count({ where: { scope: "pair", key: `${ip}|${user.email.toLowerCase()}` } })).toBe(0);
+  });
+
+  it("a real and a nonexistent email get the same refusal and the same wait", async () => {
+    const real = await createUserWithPassword();
     const fakeEmail = `nobody-${randomUUID()}@example.test`;
-
-    for (let i = 0; i < 2; i++) {
-      await expect(
-        authService.login(realUser.email, "wrong", null, uniqueIp()),
-      ).rejects.toThrow(UnauthorizedError);
-      await expect(
-        authService.login(fakeEmail, "wrong", null, uniqueIp()),
-      ).rejects.toThrow(UnauthorizedError);
-    }
-
-    let realMessage = "";
-    try {
-      await authService.login(realUser.email, "wrong", null, uniqueIp());
-    } catch (err) {
-      realMessage = (err as Error).message;
-    }
-    let fakeMessage = "";
-    try {
-      await authService.login(fakeEmail, "wrong", null, uniqueIp());
-    } catch (err) {
-      fakeMessage = (err as Error).message;
-    }
-
-    expect(realMessage).not.toBe("");
-    expect(realMessage).toBe(fakeMessage);
+    const ip = uniqueIp();
+    await failures(real.email, ip, 5);
+    await failures(fakeEmail, ip, 5);
+    const a = (await authService.login(real.email, "x", null, ip).catch((e) => e)) as RateLimitedError;
+    const b = (await authService.login(fakeEmail, "x", null, ip).catch((e) => e)) as RateLimitedError;
+    expect(a).toBeInstanceOf(RateLimitedError);
+    expect(b).toBeInstanceOf(RateLimitedError);
+    expect(a.message.replace(/\d+/, "N")).toBe(b.message.replace(/\d+/, "N"));
   });
 
-  it("does not rate-limit a different email/IP pair still under its own limit", async () => {
+  it("a trusted device of the account signs in at once, even while the pair is waiting and the email is over its ceiling", async () => {
+    process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL = "3";
+    const user = await createUserWithPassword();
+    const { token } = await trustThisDevice(user.id, { userAgent: "Vitest", ipAddress: null });
+    const ip = uniqueIp();
+    await failures(user.email, ip, 3);
+    await expect(authService.login(user.email, PASSWORD, null, ip)).rejects.toThrow(RateLimitedError);
+    expect((await authService.startSignIn(user.email, PASSWORD, null, ip, null, token)) as { userId: string }).toMatchObject({ userId: user.id });
+  });
+
+  it("per email across all addresses is a wait, never a block, and the table keeps no password or token", async () => {
+    process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL = "4";
+    const user = await createUserWithPassword();
+    const ips = [uniqueIp(), uniqueIp(), uniqueIp(), uniqueIp()];
+    for (const ip of ips) await failures(user.email, ip, 1);
+    const fresh = uniqueIp();
+    const refused = await authService.login(user.email, PASSWORD, null, fresh).catch((e) => e);
+    expect(refused).toBeInstanceOf(RateLimitedError);
+    expect((refused as RateLimitedError).retryAfterSeconds).toBeLessThanOrEqual(30);
+    await advance(31_000);
+    expect((await authService.login(user.email, PASSWORD, null, fresh)).userId).toBe(user.id);
+
+    vi.useRealTimers();
+    const rows = await adminDb.authRateLimitAttempt.findMany({ where: { action: "LOGIN", key: { contains: user.email.toLowerCase() } } });
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(JSON.stringify(row)).not.toContain(WRONG);
+      expect(JSON.stringify(row)).not.toContain(PASSWORD);
+      expect(["pair", "email", "ip"]).toContain(row.scope);
+    }
+  });
+});
+
+describe("authService.login: scripted attacks are slowed, then blocked (P2-02)", () => {
+  it("1,000 guesses at one account from one address: only a handful are ever checked, the rest are refused with a wait", async () => {
+    const user = await createUserWithPassword();
+    const ip = uniqueIp();
+    let checked = 0;
+    let refused = 0;
+    for (let i = 0; i < 1000; i++) {
+      try {
+        await authService.login(user.email, `guess-${i}`, null, ip);
+      } catch (err) {
+        if (err instanceof RateLimitedError) refused++;
+        else if (err instanceof UnauthorizedError) checked++;
+      }
+    }
+    // The waits (1, 2, 4 ... s) expire while the loop runs, so a few more get through than the free three; nowhere near 1,000.
+    expect(checked).toBeLessThanOrEqual(15);
+    expect(refused).toBeGreaterThanOrEqual(985);
+    // Even the right password is held back until the wait is over.
+    await expect(authService.login(user.email, PASSWORD, null, ip)).rejects.toThrow(RateLimitedError);
+  }, 180_000);
+
+  it("1,000 guesses spread over many accounts from one address: blocked at the per-address ceiling of 300", async () => {
+    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_IP;
+    const ip = uniqueIp();
+    let checked = 0;
+    let refused = 0;
+    for (let i = 0; i < 1000; i++) {
+      try {
+        await authService.login(`nobody-${randomUUID()}@example.test`, "guess", null, ip);
+      } catch (err) {
+        if (err instanceof RateLimitedError) refused++;
+        else if (err instanceof UnauthorizedError) checked++;
+      }
+    }
+    expect(checked).toBe(300);
+    expect(refused).toBe(700);
+    // A hard block until the window passes, even for the right password.
+    const user = await createUserWithPassword();
+    const blocked = await authService.login(user.email, PASSWORD, null, ip).catch((e) => e);
+    expect(blocked).toBeInstanceOf(RateLimitedError);
+    // ...but it does not touch anyone on another address.
+    expect((await authService.login(user.email, PASSWORD, null, uniqueIp())).userId).toBe(user.id);
+  }, 300_000);
+
+  it("blocks a single address at a small configured ceiling, then lets it back in after the window", async () => {
+    process.env.LOGIN_RATE_LIMIT_MAX_PER_IP = "3";
     process.env.LOGIN_RATE_LIMIT_WINDOW_MS = "600000";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL = "1";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_IP = "1000";
-
-    const userA = await createUserWithPassword();
-    const userB = await createUserWithPassword();
-
-    await expect(
-      authService.login(userA.email, "wrong", null, uniqueIp()),
-    ).rejects.toThrow(UnauthorizedError);
-    // Different email, same tiny per-email limit -- must not inherit
-    // userA's exhausted count.
-    const { userId } = await authService.login(userB.email, PASSWORD, null, uniqueIp());
-    expect(userId).toBe(userB.id);
+    const ip = uniqueIp();
+    for (let i = 0; i < 3; i++) await authService.login(`nobody-${randomUUID()}@example.test`, "x", null, ip).catch(() => undefined);
+    await expect(authService.login(`nobody-${randomUUID()}@example.test`, "x", null, ip)).rejects.toThrow(RateLimitedError);
+    await advance(601_000);
+    await expect(authService.login(`nobody-${randomUUID()}@example.test`, "x", null, ip)).rejects.toThrow(UnauthorizedError);
   });
 });
 
@@ -131,10 +228,7 @@ describe("authService.login: only failed attempts count (D-3)", () => {
     }
   }, 180_000);
 
-  it("does not block one person who signs in successfully more often than the per-email failure limit", async () => {
-    process.env.LOGIN_RATE_LIMIT_WINDOW_MS = "600000";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL = "3";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_IP = "1000";
+  it("does not block one person who signs in successfully many times in a row", async () => {
     const user = await createUserWithPassword();
     const ip = uniqueIp();
     for (let i = 0; i < 8; i++) {
@@ -143,39 +237,9 @@ describe("authService.login: only failed attempts count (D-3)", () => {
     }
   });
 
-  it("still blocks repeated failures against one account, using the default per-email limit of 5", async () => {
-    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_IP;
-    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL;
-    delete process.env.LOGIN_RATE_LIMIT_WINDOW_MS;
-    const user = await createUserWithPassword();
-    for (let i = 0; i < 5; i++) {
-      await expect(authService.login(user.email, "wrong-password", null, uniqueIp())).rejects.toThrow(UnauthorizedError);
-    }
-    await expect(authService.login(user.email, PASSWORD, null, uniqueIp())).rejects.toThrow(RateLimitedError);
-  });
-
-  it("still blocks a single IP that fails across many accounts, at the default threshold of 100", async () => {
-    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_IP;
-    delete process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL;
-    delete process.env.LOGIN_RATE_LIMIT_WINDOW_MS;
-    const ip = uniqueIp();
-    // Record 99 earlier failures directly (the limiter is what is under test, not 99 password checks), then fail for real.
-    await adminDb.authRateLimitAttempt.createMany({
-      data: Array.from({ length: 99 }, () => ({ action: "LOGIN" as const, scope: "ip", key: ip })),
-    });
-    await expect(authService.login(`nobody-${randomUUID()}@example.test`, "wrong", null, ip)).rejects.toThrow(UnauthorizedError);
-    // That was the 100th failure: the next attempt, even with a correct password, is refused.
-    const user = await createUserWithPassword();
-    await expect(authService.login(user.email, PASSWORD, null, ip)).rejects.toThrow(RateLimitedError);
-  });
-
   it("a successful sign-in does not add to the IP's failure count", async () => {
-    process.env.LOGIN_RATE_LIMIT_WINDOW_MS = "600000";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_IP = "2";
-    process.env.LOGIN_RATE_LIMIT_MAX_PER_EMAIL = "1000";
     const user = await createUserWithPassword();
     const ip = uniqueIp();
-    await authService.login(user.email, PASSWORD, null, ip);
     await authService.login(user.email, PASSWORD, null, ip);
     await authService.login(user.email, PASSWORD, null, ip);
     const recorded = await adminDb.authRateLimitAttempt.count({ where: { action: "LOGIN", scope: "ip", key: ip } });
@@ -257,6 +321,15 @@ describe("authService.requestPasswordReset: rate limiting (FIG-784)", () => {
     await expect(
       authService.requestPasswordReset(user.email, buildResetUrl, uniqueIp()),
     ).rejects.toThrow(RateLimitedError);
+  });
+
+  it("someone else asking for resets of your email cannot stop you asking from your own address (P2-02)", async () => {
+    const user = await createUserWithPassword();
+    const attacker = uniqueIp();
+    for (let i = 0; i < 3; i++) await authService.requestPasswordReset(user.email, buildResetUrl, attacker);
+    await expect(authService.requestPasswordReset(user.email, buildResetUrl, attacker)).rejects.toThrow(RateLimitedError);
+    const result = await authService.requestPasswordReset(user.email, buildResetUrl, uniqueIp());
+    expect(result.message).toContain("If that email has an account");
   });
 
   it("locks out a nonexistent email at exactly the same threshold as a real one -- reset-email flooding is throttled either way", async () => {

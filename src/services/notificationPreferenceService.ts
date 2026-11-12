@@ -25,6 +25,8 @@ import { pushConfigured } from "../notifications/webPush";
 import { pushPreferenceMap } from "../repositories/pushSubscriptions";
 import { memberTimeZone } from "./notificationDeliveryPolicy";
 import { hasPushDevice } from "./pushService";
+import { DELIVERY_MODES, findTeamEventDef } from "../notifications/teamActivity";
+import { getTeamActivityPreferences, updateTeamActivityPreferences, type UpdateTeamActivityInput } from "./teamActivityNotifier";
 
 /**
  * Notification preferences v2 (FIG-1027, B1.11): per-role types, three channels
@@ -43,6 +45,8 @@ export interface UpdateNotificationPreferencesInput {
   types?: Record<string, { inApp?: boolean; email?: boolean; push?: boolean }>;
   quietHours?: { enabled?: boolean; start?: string; end?: string };
   dailyEmailCap?: number;
+  /** FIG-1600: Management only. */
+  teamActivity?: UpdateTeamActivityInput;
 }
 
 function detectPreset(
@@ -111,6 +115,7 @@ export async function getMyNotificationPreferencesV2(ctx: AuthContext) {
     dailyEmailCapRange: { min: EMAIL_CAP_MIN, max: EMAIL_CAP_MAX, default: EMAIL_CAP_DEFAULT },
     emailsToday,
     heldForDigest: held,
+    ...(ctx.roleKey === "MANAGEMENT" ? { teamActivity: await getTeamActivityPreferences(ctx.organizationId, ctx.membershipId) } : {}),
   };
 }
 
@@ -196,6 +201,24 @@ export async function updateMyNotificationPreferencesV2(
     } else next.dailyEmailCap = cap;
   }
 
+  // ---- team activity (FIG-1600): Management only, validated here, saved with the rest below
+  if (input.teamActivity && Object.keys(input.teamActivity).length > 0) {
+    if (ctx.roleKey !== "MANAGEMENT") {
+      issues.push({ path: "teamActivity", code: "NOTIFICATION_NOT_FOR_ROLE", message: "Team activity notifications are for Management, so there is nothing to set." });
+    } else {
+      for (const [event, change] of Object.entries(input.teamActivity)) {
+        if (!findTeamEventDef(event)) issues.push({ path: `teamActivity.${event}`, message: `"${event}" is not a team activity event.` });
+        else if (change.mode !== undefined && !(DELIVERY_MODES as readonly string[]).includes(change.mode)) {
+          issues.push({ path: `teamActivity.${event}.mode`, message: `Choose one of: ${DELIVERY_MODES.join(", ")}.` });
+        }
+        if (change.push === true) {
+          pushBlockerMessage ??= (await pushBlocker(ctx)) ?? "";
+          if (pushBlockerMessage) issues.push({ path: `teamActivity.${event}.push`, code: "PUSH_NOT_AVAILABLE", message: `${pushBlockerMessage} It cannot be turned on yet.` });
+        }
+      }
+    }
+  }
+
   if (issues.length > 0) {
     throw new ValidationError(issues.length === 1 ? issues[0]!.message : "Some notification preferences are not valid.", issues);
   }
@@ -216,11 +239,17 @@ export async function updateMyNotificationPreferencesV2(
       inApp: w.inAppEnabled ?? applied[type]?.inApp ?? true,
     };
   }
+  let teamActivityChanged = false;
+  if (input.teamActivity && Object.keys(input.teamActivity).length > 0) {
+    const problems = await updateTeamActivityPreferences(ctx.organizationId, ctx.membershipId, input.teamActivity);
+    if (problems.length > 0) throw new ValidationError(problems.length === 1 ? problems[0]!.message : "Some team activity preferences are not valid.", problems);
+    teamActivityChanged = true;
+  }
   const settingsChanged =
     JSON.stringify(next) !== JSON.stringify({ quietHours: current.quietHours, dailyEmailCap: current.dailyEmailCap });
   if (settingsChanged) await saveNotificationSettings(ctx.organizationId, ctx.membershipId, next);
 
-  if (preset || writes.size > 0 || settingsChanged) {
+  if (preset || writes.size > 0 || settingsChanged || teamActivityChanged) {
     await recordAuditEvent({
       organizationId: ctx.organizationId,
       actorMembershipId: ctx.membershipId,
@@ -230,6 +259,7 @@ export async function updateMyNotificationPreferencesV2(
       newValue: {
         ...(preset ? { preset } : {}),
         ...(writes.size > 0 ? { types: Object.fromEntries(writes) } : {}),
+        ...(teamActivityChanged ? { teamActivity: input.teamActivity } : {}),
         ...(settingsChanged ? { quietHours: next.quietHours, dailyEmailCap: next.dailyEmailCap } : {}),
       } as unknown as Prisma.InputJsonValue,
     });

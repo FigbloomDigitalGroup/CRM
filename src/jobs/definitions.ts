@@ -13,6 +13,7 @@ import { ORG_EXPORT_JOB } from "./offboardingJobs";
 import { runOrganisationExportJob } from "../services/platformDataRequestService";
 import { runDueSequences } from "../sequences/engine";
 import { expireSupportAccess } from "../services/supportAccessService";
+import { TEAM_DIGEST_JOB, flushTeamActivityDigests } from "../services/teamActivityNotifier";
 import { registerJob } from "./registry";
 import "./integrationJobs";
 import "./webhookJobs";
@@ -248,4 +249,18 @@ registerJob({
   maxAttempts: 3,
   concurrency: 4,
   handler: async (ctx) => expireSupportAccess(ctx.organizationId),
+});
+
+// FIG-1600 (P2-17): hourly and daily team activity digests for Management, grouped ("Amina added 12 leads in the last hour").
+registerJob({
+  type: TEAM_DIGEST_JOB,
+  schedule: { everyMs: 5 * 60_000 },
+  timeoutMs: 5 * 60_000,
+  maxAttempts: 3,
+  concurrency: 4,
+  handler: async (ctx) => {
+    const result = await flushTeamActivityDigests(ctx.organizationId);
+    if (result.groups > 0) ctx.log.info({ ...result }, "Team activity digests sent");
+    return result;
+  },
 });

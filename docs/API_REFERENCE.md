@@ -91,6 +91,7 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Sync](#sync) (2)
 - [Tags](#tags) (5)
 - [Tasks](#tasks) (15)
+- [Team](#team) (4)
 - [Views](#views) (7)
 - [Web Forms](#web-forms) (7)
 - [Webhooks](#webhooks) (9)
@@ -3210,7 +3211,7 @@ The person's recent sign-ins and failed attempts.
 Notification types for the caller's role, channels, presets, quiet hours and daily email limit
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
-- **Returns:** `preset`: "EVERYTHING" | "IMPORTANT_ONLY" | "OFF" | "CUSTOM", `presets`: object[], `types`: object[], `quietHours`: object, `dailyEmailCap`: number, `dailyEmailCapRange`: object, `emailsToday`: number, `heldForDigest`: number
+- **Returns:** `preset`: "EVERYTHING" | "IMPORTANT_ONLY" | "OFF" | "CUSTOM", `presets`: object[], `types`: object[], `quietHours`: object, `dailyEmailCap`: number, `dailyEmailCapRange`: object, `emailsToday`: number, `heldForDigest`: number, `teamActivity`?: object[]
 - **Errors:** 401, 403
 
 ### `PATCH …/me/notification-preferences`
@@ -3220,8 +3221,8 @@ Notification types for the caller's role, channels, presets, quiet hours and dai
 Change notification preferences; overdue alerts cannot be turned off and push is not available yet
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
-- **Body:** `preset`?: "EVERYTHING" | "IMPORTANT_ONLY" | "OFF", `types`?: object, `quietHours`?: object, `dailyEmailCap`?: number
-- **Returns:** `preset`: "EVERYTHING" | "IMPORTANT_ONLY" | "OFF" | "CUSTOM", `presets`: object[], `types`: object[], `quietHours`: object, `dailyEmailCap`: number, `dailyEmailCapRange`: object, `emailsToday`: number, `heldForDigest`: number
+- **Body:** `preset`?: "EVERYTHING" | "IMPORTANT_ONLY" | "OFF", `types`?: object, `quietHours`?: object, `dailyEmailCap`?: number, `teamActivity`?: object
+- **Returns:** `preset`: "EVERYTHING" | "IMPORTANT_ONLY" | "OFF" | "CUSTOM", `presets`: object[], `types`: object[], `quietHours`: object, `dailyEmailCap`: number, `dailyEmailCapRange`: object, `emailsToday`: number, `heldForDigest`: number, `teamActivity`?: object[]
 - **Errors:** 400, 401, 403
 
 ### `GET …/notifications`
@@ -4940,6 +4941,51 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 - **Credential:** sessionCookie; **access:** management, sales, delivery, restricted technical
 - **Query:** `assigneeMembershipId`?: string, `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string, `q`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
 - **Returns:** `key`: string, `label`: string, `count`: number, `items`: any[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`?: null
+- **Errors:** 400, 401, 403, 404
+
+## Team
+
+### `GET …/team/attention`
+
+`getTeamAttention`
+
+Quiet leads, overdue tasks and stuck deals across the team. Management only
+
+- **Credential:** sessionCookie; **access:** management
+- **Returns:** `staleDays`: number, `access`: object, `staleLeads`: object | null, `overdueTasks`: object | null, `stuckDeals`: object | null
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/team/members`
+
+`listTeamMembers`
+
+Team members with per-person open leads, deals, tasks and last activity; filter by role, status and name; sortable and paged. Management only
+
+- **Credential:** sessionCookie; **access:** management
+- **Query:** `range`?: "today" | "7d" | "30d", `q`?: string, `role`?: string, `status`?: "ACTIVE" | "INACTIVE" | "PENDING", `sort`?: string, `page`?: string, `pageSize`?: string
+- **Returns:** `range`: "today" | "7d" | "30d", `access`: object, `items`: object[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`: string | null, `roles`: object[]
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/team/members/{membershipId}`
+
+`getTeamMember`
+
+One member: recent sales activity from the audit trail, open leads, deals and tasks, 30-day trend. Management only
+
+- **Credential:** sessionCookie; **access:** management
+- **Query:** `range`?: "today" | "7d" | "30d"
+- **Returns:** `range`: "today" | "7d" | "30d", `access`: object, `member`: object, `recentActivity`: object[], `openLeads`: object[] | null, `openDeals`: object[] | null, `tasks`: object[] | null, `trend`: object[]
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/team/summary`
+
+`getTeamSummary`
+
+The team summary strip and workload balance for a date range (today, 7d, 30d). Management only
+
+- **Credential:** sessionCookie; **access:** management
+- **Query:** `range`?: "today" | "7d" | "30d"
+- **Returns:** `range`: "today" | "7d" | "30d", `rangeStart`: string, `generatedAt`: string, `staleDays`: number, `access`: object, `summary`: object, `workload`: object[]
 - **Errors:** 400, 401, 403, 404
 
 ## Views

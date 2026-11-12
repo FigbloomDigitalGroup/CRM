@@ -1,3 +1,5 @@
+import { canViewTeamPage } from "../../../auth/teamAccess";
+
 /**
  * What the command palette (X3, FIG-1172) lists. A pure function of the person's permission keys, so "only permitted actions" is a unit test:
  * a link or action the role cannot use is not in the list at all (hard rule: hiding is a courtesy, every page and route still checks).
@@ -14,7 +16,7 @@ export interface PaletteItem {
   /** Opens a page. */
   href?: string;
   /** Or runs something in the shell. */
-  run?: "assistant" | "help";
+  run?: "assistant" | "help" | "support";
   /** The key shown beside it. */
   hint?: string;
 }
@@ -33,6 +35,7 @@ export const GOTO: { id: string; label: string; path: string; shortcut?: string;
   { id: "deals", label: "Deals", path: "/deals", shortcut: "D", allowed: (k) => any(k, "deals.view.own", "deals.view.all", "deals.view.won") },
   { id: "tasks", label: "Tasks", path: "/tasks", shortcut: "T", allowed: (k) => any(k, "tasks.view.own", "tasks.view.all") },
   { id: "calendar", label: "Calendar", path: "/calendar", allowed: (k) => any(k, "tasks.view.own", "tasks.view.all") },
+  { id: "team", label: "Team", path: "/team", allowed: (k) => canViewTeamPage(k) },
   { id: "companies", label: "Companies", path: "/companies", shortcut: "C", allowed: (k) => any(k, "companies.view") },
   { id: "contacts", label: "Contacts", path: "/contacts", allowed: (k) => any(k, "contacts.view") },
   { id: "conversations", label: "Conversations", path: "/conversations", allowed: (k) => any(k, "communications.view") },
@@ -51,6 +54,7 @@ export const ACTIONS: { id: string; label: string; path?: string; run?: PaletteI
   { id: "new-company", label: "New company", path: "/companies", allowed: (k) => any(k, "companies.create") },
   { id: "ask", label: "Ask Figbloom", run: "assistant", allowed: () => true },
   { id: "help", label: "Help and what’s new", run: "help", hint: "?", allowed: () => true },
+  { id: "support", label: "Contact support", run: "support", allowed: () => true },
 ];
 
 /** A command as `GET /commands` returns it (docs/HELP_AND_PALETTE.md): the server already left out what the role may not do. */
@@ -86,7 +90,9 @@ export function buildPaletteItems(input: { orgSlug: string; permissionKeys: read
       hint: c.hint ?? undefined,
     }));
     const match = (i: PaletteItem) => !q || i.title.toLowerCase().includes(q);
-    actions = mapped.filter((i) => !i.navigate && match(i));
+    // Contact support is a shell action every role has; it is not in the server's index (which holds only what the API itself gates).
+    const support: PaletteItem = { id: "support", group: "ACTIONS", title: "Contact support", run: "support" };
+    actions = [...mapped.filter((i) => !i.navigate), support].filter(match);
     goto = mapped.filter((i) => i.navigate && match(i));
   } else {
     actions = ACTIONS.filter((a) => a.allowed(keys))

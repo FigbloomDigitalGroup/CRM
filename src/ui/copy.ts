@@ -16,6 +16,7 @@ export const copy = {
     title: "That did not load",
     body: "Something went wrong on our side. Try again. If it keeps happening, tell your admin and give them the reference below.",
     retry: "Try again",
+    contactSupport: "Something wrong? Contact support",
     reference: (id: string) => `Reference ${id}`,
     signedOut: { title: "Your session has ended", body: "Sign in again to carry on. Anything you typed has been kept.", action: "Sign in" },
     notFound: { title: "We cannot find that", body: "It may have been archived, merged or never existed in your organisation.", action: "Go to the dashboard" },
