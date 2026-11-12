@@ -70297,6 +70297,12 @@
                         "type": "integer",
                         "minimum": -9007199254740991,
                         "maximum": 9007199254740991
+                      },
+                      "language": {
+                        "type": "string"
+                      },
+                      "allowSigning": {
+                        "type": "boolean"
                       }
                     },
                     "additionalProperties": false
@@ -70706,6 +70712,12 @@
                     "type": "integer",
                     "minimum": -9007199254740991,
                     "maximum": 9007199254740991
+                  },
+                  "language": {
+                    "type": "string"
+                  },
+                  "allowSigning": {
+                    "type": "boolean"
                   }
                 },
                 "additionalProperties": false
@@ -90419,6 +90431,9 @@
                   "successMessage": {
                     "type": "string"
                   },
+                  "language": {
+                    "type": "string"
+                  },
                   "allowedOrigins": {},
                   "honeypotFieldName": {
                     "type": "string"
@@ -90966,6 +90981,9 @@
                     ]
                   },
                   "successMessage": {
+                    "type": "string"
+                  },
+                  "language": {
                     "type": "string"
                   },
                   "allowedOrigins": {},

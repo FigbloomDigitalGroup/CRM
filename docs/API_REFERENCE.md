@@ -3969,7 +3969,7 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 `postQuotesByQuoteIdVersionsByVersionSend` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, finance
-- **Body:** `to`?: string, `subject`?: string, `body`?: string, `templateId`?: string, `linkExpiresInDays`?: number
+- **Body:** `to`?: string, `subject`?: string, `body`?: string, `templateId`?: string, `linkExpiresInDays`?: number, `language`?: string, `allowSigning`?: boolean
 - **Returns:** any
 - **Errors:** 400, 401, 403, 404
 
@@ -5066,7 +5066,7 @@ The team summary strip and workload balance for a date range (today, 7d, 30d). M
 `postWebForms` · *derived*
 
 - **Credential:** sessionCookie; **access:** management
-- **Body:** `name`: string, `fields`?: any, `leadSourceKey`?: string | null, `successMessage`?: string, `allowedOrigins`?: any, `honeypotFieldName`?: string, `captchaSecret`?: string | null
+- **Body:** `name`: string, `fields`?: any, `leadSourceKey`?: string | null, `successMessage`?: string, `language`?: string, `allowedOrigins`?: any, `honeypotFieldName`?: string, `captchaSecret`?: string | null
 - **Returns:** `id`: string, `name`: string, `status`: string, `publicKey`: string, `fields`: object[], `leadSourceKey`?: null, `successMessage`: string, `allowedOrigins`: any[], `honeypotFieldName`: string, `captchaConfigured`: boolean, `createdAt`: string, `updatedAt`: string
 - **Errors:** 400, 401, 403, 404
 
@@ -5083,7 +5083,7 @@ The team summary strip and workload balance for a date range (today, 7d, 30d). M
 `patchWebFormsByFormId` · *derived*
 
 - **Credential:** sessionCookie; **access:** management
-- **Body:** `name`?: string, `status`?: string, `fields`?: any, `leadSourceKey`?: string | null, `successMessage`?: string, `allowedOrigins`?: any, `honeypotFieldName`?: string, `captchaSecret`?: string | null
+- **Body:** `name`?: string, `status`?: string, `fields`?: any, `leadSourceKey`?: string | null, `successMessage`?: string, `language`?: string, `allowedOrigins`?: any, `honeypotFieldName`?: string, `captchaSecret`?: string | null
 - **Returns:** `id`: string, `name`: string, `status`: string, `publicKey`: string, `fields`: object[], `leadSourceKey`?: null, `successMessage`: string, `allowedOrigins`: any[], `honeypotFieldName`: string, `captchaConfigured`: boolean, `createdAt`: string, `updatedAt`: string
 - **Errors:** 400, 401, 403, 404
 

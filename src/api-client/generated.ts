@@ -9190,6 +9190,8 @@ export interface Operations {
         body?: string;
         templateId?: string;
         linkExpiresInDays?: number;
+        language?: string;
+        allowSigning?: boolean;
       };
     };
     response: {
@@ -9240,6 +9242,8 @@ export interface Operations {
       body?: string;
       templateId?: string;
       linkExpiresInDays?: number;
+      language?: string;
+      allowSigning?: boolean;
     };
     response: unknown;
   };
@@ -11696,6 +11700,7 @@ export interface Operations {
       fields?: unknown;
       leadSourceKey?: string | null;
       successMessage?: string;
+      language?: string;
       allowedOrigins?: unknown;
       honeypotFieldName?: string;
       captchaSecret?: string | null;
@@ -11773,6 +11778,7 @@ export interface Operations {
       fields?: unknown;
       leadSourceKey?: string | null;
       successMessage?: string;
+      language?: string;
       allowedOrigins?: unknown;
       honeypotFieldName?: string;
       captchaSecret?: string | null;

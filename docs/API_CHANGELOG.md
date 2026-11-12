@@ -14,15 +14,19 @@ To change the API on purpose:
 A change that removes or renames a path, field or enum value, narrows what a role may do, or makes an optional field required is **breaking** and
 needs a new major version (`API_VERSION` in `src/api/openapi.ts`). Additions are minor. Wording-only and documentation changes are patches.
 
+## 1.1.0 — Request-shape record caught up, documentation only (M19, 13 Nov 2026)
+
+The recorded request shapes now also list the optional `language` and `allowSigning` fields that `POST /orgs/{org}/api-tokens` and `PATCH /orgs/{org}/webhooks/{endpointId}` (and the user language preference) already accepted from the V2 backend work; they had not been written into the snapshot. Nothing changed for callers. The contract hash in the two sections below is the contract after this catch-up.
+
 ## 1.1.0 — Team page endpoints, additive (FIG-1598, P2-15, 12 Nov 2026)
 
-contract-hash: 01d65c7262d5edb4b4ff80f6c6b95bfea4f27d14bec44be400a4e78ee1c3089d
+contract-hash: 7429d75d11be85fc2b0adc5654b690a75e69917732e1c5d3004bac9e092ce01b
 
 Additive only (still version 1.1.0). Four new Management-only routes, all `GET`, under `/orgs/{org}/team`: `summary`, `members` (filter by `role`, `status`, `q`; `sort`; `page`/`pageSize`), `members/{membershipId}` and `attention`, each taking an optional `range` (`today`, `7d`, `30d`). Every other role gets the explained 403. A figure the caller's role may not see is `null`, deal values are `{ amount: null, masked: true }`, and payments never appear. No existing path changed. The hash line above is the contract as it stood when this was written: re-run `npm run contract:update` after any later API change and replace it (the same line appears in the section below when both changes are in one contract).
 
 ## 1.1.0 — Team activity preferences, additive (FIG-1600, P2-17, 12 Nov 2026)
 
-contract-hash: 01d65c7262d5edb4b4ff80f6c6b95bfea4f27d14bec44be400a4e78ee1c3089d
+contract-hash: 7429d75d11be85fc2b0adc5654b690a75e69917732e1c5d3004bac9e092ce01b
 
 Additive only (still version 1.1.0). `GET /me/notification-preferences` gains an optional `teamActivity` list (Management only) and `PATCH /me/notification-preferences` accepts an optional `teamActivity` object (event, channels, `mode` INSTANT, HOURLY or DAILY). Notifications gain `actorName` and a new type `TEAM_ACTIVITY`. No path changes. Re-run `npm run contract:update` after any later API change and replace the hash on this line.
 
