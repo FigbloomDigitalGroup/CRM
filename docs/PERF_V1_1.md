@@ -5,14 +5,43 @@ Measured on 9 Nov 2026 with `tests/perf/v11.perf.ts` against the scale database 
 then 40 times in a row (p50 and p95) and 8 at a time five times (c8). Times are server time for the handler, in milliseconds, without the network. The assistant is timed up to the
 model call with a stub model, because the model's own time is not ours to budget. Run: `PERF_ORG_SLUG=<slug> npx vitest run --config vitest.perf.config.ts --project node tests/perf/v11.perf.ts`.
 
-## How far to trust these numbers
+## Re-measured 12 Nov 2026 (FIG-1567): every target is met
+
+Three consecutive runs of the same suite (`tests/perf/v11.perf.ts`, organisation perf-alpha: 40,000 leads and 12,000 deals, the scale database freshly seeded with `scripts/perf-seed.ts`) on a machine doing nothing else of mine. **Where:** the same Postgres container on this computer, not the Vercel or Neon deployment and not the staging Docker stack's database. Numbers are server time for the handler, without the network. Times in ms, three runs shown as run 1 / run 2 / run 3.
+
+| Scenario | p50 | p95 | c8 p95 | DB calls | Target p95 | |
+|---|---:|---:|---:|---:|---:|---|
+| Quotes list, first page (Management) | 29 / 25 / 29 | 40 / 33 / 37 | 258 / 155 / 145 | 1 | 300 | ok |
+| Quotes list, first page (Sales) | 151 / 154 / 154 | 174 / 182 / 170 | 209 / 228 / 221 | 1 | 300 | ok |
+| Quotes list, deep page | 30 / 26 / 28 | 39 / 33 / 33 | 85 / 71 / 58 | 1 | 300 | ok |
+| Quote detail with its versions | 34 / 35 / 39 | 39 / 48 / 48 | 147 / 125 / 108 | 2 | 500 | ok |
+| Quote version with lines | 49 / 49 / 48 | 61 / 70 / 69 | 85 / 97 / 105 | 3 | 500 | ok |
+| Approvals inbox (Management) | 22 / 25 / 23 | 36 / 33 / 38 | 178 / 230 / 180 | 2 | 300 | ok |
+| Approvals inbox (Sales: own) | 15 / 18 / 15 | 21 / 22 / 21 | 46 / 74 / 52 | 2 | 300 | ok |
+| Catalogue | 19 / 19 / 16 | 35 / 25 / 22 | 43 / 48 / 46 | 1 | 300 | ok |
+| Forecast (Management) | 185 / 177 / 184 | 213 / 217 / 222 | 609 / 601 / 635 | 5 | 500 | ok |
+| Forecast (Sales: own) | 44 / 44 / 50 | 54 / 56 / 63 | 131 / 128 / 121 | 5 | 500 | ok |
+| Forecast targets | 16 / 14 / 14 | 28 / 20 / 16 | 39 / 30 / 22 | 1 | 500 | ok |
+| Pipelines | 15 / 19 / 16 | 24 / 27 / 26 | 41 / 43 / 47 | 1 | 300 | ok |
+| Saved views (Sales) | 17 / 18 / 14 | 24 / 32 / 21 | 58 / 79 / 52 | 3 | 300 | ok |
+| Sequences | 18 / 21 / 18 | 24 / 36 / 27 | 67 / 88 / 56 | 1 | 300 | ok |
+| Chat: channel list | 24 / 25 / 25 | 29 / 32 / 30 | 55 / 102 / 106 | 1 | 300 | ok |
+| Chat: latest messages | 31 / 29 / 33 | 37 / 39 / 41 | 91 / 72 / 75 | 1 | 300 | ok |
+| Chat: sync (the poll) | 35 / 35 / 36 | 47 / 43 / 50 | 69 / 65 / 71 | 2 | 300 | ok |
+| Chat: unread totals | 12 / 12 / 10 | 15 / 16 / 15 | 22 / 37 / 43 | 1 | 300 | ok |
+| Assistant: context, general question | 165 / 184 / 169 | 197 / 219 / 220 | 583 / 449 / 633 | 4 | 500 | ok |
+| Assistant: context for a deal (Sales) | 120 / 128 / 124 | 151 / 147 / 143 | 340 / 408 / 311 | 4 | 500 | ok |
+
+**Reading:** the 9 Nov misses (quotes list, quote version, forecast, chat messages) were machine noise. Every sequential p95 is under its target in all three runs (the largest is the Management forecast at about 220 ms against 500), and database calls per request are unchanged (no N+1). **No code was changed and none of the fixes below was applied**, because nothing misses a target. The 8-at-once column is not a target; the Management forecast (about 600 ms) and the assistant context (about 450 to 630 ms) are the two to watch with many users. The fixes below stay on the list for that day. **Not measured here:** the hosted Vercel and Neon deployment (network and cold starts); measure it once real use starts.
+
+## How far to trust the 9 Nov numbers (history)
 
 **Not far.** This development machine also runs Docker containers (staging, observability, other projects), VS Code and the browser, and the same code measured very differently from
 run to run: the management forecast p95 was 336 ms in one run and 844 ms in the next, chat message listing 47 ms and 410 ms. The run below was started with nothing else of mine
 running and is still noisy. It shows what is slow in relative terms and that nothing is pathological (no endpoint above about 1 s sequentially, database calls per request stay at 1 to 5),
 but it does **not** prove the targets are met or missed. A repeat on a quiet machine (the staging stack is the right place) is needed before this gate can say "targets met".
 
-## Result (last run)
+## Result of the 9 Nov run (noisy machine; superseded by the 12 Nov table above)
 
 | Scenario | p50 | p95 | c8 p95 | DB calls | Target p95 | |
 |---|---:|---:|---:|---:|---:|---|
