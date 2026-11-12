@@ -48,7 +48,7 @@ Break-glass support access, platform flags and limits, announcements and the oth
 - **Deposit request through a payment provider (B7.05, FIG-1187): cancelled by Given on 11 Nov 2026** (`docs/DECISIONS.md` 9.1). Signed quotes stay status-only. Reopen as a new issue only when payments are approved and a provider and sandbox keys exist.
 
 ### B2. V1.1 gates and quality (M15 and M16)
-- Gates: G2.01, G2.02 and G2.04 are passed or signed (`docs/V1_1_BACKEND_GATE.md`). **G2.03 (performance) is waived** by Given on 11 Nov 2026 (`docs/RESTRUCTURE_LOG.md` W7): measure the forecast, assistant-context and chat fixes from `docs/PERF_V1_1.md` on the staging stack. (MVP-15)
+- Gates: G2.01, G2.02 and G2.04 are passed or signed (`docs/V1_1_BACKEND_GATE.md`). **G2.03 (performance) is waived** by Given on 11 Nov 2026 (`docs/RESTRUCTURE_LOG.md` W7): the V1.1 targets were then re-measured on 12 Nov 2026 (FIG-1567, `docs/PERF_V1_1.md`): all met on this computer. Still to measure: the hosted Vercel and Neon deployment, and the 8-at-once forecast and assistant times once many people use it. (MVP-15)
 - UAT was signed off by Given on 12 Nov 2026 (`docs/UAT_V1_1.md`). Still to do with real people: the manual screen-reader, keyboard and real-device passes, design approval of the 82 V1.1 baselines, Linux baselines.
 - Not run when M16 was closed (12 Nov 2026, `docs/V1_1_RELEASE.md` section 0): the migration rehearsal on a restored copy of the target, the formal hypercare and the retrospective. Do them before the move to AWS.
 - D-V11-01 is fixed; D-V11-03 to D-V11-05 are accepted by Given (`docs/DECISIONS.md` section 10, each reversible); the cron and the matrix cell are resolved (`docs/V11_TEST_REPORT.md`).
