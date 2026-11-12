@@ -203,3 +203,14 @@ Given asked for the Sky theme (sidebar `#1C4E6E`, accent `#2A7BB0`, highlight `#
 |---|---|---|
 | 9.1 | **B7.05 (FIG-1187), deposit request through a payment provider, is cancelled.** The business has not approved taking payments through the CRM, no provider is chosen and there are no sandbox credentials, so the issue's own rule applies ("if not approved, cancel with a note"). Signed quotes stay status-only (this confirms 2.5 and 13). Nothing was built, so nothing is removed. If payments are approved later, open a new issue naming the provider, with sandbox keys available. G3.01 (FIG-1191) no longer waits for it. | Decided by Given, 11 Nov 2026 |
 | 9.2 | **B7.06 (FIG-1188): field visibility rules cover the deal value only for V2.** An organisation can set `deal.value` to all, own or hidden per role. Margin and payments stay fixed hidden (rule 7). No other field (for example a contact's phone) is controllable. Adding a field later is about 2 to 3 days each: add it to `FIELD_CATALOGUE`, add a `canSee<Field>` helper in `src/auth/masking.ts`, carry it in `hiddenFields`, mask it in the DTO mappers. | Decided by Given, 11 Nov 2026 |
+
+## 10. M16 close-out (12 Nov 2026, decided by Given on Claude's recommendations)
+
+| # | Decision | Status |
+|---|---|---|
+| 10.1 | **D-V11-01 (Ocean chat avatar contrast) is fixed in code, not in the theme tokens.** A chat rule (`.fb-chat__me span:not(.fb-chat__avatar)`) also caught the avatar initials and turned them grey; the selector now excludes `.fb-avatar`. No shared token changed. | Done |
+| 10.2 | **D-V11-03 (figures typed into an ordinary chat channel) is accepted as is.** Typed text is the author's own words, as for comments and notes. Text in a deal's own channel, text sent with a deal or invoice card, and notifications stay redacted for a role without deal value. | Accepted. Reversible: say so and a typed-text filter is added |
+| 10.3 | **D-V11-04 (synced mail and meeting text shows as written on the timeline) is accepted.** It is the customer's own correspondence. Who sees it is governed by `communications.view`; no money field from a record is shown. | Accepted. Reversible |
+| 10.4 | **D-V11-05 (sequence SEND steps) is accepted as built, not a rule 9 breach.** A SEND step is chosen per step by Management, uses an approved active template only, runs as the record owner, skips do-not-contact people and drafts instead when a field is empty. It never moves a stage, sets a discount or approves anything (`SEQUENCE_EFFECTS` is pinned by a test). | Accepted. Reversible: to make sequences draft-only, make `emailMode` always DRAFT |
+| 10.5 | **D-V11-06 (cron cadence) is resolved for the MVP:** cron-job.org calls `/api/cron/jobs` every 5 minutes. `vercel.json` keeps the daily entry as a backstop. | Resolved |
+| 10.6 | **The platform console journeys keep running on a dev server only.** No CI job is added; the console is a 404 on a production build by design. | Accepted |
