@@ -373,6 +373,8 @@ textarea.fb-input { padding: var(--space-3); min-height: 96px; resize: vertical;
 .fb-empty__icon { width: 40px; height: 40px; border-radius: 12px; background: var(--orange-soft); color: var(--orange-text); display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .fb-empty__title { margin: 0; font-size: 15px; font-weight: 600; }
 .fb-empty__body { margin: 0; color: var(--text-2); max-width: 52ch; }
+/* Buttons inside an empty or error state may wrap their label, so "Something wrong? Contact support" never pushes a narrow, largest-text page wider than the screen. */
+.fb-empty .fb-btn { max-width: 100%; height: auto; min-height: 36px; white-space: normal; text-align: left; }
 .fb-noaccess { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-4); border-radius: var(--r-xl); background: var(--surface-2); border: 1px solid var(--border); }
 .fb-noaccess dl { margin: var(--space-2) 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px var(--space-3); font-size: 12.5px; }
 .fb-noaccess > div { min-width: 0; }

@@ -10,7 +10,7 @@
 /** Exported as stored (minus redacted columns). Chat tables are exported only for PUBLIC channels, see EXPORT_TABLE_FILTERS. */
 export const EXPORTED_TABLES: readonly string[] = [
   "memberships", "organization_settings", "website_lead_request_log", "website_lead_assignment_rules", "page_views", "deal_handoffs",
-  "files", "notifications", "notification_preferences", "user_preferences", "notification_settings", "lead_sources", "lead_statuses",
+  "files", "notifications", "notification_preferences", "team_activity_preferences", "user_preferences", "notification_settings", "lead_sources", "lead_statuses",
   "pipeline_stages", "customer_lifecycle_states", "lost_reasons", "services", "companies", "contacts", "leads", "deals", "activities",
   "tasks", "communications", "proposal_references", "company_services", "audit_events", "merge_records", "custom_field_definitions",
   "tags", "tag_links", "attachments", "email_templates", "lead_pool_requests", "deal_moves", "comments", "comment_mentions",
@@ -53,6 +53,7 @@ export const EXCLUDED_TABLES: Readonly<Record<string, string>> = {
   webhook_deliveries: "delivery log and plumbing of outbound webhooks (FIG-804)",
   quote_signatures: "sealed signature records with signer IP and device; kept as legal evidence with the signed quote (FIG-1186)",
   notification_deliveries: "delivery plumbing (addresses, provider ids)",
+  team_activity_pending: "transient queue of team activity waiting for a digest (FIG-1600); the notifications it becomes are exported",
   chat_read_markers: "per-person read state",
   chat_presence: "per-person presence",
   organization_lifecycle_events: "platform record about the organisation, not organisation data",

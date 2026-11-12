@@ -56,6 +56,30 @@ export function addPending(input: PendingInput) {
   );
 }
 
+/**
+ * One transaction for the fan-out of a single event: read the recipients' preferences, let `decide` choose what to hold for a
+ * digest, and queue those rows together. A request that creates a lead pays for one extra round trip, however many managers there are.
+ */
+export function readPrefsAndQueue<R>(
+  organizationId: string,
+  membershipIds: string[],
+  decide: (prefs: TeamPreferenceRow[]) => { rows: PendingInput[]; result: R },
+): Promise<R> {
+  return withOrgContext(organizationId, async (tx) => {
+    const prefs = await tx.teamActivityPreference.findMany({
+      where: { organizationId, membershipId: { in: membershipIds } },
+      select: { membershipId: true, eventKey: true, inAppEnabled: true, emailEnabled: true, pushEnabled: true, mode: true },
+    });
+    const { rows, result } = decide(prefs);
+    if (rows.length > 0) {
+      await tx.teamActivityPending.createMany({
+        data: rows.map(({ detail, ...rest }) => ({ ...rest, ...(detail === null ? {} : { detail }) })),
+      });
+    }
+    return result;
+  });
+}
+
 export function listUndispatched(organizationId: string) {
   return withOrgContext(organizationId, (tx) =>
     tx.teamActivityPending.findMany({ where: { organizationId, dispatchedAt: null }, orderBy: { createdAt: "asc" } }),

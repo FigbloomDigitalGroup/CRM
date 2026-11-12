@@ -54,7 +54,7 @@ describe("command palette API by role", () => {
       const c = ctx[role]!;
       const ids = idsOf(await getCommandIndex(c));
       for (const g of GOTO) expect(ids.includes(`go-${g.id}`), `${role} go-${g.id}`).toBe(g.allowed(c.permissionKeys));
-      for (const a of ACTIONS.filter((x) => x.id !== "ask" && x.id !== "help")) expect(ids.includes(a.id), `${role} ${a.id}`).toBe(a.allowed(c.permissionKeys));
+      for (const a of ACTIONS.filter((x) => x.id !== "ask" && x.id !== "help" && x.id !== "support")) expect(ids.includes(a.id), `${role} ${a.id}`).toBe(a.allowed(c.permissionKeys));
       expect(ids).toContain("help");
     }
   });

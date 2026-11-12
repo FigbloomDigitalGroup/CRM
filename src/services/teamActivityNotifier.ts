@@ -28,6 +28,8 @@ import {
   listTeamPreferences,
   listUndispatched,
   markDispatched,
+  readPrefsAndQueue,
+  type PendingInput,
   upsertTeamPreference,
   type TeamPreferenceRow,
 } from "../repositories/teamActivity";
@@ -184,32 +186,39 @@ export async function emitTeamActivity(event: TeamActivityEvent, now: Date = new
     if (recipients.length === 0) return;
     const org = await adminDb.organization.findUniqueOrThrow({ where: { id: event.organizationId }, select: { slug: true } });
     const path = `/o/${org.slug}/${event.route}`;
-    const prefs = await listTeamPreferences(event.organizationId, recipients.map((r) => r.membershipId));
+    const held = (membershipId: string, mode: string): PendingInput => ({
+      organizationId: event.organizationId,
+      recipientMembershipId: membershipId,
+      eventKey: event.eventKey,
+      actorMembershipId: event.actorMembershipId,
+      entityType: event.entityType,
+      entityId: event.entityId,
+      label: event.label,
+      path,
+      detail: { ...(event.detail ?? {}), mode } as Prisma.InputJsonValue,
+    });
 
-    for (const recipient of recipients) {
-      try {
+    // One transaction reads the preferences and queues everything bound for a digest; only instant recipients need more work.
+    const instant = await readPrefsAndQueue(event.organizationId, recipients.map((r) => r.membershipId), (prefs) => {
+      const rows: PendingInput[] = [];
+      const now_: { recipient: Recipient; pref: EffectivePref }[] = [];
+      for (const recipient of recipients) {
         const pref = effectivePref(prefs, recipient.membershipId, event.eventKey);
         if (!pref.inApp && !pref.email && !pref.push) continue; // switched off for this person only
-        let mode = pref.mode;
-        if (mode === "INSTANT") {
-          const sent = await countTeamNotificationsSince(event.organizationId, recipient.membershipId, new Date(now.getTime() - HOUR_MS));
-          if (isOverRateCap(sent, TEAM_ACTIVITY_HOURLY_CAP)) mode = "HOURLY"; // the per-person cap: the rest wait for the digest
-        }
-        if (mode === "INSTANT") {
+        if (pref.mode === "INSTANT") now_.push({ recipient, pref });
+        else rows.push(held(recipient.membershipId, pref.mode));
+      }
+      return { rows, result: now_ };
+    });
+
+    for (const { recipient, pref } of instant) {
+      try {
+        const sent = await countTeamNotificationsSince(event.organizationId, recipient.membershipId, new Date(now.getTime() - HOUR_MS));
+        if (isOverRateCap(sent, TEAM_ACTIVITY_HOURLY_CAP)) {
+          await addPending(held(recipient.membershipId, "HOURLY")); // the per-person cap: the rest wait for the digest
+        } else {
           const item: TeamItem = { eventKey: event.eventKey, actorMembershipId: event.actorMembershipId, entityType: event.entityType, entityId: event.entityId, label: event.label, path, detail: event.detail, createdAt: now };
           await deliverGroup(event.organizationId, recipient, pref, { eventKey: event.eventKey, actorMembershipId: event.actorMembershipId, items: [item] }, undefined, now);
-        } else {
-          await addPending({
-            organizationId: event.organizationId,
-            recipientMembershipId: recipient.membershipId,
-            eventKey: event.eventKey,
-            actorMembershipId: event.actorMembershipId,
-            entityType: event.entityType,
-            entityId: event.entityId,
-            label: event.label,
-            path,
-            detail: { ...(event.detail ?? {}), mode } as Prisma.InputJsonValue,
-          });
         }
       } catch (err) {
         logger.error({ err, organizationId: event.organizationId, eventKey: event.eventKey }, "Team activity notification failed for one recipient");

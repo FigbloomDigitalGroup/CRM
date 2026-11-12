@@ -499,6 +499,10 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /tasks/{taskId}/restore` | V | V | H | D | H | same |
 | `GET /tasks/groups` | A | A | A | D | A | same |
 | `GET /tasks/groups/{group}` | A | A | A | D | A | same |
+| `GET /team/attention` | A | D | D | D | D | same |
+| `GET /team/members` | A | D | D | D | D | same |
+| `GET /team/members/{membershipId}` | A | D | D | D | D | same |
+| `GET /team/summary` | A | D | D | D | D | same |
 | `GET /views` | A | A | A | A | A | opened |
 | `POST /views` | V | V | V | V | V | opened |
 | `DELETE /views/{viewId}` | H | A | H | H | H | opened |
@@ -528,4 +532,4 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D | same |
 | `GET /whats-new` | A | A | A | A | A | opened |
 
-511 route and method pairs, 2555 role answers: A 843, D 1290, H 255, V 167.
+515 route and method pairs, 2575 role answers: A 847, D 1306, H 255, V 167.

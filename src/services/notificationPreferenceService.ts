@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import type { AuthContext } from "../auth/context";
+import { canViewTeamPage } from "../auth/teamAccess";
 import { ValidationError, type ValidationIssue } from "../auth/errors";
 import { withOrgContext } from "../db/orgScopedClient";
 import { loadFeatureConfig } from "../lib/featureConfig";
@@ -115,7 +116,7 @@ export async function getMyNotificationPreferencesV2(ctx: AuthContext) {
     dailyEmailCapRange: { min: EMAIL_CAP_MIN, max: EMAIL_CAP_MAX, default: EMAIL_CAP_DEFAULT },
     emailsToday,
     heldForDigest: held,
-    ...(ctx.roleKey === "MANAGEMENT" ? { teamActivity: await getTeamActivityPreferences(ctx.organizationId, ctx.membershipId) } : {}),
+    ...(canViewTeamPage(ctx.permissionKeys) ? { teamActivity: await getTeamActivityPreferences(ctx.organizationId, ctx.membershipId) } : {}),
   };
 }
 
@@ -203,7 +204,7 @@ export async function updateMyNotificationPreferencesV2(
 
   // ---- team activity (FIG-1600): Management only, validated here, saved with the rest below
   if (input.teamActivity && Object.keys(input.teamActivity).length > 0) {
-    if (ctx.roleKey !== "MANAGEMENT") {
+    if (!canViewTeamPage(ctx.permissionKeys)) {
       issues.push({ path: "teamActivity", code: "NOTIFICATION_NOT_FOR_ROLE", message: "Team activity notifications are for Management, so there is nothing to set." });
     } else {
       for (const [event, change] of Object.entries(input.teamActivity)) {

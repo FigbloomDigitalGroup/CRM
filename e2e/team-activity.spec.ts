@@ -11,24 +11,23 @@ test("a lead added by Sales shows up in Management's bell, and not in Sales's ow
   const managerContext = await browser.newContext();
   const manager = await managerContext.newPage();
   await loginAs(manager, "dev.management@figbloom.local");
-  const csrf = (await managerContext.cookies()).find((c) => /csrf/i.test(c.name))?.value;
-  const headers = csrf ? { "x-csrf-token": csrf } : undefined;
+  // The API checks the request's Origin (as helpers.apiPost does), not a CSRF header.
+  const origin = new URL(manager.url()).origin;
   const set = await manager.request.patch("/api/orgs/figbloom/me/notification-preferences", {
     data: { teamActivity: { LEAD_CREATED: { inApp: true, mode: "INSTANT" } } },
-    headers,
+    headers: { origin },
   });
-  expect(set.ok()).toBe(true);
+  expect(set.ok(), await set.text()).toBe(true);
 
   const salesContext = await browser.newContext();
   const sales = await salesContext.newPage();
   await loginAs(sales, "dev.sales@figbloom.local");
   const ref = await (await sales.request.get("/api/orgs/figbloom/reference-data")).json();
-  const salesCsrf = (await salesContext.cookies()).find((c) => /csrf/i.test(c.name))?.value;
   const created = await sales.request.post("/api/orgs/figbloom/leads", {
     data: { leadStatusId: ref.leadStatuses[0].id },
-    headers: salesCsrf ? { "x-csrf-token": salesCsrf, "idempotency-key": `ta-${Date.now()}` } : { "idempotency-key": `ta-${Date.now()}` },
+    headers: { origin: new URL(sales.url()).origin, "idempotency-key": `ta-${Date.now()}` },
   });
-  expect(created.ok()).toBe(true);
+  expect(created.ok(), await created.text()).toBe(true);
 
   await gotoAndSettle(manager, "/o/figbloom");
   const bell = manager.getByRole("button", { name: /^Notifications/ });

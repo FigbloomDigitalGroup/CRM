@@ -2054,6 +2054,84 @@
       }
     }
   },
+  "GET /api/orgs/{orgSlug}/team/members": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "range": {
+          "type": "string",
+          "enum": [
+            "today",
+            "7d",
+            "30d"
+          ]
+        },
+        "q": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "role": {
+          "description": "A role key, for example SALES.",
+          "type": "string",
+          "maxLength": 64
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ACTIVE",
+            "INACTIVE",
+            "PENDING"
+          ]
+        },
+        "sort": {
+          "description": "A field, or -field for descending: name, role, status, lastActive, openLeads, openDeals, overdueTasks, tasksToday, newLeads.",
+          "type": "string",
+          "maxLength": 32
+        },
+        "page": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "pageSize": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/team/members/{membershipId}": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "range": {
+          "type": "string",
+          "enum": [
+            "today",
+            "7d",
+            "30d"
+          ]
+        }
+      }
+    }
+  },
+  "GET /api/orgs/{orgSlug}/team/summary": {
+    "query": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "range": {
+          "type": "string",
+          "enum": [
+            "today",
+            "7d",
+            "30d"
+          ]
+        }
+      }
+    }
+  },
   "GET /api/orgs/{orgSlug}/views": {
     "query": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -3069,6 +3147,30 @@
         },
         "dailyEmailCap": {
           "type": "number"
+        },
+        "teamActivity": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "inApp": {
+                "type": "boolean"
+              },
+              "email": {
+                "type": "boolean"
+              },
+              "push": {
+                "type": "boolean"
+              },
+              "mode": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
         }
       },
       "additionalProperties": false
