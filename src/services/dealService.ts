@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { companyNameFor, emitTeamActivity } from "./teamActivityNotifier";
 import { assertNewDealStageAllowed } from "./dealStageGate";
 import { auditCustomFieldChanges, prepareCustomFields } from "./customFieldService";
 import { assertWritable, cleanArchiveReason } from "../lib/archive";
@@ -173,6 +174,7 @@ export async function createDeal(
       : undefined,
   });
   await invalidateSignals(ctx.organizationId);
+  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "DEAL_CREATED", actorMembershipId: ctx.membershipId, entityType: "Deal", entityId: deal.id, label: await companyNameFor(ctx.organizationId, deal.companyId), route: `deals/${deal.id}`, detail: { value: deal.value === null || deal.value === undefined ? null : String(deal.value), currency: deal.currency } });
   return maskValue(ctx, deal);
 }
 
@@ -467,6 +469,9 @@ export async function updateDeal(
   }
   if (custom) await auditCustomFieldChanges(ctx, "Deal", dealId, custom.changes);
   if (outcomeChanged) await rescoreCompanyQuietly(ctx.organizationId, deal.companyId);
+  if (outcomeChanged && (updated.outcome === "WON" || updated.outcome === "LOST")) {
+    await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "DEAL_CLOSED", actorMembershipId: ctx.membershipId, entityType: "Deal", entityId: dealId, label: await companyNameFor(ctx.organizationId, deal.companyId), route: `deals/${dealId}`, detail: { outcome: updated.outcome, value: updated.value === null || updated.value === undefined ? null : String(updated.value), currency: updated.currency } });
+  }
   await invalidateSignals(ctx.organizationId);
   if (input.pipelineStageId && input.pipelineStageId !== deal.pipelineStageId) await touchDealActivity(ctx.organizationId, dealId);
 

@@ -9,6 +9,7 @@ import { useApi, useApiQuery } from "../../data/hooks";
 import { newIdempotencyKey } from "../../data/client";
 import { connectivity } from "../../data/connectivity";
 import { useMember } from "../../data/member";
+import { useContactSupport } from "../../data/supportContext";
 import { describeError } from "../../errors";
 import type { IdentityInfo } from "../../shell/TopBar";
 import type { LogTarget } from "../contacts/QuickLogPrompt";
@@ -583,6 +584,7 @@ export function MoreSheet({ identity, onClose, onQueue }: { identity: IdentityIn
   const install = useSyncExternalStore(installState.subscribe, installState.getSnapshot, installState.getServerSnapshot);
   const { waiting, attention } = useQueue();
   const [showIosHelp, setShowIosHelp] = useState(false);
+  const support = useContactSupport();
   const base = `/o/${orgSlug}/m`;
   const dark = appearance?.scheme === "dark";
   const canInstall = !install.installed && !isStandalone() && (install.canPrompt || isIos());
@@ -680,6 +682,13 @@ export function MoreSheet({ identity, onClose, onQueue }: { identity: IdentityIn
         <span className="fb-m-menu__label">Use the desktop view</span>
         <span className="fb-m-menu__note">until you close this tab</span>
       </button>
+      {support ? (
+        <button type="button" className="fb-m-menu" data-testid="support-entry-phone" onClick={() => { onClose(); support.open(); }}>
+          <Icon name="help" size={18} />
+          <span className="fb-m-menu__label">Support</span>
+          <span className="fb-m-menu__note">ask a person</span>
+        </button>
+      ) : null}
       <button type="button" className="fb-m-menu fb-m-menu--danger" onClick={() => void signOut()}>
         <Icon name="logout" size={18} />
         <span className="fb-m-menu__label">Sign out</span>

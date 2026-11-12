@@ -1,6 +1,7 @@
 import type { AuthContext } from "../auth/context";
 import { textForViewer } from "../auth/masking";
 import { ValidationError } from "../auth/errors";
+import { adminDb } from "../db/adminClient";
 import { NOTIFICATION_TYPES, type NotificationTypeKey } from "../notifications/catalogue";
 import {
   archiveNotification as archiveRecord,
@@ -72,6 +73,11 @@ async function visibleFeed(ctx: AuthContext, query: NotificationFeedQuery) {
     limit: FEED_SCAN_LIMIT,
   });
   const enabled = await filterByPreferences(ctx, rows);
+  const actorIds = [...new Set(enabled.map((r) => r.actorMembershipId).filter((id): id is string => Boolean(id)))];
+  const actors = actorIds.length
+    ? await adminDb.membership.findMany({ where: { organizationId: ctx.organizationId, id: { in: actorIds } }, select: { id: true, user: { select: { name: true } } } })
+    : [];
+  const actorNames = new Map(actors.map((a) => [a.id, a.user.name]));
   const verdicts = new Map<string, boolean>();
   const out = [];
   for (const row of enabled) {
@@ -91,6 +97,7 @@ async function visibleFeed(ctx: AuthContext, query: NotificationFeedQuery) {
       /** Where the notification opens: the record under this organisation. */
       deepLink: row.link,
       organizationId: row.organizationId,
+      actorName: row.actorMembershipId ? (actorNames.get(row.actorMembershipId) ?? null) : null,
       read: row.readAt !== null,
       readAt: row.readAt,
       archivedAt: row.archivedAt,

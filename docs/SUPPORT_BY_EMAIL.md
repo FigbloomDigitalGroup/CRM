@@ -6,6 +6,10 @@ On 5 Nov 2026 Michael decided that the CRM does not need a Customer Support role
 
 Help panel (the question mark in the top bar), then **Contact support**. A dialog asks for a subject, a kind of request (question, something is not working, sign-in or access, billing or plan, something else), a message and an "urgent" tick. Sending shows a reference such as `FB-20261105-K7Q2X9`. The answer comes to the member's own email.
 
+**Where it is (FIG-1594).** One shared dialog (`SupportProvider` in the shell, `useContactSupport()`), opened from: the "Support" item at the foot of the sidebar (desktop) and in the phone "Account and more" sheet, "Contact support" in the user menu, the command palette ("Contact support", for every role), the Help panel, and the shared error and not-found states inside the app ("Something wrong? Contact support", not shown when signed out or offline). The dialog states what travels with the request (the page path, the member's role and organisation, nothing else) and the expected reply time ("usually within one working day", `SUPPORT_REPLY_TIME`, an assumption to confirm with Michael), and ends with the reference number.
+
+Not covered yet: the root pages (`src/app/not-found.tsx`, `error.tsx`, `global-error.tsx`) and the sign-in pages (a "Need help signing in?" link waits for the auth-page exception under P2-07 to P2-10), screenshot attachment (needs uploads, P2-04), and the suspended-organisation screen (its API route needs an available organisation).
+
 Every role has it (Management, Sales, Delivery, Finance, Restricted Technical): asking for help needs no permission key, only a signed-in membership in a V1.1 organisation.
 
 ## What Figbloom receives
@@ -51,4 +55,4 @@ Needs Michael's Resend API key. Steps, variables and the check list are in `docs
 
 ## Tests
 
-`tests/supportRequests.test.ts`: validation, composing the email (Reply-To, subject, headers, no deal data), the Resend adapter against a stand-in `fetch` (request shape, idempotency key, error mapping, key never in the error), the 503 when not configured in production, the log-only path in development, the rate limits, the audit event without the message, and every role allowed. `tests/components/screens/palette/` covers the dialog.
+`tests/supportRequests.test.ts`: validation, composing the email (Reply-To, subject, headers, no deal data), the Resend adapter against a stand-in `fetch` (request shape, idempotency key, error mapping, key never in the error), the 503 when not configured in production, the log-only path in development, the rate limits, the audit event without the message, and every role allowed. `tests/components/palette/contactSupport.test.tsx` covers the dialog and `tests/components/palette/supportEntryPoints.test.tsx` each entry point (sidebar, user menu, error and not-found states, palette, pre-filled context, axe).

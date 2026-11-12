@@ -11,7 +11,8 @@ import {
   consumePasswordResetToken,
   createPasswordResetToken,
 } from "../auth/passwordResetToken";
-import { checkRateLimit, clearRateLimit, enforceRateLimit, recordRateLimitHits, type RateLimitRule } from "../auth/rateLimiter";
+import { enforceRateLimit, type RateLimitRule } from "../auth/rateLimiter";
+import { checkLoginThrottle, clearLoginFailuresForEmail, clearLoginPair, loginThrottleConfig, recordLoginFailure } from "../auth/loginThrottle";
 import {
   createSession,
   resolveSessionUserId,
@@ -30,7 +31,7 @@ import { recordAuditEvent } from "../repositories/auditEvents";
 import { getAccessState, type AccessState } from "./accessStateService";
 import { recordAuthAuditEvent } from "./authAudit";
 import { recordSignInEvent } from "./signInEventService";
-import { revokeAllTrustedDevices, signInRequirement } from "./twoStepService";
+import { isTrustedDevice, revokeAllTrustedDevices, signInRequirement } from "./twoStepService";
 import { tenantTwoStep } from "../auth/twoStep/stores";
 import { sendSecurityAlert } from "./securityAlertService";
 import {
@@ -90,24 +91,8 @@ function normalizeEmailForRateLimit(email: string): string {
  * mistyping, but which still stops one address spraying guesses across accounts
  * (each account is further capped at 5 by the email rule).
  */
-const LOGIN_DEFAULT_MAX_FAILURES_PER_IP = 100;
-
-function loginRateLimitRules(ipAddress: string | null, email: string): RateLimitRule[] {
-  return [
-    {
-      scope: "ip",
-      key: ipAddress,
-      windowMs: envInt("LOGIN_RATE_LIMIT_WINDOW_MS", 15 * 60_000),
-      max: envInt("LOGIN_RATE_LIMIT_MAX_PER_IP", LOGIN_DEFAULT_MAX_FAILURES_PER_IP),
-    },
-    {
-      scope: "email",
-      key: normalizeEmailForRateLimit(email),
-      windowMs: envInt("LOGIN_RATE_LIMIT_WINDOW_MS", 15 * 60_000),
-      max: envInt("LOGIN_RATE_LIMIT_MAX_PER_EMAIL", 5),
-    },
-  ];
-}
+// P2-02 supersedes the old fixed limits: sign-in now uses growing waits per IP+email pair and high
+// ceilings; see src/auth/loginThrottle.ts and docs/SIGN_IN_RATE_LIMIT.md.
 
 function signupRateLimitRules(ipAddress: string | null, email: string): RateLimitRule[] {
   return [
@@ -137,11 +122,19 @@ function passwordResetRateLimitRules(
       windowMs: envInt("PASSWORD_RESET_RATE_LIMIT_WINDOW_MS", 60 * 60_000),
       max: envInt("PASSWORD_RESET_RATE_LIMIT_MAX_PER_IP", 10),
     },
+    // Per IP + email pair: someone else asking for resets of your email cannot stop you asking from your own address (P2-02).
+    {
+      scope: "pair",
+      key: `${ipAddress ?? "unknown"}|${normalizeEmailForRateLimit(email)}`,
+      windowMs: envInt("PASSWORD_RESET_RATE_LIMIT_WINDOW_MS", 60 * 60_000),
+      max: envInt("PASSWORD_RESET_RATE_LIMIT_MAX_PER_PAIR", 3),
+    },
+    // Per email across all addresses: a high ceiling that only stops mail flooding.
     {
       scope: "email",
       key: normalizeEmailForRateLimit(email),
       windowMs: envInt("PASSWORD_RESET_RATE_LIMIT_WINDOW_MS", 60 * 60_000),
-      max: envInt("PASSWORD_RESET_RATE_LIMIT_MAX_PER_EMAIL", 3),
+      max: envInt("PASSWORD_RESET_RATE_LIMIT_MAX_PER_EMAIL", 30),
     },
   ];
 }
@@ -159,14 +152,15 @@ function passwordResetRateLimitRules(
  */
 export function lockoutPolicy() {
   return {
-    maxFailures: envInt("LOCKOUT_MAX_FAILURES", 5),
+    // P2-02: raised from 5 to the per-email ceiling; reaching it now means a wait, not a lock (see accountWaitSeconds).
+    maxFailures: envInt("LOCKOUT_MAX_FAILURES", 200),
     durationMs: envInt("LOCKOUT_DURATION_MS", 15 * 60_000),
   };
 }
 
 /** Forgets the email's recorded login attempts (used by the admin unlock). */
 export async function clearLoginRateLimitForEmail(email: string): Promise<void> {
-  await clearRateLimit("LOGIN", "email", normalizeEmailForRateLimit(email));
+  await clearLoginFailuresForEmail(email);
 }
 
 function clientOf(userAgent?: string | null, ipAddress?: string | null, place?: string | null): ClientInfo {
@@ -287,17 +281,43 @@ export async function startSignIn(
   place?: string | null,
   trustedDeviceToken?: string | null,
 ): Promise<SignedInSession | TwoStepPending> {
-  const rules = loginRateLimitRules(ipAddress ?? null, email);
-  // Checked before any real work; recorded only when the attempt fails (below), so successful sign-ins never count.
-  await checkRateLimit("LOGIN", rules);
+  const ip = ipAddress ?? null;
+  // A live trusted-device cookie of this very account skips every wait (P2-02): the real person on their own device is never held up.
+  const trusted = await isKnownTrustedDevice(email, trustedDeviceToken);
+  // Checked before any real work; failures only are recorded (below), so successful sign-ins never count.
+  await checkLoginThrottle(ip, email, { trusted });
   try {
-    return await signInChecked(email, password, userAgent, ipAddress, place, trustedDeviceToken);
+    const result = await signInChecked(email, password, userAgent, ipAddress, place, trustedDeviceToken, trusted);
+    await clearLoginPair(ip, email);
+    return result;
   } catch (err) {
-    if (err instanceof UnauthorizedError || err instanceof RateLimitedError) {
-      await recordRateLimitHits("LOGIN", rules);
+    if (err instanceof UnauthorizedError) {
+      const reached = await recordLoginFailure(ip, email);
+      if (reached.emailCeilingReached) {
+        const user = await adminDb.user.findUnique({ where: { email }, select: { id: true } });
+        if (user) await recordAuthAuditEvent(user.id, "auth.rate_limit_ceiling", { scope: "email", failures: loginThrottleConfig().maxPerEmail });
+      }
     }
     throw err;
   }
+}
+
+async function isKnownTrustedDevice(email: string, token?: string | null): Promise<boolean> {
+  if (!token) return false;
+  const user = await adminDb.user.findUnique({ where: { email }, select: { id: true } });
+  return user ? isTrustedDevice(user.id, token) : false;
+}
+
+/**
+ * Seconds a person must still wait because the account reached its failure ceiling
+ * (`lockedUntil`). It is a wait, not a lock: the longest sign-in delay counted from the
+ * last failure, after which the right password signs in. Anyone typing wrong passwords for
+ * someone's email can therefore never keep that person out (P2-02).
+ */
+export function accountWaitSeconds(user: { lockedUntil: Date | null; lastFailedSignInAt: Date | null }, now = Date.now()): number {
+  if (!user.lockedUntil || user.lockedUntil.getTime() <= now || !user.lastFailedSignInAt) return 0;
+  const seconds = loginThrottleConfig().maxSeconds;
+  return Math.max(0, Math.ceil((user.lastFailedSignInAt.getTime() + seconds * 1000 - now) / 1000));
 }
 
 async function signInChecked(
@@ -307,6 +327,7 @@ async function signInChecked(
   ipAddress?: string | null,
   place?: string | null,
   trustedDeviceToken?: string | null,
+  trusted = false,
 ): Promise<SignedInSession | TwoStepPending> {
   const client = clientOf(userAgent, ipAddress, place);
   const user = await adminDb.user.findUnique({ where: { email } });
@@ -329,7 +350,8 @@ async function signInChecked(
   const policy = lockoutPolicy();
   const now = Date.now();
   if (user.lockedUntil) {
-    if (user.lockedUntil.getTime() > now) {
+    const wait = trusted ? 0 : accountWaitSeconds(user, now);
+    if (wait > 0) {
       await recordSignInEvent({
         userId: user.id,
         email: user.email,
@@ -337,15 +359,17 @@ async function signInChecked(
         reason: "LOCKED",
         client,
       });
-      throw new RateLimitedError();
+      throw new RateLimitedError(`Too many sign-in attempts. Please wait ${wait} second${wait === 1 ? "" : "s"} and try again.`, wait);
     }
-    // The lock has run out: time-based unlock.
-    await adminDb.user.update({
-      where: { id: user.id },
-      data: { lockedUntil: null, failedSignInCount: 0 },
-    });
-    user.failedSignInCount = 0;
-    await recordAuthAuditEvent(user.id, "auth.unlocked", { by: "timeout" });
+    if (user.lockedUntil.getTime() <= now) {
+      // The lock window has run out: time-based unlock.
+      await adminDb.user.update({
+        where: { id: user.id },
+        data: { lockedUntil: null, failedSignInCount: 0 },
+      });
+      user.failedSignInCount = 0;
+      await recordAuthAuditEvent(user.id, "auth.unlocked", { by: "timeout" });
+    }
   }
 
   const valid = await verifyPassword(password, user.passwordHash);

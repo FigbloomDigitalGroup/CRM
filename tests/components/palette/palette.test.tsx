@@ -39,7 +39,8 @@ describe("command palette: only what the role may use (X3, FIG-1172)", () => {
       { id: "ask", kind: "assistant" as const, title: "Ask Figbloom", path: null, hint: null },
     ];
     const items = buildPaletteItems({ orgSlug: "figbloom", permissionKeys: MANAGEMENT, query: "", commands }).flatMap((g) => g.items);
-    expect(items.map((i) => i.title)).toEqual(["Ask Figbloom", "Go to Leads"]);
+    // "Contact support" (FIG-1594) is a shell action every role has, added on the client beside the server list.
+    expect(items.map((i) => i.title)).toEqual(["Ask Figbloom", "Contact support", "Go to Leads"]);
     expect(items.find((i) => i.id === "ask")?.run).toBe("assistant");
     expect(items.find((i) => i.id === "go-leads")?.href).toBe("/o/figbloom/leads");
   });

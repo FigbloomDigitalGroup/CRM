@@ -1,5 +1,6 @@
 import type { Release } from "./featureFlags";
 import { releaseAtLeast } from "./featureFlags";
+import { canViewTeamPage } from "../auth/teamAccess";
 
 /**
  * The command index behind the command palette (FIG-1149, B6.17, design X3): every page a person may go to and every action they may
@@ -42,6 +43,7 @@ export const NAVIGATE: readonly Def[] = [
   { id: "go-deals", kind: "navigate", title: "Go to Deals", path: "/deals", hint: "G D", allowed: (k) => any(k, "deals.view.own", "deals.view.all", "deals.view.won") },
   { id: "go-tasks", kind: "navigate", title: "Go to Tasks", path: "/tasks", hint: "G T", allowed: (k) => any(k, "tasks.view.own", "tasks.view.all") },
   { id: "go-calendar", kind: "navigate", title: "Go to Calendar", path: "/calendar", allowed: (k) => any(k, "tasks.view.own", "tasks.view.all") },
+  { id: "go-team", kind: "navigate", title: "Go to Team", path: "/team", allowed: (k) => canViewTeamPage(k) },
   { id: "go-companies", kind: "navigate", title: "Go to Companies", path: "/companies", hint: "G C", allowed: (k) => any(k, "companies.view") },
   { id: "go-contacts", kind: "navigate", title: "Go to Contacts", path: "/contacts", allowed: (k) => any(k, "contacts.view") },
   { id: "go-conversations", kind: "navigate", title: "Go to Conversations", path: "/conversations", allowed: (k) => any(k, "communications.view") },

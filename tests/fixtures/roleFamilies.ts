@@ -27,6 +27,7 @@ export const MANAGEMENT_ONLY: RegExp[] = [
   under("/jobs"),
   under("/memberships"),
   under("/security"),
+  under("/team"),
   under("/settings"),
   key("/profile"),
   key("/reference-admin/{kind}"),

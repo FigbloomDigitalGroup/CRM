@@ -779,6 +779,8 @@ enum NotificationType {
   PAYMENT_OVERDUE
   /// FIG-795: a customer went dormant, for the account owner.
   DORMANT_CUSTOMER
+  /// FIG-1600 (P2-17): a team member added or changed something, for Management. Governed by its own per-event preferences (TeamActivityPreference), not by the catalogue types.
+  TEAM_ACTIVITY
 }
 
 /// In-app notification feed entry for one membership (FIG-597). Always has
@@ -786,18 +788,20 @@ enum NotificationType {
 /// has no membership to notify, so it only ever produces a
 /// NotificationDelivery with `notificationId: null`, never a row here.
 model Notification {
-  id             String           @id @default(uuid())
-  organizationId String           @map("organization_id")
-  membershipId   String           @map("membership_id")
-  type           NotificationType
-  title          String
-  body           String
-  entityType     String?          @map("entity_type")
-  entityId       String?          @map("entity_id")
-  link           String?
-  readAt         DateTime?        @map("read_at")
-  archivedAt     DateTime?        @map("archived_at")
-  createdAt      DateTime         @default(now()) @map("created_at")
+  id                String           @id @default(uuid())
+  organizationId    String           @map("organization_id")
+  membershipId      String           @map("membership_id")
+  type              NotificationType
+  title             String
+  body              String
+  entityType        String?          @map("entity_type")
+  entityId          String?          @map("entity_id")
+  link              String?
+  /// FIG-1600: who did the thing the notification is about (team activity only).
+  actorMembershipId String?          @map("actor_membership_id")
+  readAt            DateTime?        @map("read_at")
+  archivedAt        DateTime?        @map("archived_at")
+  createdAt         DateTime         @default(now()) @map("created_at")
 
   organization Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   membership   Membership             @relation(fields: [membershipId], references: [id], onDelete: Cascade)
@@ -1703,6 +1707,8 @@ model AuditEvent {
   @@index([organizationId, createdAt])
   @@index([organizationId, entityType, entityId])
   @@index([organizationId, actorMembershipId])
+  /// P2-15 (Team page): the latest action per person, and a person's recent actions.
+  @@index([organizationId, actorMembershipId, createdAt])
   @@map("audit_events")
 }
 
@@ -3801,4 +3807,43 @@ model ChurnHint {
   @@index([organizationId, status])
   @@index([organizationId, companyId])
   @@map("churn_hints")
+}
+
+/// FIG-1600 (P2-17): one person's choice for one team-activity event. No row means the defaults in
+/// `src/notifications/teamActivity.ts` (in-app on, email and push off, the event's own delivery mode).
+model TeamActivityPreference {
+  id             String   @id @default(uuid())
+  organizationId String   @map("organization_id")
+  membershipId   String   @map("membership_id")
+  eventKey       String   @map("event_key")
+  inAppEnabled   Boolean  @default(true) @map("in_app_enabled")
+  emailEnabled   Boolean  @default(false) @map("email_enabled")
+  pushEnabled    Boolean  @default(false) @map("push_enabled")
+  /// INSTANT, HOURLY or DAILY; null follows the event's default.
+  mode           String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([organizationId, membershipId, eventKey], map: "team_activity_preferences_org_member_event_key")
+  @@map("team_activity_preferences")
+}
+
+/// FIG-1600: a team-activity item held for a person's hourly or daily digest, grouped when the digest goes out.
+model TeamActivityPending {
+  id                    String    @id @default(uuid())
+  organizationId        String    @map("organization_id")
+  recipientMembershipId String    @map("recipient_membership_id")
+  eventKey              String    @map("event_key")
+  actorMembershipId     String?   @map("actor_membership_id")
+  entityType            String    @map("entity_type")
+  entityId              String    @map("entity_id")
+  label                 String
+  path                  String
+  /// Raw facts (deal value and currency, won or lost); text is composed per recipient when it goes out, so masking applies.
+  detail                Json?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  dispatchedAt          DateTime? @map("dispatched_at")
+
+  @@index([organizationId, recipientMembershipId, dispatchedAt, createdAt], map: "team_activity_pending_due_idx")
+  @@map("team_activity_pending")
 }

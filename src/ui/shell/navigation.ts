@@ -1,4 +1,5 @@
 import { canUseResource, resolveScope } from "@/auth/permissions";
+import { canViewTeamPage } from "@/auth/teamAccess";
 import type { NavIcon, NavItem, NavSection, QuickCreateItem } from "./navModel";
 
 /**
@@ -68,6 +69,8 @@ const DEFS: Def[] = [
   },
   { section: "workspace", key: "tasks", label: () => "Tasks", path: "/tasks", icon: "tasks", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
   { section: "workspace", key: "calendar", label: () => "Calendar", path: "/calendar", icon: "calendar", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
+  // Team (P2-15): Management only today; `canViewTeamPage` is the one place the rule lives (a Head of Sales joins it later).
+  { section: "workspace", key: "team", label: () => "Team", path: "/team", icon: "contacts", tint: "g", allowed: (c) => canViewTeamPage(c.permissionKeys), built: true },
   // V1.1 commercial screens (M10, demo data): the permissions below are stripped until the organisation's release reaches V1.1.
   { section: "customers", key: "companies", label: () => "Companies", path: "/companies", icon: "companies", tint: "o", allowed: (c) => has(c, "companies.view"), built: true },
   { section: "customers", key: "contacts", label: () => "Contacts", path: "/contacts", icon: "contacts", tint: "o", allowed: (c) => has(c, "contacts.view"), built: true },

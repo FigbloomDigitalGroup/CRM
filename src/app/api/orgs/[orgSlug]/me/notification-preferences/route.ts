@@ -27,6 +27,12 @@ const UpdateSchema = z.strictObject({
     })
     .optional(),
   dailyEmailCap: z.number({ error: "The daily email limit must be a number." }).optional(),
+  teamActivity: z
+    .record(
+      z.string(),
+      z.strictObject({ inApp: z.boolean().optional(), email: z.boolean().optional(), push: z.boolean().optional(), mode: z.string().optional() }),
+    )
+    .optional(),
 });
 
 /** The member's notification preferences: the types that apply to their role, channels, presets, quiet hours and daily limit (B1.11). */

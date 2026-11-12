@@ -119,6 +119,19 @@ export const NotificationPreferencesViewSchema = z.strictObject({
   dailyEmailCapRange: z.strictObject({ min: z.number(), max: z.number(), default: z.number() }),
   emailsToday: z.number().int(),
   heldForDigest: z.number().int(),
+  /** FIG-1600: the "Team activity" group, for Management only (absent for every other role). */
+  teamActivity: z
+    .array(
+      z.strictObject({
+        event: z.string(),
+        label: z.string(),
+        description: z.string(),
+        channels: z.strictObject({ inApp: z.boolean(), email: z.boolean(), push: z.boolean() }),
+        mode: z.enum(["INSTANT", "HOURLY", "DAILY"]),
+        defaultMode: z.enum(["INSTANT", "HOURLY", "DAILY"]),
+      }),
+    )
+    .optional(),
 });
 
 export const UpdateNotificationPreferencesBodySchema = z.strictObject({
@@ -130,6 +143,10 @@ export const UpdateNotificationPreferencesBodySchema = z.strictObject({
     .strictObject({ enabled: z.boolean().optional(), start: z.string().optional(), end: z.string().optional() })
     .optional(),
   dailyEmailCap: z.number().int().optional(),
+  /** FIG-1600: Management only. One entry per team-activity event; `mode` is INSTANT, HOURLY or DAILY. */
+  teamActivity: z
+    .record(z.string(), z.strictObject({ inApp: z.boolean().optional(), email: z.boolean().optional(), push: z.boolean().optional(), mode: z.enum(["INSTANT", "HOURLY", "DAILY"]).optional() }))
+    .optional(),
 });
 
 export const SessionSummarySchema = z.strictObject({

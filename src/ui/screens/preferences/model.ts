@@ -69,6 +69,19 @@ export interface NotificationPrefsView {
   dailyEmailCap: number;
   dailyEmailCapRange: { min: number; max: number; default: number };
   heldForDigest: number;
+  /** FIG-1600: present for Management only. */
+  teamActivity?: TeamActivityRow[];
+}
+
+export type DeliveryMode = "INSTANT" | "HOURLY" | "DAILY";
+
+export interface TeamActivityRow {
+  event: string;
+  label: string;
+  description: string;
+  channels: { inApp: boolean; email: boolean; push: boolean };
+  mode: DeliveryMode;
+  defaultMode: DeliveryMode;
 }
 
 export interface SessionRow {

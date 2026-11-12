@@ -496,6 +496,10 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `POST /tasks/{taskId}/restore` | V | V | H | D | H |
 | `GET /tasks/groups` | A | A | A | D | A |
 | `GET /tasks/groups/{group}` | A | A | A | D | A |
+| `GET /team/attention` | A | D | D | D | D |
+| `GET /team/members` | A | D | D | D | D |
+| `GET /team/members/{membershipId}` | A | D | D | D | D |
+| `GET /team/summary` | A | D | D | D | D |
 | `GET /views` | D | D | D | D | D |
 | `POST /views` | D | D | D | D | D |
 | `DELETE /views/{viewId}` | D | D | D | D | D |
@@ -525,4 +529,4 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D |
 | `GET /whats-new` | D | D | D | D | D |
 
-511 route and method pairs, 2555 role answers: A 649, D 1682, H 134, V 90.
+515 route and method pairs, 2575 role answers: A 653, D 1698, H 134, V 90.

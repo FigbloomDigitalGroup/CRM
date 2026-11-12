@@ -20,8 +20,11 @@ const CATEGORIES = [
  * Figbloom support, with the member's own address as the Reply-To, so the answer arrives in their inbox. There is no ticket
  * list in the CRM: the platform console holds the tickets.
  */
+/** Said in the dialog and on the confirmation. Not a promise in a contract: the figure Figbloom support aims for. */
+export const SUPPORT_REPLY_TIME = "one working day";
+
 export function ContactSupportDialog({ onClose }: { onClose: () => void }) {
-  const { orgSlug } = useMember();
+  const { orgSlug, roleName } = useMember();
   const pathname = usePathname();
   const [subject, setSubject] = useState("");
   const [category, setCategory] = useState("QUESTION");
@@ -51,6 +54,7 @@ export function ContactSupportDialog({ onClose }: { onClose: () => void }) {
         <p>
           Your reference is <strong data-testid="support-reference">{sent.reference}</strong>. Quote it if you write to us again about this.
         </p>
+        <p>We usually reply by email within {SUPPORT_REPLY_TIME}.</p>
       </DealModal>
     );
   }
@@ -58,7 +62,7 @@ export function ContactSupportDialog({ onClose }: { onClose: () => void }) {
   return (
     <DealModal
       title="Contact support"
-      lead="We reply by email, to the address you sign in with. Please do not include passwords."
+      lead={`We reply by email, to the address you sign in with, usually within ${SUPPORT_REPLY_TIME}. Please do not include passwords.`}
       onClose={onClose}
       actions={
         <>
@@ -79,6 +83,9 @@ export function ContactSupportDialog({ onClose }: { onClose: () => void }) {
         </>
       }
     >
+      <p className="fb-dm__context" data-testid="support-context">
+        We send with your request: the page you are on ({pathname || "unknown"}), your role ({roleName}) and your organisation ({orgSlug}). Nothing else.
+      </p>
       <label className="fb-dm__field">
         <span>What do you need help with?</span>
         <input className="fb-dm__input" value={subject} maxLength={160} onChange={(e) => setSubject(e.target.value)} required aria-required="true" />

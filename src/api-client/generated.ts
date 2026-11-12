@@ -7450,6 +7450,18 @@ export interface Operations {
       };
       emailsToday: number;
       heldForDigest: number;
+      teamActivity?: Array<{
+        event: string;
+        label: string;
+        description: string;
+        channels: {
+          inApp: boolean;
+          email: boolean;
+          push: boolean;
+        };
+        mode: "INSTANT" | "HOURLY" | "DAILY";
+        defaultMode: "INSTANT" | "HOURLY" | "DAILY";
+      }>;
     };
   };
   updateMyNotificationPreferences: {
@@ -7470,6 +7482,14 @@ export interface Operations {
         end?: string;
       };
       dailyEmailCap?: number;
+      teamActivity?: {
+        [key: string]: {
+          inApp?: boolean;
+          email?: boolean;
+          push?: boolean;
+          mode?: "INSTANT" | "HOURLY" | "DAILY";
+        };
+      };
     };
     response: {
       preset: "EVERYTHING" | "IMPORTANT_ONLY" | "OFF" | "CUSTOM";
@@ -7514,6 +7534,18 @@ export interface Operations {
       };
       emailsToday: number;
       heldForDigest: number;
+      teamActivity?: Array<{
+        event: string;
+        label: string;
+        description: string;
+        channels: {
+          inApp: boolean;
+          email: boolean;
+          push: boolean;
+        };
+        mode: "INSTANT" | "HOURLY" | "DAILY";
+        defaultMode: "INSTANT" | "HOURLY" | "DAILY";
+      }>;
     };
   };
   getMyPreferences: {
@@ -9158,6 +9190,8 @@ export interface Operations {
         body?: string;
         templateId?: string;
         linkExpiresInDays?: number;
+        language?: string;
+        allowSigning?: boolean;
       };
     };
     response: {
@@ -9208,6 +9242,8 @@ export interface Operations {
       body?: string;
       templateId?: string;
       linkExpiresInDays?: number;
+      language?: string;
+      allowSigning?: boolean;
     };
     response: unknown;
   };
@@ -11272,6 +11308,231 @@ export interface Operations {
       [key: string]: unknown;
     };
   };
+  getTeamAttention: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: undefined;
+    response: {
+      staleDays: number;
+      access: {
+        leads: boolean;
+        deals: boolean;
+        tasks: boolean;
+        values: boolean;
+      };
+      staleLeads: {
+        total: number;
+        items: Array<{
+          id: string;
+          company: string | null;
+          contact: string | null;
+          lastTouchAt: string | null;
+          ownerMembershipId: string | null;
+          ownerName: string | null;
+        }>;
+      } | null;
+      overdueTasks: {
+        total: number;
+        items: Array<{
+          id: string;
+          title: string;
+          dueAt: string;
+          ownerMembershipId: string | null;
+          ownerName: string | null;
+        }>;
+      } | null;
+      stuckDeals: {
+        total: number;
+        items: Array<{
+          id: string;
+          company: string | null;
+          stage: string;
+          daysQuiet: number;
+          value: {
+            amount: string | null;
+            masked: boolean;
+          };
+          ownerMembershipId: string | null;
+          ownerName: string | null;
+        }>;
+      } | null;
+    };
+  };
+  listTeamMembers: {
+    params: { orgSlug: string };
+    query: {
+      range?: "today" | "7d" | "30d";
+      q?: string;
+      role?: string;
+      status?: "ACTIVE" | "INACTIVE" | "PENDING";
+      sort?: string;
+      page?: string;
+      pageSize?: string;
+    };
+    body: undefined;
+    response: {
+      range: "today" | "7d" | "30d";
+      access: {
+        leads: boolean;
+        deals: boolean;
+        tasks: boolean;
+        values: boolean;
+      };
+      items: Array<{
+        membershipId: string;
+        name: string;
+        email: string;
+        initials: string;
+        avatarUrl: string | null;
+        role: {
+          key: string;
+          name: string;
+        };
+        status: "ACTIVE" | "INACTIVE" | "PENDING";
+        lastActiveAt: string | null;
+        openLeads: number | null;
+        openDeals: number | null;
+        openDealsValue: {
+          amount: string | null;
+          masked: boolean;
+        };
+        tasksDueToday: number | null;
+        overdueTasks: number | null;
+        newLeads: number | null;
+        stuckDeals: number | null;
+      }>;
+      page: number;
+      pageSize: number;
+      total: number;
+      pageCount: number;
+      nextCursor: string | null;
+      roles: Array<{
+        key: string;
+        name: string;
+      }>;
+    };
+  };
+  getTeamMember: {
+    params: { orgSlug: string; membershipId: string };
+    query: {
+      range?: "today" | "7d" | "30d";
+    };
+    body: undefined;
+    response: {
+      range: "today" | "7d" | "30d";
+      access: {
+        leads: boolean;
+        deals: boolean;
+        tasks: boolean;
+        values: boolean;
+      };
+      member: {
+        membershipId: string;
+        name: string;
+        email: string;
+        initials: string;
+        avatarUrl: string | null;
+        role: {
+          key: string;
+          name: string;
+        };
+        status: "ACTIVE" | "INACTIVE" | "PENDING";
+        lastActiveAt: string | null;
+        openLeads: number | null;
+        openDeals: number | null;
+        openDealsValue: {
+          amount: string | null;
+          masked: boolean;
+        };
+        tasksDueToday: number | null;
+        overdueTasks: number | null;
+        newLeads: number | null;
+        stuckDeals: number | null;
+      };
+      recentActivity: Array<{
+        id: string;
+        action: string;
+        label: string;
+        entityType: string;
+        entityId: string | null;
+        at: string;
+        path: string | null;
+      }>;
+      openLeads: Array<{
+        id: string;
+        company: string | null;
+        contact: string | null;
+        temperature: string;
+        nextFollowUpAt: string | null;
+        stale: boolean;
+      }> | null;
+      openDeals: Array<{
+        id: string;
+        company: string | null;
+        stage: string;
+        expectedCloseDate: string | null;
+        stuck: boolean;
+        value: {
+          amount: string | null;
+          masked: boolean;
+        };
+      }> | null;
+      tasks: Array<{
+        id: string;
+        title: string;
+        dueAt: string | null;
+        overdue: boolean;
+      }> | null;
+      trend: Array<{
+        start: string;
+        count: number;
+      }>;
+    };
+  };
+  getTeamSummary: {
+    params: { orgSlug: string };
+    query: {
+      range?: "today" | "7d" | "30d";
+    };
+    body: undefined;
+    response: {
+      range: "today" | "7d" | "30d";
+      rangeStart: string;
+      generatedAt: string;
+      staleDays: number;
+      access: {
+        leads: boolean;
+        deals: boolean;
+        tasks: boolean;
+        values: boolean;
+      };
+      summary: {
+        membersActive: number;
+        membersTotal: number;
+        openLeads: number | null;
+        openDeals: number | null;
+        openDealsValue: {
+          amount: string | null;
+          masked: boolean;
+        };
+        overdueTasks: number | null;
+        newLeads: number | null;
+        dealsWon: {
+          count: number | null;
+          value: {
+            amount: string | null;
+            masked: boolean;
+          };
+        };
+        unassignedLeads: number | null;
+      };
+      workload: Array<{
+        membershipId: string;
+        name: string;
+        openLeads: number;
+      }>;
+    };
+  };
   getViews: {
     params: { orgSlug: string };
     query: {
@@ -11439,6 +11700,7 @@ export interface Operations {
       fields?: unknown;
       leadSourceKey?: string | null;
       successMessage?: string;
+      language?: string;
       allowedOrigins?: unknown;
       honeypotFieldName?: string;
       captchaSecret?: string | null;
@@ -11516,6 +11778,7 @@ export interface Operations {
       fields?: unknown;
       leadSourceKey?: string | null;
       successMessage?: string;
+      language?: string;
       allowedOrigins?: unknown;
       honeypotFieldName?: string;
       captchaSecret?: string | null;
@@ -12314,6 +12577,10 @@ export const operations = {
   postTasksByTaskIdRestore: { method: "POST", path: "/api/orgs/{orgSlug}/tasks/{taskId}/restore", tag: "Tasks", summary: "POST /tasks/{taskId}/restore", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
   getTasksGroups: { method: "GET", path: "/api/orgs/{orgSlug}/tasks/groups", tag: "Tasks", summary: "GET /tasks/groups", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
   getTasksGroupsByGroup: { method: "GET", path: "/api/orgs/{orgSlug}/tasks/groups/{group}", tag: "Tasks", summary: "GET /tasks/groups/{group}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
+  getTeamAttention: { method: "GET", path: "/api/orgs/{orgSlug}/team/attention", tag: "Team", summary: "Quiet leads, overdue tasks and stuck deals across the team. Management only", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  listTeamMembers: { method: "GET", path: "/api/orgs/{orgSlug}/team/members", tag: "Team", summary: "Team members with per-person open leads, deals, tasks and last activity; filter by role, status and name; sortable and paged. Management only", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getTeamMember: { method: "GET", path: "/api/orgs/{orgSlug}/team/members/{membershipId}", tag: "Team", summary: "One member: recent sales activity from the audit trail, open leads, deals and tasks, 30-day trend. Management only", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getTeamSummary: { method: "GET", path: "/api/orgs/{orgSlug}/team/summary", tag: "Team", summary: "The team summary strip and workload balance for a date range (today, 7d, 30d). Management only", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getViews: { method: "GET", path: "/api/orgs/{orgSlug}/views", tag: "Views", summary: "GET /views", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   postViews: { method: "POST", path: "/api/orgs/{orgSlug}/views", tag: "Views", summary: "POST /views", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   deleteViewsByViewId: { method: "DELETE", path: "/api/orgs/{orgSlug}/views/{viewId}", tag: "Views", summary: "DELETE /views/{viewId}", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },

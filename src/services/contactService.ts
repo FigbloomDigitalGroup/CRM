@@ -1,4 +1,5 @@
 import type { Contact, Prisma } from "@prisma/client";
+import { emitTeamActivity } from "./teamActivityNotifier";
 import { canAssignAccountOwner, canWorkAccounts } from "../auth/accountAccess";
 import { assertWritable, cleanArchiveReason } from "../lib/archive";
 import { findDuplicates } from "./duplicateService";
@@ -87,7 +88,7 @@ export async function createContact(
   ctx: AuthContext,
   input: CreateContactServiceInput,
   /** `skipDuplicateCheck`: the caller already checked (quick capture warns first), so do not search a second time. */
-  options: { skipDuplicateCheck?: boolean } = {},
+  options: { skipDuplicateCheck?: boolean; /** `notifyTeam: false`: the caller creates a lead next and that is what Management is told about (quick capture), so one action is one alert. */ notifyTeam?: boolean } = {},
 ) {
   requirePermission(ctx, "contacts.create");
 
@@ -170,6 +171,7 @@ export async function createContact(
   }
 
   await emitWebhookEvent({ organizationId: ctx.organizationId, type: "contact.created", record: contact });
+  if (options.notifyTeam !== false) await emitTeamActivity({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, eventKey: "CONTACT_CREATED", entityType: "Contact", entityId: contact.id, label: [contact.firstName, contact.lastName].filter(Boolean).join(" "), route: `contacts/${contact.id}` });
   return { contact, possibleDuplicates, duplicates: found.candidates, hiddenDuplicates: found.hiddenCount };
 }
 

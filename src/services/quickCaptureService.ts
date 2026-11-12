@@ -236,8 +236,8 @@ export async function quickCapture(ctx: AuthContext, input: QuickCaptureInput) {
   const { statusId, sourceId, companyId } = await prepared!;
 
   // The duplicate check ran at the top of this call (and the caller chose), so the create steps do not repeat it.
-  const contactResult = await createContact(ctx, { firstName, lastName, phone: clean.phone, email: clean.email, companyId }, { skipDuplicateCheck: true });
-  const contact = contactResult.contact;
+  const contactResult = await createContact(ctx, { firstName, lastName, phone: clean.phone, email: clean.email, companyId }, { skipDuplicateCheck: true, notifyTeam: false });
+const contact = contactResult.contact;
   let lead;
   try {
     lead = (await createLead(ctx, { leadStatusId: statusId, leadSourceId: sourceId, serviceInterestId: input.serviceId, contactId: contact.id, companyId }, { skipDuplicateCheck: true })).lead;

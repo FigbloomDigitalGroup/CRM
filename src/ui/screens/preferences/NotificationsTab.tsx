@@ -4,7 +4,9 @@ import { Info } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ErrorState, LoadingState, describeError, explainRollback, queryKeyFor, useApiMutation, useMember, useToast } from "@/ui";
 import { useNotificationPrefsQuery } from "./hooks";
-import type { NotificationPrefsView } from "./model";
+import type { DeliveryMode, NotificationPrefsView } from "./model";
+
+const MODE_LABEL: Record<DeliveryMode, string> = { INSTANT: "Instant", HOURLY: "Hourly digest", DAILY: "Daily digest" };
 
 const CAP_CHOICES = [10, 20, 50];
 const CHANNELS = [
@@ -14,7 +16,7 @@ const CHANNELS = [
 ] as const;
 
 type Channel = (typeof CHANNELS)[number]["key"];
-type Body = { preset?: string; types?: Record<string, Partial<Record<Channel, boolean>>>; quietHours?: { enabled?: boolean }; dailyEmailCap?: number };
+type Body = { preset?: string; types?: Record<string, Partial<Record<Channel, boolean>>>; teamActivity?: Record<string, Partial<Record<Channel, boolean>> & { mode?: string }>; quietHours?: { enabled?: boolean }; dailyEmailCap?: number };
 
 export function NotificationsTab() {
   const { orgSlug } = useMember();
@@ -111,6 +113,58 @@ export function NotificationsTab() {
           </tbody>
         </table>
       </div>
+      {v.teamActivity ? (
+        <div className="fb-prefs__tablewrap" data-testid="prefs-team-activity">
+          <table className="fb-prefs__table">
+            <caption className="fb-prefs__subhead">Team activity (what your team adds and changes)</caption>
+            <thead>
+              <tr>
+                <th scope="col">Event</th>
+                {CHANNELS.map((c) => <th key={c.key} scope="col" className="fb-prefs__chan">{c.label.toUpperCase()}</th>)}
+                <th scope="col">How often</th>
+              </tr>
+            </thead>
+            <tbody>
+              {v.teamActivity.map((t) => {
+                const pushOff = !(v.types[0]?.channels.push.available ?? false);
+                return (
+                  <tr key={t.event}>
+                    <th scope="row">
+                      {t.label}
+                      <span className="fb-prefs__hint fb-prefs__desc">{t.description}</span>
+                    </th>
+                    {CHANNELS.map((c) => {
+                      const unavailable = c.key === "push" && pushOff && !t.channels.push;
+                      return (
+                        <td key={c.key} className="fb-prefs__chan">
+                          <input
+                            type="checkbox"
+                            aria-label={`${t.label}: ${c.label}`}
+                            checked={t.channels[c.key]}
+                            disabled={unavailable}
+                            title={unavailable ? "Allow notifications on this phone or browser first." : undefined}
+                            onChange={(e) => void send({ teamActivity: { [t.event]: { [c.key]: e.target.checked } } }, `${t.label}: ${c.label} ${e.target.checked ? "on" : "off"}.`, { teamActivity: { [t.event]: { [c.key]: t.channels[c.key] } } })}
+                          />
+                        </td>
+                      );
+                    })}
+                    <td>
+                      <select
+                        className="fb-input"
+                        aria-label={`${t.label}: how often`}
+                        value={t.mode}
+                        onChange={(e) => void send({ teamActivity: { [t.event]: { mode: e.target.value } } }, `${t.label}: ${MODE_LABEL[e.target.value as DeliveryMode]}.`, { teamActivity: { [t.event]: { mode: t.mode } } })}
+                      >
+                        {(["INSTANT", "HOURLY", "DAILY"] as const).map((m) => <option key={m} value={m}>{MODE_LABEL[m]}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
       <div className="fb-prefs__grid fb-prefs__grid--tight">
         <label className="fb-prefs__tile fb-prefs__tile--check">
           <input

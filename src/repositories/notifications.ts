@@ -5,12 +5,14 @@ import { withOrgContext } from "../db/orgScopedClient";
 export interface CreateNotificationInput {
   organizationId: string;
   membershipId: string;
-  type: NotificationTypeKey;
+  type: NotificationTypeKey | "TEAM_ACTIVITY";
   title: string;
   body: string;
   entityType?: string;
   entityId?: string;
   link?: string;
+  /** FIG-1600: who did the thing the notification is about. */
+  actorMembershipId?: string;
 }
 
 /**

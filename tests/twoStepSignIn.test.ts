@@ -202,6 +202,7 @@ describe("sign-in with two-step on", () => {
   it("burns the challenge after five wrong codes, even when the sixth is right, and counts toward the account lockout", async () => {
     vi.stubEnv("TWO_STEP_RATE_LIMIT_MAX_PER_USER", "100");
     vi.stubEnv("TWO_STEP_RATE_LIMIT_MAX_PER_IP", "100");
+    vi.stubEnv("LOCKOUT_MAX_FAILURES", "5"); // the default ceiling is 200 since P2-02
     const { user } = await person();
     const { secret } = await enrol(user.id);
     const challenge = await pending(user.email);

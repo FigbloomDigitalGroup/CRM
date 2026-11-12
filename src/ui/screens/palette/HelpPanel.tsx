@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { HelpCircle, Lightbulb, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { useContactSupport } from "../../data/supportContext";
 import { ContactSupportDialog } from "./ContactSupportDialog";
 import { useHelpContent } from "./helpApi";
 
@@ -10,6 +11,7 @@ import { useHelpContent } from "./helpApi";
 export function HelpPanel({ open, onClose, pathname, orgSlug }: { open: boolean; onClose: () => void; pathname: string; orgSlug: string }) {
   const ref = useRef<HTMLElement>(null);
   const [contacting, setContacting] = useState(false);
+  const support = useContactSupport();
   useEffect(() => {
     if (!open) return;
     const opener = document.activeElement as HTMLElement | null;
@@ -58,7 +60,7 @@ export function HelpPanel({ open, onClose, pathname, orgSlug }: { open: boolean;
         <Link href={`/o/${orgSlug}/help`}>Open the Help centre</Link> · <Link href={`/o/${orgSlug}/help/whats-new`}>All that’s new</Link>
       </p>
       <p className="fb-help-panel__more">
-        Need a person? <button type="button" className="fb-help-panel__contact" onClick={() => setContacting(true)}>Contact support</button>
+        Need a person? <button type="button" className="fb-help-panel__contact" onClick={() => (support ? (onClose(), support.open()) : setContacting(true))}>Contact support</button>
       </p>
       {contacting ? <ContactSupportDialog onClose={() => setContacting(false)} /> : null}
     </aside>
