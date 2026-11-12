@@ -53,7 +53,7 @@ describe("the catalogue", () => {
     expect(isClientLocale("fr")).toBe(false);
     expect(isClientLocale(undefined)).toBe(false);
     expect(missingKeys("en")).toEqual([]);
-    expect(TRANSLATION_REVIEW).toEqual({ en: "COMPLETE", sw: "PENDING_HUMAN_REVIEW" });
+    expect(TRANSLATION_REVIEW).toEqual({ en: "COMPLETE", sw: "COMPLETE" });
   });
 
   it("returns Swahili text, fills placeholders, and never falls back for a key that has Swahili", () => {

@@ -5,15 +5,15 @@
  * records the key in `fellBack`, so a page can say so ("Some text is shown in English"), never leave a hole. A language is chosen per
  * document (a quote share, a web form), never guessed from the browser. Dates and money are formatted for the language.
  *
- * REVIEW: the Swahili text was drafted by the build team and has NOT been checked by a native speaker. `TRANSLATION_REVIEW.sw` stays
- * "PENDING_HUMAN_REVIEW" until a reviewer signs it off (docs/M17_LANE_B_ESIGN_SWAHILI.md); the strings are meant to be corrected here.
+ * REVIEW: the Swahili text was drafted by the build team and reviewed and approved by a native Swahili speaker (Given, 12 Nov 2026), so
+ * `TRANSLATION_REVIEW.sw` is "COMPLETE" (docs/M17_LANE_B_ESIGN_SWAHILI.md). Corrections are still made here.
  */
 
 export const CLIENT_LOCALES = ["en", "sw"] as const;
 export type ClientLocale = (typeof CLIENT_LOCALES)[number];
 export const DEFAULT_CLIENT_LOCALE: ClientLocale = "en";
 
-export const TRANSLATION_REVIEW: Record<ClientLocale, "COMPLETE" | "PENDING_HUMAN_REVIEW"> = { en: "COMPLETE", sw: "PENDING_HUMAN_REVIEW" };
+export const TRANSLATION_REVIEW: Record<ClientLocale, "COMPLETE" | "PENDING_HUMAN_REVIEW"> = { en: "COMPLETE", sw: "COMPLETE" };
 
 export function isClientLocale(value: unknown): value is ClientLocale {
   return typeof value === "string" && (CLIENT_LOCALES as readonly string[]).includes(value);

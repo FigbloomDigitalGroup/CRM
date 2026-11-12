@@ -1,6 +1,6 @@
 # G3.01 · V2 backend gate (FIG-1191), 9 Nov 2026
 
-Status: **checks run, sign-off open.** The gate closes when Given confirms there are no open Urgent or High bugs and Michael's approval is recorded. The tag `backend-v2` is not placed: tags are placed only when Given asks (CLAUDE.md rule 4).
+Status: **signed off by Given, also on Michael's behalf, 12 Nov 2026 (see "Sign-off" below); tag not placed.** Earlier: checks run, sign-off open. The gate closes when Given confirms there are no open Urgent or High bugs and Michael's approval is recorded. The tag `backend-v2` is not placed: tags are placed only when Given asks (CLAUDE.md rule 4).
 
 ## Checklist (from the issue)
 
@@ -78,10 +78,15 @@ Branch `makeover/m17-closeout`. Four independent agent passes, each on its own t
 
 Each `it.fails` test carries a `FINDING` comment; when a gap is fixed, change `it.fails` to `it`.
 
+### Sign-off (12 Nov 2026)
+
+- **Swahili (FIG-1189):** reviewed and approved by a native Swahili speaker (Given). `TRANSLATION_REVIEW.sw` is `COMPLETE`.
+- **G3.01 (FIG-1191):** Given signed off on Michael's behalf, as for `backend-v1`. Michael has not signed himself. Given knew at sign-off that the review was an AI code read, not a penetration test, and that W-1 and P-1 (Medium) and the Low findings are open and accepted for now. No Urgent or High bug is open (R-1 was fixed).
+- The `backend-v2` tag is not placed: it needs Given's separate word.
+
 ### Still open (human steps, not done)
 
-- Michael's approval, and the `backend-v2` tag (tags are placed only when Given asks).
-- A native review of the Swahili text.
+- Michael's own approval (Given signed on his behalf), and the `backend-v2` tag (tags are placed only when Given asks).
 - A real independent security review or penetration test of the public endpoints.
 - Confirm on AWS that the owner role bypasses RLS.
 - Wiring the V2 screens to these routes (M18).
