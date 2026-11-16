@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { callUncontracted } from "@/ui/data/client";
 import { describeError } from "@/ui/errors";
+import { AuthLayout, AuthLinks, AuthNotice } from "@/app/_shared/AuthLayout";
 
 /**
  * A5, the two-step code screen (FIG-1167, wired to FIG-1134): a new page that comes after the frozen sign-in, only when two-step sign-in is needed.
@@ -82,97 +83,98 @@ export function TwoStepForm() {
 
   if (phase === "loading" || phase === "expired" || phase === "failed") {
     return (
-      <div className="auth-shell">
-        <div className="auth-card" data-screen-label="A5 Two-step sign-in" style={{ maxWidth: 440 }}>
-          <h1 style={{ fontSize: 24, margin: "0 0 8px" }}>{phase === "loading" ? "One moment" : phase === "expired" ? "Sign in again" : "Something went wrong"}</h1>
-          <p style={{ marginTop: 0 }} role={phase === "loading" ? "status" : undefined}>
-            {phase === "loading"
-              ? "Checking your sign-in…"
-              : phase === "expired"
-                ? "This sign-in step has expired or was already used. Sign in with your password again to get a new one."
-                : "We couldn’t check your sign-in. Check your connection and reload the page."}
-          </p>
-          {phase === "loading" ? null : (
-            <p style={{ fontSize: 13, marginBottom: 0 }}>
-              <a href="/login">Back to sign-in</a>
-            </p>
-          )}
-        </div>
-      </div>
+      <AuthLayout
+        screenLabel="A5 Two-step sign-in"
+        wide
+        title={phase === "loading" ? "One moment" : phase === "expired" ? "Sign in again" : "Something went wrong"}
+        lead={
+          phase === "loading"
+            ? "Checking your sign-in…"
+            : phase === "expired"
+              ? "This sign-in step has expired or was already used. Sign in with your password again to get a new one."
+              : "We couldn’t check your sign-in. Check your connection and reload the page."
+        }
+      >
+        {phase === "loading" ? <span className="auth-spinner" role="status" aria-label="Checking your sign-in" /> : (
+          <AuthLinks>
+            <a href="/login">Back to sign-in</a>
+          </AuthLinks>
+        )}
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card" data-screen-label="A5 Two-step sign-in" style={{ maxWidth: 440 }}>
-        <span style={{ alignSelf: "flex-start", fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#e8f0fa", color: "#1f5fa8", display: "inline-block", marginBottom: 12 }}>
-          Two-step sign-in
-        </span>
-        <h1 style={{ fontSize: 24, margin: "0 0 8px" }}>{locked ? "Too many wrong codes" : useBackup ? "Enter a backup code" : "Enter your 6-digit code"}</h1>
-        <p style={{ marginTop: 0 }}>
-          {locked
-            ? "Too many wrong codes. This sign-in has ended and Management was told. Sign in again, or ask Management to reset two-step sign-in if you lost your phone."
-            : useBackup
-              ? "Each backup code works once. Lost them all? Ask Management to reset two-step sign-in."
-              : "Open your authenticator app and type the code for Figbloom CRM. This step appears after the sign-in page, only when two-step sign-in is on for you."}
-        </p>
-        {locked ? null : (
-          <form onSubmit={verify} noValidate>
-            <label htmlFor="two-step-code" style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
-              {useBackup ? "Backup code" : "Authenticator code"}
+    <AuthLayout
+      screenLabel="A5 Two-step sign-in"
+      wide
+      pill="Two-step sign-in"
+      title={locked ? "Too many wrong codes" : useBackup ? "Enter a backup code" : "Enter your 6-digit code"}
+      lead={
+        locked
+          ? "Too many wrong codes. This sign-in has ended and Management was told. Sign in again, or ask Management to reset two-step sign-in if you lost your phone."
+          : useBackup
+            ? "Each backup code works once. Lost them all? Ask Management to reset two-step sign-in."
+            : "Open your authenticator app and type the code for Figbloom CRM. This step appears after the sign-in page, only when two-step sign-in is on for you."
+      }
+    >
+      {locked ? null : (
+        <form className="auth-form" onSubmit={verify} noValidate>
+          <label htmlFor="two-step-code" className="auth-label">
+            {useBackup ? "Backup code" : "Authenticator code"}
+          </label>
+          <input
+            id="two-step-code"
+            name="code"
+            className="auth-code-input"
+            inputMode={useBackup ? "text" : "numeric"}
+            autoComplete="one-time-code"
+            autoFocus
+            placeholder={useBackup ? "XXXX-XXXX" : "123 456"}
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "two-step-error" : undefined}
+          />
+          {error ? (
+            <AuthNotice kind="error" id="two-step-error">
+              {error}
+            </AuthNotice>
+          ) : null}
+          {useBackup ? null : (
+            <label className="auth-check">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+              Remember this device for 30 days
             </label>
-            <input
-              id="two-step-code"
-              name="code"
-              inputMode={useBackup ? "text" : "numeric"}
-              autoComplete="one-time-code"
-              autoFocus
-              placeholder={useBackup ? "XXXX-XXXX" : "123 456"}
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              aria-invalid={error ? true : undefined}
-              aria-describedby={error ? "two-step-error" : undefined}
-            />
-            {error ? (
-              <p id="two-step-error" className="error" role="alert">
-                {error}
-              </p>
-            ) : null}
-            {useBackup ? null : (
-              <label style={{ display: "flex", gap: 8, alignItems: "center", margin: "12px 0", fontSize: 14 }}>
-                <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} style={{ width: 16, height: 16 }} />
-                Remember this device for 30 days
-              </label>
-            )}
-            <button type="submit" disabled={busy || done} style={{ width: "100%", marginTop: 8 }}>
-              {done ? "Signed in…" : "Verify and continue"}
-            </button>
-          </form>
-        )}
-        {done ? (
-          <p role="status" style={{ marginBottom: 0 }}>
-            Signed in. {remember && !useBackup ? "This device is now trusted for 30 days." : ""}
-          </p>
-        ) : null}
-        {locked ? null : (
-          <p style={{ marginBottom: 0 }}>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => {
-                setUseBackup((v) => !v);
-                setCode("");
-                setError("");
-              }}
-            >
-              {useBackup ? "Use my authenticator code" : "Use a backup code"}
-            </button>
-          </p>
-        )}
-        <p style={{ fontSize: 13, marginBottom: 0 }}>
-          <a href="/login">Use a different account</a>
+          )}
+          <button type="submit" disabled={busy || done} aria-busy={busy || undefined} className="auth-wide">
+            {done ? "Signed in…" : "Verify and continue"}
+          </button>
+        </form>
+      )}
+      {done ? (
+        <AuthNotice kind="success">
+          Signed in. {remember && !useBackup ? "This device is now trusted for 30 days." : ""}
+        </AuthNotice>
+      ) : null}
+      {locked ? null : (
+        <p className="auth-links">
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              setUseBackup((v) => !v);
+              setCode("");
+              setError("");
+            }}
+          >
+            {useBackup ? "Use my authenticator code" : "Use a backup code"}
+          </button>
         </p>
-      </div>
-    </div>
+      )}
+      <AuthLinks>
+        <a href="/login">Use a different account</a>
+      </AuthLinks>
+    </AuthLayout>
   );
 }

@@ -49,22 +49,18 @@ describe("no direct fetch in screens (F1.06)", () => {
 describe("the frozen sign-in pages (hard rule 1)", () => {
   // sha256 of each file's text with line endings normalised, recorded when the design was approved (27 Oct 2026); login/page.tsx and login/LoginForm.tsx updated on 29 Oct 2026 with Given's approval, to list the dev Super Admin beside the other dev chips (dev-only). A change to any of them fails here;
   // it needs Given's and Michael's say-so, and a deliberate update of this table in the same change.
+  // FIG-1592 (Given, 12 Nov 2026): forgot-password, reset-password, accept-invite and PasswordInput are open to visual polish only. They are no longer pinned by
+  // hash; `tests/frozenAuthSource.test.ts` guards what they DO (fields, endpoints, redirects, validation) instead, so new markup is allowed and new behaviour is not.
+  // login and signup (and the hero) stay pinned exactly.
   const FROZEN: Record<string, string> = {
     "src/app/login/page.tsx": "670f7f58fc1a4bf448f22fd2affe16a235f1582c2efd2d2a893f5f9062a571b9",
     "src/app/login/LoginForm.tsx": "f5ee85940286e1525d59a2e79ffb719000df1e24f80ecf643db50f25649c846e",
     "src/app/signup/page.tsx": "1a6edf08e8d7fb3471d448542c8d633e0cea03ec74bb7477557e33c14f5ecec8",
     "src/app/signup/SignupForm.tsx": "896ba29b08c148d45c924a87cc89bf56c90226d61eed0472865282661895c786",
-    "src/app/forgot-password/page.tsx": "3532069a14ea82187c6375fa8189615b49ec533697e279bb593d3f006f879052",
-    "src/app/forgot-password/ForgotPasswordForm.tsx": "3093847a152fe652bafff1193b891a63d1a2d881ddf737aa7e301e3d566537cb",
-    "src/app/reset-password/page.tsx": "825e5727fccf8593bb7861098d704daf452483457b7e58667f043b86682192a9",
-    "src/app/reset-password/ResetPasswordForm.tsx": "b8ad227e2ee8204cc15d3582fdfe404cb61702d66390d916d620f433cbcfead1",
-    "src/app/accept-invite/page.tsx": "15d40b46c0ac871fef48338320ce2d055f5085c377e0efe8a3dcbacee36554aa",
-    "src/app/accept-invite/AcceptInviteForm.tsx": "61d365e430c9e58e492eb4ecd1bcf4540ef82d6b47be7010a1a48493e7d61703",
     "src/app/_shared/AuthHero.tsx": "d4f3a599483f0fd99c826757451f1d66c45d690e80b81afe5222b38685344740",
-    "src/app/_shared/PasswordInput.tsx": "15a394403ca5108cec3c53aae5466ed3296fa5f9b738b9facc653ddb77e865bd",
   };
 
-  it("none of their files has changed", () => {
+  it("none of the pinned files has changed", () => {
     const changed = Object.entries(FROZEN)
       .filter(([file, hash]) => createHash("sha256").update(readFileSync(file, "utf8").split("\r\n").join("\n")).digest("hex") !== hash)
       .map(([file]) => file);
