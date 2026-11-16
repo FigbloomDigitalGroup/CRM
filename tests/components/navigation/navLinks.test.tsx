@@ -100,7 +100,7 @@ describe("every navigation link resolves to a real page", () => {
       for (const m of text.matchAll(/tab=([a-z0-9]+)/g)) used.add(m[1]!);
       for (const m of text.matchAll(/(?:WEBSITE|INBOUND_EMAIL): "([a-z]+)"/g)) used.add(m[1]!);
     }
-    expect([...used].filter((t) => !ids.includes(t))).toEqual([]);
+    expect([...used].filter((t) => !(ids as string[]).includes(t))).toEqual([]);
   });
 
   it("platform console: every navigation item, the account menu and the sign-in steps resolve; V2 pages are not linked and answer 404", () => {

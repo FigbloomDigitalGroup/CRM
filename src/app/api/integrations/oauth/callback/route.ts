@@ -16,9 +16,9 @@ export async function GET(request: Request) {
     // An unknown or used state and a provider-side denial both go through the same refusal inside the service.
     const ctx = await resolveRequestContext(slug ?? "unknown");
     if (url.searchParams.get("error")) {
-      return NextResponse.redirect(new URL(settingsHref(slug, "connect", { connection: "denied" }), url.origin));
+      return NextResponse.redirect(new URL(settingsHref(slug ?? "unknown", "connect", { connection: "denied" }), url.origin));
     }
     await completeConnection(ctx, { state, code });
-    return NextResponse.redirect(new URL(settingsHref(slug, "connect", { connection: "connected" }), url.origin));
+    return NextResponse.redirect(new URL(settingsHref(slug ?? "unknown", "connect", { connection: "connected" }), url.origin));
   });
 }
