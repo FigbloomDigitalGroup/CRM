@@ -145,7 +145,6 @@ export function HomeScreen() {
   }
 
   const quick = quickFor(kind, m.orgSlug, m.can);
-  const links = linksFor(kind, m.orgSlug, m.can);
   return (
     <div className="fb-home">
       <Header kind={kind} timeZone={m.timeZone} quick={quick.filter((q) => q.primary)} />
@@ -154,7 +153,6 @@ export function HomeScreen() {
       {kind === "delivery" ? <DeliveryHome sections={sections} retry={retry} /> : null}
       {kind === "finance" ? <FinanceHome sections={sections} retry={retry} /> : null}
       {kind === "technical" ? <TechnicalHome sections={sections} retry={retry} /> : null}
-      <QuickLinks links={links} />
     </div>
   );
 }
@@ -175,60 +173,6 @@ function quickFor(kind: Kind, org: string, can: (k: string) => boolean): Quick[]
   }
   if (kind === "technical") add({ key: "task", label: "New task for myself", icon: "plus", href: `${base}/tasks?new=1`, primary: true }, can("tasks.create"));
   return out;
-}
-
-/** The links along the foot of the page: the role's quick actions first, then the screens it works in (only what its permissions allow). */
-function linksFor(kind: Kind, org: string, can: (k: string) => boolean): Quick[] {
-  const base = `/o/${org}`;
-  const any = (...keys: string[]) => keys.some((k) => can(k));
-  const out: Quick[] = [...quickFor(kind, org, can)];
-  const add = (q: Quick, ok: boolean) => ok && out.push(q);
-  const tasks = any("tasks.view.own", "tasks.view.all");
-  const leads = any("leads.view.own", "leads.view.all", "leads.view.shared");
-  const deals = any("deals.view.own", "deals.view.all", "deals.view.won");
-  const dealsLabel = any("deals.view.own", "deals.view.all") ? "Deals" : "Won deals";
-  if (kind === "sales" || kind === "management") {
-    add({ key: "n-leads", label: "Leads", icon: "users", href: `${base}/leads` }, leads);
-    add({ key: "n-deals", label: dealsLabel, icon: "briefcase", href: `${base}/deals` }, deals);
-    add({ key: "n-tasks", label: "Tasks", icon: "check-square", href: `${base}/tasks` }, tasks);
-    add({ key: "n-calendar", label: "Calendar", icon: "calendar", href: `${base}/calendar` }, tasks);
-    add({ key: "n-forecast", label: "Forecast & targets", icon: "target", href: `${base}/forecast` }, any("forecast.view.all", "quotes.create", "reporting.view.own", "reporting.view.all"));
-  }
-  if (kind === "delivery") {
-    add({ key: "n-deals", label: dealsLabel, icon: "briefcase", href: `${base}/deals` }, deals);
-    add({ key: "n-tasks", label: "Tasks", icon: "check-square", href: `${base}/tasks` }, tasks);
-    add({ key: "n-handoffs", label: "Handoffs", icon: "package", href: `${base}/handoffs` }, any("handoff.manage", "deals.handoff"));
-    add({ key: "n-calendar", label: "Calendar", icon: "calendar", href: `${base}/calendar` }, tasks);
-  }
-  if (kind === "finance") {
-    add({ key: "n-deals", label: dealsLabel, icon: "briefcase", href: `${base}/deals` }, deals);
-    add({ key: "n-payments", label: "Payments", icon: "wallet", href: `${base}/payments` }, can("finance.view.payments"));
-    add({ key: "n-reports", label: can("reporting.view.all") ? "Reports" : "My metrics", icon: "chart", href: `${base}/reports` }, any("reporting.view.own", "reporting.view.all"));
-  }
-  if (kind === "technical") {
-    add({ key: "n-tasks", label: "Tasks", icon: "check-square", href: `${base}/tasks` }, tasks);
-    add({ key: "n-calendar", label: "Calendar", icon: "calendar", href: `${base}/calendar` }, tasks);
-  }
-  return out.slice(0, 8);
-}
-
-function QuickLinks({ links }: { links: Quick[] }) {
-  if (links.length === 0) return null;
-  return (
-    <nav className="fb-qlinks-wrap" aria-label="Quick links">
-      <div className="fb-qlinks__t">Quick links</div>
-      <div className="fb-qlinks">
-        {links.map((q) => (
-          <Link key={q.key} href={q.href} className="fb-qlink">
-            <span className="fb-qlink__c" aria-hidden="true">
-              <HIcon name={q.icon} size={16} stroke={1.6} />
-            </span>
-            {q.label}
-          </Link>
-        ))}
-      </div>
-    </nav>
-  );
 }
 
 function Header({ kind, timeZone, quick }: { kind: Kind | null; timeZone: string | null; quick: Quick[] }) {

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { DateTimeField } from "../../components/forms";
+import { defaultFollowUp } from "../../components/dateTimeZone";
 import { describeError } from "../../errors";
 import { useToast } from "../../components/toast";
 import { useApi } from "../../data/hooks";
@@ -20,11 +22,16 @@ const KINDS: { v: CommKind; l: string; icon: string; type: "CALL" | "WHATSAPP" |
   { v: "note", l: "Note", icon: "note", type: "NOTE" },
 ];
 const OUTCOMES = ["Reached", "No answer", "Interested", "Not now", "Asked for quote"];
-const WHEN: { v: string; l: string; days: number }[] = [
-  { v: "tomorrow", l: "Tomorrow", days: 1 },
-  { v: "3days", l: "In 3 days", days: 3 },
-  { v: "week", l: "Next week", days: 7 },
-];
+/** What the next step is. It becomes a task of that type on the Tasks page and the Calendar, and the lead's Next follow-up (P2-23). */
+const NEXT_TYPES = [
+  { v: "TASK", l: "Follow up" },
+  { v: "CALL", l: "Call" },
+  { v: "EMAIL", l: "Email" },
+  { v: "QUOTE", l: "Send quote" },
+  { v: "MEETING", l: "Meet" },
+  { v: "VISIT", l: "Visit" },
+] as const;
+type NextType = (typeof NEXT_TYPES)[number]["v"];
 
 function Chip({ on, onClick, children, tone }: { on: boolean; onClick: () => void; children: React.ReactNode; tone?: "red" }) {
   return (
@@ -36,7 +43,7 @@ function Chip({ on, onClick, children, tone }: { on: boolean; onClick: () => voi
 
 /** "Log a call or note" (the design's note drawer): what happened, the outcome, one line, and one next action that becomes a task. */
 export function NoteDrawer({ leadId, about, kind: initial = "note", onClose }: { leadId: string; about: string; kind?: CommKind; onClose: () => void }) {
-  const { orgSlug, membershipId } = useMember();
+  const { orgSlug, timeZone } = useMember();
   const api = useApi();
   const toast = useToast();
   const refresh = useRefreshLeads();
@@ -44,7 +51,9 @@ export function NoteDrawer({ leadId, about, kind: initial = "note", onClose }: {
   const [outcome, setOutcome] = useState("");
   const [text, setText] = useState("");
   const [nextTitle, setNextTitle] = useState("");
-  const [when, setWhen] = useState("tomorrow");
+  const [nextType, setNextType] = useState<NextType>("TASK");
+  const [nextDue, setNextDue] = useState(() => defaultFollowUp(new Date(), timeZone).toISOString());
+  const [key] = useState(() => newIdempotencyKey());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,18 +62,20 @@ export function NoteDrawer({ leadId, about, kind: initial = "note", onClose }: {
     setError(null);
     try {
       const k = KINDS.find((x) => x.v === kind)!;
+      // One request: what happened is a done activity on the timeline; the next step, if any, is the open follow-up task. The server saves both
+      // in one transaction and a retry with the same key saves them once.
       await api.call("postActivities", {
         params: { orgSlug },
-        idempotencyKey: newIdempotencyKey(),
-        body: { type: k.type, subject: k.l, description: text.trim() || undefined, outcome: outcome || undefined, leadId },
+        idempotencyKey: key,
+        body: {
+          type: k.type,
+          subject: k.l,
+          description: text.trim() || undefined,
+          outcome: outcome || undefined,
+          leadId,
+          ...(nextTitle.trim() ? { nextStep: { type: nextType, title: nextTitle.trim(), dueAt: nextDue } } : {}),
+        },
       });
-      if (nextTitle.trim()) {
-        const days = WHEN.find((w) => w.v === when)?.days ?? 1;
-        const due = new Date();
-        due.setDate(due.getDate() + days);
-        due.setHours(10, 0, 0, 0);
-        await api.call("postTasks", { params: { orgSlug }, idempotencyKey: newIdempotencyKey(), body: { title: nextTitle.trim(), dueAt: due.toISOString(), leadId, assigneeMembershipId: membershipId } });
-      }
       toast.show({ message: "Logged" });
       await refresh();
       onClose();
@@ -134,13 +145,14 @@ export function NoteDrawer({ leadId, about, kind: initial = "note", onClose }: {
           One next action
         </span>
         <input className="fb-ld-input" aria-label="Next action" value={nextTitle} onChange={(e) => setNextTitle(e.target.value)} placeholder="e.g. Send revised quote" />
-        <div className="fb-ld-pills" role="group" aria-label="When">
-          {WHEN.map((w) => (
-            <button key={w.v} type="button" className="fb-ld-pill" aria-pressed={when === w.v} onClick={() => setWhen(w.v)} style={when === w.v ? { background: "var(--primary-soft)", color: "var(--primary-text)", borderColor: "var(--primary)" } : undefined}>
-              {w.l}
+        <div className="fb-ld-pills" role="group" aria-label="Kind of next step">
+          {NEXT_TYPES.map((t) => (
+            <button key={t.v} type="button" className="fb-ld-pill" aria-pressed={nextType === t.v} onClick={() => setNextType(t.v)} style={nextType === t.v ? { background: "var(--primary-soft)", color: "var(--primary-text)", borderColor: "var(--primary)" } : undefined}>
+              {t.l}
             </button>
           ))}
         </div>
+        <DateTimeField label="When" value={nextDue} onChange={setNextDue} required />
       </div>
       {error ? (
         <div role="alert" className="fb-ld-error">
@@ -153,14 +165,16 @@ export function NoteDrawer({ leadId, about, kind: initial = "note", onClose }: {
 
 /** "New task" from a lead (the design's task drawer): what, details, when, priority, who. It is linked to the lead. */
 export function TaskDrawer({ leadId, about, onClose }: { leadId: string; about: string; onClose: () => void }) {
-  const { orgSlug, membershipId, can } = useMember();
+  const { orgSlug, membershipId, timeZone, can } = useMember();
   const api = useApi();
   const toast = useToast();
   const ref = useReference();
   const refresh = useRefreshLeads();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [due, setDue] = useState("");
+  const [due, setDue] = useState(() => defaultFollowUp(new Date(), timeZone).toISOString());
+  const [taskType, setTaskType] = useState<NextType>("TASK");
+  const [taskKey] = useState(() => newIdempotencyKey());
   const [priority, setPriority] = useState<"HIGH" | "MEDIUM" | "LOW">("MEDIUM");
   const [assignee, setAssignee] = useState(membershipId);
   const [busy, setBusy] = useState(false);
@@ -173,11 +187,12 @@ export function TaskDrawer({ leadId, about, onClose }: { leadId: string; about: 
     try {
       await api.call("postTasks", {
         params: { orgSlug },
-        idempotencyKey: newIdempotencyKey(),
+        idempotencyKey: taskKey,
         body: {
           title: title.trim(),
           ...(description.trim() ? { description: description.trim() } : {}),
-          ...(due ? { dueAt: new Date(due).toISOString() } : {}),
+          ...(due ? { dueAt: due } : {}),
+          type: taskType,
           priority,
           leadId,
           assigneeMembershipId: assignee,
@@ -221,10 +236,19 @@ export function TaskDrawer({ leadId, about, onClose }: { leadId: string; about: 
         <span>Description</span>
         <textarea className="fb-ld-textarea" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Details, links, next steps..." />
       </label>
-      <label className="fb-ld-field">
-        <span>Due</span>
-        <input className="fb-ld-input" type="datetime-local" value={due} onChange={(e) => setDue(e.target.value)} />
-      </label>
+      <div className="fb-ld-field">
+        <span id="fb-ld-tasktype" className="fb-ld-label">
+          What kind?
+        </span>
+        <div className="fb-ld-pills" role="group" aria-labelledby="fb-ld-tasktype">
+          {NEXT_TYPES.map((t) => (
+            <button key={t.v} type="button" className="fb-ld-pill" aria-pressed={taskType === t.v} onClick={() => setTaskType(t.v)} style={taskType === t.v ? { background: "var(--primary-soft)", color: "var(--primary-text)", borderColor: "var(--primary)" } : undefined}>
+              {t.v === "TASK" ? "Task" : t.l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <DateTimeField label="Due" value={due} onChange={setDue} />
       <div className="fb-ld-field">
         <span id="fb-ld-prio" className="fb-ld-label">
           Priority

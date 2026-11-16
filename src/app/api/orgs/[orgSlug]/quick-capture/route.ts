@@ -10,6 +10,7 @@ const QuickCaptureSchema = z.strictObject({
   phone: z.string().optional(),
   email: z.string().optional(),
   company: z.string().optional(),
+  role: z.string().optional(),
   serviceId: z.string().optional(),
   sourceId: z.string().optional(),
   note: z.string().optional(),

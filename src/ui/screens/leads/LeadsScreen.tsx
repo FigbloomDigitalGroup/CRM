@@ -16,6 +16,7 @@ import { ConvertDialog } from "./ConvertDialog";
 import { ExportDialog } from "./ExportDialog";
 import { ImportWizard } from "./ImportWizard";
 import { LeadDrawer } from "./LeadDrawer";
+import { KeyNotesPreview } from "./KeyNotesPreview";
 import { DUE_COLOUR, personInitials, statusTone, tempTone, TEMPERATURE_LABEL, TEMPERATURES } from "./format";
 import { Icon } from "./icons";
 import { SavedViewsBar } from "../views/SavedViewsBar";
@@ -98,6 +99,7 @@ export function LeadsScreen() {
   const [perPage, setPerPage] = useState(25);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [drawer, setDrawer] = useState<{ id?: string } | null>(null);
+  const [notesFor, setNotesFor] = useState<{ id: string; name: string } | null>(null);
   // A link from the home ("New lead") arrives as ?new=1: open the drawer once and clear the parameter.
   const wantsNew = params.get("new") === "1";
   useEffect(() => {
@@ -683,6 +685,11 @@ export function LeadsScreen() {
                               Restore
                             </button>
                           ) : null}
+                          {!isPoolRow && !l.archived && can("activities.view") ? (
+                            <button type="button" className="fb-ld-iconbtn" title="Key notes" aria-label={`Key notes for ${name}`} onClick={() => setNotesFor({ id: l.id, name })}>
+                              <Icon name="note" size={15} />
+                            </button>
+                          ) : null}
                           {!isPoolRow && !l.archived && c2.canEdit ? (
                             <span className="fb-ld-rowactions">
                               <button type="button" className="fb-ld-iconbtn" title="Edit" aria-label={`Edit ${name}`} onClick={() => setDrawer({ id: l.id })}>
@@ -805,6 +812,7 @@ export function LeadsScreen() {
           }}
         />
       ) : null}
+      {notesFor ? <KeyNotesPreview leadId={notesFor.id} name={notesFor.name} onClose={() => setNotesFor(null)} /> : null}
       {convertId ? (
         <ConvertDialog
           leadId={convertId}

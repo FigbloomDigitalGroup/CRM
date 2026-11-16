@@ -48,6 +48,17 @@ export const CreateLeadBodySchema = z.object({
   qualificationData: z.any().optional(),
   /** Organisation-defined custom field values (FIG-803). */
   customFields: z.record(z.string(), z.any()).optional(),
+  /** New company to create with the lead (name only), instead of `companyId` (FIG-1675). */
+  newCompanyName: z.string().max(200).optional(),
+  /** The person behind the lead: saved as a contact (reused when the email exists) linked to the company; `role` is their role in it. */
+  contact: z
+    .object({
+      name: z.string().max(120).optional(),
+      email: z.string().max(200).optional(),
+      phone: z.string().max(40).optional(),
+      role: z.string().max(80).optional(),
+    })
+    .optional(),
 });
 
 const idName = { id: z.string(), name: z.string() };
@@ -97,6 +108,9 @@ export const CreateLeadResponseSchema = z.strictObject({
   duplicates: z.array(DuplicateCandidateSchema),
   /** Candidates the caller may not open: counted, never described. */
   hiddenDuplicates: z.number().int(),
+  /** Set when the new-lead form sent a person: the contact with that email already existed and was reused (FIG-1675). */
+  contactReused: z.boolean().optional(),
+  companyReused: z.boolean().optional(),
 });
 
 /** Adds the standard `archived`, `masked` and `scope` fields to a lead row. */

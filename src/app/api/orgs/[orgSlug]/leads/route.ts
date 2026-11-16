@@ -15,7 +15,8 @@ import { respond } from "@/api/respond";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { withIdempotency } from "@/lib/idempotency";
 import { parseSort } from "@/lib/listQuery";
-import { createLead, listLeadsPage } from "@/services/leadService";
+import { listLeadsPage } from "@/services/leadService";
+import { createLeadFromForm } from "@/services/leadIntakeService";
 
 // Reference implementation of the API conventions (FIG-1014, B0.06): schemas
 // in `src/api/dto/leads.ts`, standard list query, checked response, standard
@@ -66,7 +67,7 @@ export async function POST(
     const ctx = await resolveRequestContext(orgSlug);
     const body = await parseJsonBody(request, CreateLeadBodySchema);
     return withIdempotency(ctx, request, body, async () =>
-      respond(CreateLeadResponseSchema, await createLead(ctx, body)),
+      respond(CreateLeadResponseSchema, await createLeadFromForm(ctx, body)),
     );
   });
 }

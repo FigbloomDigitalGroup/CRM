@@ -6,6 +6,8 @@ import { useMemo, useState } from "react";
 import { describeError } from "../../errors";
 import { ErrorState, NoAccess } from "../../components/states";
 import { useToast } from "../../components/toast";
+import { DateTimeField } from "../../components/forms";
+import { defaultFollowUp } from "../../components/dateTimeZone";
 import { useApi, useApiQuery, useUndoable } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { newIdempotencyKey } from "../../data/client";
@@ -58,12 +60,12 @@ const SHOWN = 8;
 type TimelineRow = { id: string; icon: string; text: string; by: string; when: string; at: number; outcome?: string };
 
 function TaskDrawer({ contactId, about, onClose }: { contactId: string; about: string; onClose: () => void }) {
-  const { orgSlug, membershipId } = useMember();
+  const { orgSlug, membershipId, timeZone } = useMember();
   const api = useApi();
   const toast = useToast();
   const refresh = useRefreshContacts();
   const [title, setTitle] = useState("");
-  const [due, setDue] = useState("");
+  const [due, setDue] = useState(() => defaultFollowUp(new Date(), timeZone).toISOString());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function save() {
@@ -73,7 +75,7 @@ function TaskDrawer({ contactId, about, onClose }: { contactId: string; about: s
       await api.call("postTasks", {
         params: { orgSlug },
         idempotencyKey: newIdempotencyKey(),
-        body: { title: title.trim(), ...(due ? { dueAt: new Date(`${due}T10:00:00`).toISOString() } : {}), priority: "MEDIUM", contactId, assigneeMembershipId: membershipId },
+        body: { title: title.trim(), ...(due ? { dueAt: due } : {}), priority: "MEDIUM", contactId, assigneeMembershipId: membershipId },
       });
       toast.show({ message: "Task created" });
       await refresh();
@@ -107,10 +109,7 @@ function TaskDrawer({ contactId, about, onClose }: { contactId: string; about: s
         </span>
         <input className="fb-ld-input" data-autofocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Send the revised quote" />
       </label>
-      <label className="fb-ld-field">
-        <span>Due</span>
-        <input className="fb-ld-input" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
-      </label>
+      <DateTimeField label="Due" value={due} onChange={setDue} />
       {error ? (
         <div role="alert" className="fb-ld-error">
           {error}

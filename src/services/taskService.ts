@@ -22,7 +22,8 @@ import {
   type TaskGroupBounds,
   type TaskGroupKey,
   listTasks as listTasksRecords,
-  updateTask as updateTaskRecord,
+  TASK_TYPES,
+  type TaskTypeValue,
   type CreateTaskInput,
   type ListTasksFilters,
 } from "../repositories/tasks";
@@ -40,6 +41,7 @@ import { assertCanAccessLinkedRecords } from "./recordAccess";
 import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 import { localParts, startOfLocalDay, startOfNextLocalDay } from "../notifications/timeZone";
 import { memberTimeZone } from "./notificationDeliveryPolicy";
+import { clearFollowUpOnArchive, promoteIfNextStep, restoreFollowUp, updateTaskLinked, isCallToAction } from "./taskLinkService";
 
 function parseDueDate(value: string | null | undefined): Date | null | undefined {
   if (value === undefined) return undefined;
@@ -83,7 +85,7 @@ export type CreateTaskServiceInput = Omit<
   "organizationId" | "createdByMembershipId" | "assigneeMembershipId" | "dueAt"
 > & { assigneeMembershipId?: string; dueAt?: string };
 
-async function resolveAssignee(ctx: AuthContext, requested?: string) {
+export async function resolveAssignee(ctx: AuthContext, requested?: string) {
   if (hasPermission(ctx, "tasks.assign.any")) {
     if (!requested || requested === ctx.membershipId) {
       return ctx.membershipId;
@@ -114,15 +116,25 @@ export async function createTask(
     input.assigneeMembershipId,
   );
 
-  const task = await createTaskRecord({
-    ...input,
-    title: title!,
-    requirements: cleanRequirements(input.requirements) ?? undefined,
-    organizationId: ctx.organizationId,
-    createdByMembershipId: ctx.membershipId,
-    assigneeMembershipId,
-    dueAt: dueAt ?? undefined,
-  });
+  // A call or meeting from the Calendar is a task of that type (P2-22); a call-to-action on a lead that comes first becomes its next step (P2-23), in the same transaction.
+  const type = input.type ?? "TASK";
+  if (!TASK_TYPES.includes(type)) {
+    throw new ValidationError("The task type is not valid.", [{ path: "type", message: `Use one of ${TASK_TYPES.join(", ")}.` }]);
+  }
+  const task = await createTaskRecord(
+    {
+      ...input,
+      type,
+      isFollowUp: undefined,
+      title: title!,
+      requirements: cleanRequirements(input.requirements) ?? undefined,
+      organizationId: ctx.organizationId,
+      createdByMembershipId: ctx.membershipId,
+      assigneeMembershipId,
+      dueAt: dueAt ?? undefined,
+    },
+    input.leadId && isCallToAction(type) ? (tx, created) => promoteIfNextStep(tx, created).then(() => undefined) : undefined,
+  );
   await rescoreCompanyQuietly(ctx.organizationId, task.companyId);
   await invalidateSignals(ctx.organizationId);
   await emitWebhookEvent({ organizationId: ctx.organizationId, type: "task.created", record: task });
@@ -323,6 +335,7 @@ export interface UpdateTaskServiceInput {
   dueAt?: string | null;
   priority?: "LOW" | "MEDIUM" | "HIGH";
   status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  type?: TaskTypeValue;
 }
 
 export async function updateTask(
@@ -375,7 +388,13 @@ export async function updateTask(
   const statusChanged =
     input.status !== undefined && input.status !== task.status;
 
-  const updatedTask = await updateTaskRecord(ctx.organizationId, taskId, {
+  if (input.type !== undefined && !TASK_TYPES.includes(input.type)) {
+    throw new ValidationError("The task type is not valid.", [{ path: "type", message: `Use one of ${TASK_TYPES.join(", ")}.` }]);
+  }
+
+  // The task and the lead's Next follow-up change together (P2-23).
+  const updatedTask = await updateTaskLinked(ctx.organizationId, taskId, {
+    type: input.type,
     title,
     description: input.description,
     requirements: cleanRequirements(input.requirements),
@@ -404,6 +423,7 @@ export async function archiveTask(ctx: AuthContext, taskId: string, input: { rea
   if (task.archivedAt) throw new ValidationError("This task is already archived.");
   const reason = cleanArchiveReason(input.reason);
   const archived = await archiveTaskRecord(ctx.organizationId, taskId, { membershipId: ctx.membershipId, reason });
+  await clearFollowUpOnArchive(ctx.organizationId, task);
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,
@@ -421,6 +441,7 @@ export async function restoreTask(ctx: AuthContext, taskId: string) {
     throw deny(ctx, "tasks.assign.any, or being this task's assignee/creator", ["tasks.assign.any"]);
   }
   if (!task.archivedAt) throw new ValidationError("This task is not archived.");
+  await restoreFollowUp(ctx.organizationId, task);
   const restored = await restoreTaskRecord(ctx.organizationId, taskId);
   await recordAuditEvent({
     organizationId: ctx.organizationId,

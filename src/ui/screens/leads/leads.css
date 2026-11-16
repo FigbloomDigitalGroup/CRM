@@ -404,3 +404,5 @@
 .fb-app .fb-ld-table td.fb-ld-td--actions { vertical-align: middle; }
 .fb-app .fb-ld-iconbtn, .fb-app .fb-ld-close, .fb-app .fb-ld-pager__btn, .fb-app .fb-ld-bulk__x, .fb-app .fb-ld-temps button { padding: 0; }
 .fb-app .fb-ld-iconbtn { width: 32px; height: 32px; }
+
+.fb-app .fb-ld-next-card__move{ flex: 1 1 260px; min-width: 240px; max-width: 360px; }

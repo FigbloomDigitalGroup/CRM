@@ -119,9 +119,9 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `PATCH /companies/{companyId}/tags` | A | A | D | D | D |
 | `POST /companies/check-duplicates` | A | A | D | D | D |
 | `GET /companies/directory` | A | A | A | A | D |
-| `GET /companies/directory/export` | A | D | D | D | D |
-| `GET /companies/export` | A | D | D | D | D |
-| `POST /companies/import` | A | D | D | D | D |
+| `GET /companies/directory/export` | A | A | A | A | D |
+| `GET /companies/export` | A | A | A | A | D |
+| `POST /companies/import` | A | A | D | D | D |
 | `GET /company-services` | A | A | A | A | D |
 | `POST /company-services` | A | A | D | D | D |
 | `POST /company-services/{companyServiceId}` | H | H | D | D | D |
@@ -142,9 +142,9 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `GET /contacts/{contactId}/tags` | A | A | A | A | D |
 | `PATCH /contacts/{contactId}/tags` | A | A | D | D | D |
 | `GET /contacts/directory` | A | A | A | A | D |
-| `GET /contacts/directory/export` | A | D | D | D | D |
-| `GET /contacts/export` | A | D | D | D | D |
-| `POST /contacts/import` | A | D | D | D | D |
+| `GET /contacts/directory/export` | A | A | A | A | D |
+| `GET /contacts/export` | A | A | A | A | D |
+| `POST /contacts/import` | A | A | D | D | D |
 | `GET /conversations` | A | A | A | D | A |
 | `POST /conversations` | A | A | A | D | D |
 | `GET /conversations/{conversationId}` | A | A | A | D | H |
@@ -213,14 +213,14 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `GET /deals/{dealId}/tags` | A | A | H | H | D |
 | `PATCH /deals/{dealId}/tags` | A | A | H | H | D |
 | `GET /deals/board` | A | A | A | A | D |
-| `GET /deals/export` | A | D | D | D | D |
+| `GET /deals/export` | A | A | A | A | D |
 | `POST /duplicates/check` | A | A | D | D | D |
 | `GET /email-templates` | A | A | A | D | D |
 | `POST /email-templates` | A | D | D | D | D |
 | `DELETE /email-templates/{templateId}` | A | D | D | D | D |
 | `PATCH /email-templates/{templateId}` | A | D | D | D | D |
 | `POST /email-templates/{templateId}/render` | A | A | A | D | D |
-| `POST /exports` | A | D | D | D | D |
+| `POST /exports` | A | A | D | D | D |
 | `GET /features` | A | A | A | A | A |
 | `PATCH /features` | V | D | D | D | D |
 | `POST /files` | A | A | A | D | D |
@@ -237,7 +237,7 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `GET /handoffs` | A | A | A | D | D |
 | `GET /help` | D | D | D | D | D |
 | `GET /help/{slug}` | D | D | D | D | D |
-| `POST /imports` | A | D | D | D | D |
+| `POST /imports` | A | A | D | D | D |
 | `GET /integrations` | A | D | D | D | D |
 | `GET /integrations/connections` | D | D | D | D | D |
 | `DELETE /integrations/connections/{connectionId}` | D | D | D | D | D |
@@ -301,8 +301,9 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `GET /leads/{leadId}/tags` | A | A | D | D | D |
 | `PATCH /leads/{leadId}/tags` | A | A | D | D | D |
 | `POST /leads/check-duplicates` | A | A | D | D | D |
-| `GET /leads/export` | A | D | D | D | D |
-| `POST /leads/import` | A | D | D | D | D |
+| `GET /leads/export` | A | A | D | D | D |
+| `POST /leads/import` | A | A | D | D | D |
+| `GET /leads/key-notes` | A | A | D | D | D |
 | `GET /leads/pool` | A | A | D | D | D |
 | `GET /look` | A | A | A | A | A |
 | `PATCH /look` | V | D | D | D | D |
@@ -350,7 +351,7 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `PUT /pipelines/{pipelineId}/stages/reorder` | D | D | D | D | D |
 | `GET /privacy` | A | D | D | D | D |
 | `GET /privacy/export-approvals` | A | A | A | A | A |
-| `POST /privacy/export-approvals` | V | D | D | D | D |
+| `POST /privacy/export-approvals` | V | V | D | D | D |
 | `POST /privacy/export-approvals/{approvalId}/decision` | A | D | D | D | D |
 | `PUT /privacy/export-rights` | A | D | D | D | D |
 | `PUT /privacy/legal-hold` | A | D | D | D | D |
@@ -529,4 +530,4 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D |
 | `GET /whats-new` | D | D | D | D | D |
 
-515 route and method pairs, 2575 role answers: A 653, D 1698, H 134, V 90.
+516 route and method pairs, 2580 role answers: A 676, D 1679, H 134, V 91.

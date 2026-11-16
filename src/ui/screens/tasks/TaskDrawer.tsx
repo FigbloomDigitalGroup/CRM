@@ -3,10 +3,10 @@
 import { Plus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { ApiRequestError } from "@/api-client";
-import { describeError, fieldErrorMap, Input, LoadingState, Select, Textarea, useApi, useApiQuery, useDirtyGuard, useMember, useToast } from "@/ui";
+import { DateTimeField, defaultFollowUp, describeError, fieldErrorMap, Input, LoadingState, Select, Textarea, useApi, useApiQuery, useDirtyGuard, useMember, useToast } from "@/ui";
 import { Portal, useFocusTrap } from "@/ui/internal";
 import { useAssignees, useRefreshTasks } from "./hooks";
-import { fromDateTimeLocal, toDateTimeLocal, type LinkType, type TaskPriority, type TaskStatus, STATUS_LABEL } from "./model";
+import { type LinkType, type TaskPriority, type TaskStatus, STATUS_LABEL } from "./model";
 import { RecordPicker, type PickedRecord } from "./RecordPicker";
 
 export interface TaskDrawerProps {
@@ -20,13 +20,25 @@ export interface TaskDrawerProps {
   taskId?: string | null;
   /** Calendar slots may add a meeting or a call as well as a task. */
   allowActivities?: boolean;
-  /** Opens as a call or a meeting (the home's "Log a call"); a call or meeting needs a linked record. */
-  initialKind?: "CALL" | "MEETING";
+  /** Opens as a call or a meeting (the home's "Log a call"), or another kind. */
+  initialKind?: Exclude<Kind, "task">;
   /** Called with what was created or saved. */
   onSaved?: () => void;
 }
 
-type Kind = "task" | "MEETING" | "CALL";
+/** What the item is. Everything is one task record with a type, so the Calendar and the Tasks page always show the same things (P2-22). */
+type Kind = "task" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT";
+const KIND_CHOICES: { value: Kind; label: string }[] = [
+  { value: "task", label: "Task" },
+  { value: "CALL", label: "Call" },
+  { value: "MEETING", label: "Meeting" },
+  { value: "EMAIL", label: "Email" },
+  { value: "QUOTE", label: "Send quote" },
+  { value: "VISIT", label: "Visit" },
+];
+const KIND_NOUN: Record<Kind, string> = { task: "task", CALL: "call", MEETING: "meeting", EMAIL: "email", QUOTE: "quote", VISIT: "visit" };
+const toTaskType = (k: Kind) => (k === "task" ? "TASK" : k);
+const fromTaskType = (t: string | null | undefined): Kind => (t && t !== "TASK" && KIND_CHOICES.some((c) => c.value === t) ? (t as Kind) : "task");
 
 const PRIORITIES: { value: TaskPriority; label: string }[] = [
   { value: "HIGH", label: "High" },
@@ -65,18 +77,19 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
   const toast = useToast();
   const refresh = useRefreshTasks();
   const ref = useRef<HTMLDivElement>(null);
+  const [initialNow] = useState(() => new Date());
   const titleId = useId();
   const editing = Boolean(taskId);
   // One key per drawer: a double click or a retry after a dropped connection creates the record once.
   const keyRef = useRef(typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now()));
   useFocusTrap(ref, onClose);
 
-  const tomorrow = new Date(Date.now() + 864e5);
+  const tomorrow = defaultFollowUp(initialNow, timeZone);
   const [form, setForm] = useState<Form>({
     kind: initialKind ?? "task",
     title: "",
     description: "",
-    due: toDateTimeLocal(initialDue ?? tomorrow, timeZone ?? undefined),
+    due: (initialDue ?? tomorrow).toISOString(),
     priority: "MEDIUM",
     assigneeId: membershipId,
     status: "PENDING",
@@ -101,16 +114,16 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
     const linkId = (t.leadId as string | null) ?? (t.dealId as string | null) ?? (t.companyId as string | null) ?? (t.contactId as string | null);
     const linkType: LinkType | null = t.leadId ? "Lead" : t.dealId ? "Deal" : t.companyId ? "Company" : t.contactId ? "Contact" : null;
     setForm({
-      kind: "task",
+      kind: fromTaskType(t.type as string | undefined),
       title: t.title,
       description: (t.description as string | null) ?? "",
-      due: t.dueAt ? toDateTimeLocal(new Date(t.dueAt), timeZone ?? undefined) : "",
+      due: t.dueAt ? new Date(t.dueAt).toISOString() : "",
       priority: t.priority as TaskPriority,
       assigneeId: t.assigneeMembershipId,
       status: t.status as TaskStatus,
       link: linkId && linkType ? { type: linkType, id: linkId, label: linkType } : null,
     });
-  }, [existing.data, timeZone]);
+  }, [existing.data]);
 
   function set<K extends keyof Form>(key: K, value: Form[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -119,6 +132,7 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
 
   const titleError = titleTouched && !form.title.trim() ? "Give it a short title so you can find it later." : errors.title;
   const isTask = form.kind === "task";
+  const noun = KIND_NOUN[form.kind];
 
   async function save() {
     setTitleTouched(true);
@@ -127,7 +141,7 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
     setErrors({});
     setFormError(null);
     try {
-      const due = form.due ? fromDateTimeLocal(form.due, timeZone ?? undefined).toISOString() : undefined;
+      const due = form.due || undefined;
       const linkIds = form.link ? ({ Lead: "leadId", Deal: "dealId", Company: "companyId", Contact: "contactId" } as const)[form.link.type] : null;
       if (editing && taskId) {
         await api.call("patchTasksByTaskId", {
@@ -136,13 +150,14 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
             title: form.title.trim(),
             description: form.description.trim() || null,
             dueAt: due ?? null,
+            type: toTaskType(form.kind),
             priority: form.priority,
             status: form.status,
             ...(canAssign && form.assigneeId !== existing.data?.assigneeMembershipId ? { assigneeMembershipId: form.assigneeId } : {}),
           },
         });
         toast.show({ tone: "success", message: "Task saved." });
-      } else if (isTask) {
+      } else {
         await api.call("postTasks", {
           params: { orgSlug },
           idempotencyKey: keyRef.current,
@@ -150,26 +165,13 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
             title: form.title.trim(),
             ...(form.description.trim() ? { description: form.description.trim() } : {}),
             ...(due ? { dueAt: due } : {}),
+            type: toTaskType(form.kind),
             priority: form.priority,
             ...(canAssign && form.assigneeId !== membershipId ? { assigneeMembershipId: form.assigneeId } : {}),
             ...(form.link && linkIds ? { [linkIds]: form.link.id } : {}),
           },
         });
-        toast.show({ tone: "success", message: "Task created." });
-      } else {
-        await api.call("postCalendar", {
-          params: { orgSlug },
-          idempotencyKey: keyRef.current,
-          body: {
-            kind: "activity",
-            type: form.kind === "CALL" ? "CALL" : "MEETING",
-            title: form.title.trim(),
-            start: due ?? new Date().toISOString(),
-            ...(form.description.trim() ? { description: form.description.trim() } : {}),
-            ...(form.link ? { link: { type: form.link.type, id: form.link.id } } : {}),
-          },
-        });
-        toast.show({ tone: "success", message: form.kind === "MEETING" ? "Meeting added." : "Call added." });
+        toast.show({ tone: "success", message: `${KIND_NOUN[form.kind][0]!.toUpperCase()}${KIND_NOUN[form.kind].slice(1)} added.` });
       }
       setDirty(false);
       refresh();
@@ -188,9 +190,9 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
     }
   }
 
-  const cta = editing ? "Save changes" : isTask ? "Create task" : form.kind === "MEETING" ? "Add meeting" : "Add call";
-  const heading = editing ? "Edit task" : isTask ? "New task" : form.kind === "MEETING" ? "New meeting" : "New call";
-  const sub = editing ? "Change who, what or when." : isTask ? "Who does what, by when." : "Put it on the calendar.";
+  const cta = editing ? "Save changes" : isTask ? "Create task" : `Add ${noun}`;
+  const heading = editing ? (isTask ? "Edit task" : `Edit ${noun}`) : `New ${noun}`;
+  const sub = editing ? "Change who, what or when." : isTask ? "Who does what, by when." : "It shows on the Calendar and on the Tasks page.";
 
   const assigneeOptions = canAssign && assignees.members.length ? assignees.members : [{ membershipId, name: "Me" }];
 
@@ -216,11 +218,11 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
           {existing.isError ? <p className="fb-error" role="alert">{describeError(existing.error).body}</p> : null}
           {formError ? <p className="fb-error" role="alert">{formError}</p> : null}
 
-          {allowActivities && !editing ? (
+          {(allowActivities ?? true) ? (
             <div className="fb-tk-field">
               <span className="fb-label" id={`${titleId}-kind`}>What are you adding?</span>
               <div className="fb-tk-seg" role="radiogroup" aria-labelledby={`${titleId}-kind`}>
-                {([["task", "Task"], ["MEETING", "Meeting"], ["CALL", "Call"]] as const).map(([value, label]) => (
+                {KIND_CHOICES.map(({ value, label }) => (
                   <button key={value} type="button" role="radio" aria-checked={form.kind === value} className="fb-tk-seg__opt" data-on={form.kind === value} onClick={() => set("kind", value)}>
                     {label}
                   </button>
@@ -240,7 +242,7 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
             autoFocus
           />
           <Textarea label="Description" rows={3} placeholder="Details, links, next steps..." value={form.description} onChange={(e) => set("description", e.target.value)} />
-          <Input label={isTask ? "Due" : "When"} type="datetime-local" value={form.due} onChange={(e) => set("due", e.target.value)} error={errors.dueAt ?? errors.start} />
+          <DateTimeField label={isTask ? "Due" : "When"} value={form.due} onChange={(iso) => set("due", iso)} error={errors.dueAt ?? errors.start} />
 
           {isTask ? (
             <div className="fb-tk-field">
@@ -264,8 +266,7 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
             />
           ) : null}
 
-          {isTask ? (
-            <Select
+          <Select
               label="Assignee"
               value={form.assigneeId}
               onChange={(e) => set("assigneeId", e.target.value)}
@@ -273,9 +274,8 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
               disabledReason={canAssign ? undefined : "You can assign tasks to yourself. Management can assign to anyone."}
               options={assigneeOptions.map((m) => ({ value: m.membershipId, label: m.membershipId === membershipId ? `${m.name} (me)`.replace("Me (me)", "Me") : m.name }))}
             />
-          ) : null}
 
-          <RecordPicker value={form.link} onChange={(r) => set("link", r)} label={isTask ? "Linked record" : "Linked record (required)"} help={errors.link ?? (isTask ? undefined : "A call or meeting is logged against a lead, deal, company or contact.")} />
+          <RecordPicker value={form.link} onChange={(r) => set("link", r)} label="Linked record" help={errors.link ?? "A lead, deal, company or contact. It shows on that record too."} />
         </form>
         <div className="fb-tk-drawer__foot">
           <button type="button" className="fb-tk-btn fb-tk-btn--secondary" onClick={onClose}>Cancel</button>

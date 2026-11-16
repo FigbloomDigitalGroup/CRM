@@ -11324,6 +11324,24 @@
     ],
     "additionalProperties": true
   },
+  "GET /api/orgs/{orgSlug}/leads/key-notes": {
+    "type": "object",
+    "properties": {
+      "canAdd": {
+        "type": "boolean"
+      },
+      "leads": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "canAdd",
+      "leads"
+    ],
+    "additionalProperties": true
+  },
   "GET /api/orgs/{orgSlug}/leads/pool": {
     "type": "object",
     "properties": {
@@ -12749,6 +12767,58 @@
       },
       "heldForDigest": {
         "type": "integer"
+      },
+      "teamActivity": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "event": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "channels": {
+              "type": "object",
+              "properties": {
+                "inApp": {
+                  "type": "boolean"
+                },
+                "email": {
+                  "type": "boolean"
+                },
+                "push": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "inApp",
+                "email",
+                "push"
+              ],
+              "additionalProperties": true
+            },
+            "mode": {
+              "type": "string"
+            },
+            "defaultMode": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "event",
+            "label",
+            "description",
+            "channels",
+            "mode",
+            "defaultMode"
+          ],
+          "additionalProperties": true
+        }
       }
     },
     "required": [
@@ -12759,7 +12829,8 @@
       "dailyEmailCap",
       "dailyEmailCapRange",
       "emailsToday",
-      "heldForDigest"
+      "heldForDigest",
+      "teamActivity"
     ],
     "additionalProperties": true
   },
@@ -13692,7 +13763,67 @@
     "properties": {
       "items": {
         "type": "array",
-        "items": {}
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "body": {
+              "type": "string"
+            },
+            "entityType": {
+              "type": "string"
+            },
+            "entityId": {
+              "type": "string"
+            },
+            "deepLink": {
+              "type": "string"
+            },
+            "organizationId": {
+              "type": "string"
+            },
+            "actorName": {
+              "type": "string"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "readAt": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            },
+            "archivedAt": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "type",
+            "title",
+            "body",
+            "entityType",
+            "entityId",
+            "deepLink",
+            "organizationId",
+            "actorName",
+            "read",
+            "createdAt"
+          ],
+          "additionalProperties": true
+        }
       },
       "page": {
         "type": "integer"
@@ -13715,7 +13846,67 @@
       },
       "notifications": {
         "type": "array",
-        "items": {}
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "body": {
+              "type": "string"
+            },
+            "entityType": {
+              "type": "string"
+            },
+            "entityId": {
+              "type": "string"
+            },
+            "deepLink": {
+              "type": "string"
+            },
+            "organizationId": {
+              "type": "string"
+            },
+            "actorName": {
+              "type": "string"
+            },
+            "read": {
+              "type": "boolean"
+            },
+            "readAt": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            },
+            "archivedAt": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "type",
+            "title",
+            "body",
+            "entityType",
+            "entityId",
+            "deepLink",
+            "organizationId",
+            "actorName",
+            "read",
+            "createdAt"
+          ],
+          "additionalProperties": true
+        }
       }
     },
     "required": [
@@ -14921,6 +15112,12 @@
             "id": {
               "type": "string"
             },
+            "signingEnabled": {
+              "type": "boolean"
+            },
+            "language": {
+              "type": "string"
+            },
             "recipientEmail": {
               "type": "string"
             },
@@ -14959,6 +15156,8 @@
           },
           "required": [
             "id",
+            "signingEnabled",
+            "language",
             "recipientEmail",
             "expiresAt",
             "viewCount",
@@ -14973,11 +15172,20 @@
       "events": {
         "type": "array",
         "items": {}
+      },
+      "signatures": {
+        "type": "array",
+        "items": {}
+      },
+      "signaturesMasked": {
+        "type": "boolean"
       }
     },
     "required": [
       "shares",
-      "events"
+      "events",
+      "signatures",
+      "signaturesMasked"
     ],
     "additionalProperties": true
   },
@@ -19323,6 +19531,16 @@
         "nullable": true,
         "description": "Observed as null in the reference example."
       },
+      "type": {
+        "type": "string"
+      },
+      "sourceActivityId": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "isFollowUp": {
+        "type": "boolean"
+      },
       "createdAt": {
         "type": "string",
         "format": "date-time"
@@ -19346,6 +19564,8 @@
       "priority",
       "status",
       "leadId",
+      "type",
+      "isFollowUp",
       "createdAt",
       "updatedAt"
     ],
@@ -19418,6 +19638,16 @@
               "nullable": true,
               "description": "Observed as null in the reference example."
             },
+            "type": {
+              "type": "string"
+            },
+            "sourceActivityId": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            },
+            "isFollowUp": {
+              "type": "boolean"
+            },
             "createdAt": {
               "type": "string",
               "format": "date-time"
@@ -19444,6 +19674,8 @@
             "priority",
             "status",
             "leadId",
+            "type",
+            "isFollowUp",
             "createdAt",
             "updatedAt",
             "assigneeName"
@@ -19474,6 +19706,605 @@
       "pageSize",
       "total",
       "pageCount"
+    ],
+    "additionalProperties": true
+  },
+  "GET /api/orgs/{orgSlug}/team/attention": {
+    "type": "object",
+    "properties": {
+      "staleDays": {
+        "type": "integer"
+      },
+      "access": {
+        "type": "object",
+        "properties": {
+          "leads": {
+            "type": "boolean"
+          },
+          "deals": {
+            "type": "boolean"
+          },
+          "tasks": {
+            "type": "boolean"
+          },
+          "values": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "leads",
+          "deals",
+          "tasks",
+          "values"
+        ],
+        "additionalProperties": true
+      },
+      "staleLeads": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "additionalProperties": true
+      },
+      "overdueTasks": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "additionalProperties": true
+      },
+      "stuckDeals": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "staleDays",
+      "access",
+      "staleLeads",
+      "overdueTasks",
+      "stuckDeals"
+    ],
+    "additionalProperties": true
+  },
+  "GET /api/orgs/{orgSlug}/team/members/{membershipId}": {
+    "type": "object",
+    "properties": {
+      "range": {
+        "type": "string"
+      },
+      "access": {
+        "type": "object",
+        "properties": {
+          "leads": {
+            "type": "boolean"
+          },
+          "deals": {
+            "type": "boolean"
+          },
+          "tasks": {
+            "type": "boolean"
+          },
+          "values": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "leads",
+          "deals",
+          "tasks",
+          "values"
+        ],
+        "additionalProperties": true
+      },
+      "member": {
+        "type": "object",
+        "properties": {
+          "membershipId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "initials": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "nullable": true,
+            "description": "Observed as null in the reference example."
+          },
+          "role": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "key",
+              "name"
+            ],
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "lastActiveAt": {
+            "nullable": true,
+            "description": "Observed as null in the reference example."
+          },
+          "openLeads": {
+            "type": "integer"
+          },
+          "openDeals": {
+            "type": "integer"
+          },
+          "openDealsValue": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string"
+              },
+              "masked": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "amount",
+              "masked"
+            ],
+            "additionalProperties": true
+          },
+          "tasksDueToday": {
+            "type": "integer"
+          },
+          "overdueTasks": {
+            "type": "integer"
+          },
+          "newLeads": {
+            "type": "integer"
+          },
+          "stuckDeals": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "membershipId",
+          "name",
+          "email",
+          "initials",
+          "role",
+          "status",
+          "openLeads",
+          "openDeals",
+          "openDealsValue",
+          "tasksDueToday",
+          "overdueTasks",
+          "newLeads",
+          "stuckDeals"
+        ],
+        "additionalProperties": true
+      },
+      "recentActivity": {
+        "type": "array",
+        "items": {}
+      },
+      "openLeads": {
+        "type": "array",
+        "items": {}
+      },
+      "openDeals": {
+        "type": "array",
+        "items": {}
+      },
+      "tasks": {
+        "type": "array",
+        "items": {}
+      },
+      "trend": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "count": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "start",
+            "count"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "required": [
+      "range",
+      "access",
+      "member",
+      "recentActivity",
+      "openLeads",
+      "openDeals",
+      "tasks",
+      "trend"
+    ],
+    "additionalProperties": true
+  },
+  "GET /api/orgs/{orgSlug}/team/members": {
+    "type": "object",
+    "properties": {
+      "range": {
+        "type": "string"
+      },
+      "access": {
+        "type": "object",
+        "properties": {
+          "leads": {
+            "type": "boolean"
+          },
+          "deals": {
+            "type": "boolean"
+          },
+          "tasks": {
+            "type": "boolean"
+          },
+          "values": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "leads",
+          "deals",
+          "tasks",
+          "values"
+        ],
+        "additionalProperties": true
+      },
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "membershipId": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "initials": {
+              "type": "string"
+            },
+            "avatarUrl": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            },
+            "role": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "key",
+                "name"
+              ],
+              "additionalProperties": true
+            },
+            "status": {
+              "type": "string"
+            },
+            "lastActiveAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "openLeads": {
+              "type": "integer"
+            },
+            "openDeals": {
+              "type": "integer"
+            },
+            "openDealsValue": {
+              "type": "object",
+              "properties": {
+                "amount": {
+                  "type": "string"
+                },
+                "masked": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "amount",
+                "masked"
+              ],
+              "additionalProperties": true
+            },
+            "tasksDueToday": {
+              "type": "integer"
+            },
+            "overdueTasks": {
+              "type": "integer"
+            },
+            "newLeads": {
+              "type": "integer"
+            },
+            "stuckDeals": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "membershipId",
+            "name",
+            "email",
+            "initials",
+            "role",
+            "status",
+            "lastActiveAt",
+            "openLeads",
+            "openDeals",
+            "openDealsValue",
+            "tasksDueToday",
+            "overdueTasks",
+            "newLeads",
+            "stuckDeals"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "page": {
+        "type": "integer"
+      },
+      "pageSize": {
+        "type": "integer"
+      },
+      "total": {
+        "type": "integer"
+      },
+      "pageCount": {
+        "type": "integer"
+      },
+      "nextCursor": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "roles": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "key",
+            "name"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "required": [
+      "range",
+      "access",
+      "items",
+      "page",
+      "pageSize",
+      "total",
+      "pageCount",
+      "roles"
+    ],
+    "additionalProperties": true
+  },
+  "GET /api/orgs/{orgSlug}/team/summary": {
+    "type": "object",
+    "properties": {
+      "range": {
+        "type": "string"
+      },
+      "rangeStart": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "generatedAt": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "staleDays": {
+        "type": "integer"
+      },
+      "access": {
+        "type": "object",
+        "properties": {
+          "leads": {
+            "type": "boolean"
+          },
+          "deals": {
+            "type": "boolean"
+          },
+          "tasks": {
+            "type": "boolean"
+          },
+          "values": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "leads",
+          "deals",
+          "tasks",
+          "values"
+        ],
+        "additionalProperties": true
+      },
+      "summary": {
+        "type": "object",
+        "properties": {
+          "membersActive": {
+            "type": "integer"
+          },
+          "membersTotal": {
+            "type": "integer"
+          },
+          "openLeads": {
+            "type": "integer"
+          },
+          "openDeals": {
+            "type": "integer"
+          },
+          "openDealsValue": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "string"
+              },
+              "masked": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "amount",
+              "masked"
+            ],
+            "additionalProperties": true
+          },
+          "overdueTasks": {
+            "type": "integer"
+          },
+          "newLeads": {
+            "type": "integer"
+          },
+          "dealsWon": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer"
+              },
+              "value": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "string"
+                  },
+                  "masked": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "amount",
+                  "masked"
+                ],
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "count",
+              "value"
+            ],
+            "additionalProperties": true
+          },
+          "unassignedLeads": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "membersActive",
+          "membersTotal",
+          "openLeads",
+          "openDeals",
+          "openDealsValue",
+          "overdueTasks",
+          "newLeads",
+          "dealsWon",
+          "unassignedLeads"
+        ],
+        "additionalProperties": true
+      },
+      "workload": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "membershipId": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "openLeads": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "membershipId",
+            "name",
+            "openLeads"
+          ],
+          "additionalProperties": true
+        }
+      }
+    },
+    "required": [
+      "range",
+      "rangeStart",
+      "generatedAt",
+      "staleDays",
+      "access",
+      "summary",
+      "workload"
     ],
     "additionalProperties": true
   },
@@ -19648,6 +20479,9 @@
       "successMessage": {
         "type": "string"
       },
+      "language": {
+        "type": "string"
+      },
       "allowedOrigins": {
         "type": "array",
         "items": {}
@@ -19690,6 +20524,7 @@
       "publicKey",
       "fields",
       "successMessage",
+      "language",
       "allowedOrigins",
       "honeypotFieldName",
       "captchaConfigured",
@@ -19757,6 +20592,9 @@
             "successMessage": {
               "type": "string"
             },
+            "language": {
+              "type": "string"
+            },
             "allowedOrigins": {
               "type": "array",
               "items": {}
@@ -19783,6 +20621,7 @@
             "publicKey",
             "fields",
             "successMessage",
+            "language",
             "allowedOrigins",
             "honeypotFieldName",
             "captchaConfigured",
@@ -22071,6 +22910,58 @@
       },
       "heldForDigest": {
         "type": "integer"
+      },
+      "teamActivity": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "event": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "channels": {
+              "type": "object",
+              "properties": {
+                "inApp": {
+                  "type": "boolean"
+                },
+                "email": {
+                  "type": "boolean"
+                },
+                "push": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "inApp",
+                "email",
+                "push"
+              ],
+              "additionalProperties": true
+            },
+            "mode": {
+              "type": "string"
+            },
+            "defaultMode": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "event",
+            "label",
+            "description",
+            "channels",
+            "mode",
+            "defaultMode"
+          ],
+          "additionalProperties": true
+        }
       }
     },
     "required": [
@@ -22081,7 +22972,8 @@
       "dailyEmailCap",
       "dailyEmailCapRange",
       "emailsToday",
-      "heldForDigest"
+      "heldForDigest",
+      "teamActivity"
     ],
     "additionalProperties": true
   },
@@ -23147,6 +24039,16 @@
         "nullable": true,
         "description": "Observed as null in the reference example."
       },
+      "type": {
+        "type": "string"
+      },
+      "sourceActivityId": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "isFollowUp": {
+        "type": "boolean"
+      },
       "createdAt": {
         "type": "string",
         "format": "date-time"
@@ -23170,6 +24072,8 @@
       "priority",
       "status",
       "leadId",
+      "type",
+      "isFollowUp",
       "createdAt",
       "updatedAt"
     ],
@@ -23300,6 +24204,9 @@
       "successMessage": {
         "type": "string"
       },
+      "language": {
+        "type": "string"
+      },
       "allowedOrigins": {
         "type": "array",
         "items": {}
@@ -23326,6 +24233,7 @@
       "publicKey",
       "fields",
       "successMessage",
+      "language",
       "allowedOrigins",
       "honeypotFieldName",
       "captchaConfigured",
@@ -23806,6 +24714,9 @@
       "id": {
         "type": "string"
       },
+      "type": {
+        "type": "string"
+      },
       "start": {
         "type": "string",
         "format": "date-time"
@@ -23814,6 +24725,7 @@
     "required": [
       "kind",
       "id",
+      "type",
       "start"
     ],
     "additionalProperties": true
@@ -29352,13 +30264,21 @@
       },
       "hiddenDuplicates": {
         "type": "integer"
+      },
+      "contactReused": {
+        "type": "boolean"
+      },
+      "companyReused": {
+        "type": "boolean"
       }
     },
     "required": [
       "lead",
       "possibleDuplicates",
       "duplicates",
-      "hiddenDuplicates"
+      "hiddenDuplicates",
+      "contactReused",
+      "companyReused"
     ],
     "additionalProperties": true
   },
@@ -31950,6 +32870,16 @@
         "nullable": true,
         "description": "Observed as null in the reference example."
       },
+      "type": {
+        "type": "string"
+      },
+      "sourceActivityId": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "isFollowUp": {
+        "type": "boolean"
+      },
       "createdAt": {
         "type": "string",
         "format": "date-time"
@@ -31975,6 +32905,8 @@
       "archivedAt",
       "archivedByMembershipId",
       "leadId",
+      "type",
+      "isFollowUp",
       "createdAt",
       "updatedAt"
     ],
@@ -32114,6 +33046,16 @@
         "nullable": true,
         "description": "Observed as null in the reference example."
       },
+      "type": {
+        "type": "string"
+      },
+      "sourceActivityId": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "isFollowUp": {
+        "type": "boolean"
+      },
       "createdAt": {
         "type": "string",
         "format": "date-time"
@@ -32135,6 +33077,8 @@
       "createdByMembershipId",
       "priority",
       "status",
+      "type",
+      "isFollowUp",
       "createdAt",
       "updatedAt"
     ],
@@ -32193,6 +33137,9 @@
       "successMessage": {
         "type": "string"
       },
+      "language": {
+        "type": "string"
+      },
       "allowedOrigins": {
         "type": "array",
         "items": {}
@@ -32219,6 +33166,7 @@
       "publicKey",
       "fields",
       "successMessage",
+      "language",
       "allowedOrigins",
       "honeypotFieldName",
       "captchaConfigured",
@@ -32280,6 +33228,9 @@
       "successMessage": {
         "type": "string"
       },
+      "language": {
+        "type": "string"
+      },
       "allowedOrigins": {
         "type": "array",
         "items": {}
@@ -32306,6 +33257,7 @@
       "publicKey",
       "fields",
       "successMessage",
+      "language",
       "allowedOrigins",
       "honeypotFieldName",
       "captchaConfigured",

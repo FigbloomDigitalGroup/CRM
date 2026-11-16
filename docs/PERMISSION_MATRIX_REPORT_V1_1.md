@@ -122,9 +122,9 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `PATCH /companies/{companyId}/tags` | A | A | D | D | D | same |
 | `POST /companies/check-duplicates` | A | A | D | D | D | same |
 | `GET /companies/directory` | A | A | A | A | D | same |
-| `GET /companies/directory/export` | A | D | D | D | D | same |
-| `GET /companies/export` | A | D | D | D | D | same |
-| `POST /companies/import` | A | D | D | D | D | same |
+| `GET /companies/directory/export` | A | A | A | A | D | same |
+| `GET /companies/export` | A | A | A | A | D | same |
+| `POST /companies/import` | A | A | D | D | D | same |
 | `GET /company-services` | A | A | A | A | D | same |
 | `POST /company-services` | A | A | D | D | D | same |
 | `POST /company-services/{companyServiceId}` | H | H | D | D | D | same |
@@ -145,9 +145,9 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `GET /contacts/{contactId}/tags` | A | A | A | A | D | same |
 | `PATCH /contacts/{contactId}/tags` | A | A | D | D | D | same |
 | `GET /contacts/directory` | A | A | A | A | D | same |
-| `GET /contacts/directory/export` | A | D | D | D | D | same |
-| `GET /contacts/export` | A | D | D | D | D | same |
-| `POST /contacts/import` | A | D | D | D | D | same |
+| `GET /contacts/directory/export` | A | A | A | A | D | same |
+| `GET /contacts/export` | A | A | A | A | D | same |
+| `POST /contacts/import` | A | A | D | D | D | same |
 | `GET /conversations` | A | A | A | D | A | same |
 | `POST /conversations` | A | A | A | D | D | same |
 | `GET /conversations/{conversationId}` | A | A | A | D | H | same |
@@ -216,14 +216,14 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `GET /deals/{dealId}/tags` | A | A | H | H | D | same |
 | `PATCH /deals/{dealId}/tags` | A | A | H | H | D | same |
 | `GET /deals/board` | A | A | A | A | D | same |
-| `GET /deals/export` | A | D | D | D | D | same |
+| `GET /deals/export` | A | A | A | A | D | same |
 | `POST /duplicates/check` | A | A | D | D | D | same |
 | `GET /email-templates` | A | A | A | D | D | same |
 | `POST /email-templates` | A | D | D | D | D | same |
 | `DELETE /email-templates/{templateId}` | A | D | D | D | D | same |
 | `PATCH /email-templates/{templateId}` | A | D | D | D | D | same |
 | `POST /email-templates/{templateId}/render` | A | A | A | D | D | same |
-| `POST /exports` | A | D | D | D | D | same |
+| `POST /exports` | A | A | D | D | D | same |
 | `GET /features` | A | A | A | A | A | same |
 | `PATCH /features` | V | D | D | D | D | same |
 | `POST /files` | A | A | A | D | D | same |
@@ -240,7 +240,7 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `GET /handoffs` | A | A | A | D | D | same |
 | `GET /help` | A | A | A | A | A | opened |
 | `GET /help/{slug}` | H | H | H | H | H | opened |
-| `POST /imports` | A | D | D | D | D | same |
+| `POST /imports` | A | A | D | D | D | same |
 | `GET /integrations` | A | D | D | D | D | same |
 | `GET /integrations/connections` | A | A | A | A | A | opened |
 | `DELETE /integrations/connections/{connectionId}` | A | A | H | H | H | opened |
@@ -304,8 +304,9 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `GET /leads/{leadId}/tags` | A | A | D | D | D | same |
 | `PATCH /leads/{leadId}/tags` | A | A | D | D | D | same |
 | `POST /leads/check-duplicates` | A | A | D | D | D | same |
-| `GET /leads/export` | A | D | D | D | D | same |
-| `POST /leads/import` | A | D | D | D | D | same |
+| `GET /leads/export` | A | A | D | D | D | same |
+| `POST /leads/import` | A | A | D | D | D | same |
+| `GET /leads/key-notes` | A | A | D | D | D | same |
 | `GET /leads/pool` | A | A | D | D | D | same |
 | `GET /look` | A | A | A | A | A | same |
 | `PATCH /look` | V | D | D | D | D | same |
@@ -353,7 +354,7 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `PUT /pipelines/{pipelineId}/stages/reorder` | V | D | D | D | D | opened |
 | `GET /privacy` | A | D | D | D | D | same |
 | `GET /privacy/export-approvals` | A | A | A | A | A | same |
-| `POST /privacy/export-approvals` | V | D | D | D | D | same |
+| `POST /privacy/export-approvals` | V | V | D | D | D | same |
 | `POST /privacy/export-approvals/{approvalId}/decision` | A | D | D | D | D | same |
 | `PUT /privacy/export-rights` | A | D | D | D | D | same |
 | `PUT /privacy/legal-hold` | A | D | D | D | D | same |
@@ -532,4 +533,4 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D | same |
 | `GET /whats-new` | A | A | A | A | A | opened |
 
-515 route and method pairs, 2575 role answers: A 847, D 1306, H 255, V 167.
+516 route and method pairs, 2580 role answers: A 870, D 1287, H 255, V 168.

@@ -13,6 +13,7 @@ const UpdateTaskSchema = z.object({
   dueAt: z.string().nullable().optional(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
   status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
+  type: z.enum(["TASK", "CALL", "MEETING", "EMAIL", "QUOTE", "VISIT"]).optional(),
 });
 
 type RouteParams = { params: Promise<{ orgSlug: string; taskId: string }> };

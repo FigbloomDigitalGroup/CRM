@@ -1,3 +1,4 @@
+@import "./screens/leads/keynotes.css";
 @import "./screens/leads/leads.css";
 @import "./screens/customers/customers.css";
 @import "./screens/deals/deals.css";
@@ -245,6 +246,12 @@ textarea.fb-input { padding: var(--space-3); min-height: 96px; resize: vertical;
 .fb-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); outline: none; }
 .fb-input[aria-invalid="true"] { border-color: var(--red); }
 .fb-input:disabled { background: var(--surface-3); color: var(--text-2); cursor: not-allowed; }
+.fb-dt__row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--space-2); }
+.fb-dt__quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.fb-dt__chip { min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer; }
+.fb-dt__chip:hover { background: var(--surface-3); }
+.fb-dt__chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.fb-dt__past { color: var(--orange-text); font-weight: 500; }
 .fb-check { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--fb-control-h); cursor: pointer; }
 .fb-check input { width: 18px; height: 18px; accent-color: var(--primary-btn); }
 .fb-form-summary { padding: var(--space-3) var(--space-4); border-radius: var(--r-lg); background: var(--red-soft); color: var(--red); font-size: 12.5px; }

@@ -4,7 +4,6 @@ import { ValidationError } from "../auth/errors";
 import { listCalendarActivities } from "../repositories/activities";
 import { listTasks as listTasksRecords } from "../repositories/tasks";
 import { localParts, startOfLocalDay, startOfNextLocalDay } from "../notifications/timeZone";
-import { createActivity } from "./activityService";
 import { memberTimeZone } from "./notificationDeliveryPolicy";
 import { assertEligibleTaskAssignee, listTaskAssigneeCandidates } from "./ownerEligibility";
 import { createTask, describeTaskLinks } from "./taskService";
@@ -17,7 +16,7 @@ export const MAX_CALENDAR_ITEMS = 1000;
 export type CalendarItem = {
   kind: "task" | "activity";
   id: string;
-  /** TASK for tasks; CALL or MEETING for activities. */
+  /** The task's type (TASK, CALL, MEETING, EMAIL, QUOTE, VISIT); CALL or MEETING for a logged activity. */
   type: string;
   title: string;
   /** Due date for a task, scheduled time for a call or meeting. */
@@ -226,7 +225,7 @@ export async function listCalendar(ctx: AuthContext, request: CalendarRequest) {
       (t): CalendarItem => ({
         kind: "task",
         id: t.id,
-        type: "TASK",
+        type: t.type,
         title: t.title,
         start: t.dueAt!.toISOString(),
         status: t.status,
@@ -315,7 +314,7 @@ export interface CreateFromSlotInput {
   title: string;
   /** The slot the person clicked: the due time of a task, the scheduled time of a call or meeting. */
   start: string;
-  /** For an activity: CALL or MEETING. */
+  /** For a call or meeting: CALL or MEETING. It is saved as a task of that type, so it also shows on the Tasks page (P2-22). */
   type?: "CALL" | "MEETING";
   description?: string;
   /** A member id; only Management may choose someone else. */
@@ -340,24 +339,18 @@ export async function createFromSlot(ctx: AuthContext, input: CreateFromSlotInpu
     companyId: input.link?.type === "Company" ? input.link.id : undefined,
     contactId: input.link?.type === "Contact" ? input.link.id : undefined,
   };
-  if (input.kind === "task") {
-    const task = await createTask(ctx, {
-      title: input.title,
-      description: input.description,
-      dueAt: start.toISOString(),
-      assigneeMembershipId: input.assigneeMembershipId,
-      ...ids,
-    });
-    return { kind: "task" as const, id: task.id, start: start.toISOString() };
-  }
-  if (input.type !== "CALL" && input.type !== "MEETING") {
+  if (input.kind === "activity" && input.type !== "CALL" && input.type !== "MEETING") {
     throw new ValidationError("Choose a call or a meeting.", [{ path: "type", message: "Use CALL or MEETING." }]);
   }
-  const title = input.title.trim();
-  if (!title) throw new ValidationError("A title is required.", [{ path: "title", message: "A title is required." }]);
-  if (!input.link) {
-    throw new ValidationError("A call or meeting must be linked to a lead, deal, company or contact.", [{ path: "link", message: "Choose the record it is about." }]);
-  }
-  const activity = await createActivity(ctx, { type: input.type, subject: title, description: input.description, occurredAt: start, ...ids });
-  return { kind: "activity" as const, id: activity.id, start: start.toISOString() };
+  // Root cause of FIG-1676: a call or meeting used to be written as a timeline activity, which the Tasks page never reads. Every kind is now one
+  // task row (same service, same table as the Tasks page), and the Calendar is a view of it.
+  const task = await createTask(ctx, {
+    title: input.title,
+    description: input.description,
+    dueAt: start.toISOString(),
+    assigneeMembershipId: input.assigneeMembershipId,
+    type: input.kind === "activity" ? input.type : "TASK",
+    ...ids,
+  });
+  return { kind: "task" as const, id: task.id, type: task.type, start: start.toISOString() };
 }

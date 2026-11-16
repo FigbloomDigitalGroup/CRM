@@ -9,6 +9,7 @@ const GroupsQuerySchema = z.object({
   groups: z.string().max(100).optional(),
   pageSize: z.string().regex(/^\d+$/).optional(),
   assigneeMembershipId: z.string().optional(),
+  type: z.enum(["TASK", "CALL", "MEETING", "EMAIL", "QUOTE", "VISIT"]).optional(),
   companyId: z.string().optional(),
   contactId: z.string().optional(),
   leadId: z.string().optional(),
@@ -30,6 +31,7 @@ export async function GET(
       pageSize: query.pageSize ? Number(query.pageSize) : undefined,
       filters: {
         assigneeMembershipId: query.assigneeMembershipId,
+        type: query.type,
         companyId: query.companyId,
         contactId: query.contactId,
         leadId: query.leadId,

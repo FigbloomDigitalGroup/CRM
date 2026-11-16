@@ -50,7 +50,7 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Integrations](#integrations) (23)
 - [Jobs](#jobs) (5)
 - [Lead Pool](#lead-pool) (5)
-- [Leads](#leads) (23)
+- [Leads](#leads) (24)
 - [Lifecycle](#lifecycle) (3)
 - [Me](#me) (5)
 - [Memberships](#memberships) (11)
@@ -114,7 +114,7 @@ Operations marked *derived* have their request schema recorded from the route it
 `postActivities` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales
-- **Body:** `type`: "CALL" | "MEETING" | "NOTE" | "EMAIL" | "WHATSAPP" | "OTHER", `subject`?: string, `description`?: string, `occurredAt`?: any, `outcome`?: string, `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string
+- **Body:** `type`: "CALL" | "MEETING" | "NOTE" | "EMAIL" | "WHATSAPP" | "OTHER", `subject`?: string, `description`?: string, `occurredAt`?: any, `outcome`?: string, `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string, `nextStep`?: object
 - **Returns:** `id`: string, `organizationId`: string, `type`: string, `subject`: string, `description`: string, `occurredAt`: string, `outcome`: string, `authorMembershipId`: string, `companyId`: string, `contactId`: string, `leadId`: string, `dealId`: string, `createdAt`: string, `importSessionId`?: null
 - **Errors:** 400, 401, 403, 404
 
@@ -519,7 +519,7 @@ The run log: each run with its rule, record and result
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, restricted technical
 - **Body:** `kind`: "task" | "activity", `title`: string, `start`: string, `type`?: "CALL" | "MEETING", `description`?: string, `assigneeMembershipId`?: string, `link`?: object
-- **Returns:** `kind`: string, `id`: string, `start`: string
+- **Returns:** `kind`: string, `id`: string, `type`: string, `start`: string
 - **Errors:** 400, 401, 403, 404
 
 ## Catalogue
@@ -1121,7 +1121,7 @@ Company list with tabs ALL (archived hidden), DORMANT and ARCHIVED, and filters 
 
 CSV of one company tab with the same filters (companies.export; bulk-export rule)
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance
 - **Query:** `tab`?: string, `q`?: string, `lifecycle`?: string, `serviceId`?: string, `ownerMembershipId`?: string, `tagId`?: string
 - **Returns:** string
 - **Errors:** 400, 401, 403
@@ -1130,7 +1130,7 @@ CSV of one company tab with the same filters (companies.export; bulk-export rule
 
 `getCompaniesExport` · *derived*
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance
 - **Returns:** CSV
 - **Errors:** 401, 403, 404
 
@@ -1138,7 +1138,7 @@ CSV of one company tab with the same filters (companies.export; bulk-export rule
 
 `postCompaniesImport` · *derived*
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales
 - **Body:** multipart form with `file`
 - **Returns:** `totalRows`: number, `created`: number, `duplicatesSkipped`: number, `alreadyConverted`: number, `failed`: number, `truncated`: boolean, `cancelled`: boolean, `errors`: object[]
 - **Errors:** 400, 401, 403, 404
@@ -1326,7 +1326,7 @@ Contact list with quality filters (standalone, missing email, missing phone), ta
 
 CSV of the contacts matching the directory filters (contacts.export; bulk-export rule)
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance
 - **Query:** `q`?: string, `companyId`?: string, `ownerMembershipId`?: string, `standalone`?: "true" | "false", `missingEmail`?: "true" | "false", `missingPhone`?: "true" | "false", `archived`?: "true" | "false", `tagId`?: string
 - **Returns:** string
 - **Errors:** 401, 403
@@ -1335,7 +1335,7 @@ CSV of the contacts matching the directory filters (contacts.export; bulk-export
 
 `getContactsExport` · *derived*
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance
 - **Returns:** CSV
 - **Errors:** 401, 403, 404
 
@@ -1343,7 +1343,7 @@ CSV of the contacts matching the directory filters (contacts.export; bulk-export
 
 `postContactsImport` · *derived*
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales
 - **Body:** multipart form with `file`
 - **Returns:** `totalRows`: number, `created`: number, `duplicatesSkipped`: number, `alreadyConverted`: number, `failed`: number, `truncated`: boolean, `cancelled`: boolean, `errors`: object[]
 - **Errors:** 400, 401, 403, 404
@@ -1559,7 +1559,7 @@ Export approval requests (Management sees all; others their own)
 
 Ask Management to approve one bulk export above the threshold
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales
 - **Body:** `entity`: string, `filters`?: object, `reason`?: string
 - **Returns:** object
 - **Errors:** 400, 401, 403
@@ -2181,7 +2181,7 @@ Get one deal (value masked for roles without deals.view.value)
 
 `getDealsExport` · *derived*
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance
 - **Returns:** CSV
 - **Errors:** 401, 403, 404
 
@@ -2472,7 +2472,7 @@ Short-lived signed link to the export (`which=result`) or the import error repor
 
 Start a background export of the full filtered set (over 500 rows needs export.bulk)
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales
 - **Body:** `entity`: "LEAD" | "CONTACT" | "COMPANY" | "DEAL", `filters`?: object
 - **Returns:** `id`: string, `kind`: "IMPORT" | "EXPORT", `entity`: string, `status`: "QUEUED" | "RUNNING" | "COMPLETED" | "COMPLETED_WITH_ERRORS" | "FAILED" | "CANCELLED", `done`: boolean, `totalRows`: number, `processedRows`: number, `createdRows`: number, `duplicateRows`: number, `alreadyConvertedRows`: number, `failedRows`: number, `hasResultFile`: boolean, `hasErrorReport`: boolean
 - **Errors:** 400, 401, 403
@@ -2483,7 +2483,7 @@ Start a background export of the full filtered set (over 500 rows needs export.b
 
 `postImports` · *derived*
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales
 - **Body:** multipart form with `file`
 - **Returns:** `id`: string, `kind`: string, `entity`: string, `status`: string, `done`: boolean, `totalRows`: number, `processedRows`: number, `createdRows`: number, `duplicateRows`: number, `alreadyConvertedRows`: number, `failedRows`: number, `truncated`: boolean, `cancelRequested`: boolean, `failureMessage`?: null, `hasResultFile`: boolean, `hasErrorReport`: boolean, `createdByMembershipId`: string, `startedAt`?: null, `finishedAt`?: null, `createdAt`: string
 - **Errors:** 400, 401, 403, 404
@@ -2800,8 +2800,8 @@ List leads (paged; own or organisation scope by role)
 Create a lead
 
 - **Credential:** sessionCookie; **access:** management, sales
-- **Body:** `leadStatusId`: string, `companyId`?: string, `contactId`?: string, `leadSourceId`?: string, `temperature`?: "HOT" | "WARM" | "COLD", `serviceInterestId`?: string, `ownerMembershipId`?: string, `qualificationData`?: any, `customFields`?: object
-- **Returns:** `lead`: object, `possibleDuplicates`: object[], `duplicates`: object[], `hiddenDuplicates`: number
+- **Body:** `leadStatusId`: string, `companyId`?: string, `contactId`?: string, `leadSourceId`?: string, `temperature`?: "HOT" | "WARM" | "COLD", `serviceInterestId`?: string, `ownerMembershipId`?: string, `qualificationData`?: any, `customFields`?: object, `newCompanyName`?: string, `contact`?: object
+- **Returns:** `lead`: object, `possibleDuplicates`: object[], `duplicates`: object[], `hiddenDuplicates`: number, `contactReused`?: boolean, `companyReused`?: boolean
 - **Errors:** 400, 401, 403, 409, 422
 
 ### `GET …/leads/{leadId}`
@@ -2817,7 +2817,7 @@ Create a lead
 `patchLeadsByLeadId` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales
-- **Body:** `customFields`?: object, `leadStatusId`?: string, `companyId`?: string | null, `contactId`?: string | null, `leadSourceId`?: string | null, `temperature`?: "HOT" | "WARM" | "COLD", `serviceInterestId`?: string | null, `qualificationData`?: any, `lostReasonId`?: string | null, `nextFollowUpAt`?: any | null, `notes`?: string | null
+- **Body:** `customFields`?: object, `leadStatusId`?: string, `companyId`?: string | null, `contactId`?: string | null, `leadSourceId`?: string | null, `temperature`?: "HOT" | "WARM" | "COLD", `serviceInterestId`?: string | null, `qualificationData`?: any, `lostReasonId`?: string | null, `nextFollowUpAt`?: string | any | null, `notes`?: string | null
 - **Returns:** `id`: string, `organizationId`: string, `companyId`: string, `contactId`: string, `leadSourceId`?: null, `leadStatusId`: string, `temperature`: string, `serviceInterestId`?: null, `ownerMembershipId`: string, `qualificationData`?: null, `lostReasonId`?: null, `nextFollowUpAt`?: null, `convertedAt`?: null, `notes`?: null, `createdByMembershipId`: string, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `customFields`: object, `scoreValue`: number, `scoreBand`: string, `scoreFactors`: object[], `scoredAt`: string, `lastContactedAt`?: null, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
 - **Errors:** 400, 401, 403, 404
 
@@ -2961,7 +2961,7 @@ Create a lead
 
 `getLeadsExport` · *derived*
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales
 - **Returns:** CSV
 - **Errors:** 401, 403, 404
 
@@ -2969,9 +2969,18 @@ Create a lead
 
 `postLeadsImport` · *derived*
 
-- **Credential:** sessionCookie; **access:** management
+- **Credential:** sessionCookie; **access:** management, sales
 - **Body:** multipart form with `file`
 - **Returns:** `totalRows`: number, `created`: number, `duplicatesSkipped`: number, `alreadyConverted`: number, `failed`: number, `truncated`: boolean, `cancelled`: boolean, `errors`: object[]
+- **Errors:** 400, 401, 403, 404
+
+### `GET …/leads/key-notes`
+
+`getLeadsKeyNotes` · *derived*
+
+- **Credential:** sessionCookie; **access:** management, sales
+- **Query:** `leadIds`?: string
+- **Returns:** `canAdd`: boolean, `leads`: object
 - **Errors:** 400, 401, 403, 404
 
 ### `GET …/leads/pool`
@@ -3927,7 +3936,7 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 `getQuotesByQuoteIdVersionsByVersionActivity` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales
-- **Returns:** `shares`: object[], `events`: any[]
+- **Returns:** `shares`: object[], `events`: any[], `signatures`: any[], `signaturesMasked`: boolean
 - **Errors:** 401, 403, 404
 
 ### `POST …/quotes/{quoteId}/versions/{version}/apply-to-deal`
@@ -4820,7 +4829,7 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 `getTasks` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, restricted technical
-- **Query:** `status`?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED", `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string, `overdueOnly`?: "true" | "false", `includeArchived`?: "true" | "false", `archivedOnly`?: "true" | "false", `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Query:** `status`?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED", `type`?: "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT", `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string, `overdueOnly`?: "true" | "false", `includeArchived`?: "true" | "false", `archivedOnly`?: "true" | "false", `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
 - **Returns:** `items`: object[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`?: null
 - **Errors:** 400, 401, 403, 404
 
@@ -4829,8 +4838,8 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 `postTasks` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, restricted technical
-- **Body:** `title`: string, `description`?: string, `requirements`?: string, `assigneeMembershipId`?: string, `dueAt`?: string, `priority`?: "LOW" | "MEDIUM" | "HIGH", `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string
-- **Returns:** `id`: string, `organizationId`: string, `title`: string, `description`?: null, `requirements`?: null, `assigneeMembershipId`: string, `createdByMembershipId`: string, `dueAt`?: null, `priority`: string, `status`: string, `completedAt`?: null, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `companyId`?: null, `contactId`?: null, `leadId`?: null, `dealId`?: null, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
+- **Body:** `title`: string, `description`?: string, `requirements`?: string, `assigneeMembershipId`?: string, `dueAt`?: string, `priority`?: "LOW" | "MEDIUM" | "HIGH", `type`?: "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT", `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string
+- **Returns:** `id`: string, `organizationId`: string, `title`: string, `description`?: null, `requirements`?: null, `assigneeMembershipId`: string, `createdByMembershipId`: string, `dueAt`?: null, `priority`: string, `status`: string, `completedAt`?: null, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `companyId`?: null, `contactId`?: null, `leadId`?: null, `dealId`?: null, `type`: string, `sourceActivityId`?: null, `isFollowUp`: boolean, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
 - **Errors:** 400, 401, 403, 404
 
 ### `GET …/tasks/{taskId}`
@@ -4838,7 +4847,7 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 `getTasksByTaskId` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, restricted technical
-- **Returns:** `id`: string, `organizationId`: string, `title`: string, `description`?: null, `requirements`?: null, `assigneeMembershipId`: string, `createdByMembershipId`: string, `dueAt`: string, `priority`: string, `status`: string, `completedAt`?: null, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `companyId`?: null, `contactId`?: null, `leadId`: string, `dealId`?: null, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
+- **Returns:** `id`: string, `organizationId`: string, `title`: string, `description`?: null, `requirements`?: null, `assigneeMembershipId`: string, `createdByMembershipId`: string, `dueAt`: string, `priority`: string, `status`: string, `completedAt`?: null, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `companyId`?: null, `contactId`?: null, `leadId`: string, `dealId`?: null, `type`: string, `sourceActivityId`?: null, `isFollowUp`: boolean, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
 - **Errors:** 401, 403, 404
 
 ### `PATCH …/tasks/{taskId}`
@@ -4846,8 +4855,8 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 `patchTasksByTaskId` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, restricted technical
-- **Body:** `title`?: string, `description`?: string | null, `requirements`?: string | null, `assigneeMembershipId`?: string, `dueAt`?: string | null, `priority`?: "LOW" | "MEDIUM" | "HIGH", `status`?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
-- **Returns:** `id`: string, `organizationId`: string, `title`: string, `description`?: null, `requirements`?: null, `assigneeMembershipId`: string, `createdByMembershipId`: string, `dueAt`: string, `priority`: string, `status`: string, `completedAt`?: null, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `companyId`?: null, `contactId`?: null, `leadId`: string, `dealId`?: null, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
+- **Body:** `title`?: string, `description`?: string | null, `requirements`?: string | null, `assigneeMembershipId`?: string, `dueAt`?: string | null, `priority`?: "LOW" | "MEDIUM" | "HIGH", `status`?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED", `type`?: "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT"
+- **Returns:** `id`: string, `organizationId`: string, `title`: string, `description`?: null, `requirements`?: null, `assigneeMembershipId`: string, `createdByMembershipId`: string, `dueAt`: string, `priority`: string, `status`: string, `completedAt`?: null, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `companyId`?: null, `contactId`?: null, `leadId`: string, `dealId`?: null, `type`: string, `sourceActivityId`?: null, `isFollowUp`: boolean, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
 - **Errors:** 400, 401, 403, 404
 
 ### `POST …/tasks/{taskId}/archive`
@@ -4856,7 +4865,7 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, restricted technical
 - **Body:** `reason`?: string
-- **Returns:** `id`: string, `organizationId`: string, `title`: string, `description`?: null, `requirements`?: null, `assigneeMembershipId`: string, `createdByMembershipId`: string, `dueAt`: string, `priority`: string, `status`: string, `completedAt`?: null, `archivedAt`: string, `archivedByMembershipId`: string, `archiveReason`?: null, `companyId`?: null, `contactId`?: null, `leadId`: string, `dealId`?: null, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
+- **Returns:** `id`: string, `organizationId`: string, `title`: string, `description`?: null, `requirements`?: null, `assigneeMembershipId`: string, `createdByMembershipId`: string, `dueAt`: string, `priority`: string, `status`: string, `completedAt`?: null, `archivedAt`: string, `archivedByMembershipId`: string, `archiveReason`?: null, `companyId`?: null, `contactId`?: null, `leadId`: string, `dealId`?: null, `type`: string, `sourceActivityId`?: null, `isFollowUp`: boolean, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
 - **Errors:** 400, 401, 403, 404
 
 ### `GET …/tasks/{taskId}/attachments`
@@ -4930,7 +4939,7 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 `getTasksGroups` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, restricted technical
-- **Query:** `groups`?: string, `pageSize`?: string, `assigneeMembershipId`?: string, `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string, `q`?: string
+- **Query:** `groups`?: string, `pageSize`?: string, `assigneeMembershipId`?: string, `type`?: "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT", `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string, `q`?: string
 - **Returns:** `timeZone`: string, `counts`: object, `groups`: object[]
 - **Errors:** 400, 401, 403, 404
 
@@ -4939,7 +4948,7 @@ The caller's queue as the server sees it: last sync, last seven days, what needs
 `getTasksGroupsByGroup` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, restricted technical
-- **Query:** `assigneeMembershipId`?: string, `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string, `q`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Query:** `assigneeMembershipId`?: string, `type`?: "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT", `companyId`?: string, `contactId`?: string, `leadId`?: string, `dealId`?: string, `q`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
 - **Returns:** `key`: string, `label`: string, `count`: number, `items`: any[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`?: null
 - **Errors:** 400, 401, 403, 404
 
@@ -5067,7 +5076,7 @@ The team summary strip and workload balance for a date range (today, 7d, 30d). M
 
 - **Credential:** sessionCookie; **access:** management
 - **Body:** `name`: string, `fields`?: any, `leadSourceKey`?: string | null, `successMessage`?: string, `language`?: string, `allowedOrigins`?: any, `honeypotFieldName`?: string, `captchaSecret`?: string | null
-- **Returns:** `id`: string, `name`: string, `status`: string, `publicKey`: string, `fields`: object[], `leadSourceKey`?: null, `successMessage`: string, `allowedOrigins`: any[], `honeypotFieldName`: string, `captchaConfigured`: boolean, `createdAt`: string, `updatedAt`: string
+- **Returns:** `id`: string, `name`: string, `status`: string, `publicKey`: string, `fields`: object[], `leadSourceKey`?: null, `successMessage`: string, `language`: string, `allowedOrigins`: any[], `honeypotFieldName`: string, `captchaConfigured`: boolean, `createdAt`: string, `updatedAt`: string
 - **Errors:** 400, 401, 403, 404
 
 ### `GET …/web-forms/{formId}`
@@ -5075,7 +5084,7 @@ The team summary strip and workload balance for a date range (today, 7d, 30d). M
 `getWebFormsByFormId` · *derived*
 
 - **Credential:** sessionCookie; **access:** management
-- **Returns:** `id`: string, `name`: string, `status`: string, `publicKey`: string, `fields`: object[], `leadSourceKey`?: null, `successMessage`: string, `allowedOrigins`: any[], `honeypotFieldName`: string, `captchaConfigured`: boolean, `createdAt`: string, `updatedAt`: string, `last30Days`: object
+- **Returns:** `id`: string, `name`: string, `status`: string, `publicKey`: string, `fields`: object[], `leadSourceKey`?: null, `successMessage`: string, `language`: string, `allowedOrigins`: any[], `honeypotFieldName`: string, `captchaConfigured`: boolean, `createdAt`: string, `updatedAt`: string, `last30Days`: object
 - **Errors:** 401, 403, 404
 
 ### `PATCH …/web-forms/{formId}`
@@ -5084,7 +5093,7 @@ The team summary strip and workload balance for a date range (today, 7d, 30d). M
 
 - **Credential:** sessionCookie; **access:** management
 - **Body:** `name`?: string, `status`?: string, `fields`?: any, `leadSourceKey`?: string | null, `successMessage`?: string, `language`?: string, `allowedOrigins`?: any, `honeypotFieldName`?: string, `captchaSecret`?: string | null
-- **Returns:** `id`: string, `name`: string, `status`: string, `publicKey`: string, `fields`: object[], `leadSourceKey`?: null, `successMessage`: string, `allowedOrigins`: any[], `honeypotFieldName`: string, `captchaConfigured`: boolean, `createdAt`: string, `updatedAt`: string
+- **Returns:** `id`: string, `name`: string, `status`: string, `publicKey`: string, `fields`: object[], `leadSourceKey`?: null, `successMessage`: string, `language`: string, `allowedOrigins`: any[], `honeypotFieldName`: string, `captchaConfigured`: boolean, `createdAt`: string, `updatedAt`: string
 - **Errors:** 400, 401, 403, 404
 
 ### `DELETE …/web-forms/{formId}`
@@ -5100,7 +5109,7 @@ The team summary strip and workload balance for a date range (today, 7d, 30d). M
 `postWebFormsByFormIdRotateKey` · *derived*
 
 - **Credential:** sessionCookie; **access:** management
-- **Returns:** `id`: string, `name`: string, `status`: string, `publicKey`: string, `fields`: object[], `leadSourceKey`?: null, `successMessage`: string, `allowedOrigins`: any[], `honeypotFieldName`: string, `captchaConfigured`: boolean, `createdAt`: string, `updatedAt`: string
+- **Returns:** `id`: string, `name`: string, `status`: string, `publicKey`: string, `fields`: object[], `leadSourceKey`?: null, `successMessage`: string, `language`: string, `allowedOrigins`: any[], `honeypotFieldName`: string, `captchaConfigured`: boolean, `createdAt`: string, `updatedAt`: string
 - **Errors:** 401, 403, 404
 
 ### `GET …/web-forms/{formId}/submissions`

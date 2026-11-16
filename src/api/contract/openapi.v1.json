@@ -2314,6 +2314,37 @@
                   },
                   "dealId": {
                     "type": "string"
+                  },
+                  "nextStep": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "TASK",
+                          "CALL",
+                          "MEETING",
+                          "EMAIL",
+                          "QUOTE",
+                          "VISIT"
+                        ]
+                      },
+                      "dueAt": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "assigneeMembershipId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "dueAt"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -7616,6 +7647,9 @@
                     "id": {
                       "type": "string"
                     },
+                    "type": {
+                      "type": "string"
+                    },
                     "start": {
                       "type": "string",
                       "format": "date-time"
@@ -7624,6 +7658,7 @@
                   "required": [
                     "kind",
                     "id",
+                    "type",
                     "start"
                   ],
                   "additionalProperties": true
@@ -20097,13 +20132,16 @@
           }
         ],
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES",
+          "DELIVERY",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
+          "SALES": "A",
+          "DELIVERY": "A",
+          "FINANCE": "A",
           "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
@@ -20309,13 +20347,16 @@
         },
         "x-contract-source": "derived",
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES",
+          "DELIVERY",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
+          "SALES": "A",
+          "DELIVERY": "A",
+          "FINANCE": "A",
           "RESTRICTED_TECHNICAL": "D"
         }
       }
@@ -20489,11 +20530,12 @@
         },
         "x-contract-source": "derived",
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
+          "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
           "RESTRICTED_TECHNICAL": "D"
@@ -24397,13 +24439,16 @@
           }
         ],
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES",
+          "DELIVERY",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
+          "SALES": "A",
+          "DELIVERY": "A",
+          "FINANCE": "A",
           "RESTRICTED_TECHNICAL": "D"
         },
         "parameters": [
@@ -24631,13 +24676,16 @@
         },
         "x-contract-source": "derived",
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES",
+          "DELIVERY",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
+          "SALES": "A",
+          "DELIVERY": "A",
+          "FINANCE": "A",
           "RESTRICTED_TECHNICAL": "D"
         }
       }
@@ -24811,11 +24859,12 @@
         },
         "x-contract-source": "derived",
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
+          "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
           "RESTRICTED_TECHNICAL": "D"
@@ -38468,13 +38517,16 @@
         },
         "x-contract-source": "derived",
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES",
+          "DELIVERY",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
-          "DELIVERY": "D",
-          "FINANCE": "D",
+          "SALES": "A",
+          "DELIVERY": "A",
+          "FINANCE": "A",
           "RESTRICTED_TECHNICAL": "D"
         }
       }
@@ -39527,11 +39579,12 @@
           }
         ],
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
+          "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
           "RESTRICTED_TECHNICAL": "D"
@@ -42786,11 +42839,12 @@
         },
         "x-contract-source": "derived",
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
+          "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
           "RESTRICTED_TECHNICAL": "D"
@@ -50083,6 +50137,32 @@
                       "type": "string"
                     },
                     "additionalProperties": {}
+                  },
+                  "newCompanyName": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "contact": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "maxLength": 120
+                      },
+                      "email": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "phone": {
+                        "type": "string",
+                        "maxLength": 40
+                      },
+                      "role": {
+                        "type": "string",
+                        "maxLength": 80
+                      }
+                    },
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -50212,6 +50292,12 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "contactReused": {
+                      "type": "boolean"
+                    },
+                    "companyReused": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -50928,7 +51014,15 @@
                   },
                   "nextFollowUpAt": {
                     "anyOf": [
-                      {},
+                      {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          {}
+                        ]
+                      },
                       {
                         "type": "null"
                       }
@@ -54919,11 +55013,12 @@
         },
         "x-contract-source": "derived",
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
+          "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
           "RESTRICTED_TECHNICAL": "D"
@@ -55099,11 +55194,142 @@
         },
         "x-contract-source": "derived",
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
+          "SALES": "A",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        }
+      }
+    },
+    "/api/orgs/{orgSlug}/leads/key-notes": {
+      "get": {
+        "operationId": "getLeadsKeyNotes",
+        "summary": "GET /leads/key-notes",
+        "tags": [
+          "Leads"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "leadIds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "",
+              "type": "string",
+              "maxLength": 4000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "canAdd": {
+                      "type": "boolean"
+                    },
+                    "leads": {
+                      "type": "object",
+                      "properties": {},
+                      "additionalProperties": true
+                    }
+                  },
+                  "required": [
+                    "canAdd",
+                    "leads"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (`fieldErrors` lists the fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation, or hidden from this role.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "x-contract-source": "derived",
+        "x-allowed-roles": [
+          "MANAGEMENT",
+          "SALES"
+        ],
+        "x-role-outcomes": {
+          "MANAGEMENT": "A",
+          "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "D",
           "RESTRICTED_TECHNICAL": "D"
@@ -63995,11 +64221,12 @@
           }
         ],
         "x-allowed-roles": [
-          "MANAGEMENT"
+          "MANAGEMENT",
+          "SALES"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "V",
-          "SALES": "D",
+          "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "D",
           "RESTRICTED_TECHNICAL": "D"
@@ -69872,6 +70099,12 @@
                           "id": {
                             "type": "string"
                           },
+                          "signingEnabled": {
+                            "type": "boolean"
+                          },
+                          "language": {
+                            "type": "string"
+                          },
                           "recipientEmail": {
                             "type": "string"
                           },
@@ -69910,6 +70143,8 @@
                         },
                         "required": [
                           "id",
+                          "signingEnabled",
+                          "language",
                           "recipientEmail",
                           "expiresAt",
                           "viewCount",
@@ -69924,11 +70159,20 @@
                     "events": {
                       "type": "array",
                       "items": {}
+                    },
+                    "signatures": {
+                      "type": "array",
+                      "items": {}
+                    },
+                    "signaturesMasked": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
                     "shares",
-                    "events"
+                    "events",
+                    "signatures",
+                    "signaturesMasked"
                   ],
                   "additionalProperties": true
                 }
@@ -84649,6 +84893,22 @@
             }
           },
           {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TASK",
+                "CALL",
+                "MEETING",
+                "EMAIL",
+                "QUOTE",
+                "VISIT"
+              ]
+            }
+          },
+          {
             "name": "companyId",
             "in": "query",
             "required": false,
@@ -84841,6 +85101,16 @@
                             "nullable": true,
                             "description": "Observed as null in the reference example."
                           },
+                          "type": {
+                            "type": "string"
+                          },
+                          "sourceActivityId": {
+                            "nullable": true,
+                            "description": "Observed as null in the reference example."
+                          },
+                          "isFollowUp": {
+                            "type": "boolean"
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time"
@@ -84867,6 +85137,8 @@
                           "priority",
                           "status",
                           "leadId",
+                          "type",
+                          "isFollowUp",
                           "createdAt",
                           "updatedAt",
                           "assigneeName"
@@ -85023,6 +85295,17 @@
                       "HIGH"
                     ]
                   },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "TASK",
+                      "CALL",
+                      "MEETING",
+                      "EMAIL",
+                      "QUOTE",
+                      "VISIT"
+                    ]
+                  },
                   "companyId": {
                     "type": "string"
                   },
@@ -85123,6 +85406,16 @@
                       "nullable": true,
                       "description": "Observed as null in the reference example."
                     },
+                    "type": {
+                      "type": "string"
+                    },
+                    "sourceActivityId": {
+                      "nullable": true,
+                      "description": "Observed as null in the reference example."
+                    },
+                    "isFollowUp": {
+                      "type": "boolean"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -85144,6 +85437,8 @@
                     "createdByMembershipId",
                     "priority",
                     "status",
+                    "type",
+                    "isFollowUp",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -85328,6 +85623,16 @@
                       "nullable": true,
                       "description": "Observed as null in the reference example."
                     },
+                    "type": {
+                      "type": "string"
+                    },
+                    "sourceActivityId": {
+                      "nullable": true,
+                      "description": "Observed as null in the reference example."
+                    },
+                    "isFollowUp": {
+                      "type": "boolean"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -85351,6 +85656,8 @@
                     "priority",
                     "status",
                     "leadId",
+                    "type",
+                    "isFollowUp",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -85498,6 +85805,17 @@
                       "COMPLETED",
                       "CANCELLED"
                     ]
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "TASK",
+                      "CALL",
+                      "MEETING",
+                      "EMAIL",
+                      "QUOTE",
+                      "VISIT"
+                    ]
                   }
                 }
               }
@@ -85583,6 +85901,16 @@
                       "nullable": true,
                       "description": "Observed as null in the reference example."
                     },
+                    "type": {
+                      "type": "string"
+                    },
+                    "sourceActivityId": {
+                      "nullable": true,
+                      "description": "Observed as null in the reference example."
+                    },
+                    "isFollowUp": {
+                      "type": "boolean"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -85606,6 +85934,8 @@
                     "priority",
                     "status",
                     "leadId",
+                    "type",
+                    "isFollowUp",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -85807,6 +86137,16 @@
                       "nullable": true,
                       "description": "Observed as null in the reference example."
                     },
+                    "type": {
+                      "type": "string"
+                    },
+                    "sourceActivityId": {
+                      "nullable": true,
+                      "description": "Observed as null in the reference example."
+                    },
+                    "isFollowUp": {
+                      "type": "boolean"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -85832,6 +86172,8 @@
                     "archivedAt",
                     "archivedByMembershipId",
                     "leadId",
+                    "type",
+                    "isFollowUp",
                     "createdAt",
                     "updatedAt"
                   ],
@@ -86997,6 +87339,22 @@
             }
           },
           {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TASK",
+                "CALL",
+                "MEETING",
+                "EMAIL",
+                "QUOTE",
+                "VISIT"
+              ]
+            }
+          },
+          {
             "name": "companyId",
             "in": "query",
             "required": false,
@@ -87253,6 +87611,22 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TASK",
+                "CALL",
+                "MEETING",
+                "EMAIL",
+                "QUOTE",
+                "VISIT"
+              ]
             }
           },
           {
@@ -90292,6 +90666,9 @@
                           "successMessage": {
                             "type": "string"
                           },
+                          "language": {
+                            "type": "string"
+                          },
                           "allowedOrigins": {
                             "type": "array",
                             "items": {}
@@ -90318,6 +90695,7 @@
                           "publicKey",
                           "fields",
                           "successMessage",
+                          "language",
                           "allowedOrigins",
                           "honeypotFieldName",
                           "captchaConfigured",
@@ -90518,6 +90896,9 @@
                     "successMessage": {
                       "type": "string"
                     },
+                    "language": {
+                      "type": "string"
+                    },
                     "allowedOrigins": {
                       "type": "array",
                       "items": {}
@@ -90544,6 +90925,7 @@
                     "publicKey",
                     "fields",
                     "successMessage",
+                    "language",
                     "allowedOrigins",
                     "honeypotFieldName",
                     "captchaConfigured",
@@ -90823,6 +91205,9 @@
                     "successMessage": {
                       "type": "string"
                     },
+                    "language": {
+                      "type": "string"
+                    },
                     "allowedOrigins": {
                       "type": "array",
                       "items": {}
@@ -90865,6 +91250,7 @@
                     "publicKey",
                     "fields",
                     "successMessage",
+                    "language",
                     "allowedOrigins",
                     "honeypotFieldName",
                     "captchaConfigured",
@@ -91067,6 +91453,9 @@
                     "successMessage": {
                       "type": "string"
                     },
+                    "language": {
+                      "type": "string"
+                    },
                     "allowedOrigins": {
                       "type": "array",
                       "items": {}
@@ -91093,6 +91482,7 @@
                     "publicKey",
                     "fields",
                     "successMessage",
+                    "language",
                     "allowedOrigins",
                     "honeypotFieldName",
                     "captchaConfigured",
@@ -91263,6 +91653,9 @@
                     "successMessage": {
                       "type": "string"
                     },
+                    "language": {
+                      "type": "string"
+                    },
                     "allowedOrigins": {
                       "type": "array",
                       "items": {}
@@ -91289,6 +91682,7 @@
                     "publicKey",
                     "fields",
                     "successMessage",
+                    "language",
                     "allowedOrigins",
                     "honeypotFieldName",
                     "captchaConfigured",

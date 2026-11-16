@@ -14,7 +14,8 @@ import { roleIsAvailable } from "./permissions";
  */
 const AREA_BY_KEY = new Map(PERMISSIONS.map((p) => [p.key, p.area]));
 
-const isViewKey = (key: string) => /(^|\.)view(\.|$)/.test(key);
+// Export and import (P2-26) are given to every role, so they do not make a role the owner of an area.
+const isViewKey = (key: string) => /(^|\.)(view|export|import)(\.|$)/.test(key);
 
 export function areaOfKey(key: string): string | undefined {
   return AREA_BY_KEY.get(key);

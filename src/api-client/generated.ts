@@ -378,6 +378,12 @@ export interface Operations {
       contactId?: string;
       leadId?: string;
       dealId?: string;
+      nextStep?: {
+        type: "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT";
+        dueAt: string;
+        title?: string;
+        assigneeMembershipId?: string;
+      };
     };
     response: {
       id: string;
@@ -1093,6 +1099,7 @@ export interface Operations {
     response: {
       kind: string;
       id: string;
+      type: string;
       start: string;
       [key: string]: unknown;
     };
@@ -6485,6 +6492,13 @@ export interface Operations {
       customFields?: {
         [key: string]: unknown;
       };
+      newCompanyName?: string;
+      contact?: {
+        name?: string;
+        email?: string;
+        phone?: string;
+        role?: string;
+      };
     };
     response: {
       lead: {
@@ -6508,6 +6522,8 @@ export interface Operations {
         score: number;
       }>;
       hiddenDuplicates: number;
+      contactReused?: boolean;
+      companyReused?: boolean;
     };
   };
   getLeadsByLeadId: {
@@ -6648,7 +6664,7 @@ export interface Operations {
       serviceInterestId?: string | null;
       qualificationData?: unknown;
       lostReasonId?: string | null;
-      nextFollowUpAt?: unknown | null;
+      nextFollowUpAt?: string | unknown | null;
       notes?: string | null;
     };
     response: {
@@ -7255,6 +7271,20 @@ export interface Operations {
         outcome: string;
         [key: string]: unknown;
       }>;
+      [key: string]: unknown;
+    };
+  };
+  getLeadsKeyNotes: {
+    params: { orgSlug: string };
+    query: {
+      leadIds?: string;
+    };
+    body: undefined;
+    response: {
+      canAdd: boolean;
+      leads: {
+        [key: string]: unknown;
+      };
       [key: string]: unknown;
     };
   };
@@ -9146,6 +9176,8 @@ export interface Operations {
     response: {
       shares: Array<{
         id: string;
+        signingEnabled: boolean;
+        language: string;
         recipientEmail: string;
         expiresAt: string;
         revokedAt?: unknown | null;
@@ -9159,6 +9191,8 @@ export interface Operations {
         [key: string]: unknown;
       }>;
       events: Array<unknown>;
+      signatures: Array<unknown>;
+      signaturesMasked: boolean;
       [key: string]: unknown;
     };
   };
@@ -10961,6 +10995,7 @@ export interface Operations {
     params: { orgSlug: string };
     query: {
       status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+      type?: "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT";
       companyId?: string;
       contactId?: string;
       leadId?: string;
@@ -10995,6 +11030,9 @@ export interface Operations {
         contactId?: unknown | null;
         leadId: unknown;
         dealId?: unknown | null;
+        type: string;
+        sourceActivityId?: unknown | null;
+        isFollowUp: boolean;
         createdAt: string;
         updatedAt: string;
         importSessionId?: unknown | null;
@@ -11019,6 +11057,7 @@ export interface Operations {
       assigneeMembershipId?: string;
       dueAt?: string;
       priority?: "LOW" | "MEDIUM" | "HIGH";
+      type?: "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT";
       companyId?: string;
       contactId?: string;
       leadId?: string;
@@ -11043,6 +11082,9 @@ export interface Operations {
       contactId?: unknown | null;
       leadId?: unknown | null;
       dealId?: unknown | null;
+      type: string;
+      sourceActivityId?: unknown | null;
+      isFollowUp: boolean;
       createdAt: string;
       updatedAt: string;
       importSessionId?: unknown | null;
@@ -11072,6 +11114,9 @@ export interface Operations {
       contactId?: unknown | null;
       leadId: string;
       dealId?: unknown | null;
+      type: string;
+      sourceActivityId?: unknown | null;
+      isFollowUp: boolean;
       createdAt: string;
       updatedAt: string;
       importSessionId?: unknown | null;
@@ -11089,6 +11134,7 @@ export interface Operations {
       dueAt?: string | null;
       priority?: "LOW" | "MEDIUM" | "HIGH";
       status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+      type?: "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT";
     };
     response: {
       id: string;
@@ -11109,6 +11155,9 @@ export interface Operations {
       contactId?: unknown | null;
       leadId: string;
       dealId?: unknown | null;
+      type: string;
+      sourceActivityId?: unknown | null;
+      isFollowUp: boolean;
       createdAt: string;
       updatedAt: string;
       importSessionId?: unknown | null;
@@ -11140,6 +11189,9 @@ export interface Operations {
       contactId?: unknown | null;
       leadId: string;
       dealId?: unknown | null;
+      type: string;
+      sourceActivityId?: unknown | null;
+      isFollowUp: boolean;
       createdAt: string;
       updatedAt: string;
       importSessionId?: unknown | null;
@@ -11245,6 +11297,7 @@ export interface Operations {
       groups?: string;
       pageSize?: string;
       assigneeMembershipId?: string;
+      type?: "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT";
       companyId?: string;
       contactId?: string;
       leadId?: string;
@@ -11283,6 +11336,7 @@ export interface Operations {
     params: { orgSlug: string; group: string };
     query: {
       assigneeMembershipId?: string;
+      type?: "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT";
       companyId?: string;
       contactId?: string;
       leadId?: string;
@@ -11682,6 +11736,7 @@ export interface Operations {
         }>;
         leadSourceKey?: unknown | null;
         successMessage: string;
+        language: string;
         allowedOrigins: Array<unknown>;
         honeypotFieldName: string;
         captchaConfigured: boolean;
@@ -11720,6 +11775,7 @@ export interface Operations {
       }>;
       leadSourceKey?: unknown | null;
       successMessage: string;
+      language: string;
       allowedOrigins: Array<unknown>;
       honeypotFieldName: string;
       captchaConfigured: boolean;
@@ -11756,6 +11812,7 @@ export interface Operations {
       }>;
       leadSourceKey?: unknown | null;
       successMessage: string;
+      language: string;
       allowedOrigins: Array<unknown>;
       honeypotFieldName: string;
       captchaConfigured: boolean;
@@ -11798,6 +11855,7 @@ export interface Operations {
       }>;
       leadSourceKey?: unknown | null;
       successMessage: string;
+      language: string;
       allowedOrigins: Array<unknown>;
       honeypotFieldName: string;
       captchaConfigured: boolean;
@@ -11825,6 +11883,7 @@ export interface Operations {
       }>;
       leadSourceKey?: unknown | null;
       successMessage: string;
+      language: string;
       allowedOrigins: Array<unknown>;
       honeypotFieldName: string;
       captchaConfigured: boolean;
@@ -12200,9 +12259,9 @@ export const operations = {
   patchCompaniesByCompanyIdTags: { method: "PATCH", path: "/api/orgs/{orgSlug}/companies/{companyId}/tags", tag: "Companies", summary: "PATCH /companies/{companyId}/tags", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   postCompaniesCheckDuplicates: { method: "POST", path: "/api/orgs/{orgSlug}/companies/check-duplicates", tag: "Companies", summary: "POST /companies/check-duplicates", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   listCompanyDirectory: { method: "GET", path: "/api/orgs/{orgSlug}/companies/directory", tag: "Companies", summary: "Company list with tabs ALL (archived hidden), DORMANT and ARCHIVED, and filters for lifecycle, service, owner and tag. Each tab's count is what it would list.", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
-  exportCompanyDirectory: { method: "GET", path: "/api/orgs/{orgSlug}/companies/directory/export", tag: "Companies", summary: "CSV of one company tab with the same filters (companies.export; bulk-export rule)", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
-  getCompaniesExport: { method: "GET", path: "/api/orgs/{orgSlug}/companies/export", tag: "Companies", summary: "GET /companies/export", contentType: "csv", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
-  postCompaniesImport: { method: "POST", path: "/api/orgs/{orgSlug}/companies/import", tag: "Companies", summary: "POST /companies/import", contentType: "multipart", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  exportCompanyDirectory: { method: "GET", path: "/api/orgs/{orgSlug}/companies/directory/export", tag: "Companies", summary: "CSV of one company tab with the same filters (companies.export; bulk-export rule)", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  getCompaniesExport: { method: "GET", path: "/api/orgs/{orgSlug}/companies/export", tag: "Companies", summary: "GET /companies/export", contentType: "csv", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  postCompaniesImport: { method: "POST", path: "/api/orgs/{orgSlug}/companies/import", tag: "Companies", summary: "POST /companies/import", contentType: "multipart", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   getCompanyServices: { method: "GET", path: "/api/orgs/{orgSlug}/company-services", tag: "Company Services", summary: "GET /company-services", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postCompanyServices: { method: "POST", path: "/api/orgs/{orgSlug}/company-services", tag: "Company Services", summary: "POST /company-services", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   postCompanyServicesByCompanyServiceId: { method: "POST", path: "/api/orgs/{orgSlug}/company-services/{companyServiceId}", tag: "Company Services", summary: "POST /company-services/{companyServiceId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
@@ -12223,9 +12282,9 @@ export const operations = {
   getContactsByContactIdTags: { method: "GET", path: "/api/orgs/{orgSlug}/contacts/{contactId}/tags", tag: "Contacts", summary: "GET /contacts/{contactId}/tags", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   patchContactsByContactIdTags: { method: "PATCH", path: "/api/orgs/{orgSlug}/contacts/{contactId}/tags", tag: "Contacts", summary: "PATCH /contacts/{contactId}/tags", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   listContactDirectory: { method: "GET", path: "/api/orgs/{orgSlug}/contacts/directory", tag: "Contacts", summary: "Contact list with quality filters (standalone, missing email, missing phone), tag, owner and the archived tab, and a count for each", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
-  exportContactDirectory: { method: "GET", path: "/api/orgs/{orgSlug}/contacts/directory/export", tag: "Contacts", summary: "CSV of the contacts matching the directory filters (contacts.export; bulk-export rule)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
-  getContactsExport: { method: "GET", path: "/api/orgs/{orgSlug}/contacts/export", tag: "Contacts", summary: "GET /contacts/export", contentType: "csv", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
-  postContactsImport: { method: "POST", path: "/api/orgs/{orgSlug}/contacts/import", tag: "Contacts", summary: "POST /contacts/import", contentType: "multipart", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  exportContactDirectory: { method: "GET", path: "/api/orgs/{orgSlug}/contacts/directory/export", tag: "Contacts", summary: "CSV of the contacts matching the directory filters (contacts.export; bulk-export rule)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  getContactsExport: { method: "GET", path: "/api/orgs/{orgSlug}/contacts/export", tag: "Contacts", summary: "GET /contacts/export", contentType: "csv", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
+  postContactsImport: { method: "POST", path: "/api/orgs/{orgSlug}/contacts/import", tag: "Contacts", summary: "POST /contacts/import", contentType: "multipart", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   listConversations: { method: "GET", path: "/api/orgs/{orgSlug}/conversations", tag: "Conversations", summary: "Conversations hub: tabs ALL, EMAIL, WHATSAPP, CALLS, MEETINGS, NOTES with a count for each; never lists a message linked to a record the caller cannot open", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
   logUnlinkedConversation: { method: "POST", path: "/api/orgs/{orgSlug}/conversations", tag: "Conversations", summary: "Log a call or message that matches no record; it waits in the Needs-linking queue", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
   getConversation: { method: "GET", path: "/api/orgs/{orgSlug}/conversations/{conversationId}", tag: "Conversations", summary: "One message", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","RESTRICTED_TECHNICAL"] },
@@ -12294,14 +12353,14 @@ export const operations = {
   getDealsByDealIdTags: { method: "GET", path: "/api/orgs/{orgSlug}/deals/{dealId}/tags", tag: "Deals", summary: "GET /deals/{dealId}/tags", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   patchDealsByDealIdTags: { method: "PATCH", path: "/api/orgs/{orgSlug}/deals/{dealId}/tags", tag: "Deals", summary: "PATCH /deals/{dealId}/tags", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   getDealsBoard: { method: "GET", path: "/api/orgs/{orgSlug}/deals/board", tag: "Deals", summary: "GET /deals/board", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
-  getDealsExport: { method: "GET", path: "/api/orgs/{orgSlug}/deals/export", tag: "Deals", summary: "GET /deals/export", contentType: "csv", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getDealsExport: { method: "GET", path: "/api/orgs/{orgSlug}/deals/export", tag: "Deals", summary: "GET /deals/export", contentType: "csv", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postDuplicatesCheck: { method: "POST", path: "/api/orgs/{orgSlug}/duplicates/check", tag: "Duplicates", summary: "POST /duplicates/check", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   getEmailTemplates: { method: "GET", path: "/api/orgs/{orgSlug}/email-templates", tag: "Email Templates", summary: "GET /email-templates", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
   postEmailTemplates: { method: "POST", path: "/api/orgs/{orgSlug}/email-templates", tag: "Email Templates", summary: "POST /email-templates", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   deleteEmailTemplatesByTemplateId: { method: "DELETE", path: "/api/orgs/{orgSlug}/email-templates/{templateId}", tag: "Email Templates", summary: "DELETE /email-templates/{templateId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   patchEmailTemplatesByTemplateId: { method: "PATCH", path: "/api/orgs/{orgSlug}/email-templates/{templateId}", tag: "Email Templates", summary: "PATCH /email-templates/{templateId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postEmailTemplatesByTemplateIdRender: { method: "POST", path: "/api/orgs/{orgSlug}/email-templates/{templateId}/render", tag: "Email Templates", summary: "POST /email-templates/{templateId}/render", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
-  startExport: { method: "POST", path: "/api/orgs/{orgSlug}/exports", tag: "Import and export", summary: "Start a background export of the full filtered set (over 500 rows needs export.bulk)", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
+  startExport: { method: "POST", path: "/api/orgs/{orgSlug}/exports", tag: "Import and export", summary: "Start a background export of the full filtered set (over 500 rows needs export.bulk)", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES"] },
   getFeatures: { method: "GET", path: "/api/orgs/{orgSlug}/features", tag: "Features", summary: "Release flags and organisation toggles, resolved for this organisation", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   updateFeatureToggles: { method: "PATCH", path: "/api/orgs/{orgSlug}/features", tag: "Features", summary: "Switch organisation toggles (Management only; audited)", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
   createFileUpload: { method: "POST", path: "/api/orgs/{orgSlug}/files", tag: "Files", summary: "Start a file upload: returns a short-lived signed link to send the bytes to", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
@@ -12318,7 +12377,7 @@ export const operations = {
   getHandoffs: { method: "GET", path: "/api/orgs/{orgSlug}/handoffs", tag: "Handoffs", summary: "GET /handoffs", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
   getHelp: { method: "GET", path: "/api/orgs/{orgSlug}/help", tag: "Help", summary: "GET /help", contentType: "json", errors: [400,401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   getHelpBySlug: { method: "GET", path: "/api/orgs/{orgSlug}/help/{slug}", tag: "Help", summary: "GET /help/{slug}", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
-  postImports: { method: "POST", path: "/api/orgs/{orgSlug}/imports", tag: "Imports", summary: "POST /imports", contentType: "multipart", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  postImports: { method: "POST", path: "/api/orgs/{orgSlug}/imports", tag: "Imports", summary: "POST /imports", contentType: "multipart", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   listIntegrations: { method: "GET", path: "/api/orgs/{orgSlug}/integrations", tag: "Integrations", summary: "Integrations registry: Connected, Not connected or Planned, each derived from real signals (Management)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
   getIntegrationsConnections: { method: "GET", path: "/api/orgs/{orgSlug}/integrations/connections", tag: "Integrations", summary: "GET /integrations/connections", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   deleteIntegrationsConnectionsByConnectionId: { method: "DELETE", path: "/api/orgs/{orgSlug}/integrations/connections/{connectionId}", tag: "Integrations", summary: "DELETE /integrations/connections/{connectionId}", contentType: "json", errors: [401,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
@@ -12382,8 +12441,9 @@ export const operations = {
   getLeadsByLeadIdTags: { method: "GET", path: "/api/orgs/{orgSlug}/leads/{leadId}/tags", tag: "Leads", summary: "GET /leads/{leadId}/tags", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   patchLeadsByLeadIdTags: { method: "PATCH", path: "/api/orgs/{orgSlug}/leads/{leadId}/tags", tag: "Leads", summary: "PATCH /leads/{leadId}/tags", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   postLeadsCheckDuplicates: { method: "POST", path: "/api/orgs/{orgSlug}/leads/check-duplicates", tag: "Leads", summary: "POST /leads/check-duplicates", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
-  getLeadsExport: { method: "GET", path: "/api/orgs/{orgSlug}/leads/export", tag: "Leads", summary: "GET /leads/export", contentType: "csv", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
-  postLeadsImport: { method: "POST", path: "/api/orgs/{orgSlug}/leads/import", tag: "Leads", summary: "POST /leads/import", contentType: "multipart", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getLeadsExport: { method: "GET", path: "/api/orgs/{orgSlug}/leads/export", tag: "Leads", summary: "GET /leads/export", contentType: "csv", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  postLeadsImport: { method: "POST", path: "/api/orgs/{orgSlug}/leads/import", tag: "Leads", summary: "POST /leads/import", contentType: "multipart", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getLeadsKeyNotes: { method: "GET", path: "/api/orgs/{orgSlug}/leads/key-notes", tag: "Leads", summary: "GET /leads/key-notes", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   getLeadsPool: { method: "GET", path: "/api/orgs/{orgSlug}/leads/pool", tag: "Leads", summary: "GET /leads/pool", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   getOrganizationLook: { method: "GET", path: "/api/orgs/{orgSlug}/look", tag: "Organisation", summary: "How the organisation looks: name, logo, default theme and page colour (every member can read)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
   updateOrganizationLook: { method: "PATCH", path: "/api/orgs/{orgSlug}/look", tag: "Organisation", summary: "Change the organisation's look and whether members may personalise (Management only)", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
@@ -12431,7 +12491,7 @@ export const operations = {
   putPipelinesByPipelineIdStagesReorder: { method: "PUT", path: "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/reorder", tag: "Pipelines", summary: "PUT /pipelines/{pipelineId}/stages/reorder", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getPrivacyOverview: { method: "GET", path: "/api/orgs/{orgSlug}/privacy", tag: "Data and privacy", summary: "Export rights, retention with documented defaults, legal hold, open requests (Management)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
   listExportApprovals: { method: "GET", path: "/api/orgs/{orgSlug}/privacy/export-approvals", tag: "Data and privacy", summary: "Export approval requests (Management sees all; others their own)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
-  requestExportApproval: { method: "POST", path: "/api/orgs/{orgSlug}/privacy/export-approvals", tag: "Data and privacy", summary: "Ask Management to approve one bulk export above the threshold", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
+  requestExportApproval: { method: "POST", path: "/api/orgs/{orgSlug}/privacy/export-approvals", tag: "Data and privacy", summary: "Ask Management to approve one bulk export above the threshold", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES"] },
   decideExportApproval: { method: "POST", path: "/api/orgs/{orgSlug}/privacy/export-approvals/{approvalId}/decision", tag: "Data and privacy", summary: "Approve or reject (someone other than the requester)", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   updateExportRights: { method: "PUT", path: "/api/orgs/{orgSlug}/privacy/export-rights", tag: "Data and privacy", summary: "Who may bulk export, the row threshold that needs approval (default 500), how long an approval lasts", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
   setLegalHold: { method: "PUT", path: "/api/orgs/{orgSlug}/privacy/legal-hold", tag: "Data and privacy", summary: "Place (with a reason) or release the legal hold. While on, nothing is purged and nobody can be erased.", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },

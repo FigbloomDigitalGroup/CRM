@@ -1457,6 +1457,8 @@ model Activity {
   deal         Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
   communications  Communication[]
+  /// P2-23: tasks created from this activity.
+  tasks           Task[]          @relation("TaskSourceActivity")
   /// B4.04: the import session that created this row (null for rows made any other way).
   importSessionId String?         @map("import_session_id")
 
@@ -1468,6 +1470,15 @@ model Activity {
   @@index([organizationId, contactId, occurredAt])
   @@index([organizationId, authorMembershipId])
   @@map("activities")
+}
+
+enum TaskType {
+  TASK
+  CALL
+  MEETING
+  EMAIL
+  QUOTE
+  VISIT
 }
 
 enum TaskPriority {
@@ -1507,9 +1518,16 @@ model Task {
   contactId              String?      @map("contact_id")
   leadId                 String?      @map("lead_id")
   dealId                 String?      @map("deal_id")
+  /// P2-22: what kind of item this is. Calls and meetings added from the Calendar are tasks of that type, so Calendar and Tasks read one table.
+  type                   TaskType     @default(TASK)
+  /// P2-23: the logged or scheduled activity this task came from (null for tasks made any other way).
+  sourceActivityId       String?      @map("source_activity_id")
+  /// P2-23: the lead's open follow-up. At most one open follow-up task per lead; the lead's nextFollowUpAt always equals its due time.
+  isFollowUp             Boolean      @default(false) @map("is_follow_up")
   createdAt              DateTime     @default(now()) @map("created_at")
   updatedAt              DateTime     @updatedAt @map("updated_at")
 
+  sourceActivity Activity? @relation("TaskSourceActivity", fields: [sourceActivityId], references: [id], onDelete: SetNull)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   assignee     Membership   @relation("TaskAssignee", fields: [assigneeMembershipId], references: [id], onDelete: Restrict)
   createdBy    Membership   @relation("TaskCreatedBy", fields: [createdByMembershipId], references: [id], onDelete: Restrict)

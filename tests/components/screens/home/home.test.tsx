@@ -87,13 +87,11 @@ const SALES = { roleName: "Sales", permissionKeys: ["leads.create", "tasks.creat
 beforeEach(() => window.localStorage.clear());
 
 describe("Sales Today (D1)", () => {
-  it("ends with quick links for the screens and actions this role may use, and nothing else", async () => {
+  it("has no Quick links block (FIG-1679); the header keeps its role actions", async () => {
     renderScreen(<HomeScreen />, salesHandlers(), SALES);
-    const nav = await screen.findByRole("navigation", { name: "Quick links" });
-    const labels = within(nav).getAllByRole("link").map((a) => a.textContent);
-    // SALES here may create leads, tasks and activities and view its own deals; it holds no lead or task view key, so no Leads, Tasks or Calendar link.
-    expect(labels).toEqual(["New lead", "Log a call", "New task", "Deals"]);
-    expect(within(nav).getByRole("link", { name: "Deals" })).toHaveAttribute("href", "/o/figbloom/deals");
+    expect(await screen.findByRole("heading", { level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Quick links" })).toBeNull();
+    expect(screen.queryByText("Quick links")).toBeNull();
   });
 
   it("shows the design's four tiles, what to do today, the newest leads and the pipeline", async () => {
@@ -124,8 +122,7 @@ describe("Sales Today (D1)", () => {
 
   it("offers only the quick actions the role may use", async () => {
     renderScreen(<HomeScreen />, salesHandlers(), { ...SALES, permissionKeys: ["leads.create"] });
-    // The header button and the quick-links tile both lead to a new lead.
-    expect((await screen.findAllByRole("link", { name: "New lead" })).length).toBe(2);
+    expect((await screen.findAllByRole("link", { name: "New lead" })).length).toBe(1);
     expect(screen.queryByRole("link", { name: "New task" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Log a call" })).toBeNull();
   });
@@ -235,7 +232,7 @@ describe("Management (D2)", () => {
     expect(within(row).getByText("▲ 5")).toBeInTheDocument();
     expect(await screen.findByText("Hillcrest School")).toBeInTheDocument();
     expect(screen.getByText("5 of 6")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Reports" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Quick links" })).toBeNull(); // FIG-1679: the old Reports tile is gone (Reports is in the sidebar)
     await expectNoAxeViolations(container);
   });
 

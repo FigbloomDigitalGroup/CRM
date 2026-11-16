@@ -46,17 +46,6 @@ export const MANAGEMENT_ONLY: RegExp[] = [
   key("/reports/export"),
   key("/reports/v2"),
   under("/reports/v2/{report}"),
-  key("/exports"),
-  key("/imports"),
-  key("/leads/import"),
-  key("/contacts/import"),
-  key("/companies/import"),
-  key("/leads/export"),
-  key("/contacts/export"),
-  key("/companies/export"),
-  key("/deals/export"),
-  key("/contacts/directory/export"),
-  key("/companies/directory/export"),
   key("/leads/{leadId}/assign"),
   key("/deals/{dealId}/assign"),
   key("/custom-fields", "POST"),
@@ -80,8 +69,26 @@ export const MANAGEMENT_ONLY: RegExp[] = [
   key("/privacy/export-rights"),
   key("/privacy/legal-hold"),
   key("/privacy/retention"),
-  key("/privacy/export-approvals", "POST"),
   key("/privacy/export-approvals/{approvalId}/decision"),
+];
+
+/**
+ * CSV import and export (FIG-1680, P2-26, Given 15 Nov 2026): every role holds these keys and works on what it can see; a role with no access to the
+ * area still gets the explained refusal. Requesting approval for a large export is part of it.
+ */
+const IMPORT_EXPORT: RegExp[] = [
+  key("/exports"),
+  key("/imports"),
+  key("/leads/import"),
+  key("/contacts/import"),
+  key("/companies/import"),
+  key("/leads/export"),
+  key("/contacts/export"),
+  key("/companies/export"),
+  key("/deals/export"),
+  key("/contacts/directory/export"),
+  key("/companies/directory/export"),
+  key("/privacy/export-approvals", "POST"),
 ];
 
 /** Invoices, payments and the follow-up note on a deal: Finance and Management only (CLAUDE.md rule 7). */
@@ -139,6 +146,7 @@ type Worker = Exclude<"SALES" | "DELIVERY" | "FINANCE" | "RESTRICTED_TECHNICAL",
 export const ROLE_FAMILIES: Record<Worker, RegExp[]> = {
   SALES: [
     ...SELF_SERVICE,
+    ...IMPORT_EXPORT,
     ...CUSTOMER_CONTEXT_READ,
     under("/activities"),
     under("/attachments/{attachmentId}"),
@@ -161,6 +169,7 @@ export const ROLE_FAMILIES: Record<Worker, RegExp[]> = {
     key("/handoffs", "GET"),
     key("/lead-pool/requests", "GET"),
     key("/leads"),
+    key("/leads/key-notes"),
     key("/leads/check-duplicates"),
     key("/leads/pool"),
     under("/leads/{leadId}"),
@@ -173,6 +182,7 @@ export const ROLE_FAMILIES: Record<Worker, RegExp[]> = {
   ],
   DELIVERY: [
     ...SELF_SERVICE,
+    ...IMPORT_EXPORT,
     ...CUSTOMER_CONTEXT_READ,
     key("/attachments/{attachmentId}/complete"),
     key("/calendar"),
@@ -191,6 +201,7 @@ export const ROLE_FAMILIES: Record<Worker, RegExp[]> = {
   ],
   FINANCE: [
     ...SELF_SERVICE,
+    ...IMPORT_EXPORT,
     ...CUSTOMER_CONTEXT_READ,
     key("/attachments/{attachmentId}/complete"),
     key("/deals", "GET"),
@@ -201,6 +212,7 @@ export const ROLE_FAMILIES: Record<Worker, RegExp[]> = {
   ],
   RESTRICTED_TECHNICAL: [
     ...SELF_SERVICE,
+    ...IMPORT_EXPORT,
     key("/conversations", "GET"),
     key("/conversations/needs-linking"),
     key("/conversations/{conversationId}"),

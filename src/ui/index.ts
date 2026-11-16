@@ -16,4 +16,5 @@ export { useDraft, saveDraft, loadDraft, clearDraft, SESSION_ENDING_EVENT } from
 export { ApiProvider, useApi, useApiQuery, useApiMutation, useOptimisticUpdate, useUndoable, explainRollback, queryKeyFor, makeQueryClient } from "./data/hooks";
 export { connectivity, type ConnectivityState } from "./data/connectivity";
 export { useAppearance, useAppearanceOptional, ThemeProvider } from "./theme/ThemeProvider";
-export { MemberProvider, useMember, testMember, type Member } from "./data/member";
+export { MemberProvider, useMember, useMemberOrNull, testMember, type Member } from "./data/member";
+export { DEFAULT_TIME, MINUTE_STEP, clockLabel, clockOf, dayOf, defaultFollowUp, instantAt, overdueBy, quickChoices, snapClock, timeOptions, zoneLabel } from "./components/dateTimeZone";

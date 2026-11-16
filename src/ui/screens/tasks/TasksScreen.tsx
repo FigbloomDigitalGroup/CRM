@@ -30,8 +30,10 @@ import {
   STATUS_LABEL,
   zonedToInstant,
   addDays,
+  KIND_LABEL,
   type GroupKey,
   type TaskGroups,
+  type TaskKind,
   type TaskItem,
   type TaskStatus,
   type Zone,
@@ -68,6 +70,7 @@ export function TasksScreen() {
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
   const [priority, setPriority] = useState("");
+  const [kind, setKind] = useState<TaskKind | "">("");
   const [who, setWho] = useState("");
   const [closed, setClosed] = useState<Record<SectionId, boolean>>({ OVERDUE: false, TODAY: false, UPCOMING: false, NO_DATE: false, DONE: true });
   const [drawer, setDrawer] = useState<{ open: boolean; taskId?: string | null; kind?: "CALL" | "MEETING" }>({ open: false });
@@ -105,6 +108,7 @@ export function TasksScreen() {
     groups: `OVERDUE,TODAY,THIS_WEEK,LATER,NO_DATE${doneOpen ? ",DONE" : ""}`,
     ...(debounced ? { q: debounced } : {}),
     ...(who ? { assigneeMembershipId: who } : {}),
+    ...(kind ? { type: kind } : {}),
     ...(record ? { [record[0]]: record[1]! } : {}),
   };
   const args = { params: { orgSlug }, query } as const;
@@ -135,7 +139,7 @@ export function TasksScreen() {
       if (have >= group.count) continue;
       const page = (extra.pages[key] ?? 1) + 1;
       try {
-        const res = await api.call("getTasksGroupsByGroup", { params: { orgSlug, group: key }, query: { page: String(page), pageSize: String(PAGE), ...(debounced ? { q: debounced } : {}), ...(who ? { assigneeMembershipId: who } : {}), ...(record ? { [record[0]]: record[1]! } : {}) } });
+        const res = await api.call("getTasksGroupsByGroup", { params: { orgSlug, group: key }, query: { page: String(page), pageSize: String(PAGE), ...(debounced ? { q: debounced } : {}), ...(who ? { assigneeMembershipId: who } : {}), ...(kind ? { type: kind } : {}), ...(record ? { [record[0]]: record[1]! } : {}) } });
         setMore((m) => {
           const base = m.key === filterKey ? m : { key: filterKey, items: {}, pages: {} };
           return { key: filterKey, items: { ...base.items, [key]: [...(base.items[key] ?? []), ...((res.items as TaskItem[]) ?? [])] }, pages: { ...base.pages, [key]: page } };
@@ -245,6 +249,12 @@ export function TasksScreen() {
               <option value="HIGH">High</option>
               <option value="MEDIUM">Medium</option>
               <option value="LOW">Low</option>
+            </select>
+            <select className="fb-tk-select" aria-label="Type" value={kind} onChange={(e) => setKind(e.target.value as TaskKind | "")}>
+              <option value="">Any type</option>
+              {(Object.keys(KIND_LABEL) as TaskKind[]).map((k) => (
+                <option key={k} value={k}>{KIND_LABEL[k]}</option>
+              ))}
             </select>
             {seeAll ? (
               <select className="fb-tk-select" aria-label="Assignee" value={who} onChange={(e) => setWho(e.target.value)}>
@@ -375,7 +385,7 @@ export function TasksScreen() {
         </>
       ) : null}
 
-      <TaskDrawer open={drawer.open} taskId={drawer.taskId} initialKind={drawer.kind} allowActivities={Boolean(drawer.kind)} onClose={() => setDrawer({ open: false })} />
+      <TaskDrawer open={drawer.open} taskId={drawer.taskId} initialKind={drawer.kind} onClose={() => setDrawer({ open: false })} />
     </div>
   );
 }
@@ -444,8 +454,12 @@ function Row({
       <div className="fb-tk-main">
         <button type="button" className="fb-tk-titlebtn" data-closed={closed} onClick={onEdit}>{task.title}</button>
         {task.description ? <div className="fb-tk-desc">{task.description}</div> : null}
+        {task.type && task.type !== "TASK" ? <span className="fb-tk-kind">{KIND_LABEL[task.type] ?? task.type}</span> : null}
         {link ? (
           <Link href={linkHref(orgSlug, link)} className="fb-tk-linkchip">{link.label} ↗</Link>
+        ) : null}
+        {link && link.type === "Lead" && (task.isFollowUp || task.sourceActivityId) ? (
+          <span className="fb-tk-from">From: {task.isFollowUp ? "next follow-up" : (task.type && task.type !== "TASK" ? KIND_LABEL[task.type].toLowerCase() : "activity")} on {link.label}</span>
         ) : null}
         {task.readOnly ? <span className="fb-sr-only">{reason}</span> : null}
       </div>

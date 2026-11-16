@@ -137,14 +137,16 @@ describe("Calendar (F2.08, T2)", () => {
     const todayCell = (await days()).find((c) => c.getAttribute("aria-current") === "date")!;
     await user.click(within(todayCell).getByRole("button", { name: /Press Enter to add a task/ }));
     const dialog = await screen.findByRole("dialog", { name: "New task" });
-    expect(within(dialog).getByLabelText(/^Due/)).toHaveValue(`${todayKey}T10:00`);
+    // The shared date-and-time input: the clicked slot is filled in as a date and a time.
+    expect(within(dialog).getByLabelText("Date")).toHaveValue(todayKey);
+    expect(within(dialog).getByLabelText("Time")).toHaveValue("10:00");
     await user.type(within(dialog).getByLabelText(/Title/), "Prep the demo");
     await user.click(within(dialog).getByRole("button", { name: "Create task" }));
     await waitFor(() => expect(calls.some((c) => c.id === "postTasks")).toBe(true));
     expect(calls.find((c) => c.id === "postTasks")!.args.body).toMatchObject({ title: "Prep the demo", dueAt: at(todayKey, "10:00").replace(":00.000Z", ":00.000Z") });
   });
 
-  it("creates a meeting from a slot through the calendar endpoint", async () => {
+  it("creates a meeting from a slot as a task of type meeting, so the Tasks page lists it too (FIG-1676)", async () => {
     const user = userEvent.setup();
     const { calls } = setup([]);
     const todayCell = (await days()).find((c) => c.getAttribute("aria-current") === "date")!;
@@ -154,8 +156,9 @@ describe("Calendar (F2.08, T2)", () => {
     expect(screen.getByRole("dialog", { name: "New meeting" })).toBeInTheDocument();
     await user.type(within(dialog).getByLabelText(/Title/), "Kick-off");
     await user.click(within(dialog).getByRole("button", { name: "Add meeting" }));
-    await waitFor(() => expect(calls.some((c) => c.id === "postCalendar")).toBe(true));
-    expect(calls.find((c) => c.id === "postCalendar")!.args.body).toMatchObject({ kind: "activity", type: "MEETING", title: "Kick-off" });
+    await waitFor(() => expect(calls.some((c) => c.id === "postTasks")).toBe(true));
+    expect(calls.some((c) => c.id === "postCalendar")).toBe(false);
+    expect(calls.find((c) => c.id === "postTasks")!.args.body).toMatchObject({ type: "MEETING", title: "Kick-off" });
   });
 
   it("opens a task in the edit drawer and a meeting on its record", async () => {

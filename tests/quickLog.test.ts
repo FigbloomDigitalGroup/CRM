@@ -79,7 +79,11 @@ describe("quick-log", () => {
     expect((await adminDb.lead.findUniqueOrThrow({ where: { id: lead.id } })).scoredAt).not.toBeNull();
     const task = await adminDb.task.findUniqueOrThrow({ where: { id: result.taskId! } });
     expect(task).toMatchObject({ title: "Send the quote", assigneeMembershipId: sales.membershipId, leadId: lead.id, companyId: company.id });
-    expect(task.dueAt).toEqual(new Date("2026-11-14T00:00:00.000Z"));
+    // A date-only follow-up is the default time (09:00) in the person's own zone, not midnight UTC (P2-27); the test user is in Nairobi (UTC+3).
+    expect(task.dueAt).toEqual(new Date("2026-11-14T06:00:00.000Z"));
+    expect(task.isFollowUp).toBe(true);
+    expect((await adminDb.lead.findUniqueOrThrow({ where: { id: lead.id } })).nextFollowUpAt).toEqual(task.dueAt);
+    expect(task.sourceActivityId).toBe(result.activityId);
 
     // On the record's timeline and in the Conversations hub, once.
     expect((await listCommunicationsForCompany(sales, company.id)).map((c) => c.id)).toContain(result.communicationId);

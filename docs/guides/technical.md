@@ -34,4 +34,6 @@ This role has a small, focused view on purpose. It shows the work given to you a
 | Payments | Only Finance and Management. |
 | Reports, settings, audit log | Not part of this role. |
 
+**CSV import and export:** the permission is on your role, but this role sees no lead, contact, company or deal records, so an export would be empty and an import cannot create leads. Management can change this in Settings, Roles.
+
 If a page says "no access", it names who to ask.

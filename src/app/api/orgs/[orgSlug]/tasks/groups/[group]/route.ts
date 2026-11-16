@@ -7,6 +7,7 @@ import { listTaskGroupPage } from "@/services/taskService";
 
 const GroupPageQuerySchema = z.object({
   assigneeMembershipId: z.string().optional(),
+  type: z.enum(["TASK", "CALL", "MEETING", "EMAIL", "QUOTE", "VISIT"]).optional(),
   companyId: z.string().optional(),
   contactId: z.string().optional(),
   leadId: z.string().optional(),
@@ -29,6 +30,7 @@ export async function GET(
       group.toUpperCase(),
       {
         assigneeMembershipId: query.assigneeMembershipId,
+        type: query.type,
         companyId: query.companyId,
         contactId: query.contactId,
         leadId: query.leadId,

@@ -18,28 +18,26 @@ export function sweepIntervalMinutes(): number {
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SWEEP_INTERVAL_MINUTES;
 }
 
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
 export async function sweepOrganization(
   organizationId: string,
-  options: { batchSize?: number } = {},
+  options: { batchSize?: number; /** For tests: the current time. */ now?: Date } = {},
 ): Promise<{
   due: number;
   overdue: number;
   retried: number;
 }> {
   const batchSize = options.batchSize ?? SWEEP_BATCH_SIZE;
-  const today = startOfDay(new Date());
-  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+  // A reminder is for the task's own time, not for the start of its day (P2-27): "due" goes out when the due time falls inside the next sweep
+  // interval, so it arrives at (or at most one sweep before) the follow-up time. After the time has passed the task is overdue, counted from that time.
+  const now = options.now ?? new Date();
+  const windowEnd = new Date(now.getTime() + sweepIntervalMinutes() * 60_000);
 
   // Tasks are read a batch at a time (stable order, so skip/take never repeats or misses a row) instead of loading every one into memory.
   let due = 0;
   for (let skip = 0; ; skip += batchSize) {
     const batch = await listTasks(organizationId, {
-      dueAfter: today,
-      dueBefore: tomorrow,
+      dueAfter: now,
+      dueBefore: windowEnd,
       statuses: ["PENDING", "IN_PROGRESS"],
       take: batchSize,
       skip,
@@ -56,7 +54,7 @@ export async function sweepOrganization(
 
   let overdue = 0;
   for (let skip = 0; ; skip += batchSize) {
-    const batch = await listTasks(organizationId, { overdueOnly: true, take: batchSize, skip });
+    const batch = await listTasks(organizationId, { overdueOnly: true, overdueAt: now, take: batchSize, skip });
     for (const task of batch) {
       await notifyTaskOverdue(organizationId, task.assigneeMembershipId, {
         id: task.id,

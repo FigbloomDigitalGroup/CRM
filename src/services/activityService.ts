@@ -1,6 +1,7 @@
 import { canView } from "../auth/permissions";
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
+import { ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import {
   createActivity as createActivityRecord,
@@ -15,29 +16,85 @@ import { getContact } from "./contactService";
 import { touchDealActivity } from "../repositories/deals";
 import { rescoreCompanyQuietly, rescoreLeadQuietly } from "./scoreEngine";
 import { assertCanAccessLinkedRecords, type LinkedRecordIds } from "./recordAccess";
+import { emitTeamActivity, leadLabelFor } from "./teamActivityNotifier";
 import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
+import { TASK_TYPES, type TaskTypeValue } from "../repositories/tasks";
+import { applyLeadFollowUp } from "./taskLinkService";
+import { resolveAssignee } from "./taskService";
+
+/**
+ * "Log a call, then say what happens next" (P2-23). A logged activity is history and never makes an open task by itself; the next step
+ * does, as the lead's follow-up, in the same transaction as the activity. Only for an activity logged on a lead.
+ */
+export interface NextStepInput {
+  /** What the next step is: TASK (a plain follow-up), CALL, MEETING, EMAIL, QUOTE or VISIT. */
+  type: TaskTypeValue;
+  /** ISO date and time of the next step. */
+  dueAt: string;
+  title?: string;
+  /** Default: the lead's owner. Only someone who may assign tasks can choose another person. */
+  assigneeMembershipId?: string;
+}
 
 export type CreateActivityServiceInput = Omit<
   CreateActivityInput,
   "organizationId" | "authorMembershipId"
->;
+> & { nextStep?: NextStepInput };
 
 export async function createActivity(
   ctx: AuthContext,
-  input: CreateActivityServiceInput,
+  rawInput: CreateActivityServiceInput,
 ) {
+  const { nextStep, ...input } = rawInput;
   await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true, requireWritable: true });
   requirePermission(ctx, "activities.create");
 
-  const activity = await createActivityRecord({
-    ...input,
-    organizationId: ctx.organizationId,
-    authorMembershipId: ctx.membershipId,
-  });
+  let followUp: Parameters<typeof applyLeadFollowUp>[1] | null = null;
+  if (nextStep) {
+    if (!input.leadId) throw new ValidationError("A next step can only be added to something logged on a lead.", [{ path: "nextStep", message: "Log it on a lead." }]);
+    requirePermission(ctx, "tasks.create");
+    const due = new Date(nextStep.dueAt);
+    if (Number.isNaN(due.getTime())) throw new ValidationError("The next step needs a valid date and time.", [{ path: "nextStep.dueAt", message: "Use a date and time." }]);
+    if (!TASK_TYPES.includes(nextStep.type)) throw new ValidationError("The next step type is not valid.", [{ path: "nextStep.type", message: `Use one of ${TASK_TYPES.join(", ")}.` }]);
+    const lead = await adminDb.lead.findFirst({ where: { id: input.leadId, organizationId: ctx.organizationId }, select: { ownerMembershipId: true } });
+    const wanted = nextStep.assigneeMembershipId ?? lead?.ownerMembershipId ?? undefined;
+    const assignee = await resolveAssignee(ctx, wanted).catch(() => ctx.membershipId);
+    followUp = {
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      leadId: input.leadId,
+      nextFollowUpAt: due,
+      assigneeMembershipId: assignee,
+      type: nextStep.type,
+      title: nextStep.title?.trim() || undefined,
+    };
+  }
+
+  const activity = await createActivityRecord(
+    {
+      ...input,
+      organizationId: ctx.organizationId,
+      authorMembershipId: ctx.membershipId,
+    },
+    followUp ? async (tx, created) => void (await applyLeadFollowUp(tx, { ...followUp!, sourceActivityId: created.id })) : undefined,
+  );
   // A contact with a lead or a customer changes how it scores (B2.03).
   await rescoreLeadQuietly(ctx.organizationId, input.leadId);
   if (input.dealId) await touchDealActivity(ctx.organizationId, input.dealId);
   await rescoreCompanyQuietly(ctx.organizationId, input.companyId);
+  // One team alert per note on a lead (FIG-1678). The same service serves the Conversation and the dashboard preview. The text is not sent.
+  if (input.type === "NOTE" && input.leadId) {
+    const lead = await adminDb.lead.findFirst({ where: { id: input.leadId, organizationId: ctx.organizationId }, select: { companyId: true, contactId: true } });
+    await emitTeamActivity({
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      eventKey: "NOTE_ADDED",
+      entityType: "Lead",
+      entityId: input.leadId,
+      label: lead ? await leadLabelFor(ctx.organizationId, lead) : "a lead",
+      route: `leads/${input.leadId}`,
+    });
+  }
   return activity;
 }
 

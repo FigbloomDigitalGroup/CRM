@@ -34,4 +34,6 @@
 | Payments | Only Finance and Management. |
 | Settings, audit log, organisation reports | Management only. You have **My metrics**. |
 
+**CSV export:** You can export the contacts, companies and won deals you can see. An export holds only the rows and columns you can see on screen (deal values you may not see are left out; payments never appear). Limits per hour apply, a file holds at most 20,000 rows, and every export is recorded.
+
 If a page says "no access", read who has access and ask them.

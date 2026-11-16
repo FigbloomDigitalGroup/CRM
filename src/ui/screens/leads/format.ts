@@ -4,6 +4,8 @@
  * in the person's own time zone and clock (B1.08).
  */
 
+import { overdueBy as overdueByText } from "../../components/dateTimeZone";
+
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export interface FormatOptions {
@@ -111,7 +113,12 @@ export function makeFormat(opts: FormatOptions = {}) {
     const p = partsOf(d, tz);
     return `${p.y}-${String(p.m).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`;
   };
-  return { time, dshort, date, when, dueState, dueLabel, ago, isoDate, toDate, now };
+  /** "Overdue by 2 h": how late a follow-up is, counted from its time (empty when it is not late). */
+  const overdueBy = (v: string | Date | null | undefined): string => {
+    const d = toDate(v);
+    return d ? overdueByText(d, now) : "";
+  };
+  return { time, dshort, date, when, dueState, dueLabel, overdueBy, ago, isoDate, toDate, now };
 }
 
 export type Formatters = ReturnType<typeof makeFormat>;

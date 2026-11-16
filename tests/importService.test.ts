@@ -20,7 +20,7 @@ function csvStream(content: string): Readable {
 describe("importService: companies", () => {
   it("rejects import for a role without companies.import", async () => {
     const org = await createTestOrganization();
-    const ctx = await createTestContext(org.id, "SALES");
+    const ctx = await createTestContext(org.id, "RESTRICTED_TECHNICAL");
 
     await expect(
       importService.importCompanies(ctx, {

@@ -35,4 +35,6 @@ The CRM does not process money. A payment's method is a plain label. Never type 
 | Tasks you can assign to others | Finance uses follow-up notes instead of tasks. |
 | Settings and the audit log | Management only. Inside an invoice you are told the audit history is read by Management. |
 
+**CSV export:** You can export the contacts, companies and won deals you can see. An export holds only the rows and columns you can see on screen (deal values you may not see are left out; payments never appear). Limits per hour apply, a file holds at most 20,000 rows, and every export is recorded.
+
 If a page says "no access", it names who to ask.

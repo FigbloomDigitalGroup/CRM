@@ -4,6 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { describeError } from "../../errors";
 import { useToast } from "../../components/toast";
+import { DateTimeField } from "../../components/forms";
+import { defaultFollowUp } from "../../components/dateTimeZone";
 import { useApi, useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { newIdempotencyKey } from "../../data/client";
@@ -126,13 +128,15 @@ export function useCallLogPrompt(): { begin: (target: LogTarget, channel: LogCha
 
 /** The "How did it go?" dialog. Skip closes it without logging anything. */
 export function QuickLogPrompt({ target, channel, onClose, onLogged }: { target: LogTarget; channel: LogChannel; onClose: () => void; onLogged?: () => void }) {
-  const { orgSlug } = useMember();
+  const { orgSlug, timeZone } = useMember();
   const api = useApi();
   const toast = useToast();
   const qc = useQueryClient();
   const [outcome, setOutcome] = useState<LogOutcome | null>(null);
   const [note, setNote] = useState("");
   const [next, setNext] = useState("");
+  // The next action has a date and a time (default tomorrow at 09:00 in the person's zone).
+  const [nextDue, setNextDue] = useState(() => defaultFollowUp(new Date(), timeZone).toISOString());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // One key for this prompt: a double tap, or a retry after a dropped connection, logs once.
@@ -148,7 +152,6 @@ export function QuickLogPrompt({ target, channel, onClose, onLogged }: { target:
     setBusy(true);
     setError(null);
     try {
-      const tomorrow = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
       await api.call("quickLog", {
         params: { orgSlug },
         idempotencyKey: key.current,
@@ -156,7 +159,7 @@ export function QuickLogPrompt({ target, channel, onClose, onLogged }: { target:
           channel,
           outcome,
           ...(note.trim() ? { note: note.trim() } : {}),
-          ...(next.trim() ? { followUp: { title: next.trim(), dueOn: tomorrow } } : {}),
+          ...(next.trim() ? { followUp: { title: next.trim(), dueOn: nextDue } } : {}),
           ...who,
         } as never,
       });
@@ -205,6 +208,7 @@ export function QuickLogPrompt({ target, channel, onClose, onLogged }: { target:
         </div>
         <textarea className="fb-ld-textarea" rows={2} aria-label="What happened" placeholder="One line is enough." value={note} onChange={(e) => setNote(e.target.value)} />
         <input className="fb-ld-input" aria-label="Next action" placeholder="Next action (optional)" value={next} onChange={(e) => setNext(e.target.value)} />
+        {next.trim() ? <DateTimeField label="When" value={nextDue} onChange={setNextDue} required /> : null}
         {error ? (
           <div role="alert" className="fb-ct-prompt__error">
             {error}
