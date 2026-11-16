@@ -293,7 +293,7 @@ describe("Chat layout (P2-18): sides, runs, separators", () => {
     });
     const log = await screen.findByRole("log", { name: "Messages" });
     expect(await within(log).findByText("Yes I am")).toBeInTheDocument();
-    const rows = within(log).getAllByRole("listitem");
+    const rows = within(log).getAllByRole("article");
     expect(rows).toHaveLength(3);
     expect(rows.map((r) => r.getAttribute("data-mine"))).toEqual([null, null, "true"]);
     expect(within(log).getAllByText("Amina Wekesa")).toHaveLength(1);
@@ -307,7 +307,7 @@ describe("Chat layout (P2-18): sides, runs, separators", () => {
     await user.click(await screen.findByRole("button", { name: /field-ops/ }));
     const divider = await screen.findByRole("separator", { name: "New messages" });
     const log = screen.getByRole("log", { name: "Messages" });
-    const order = Array.from(log.querySelectorAll('[role="listitem"], [aria-label="New messages"]')).map((n) => n.getAttribute("aria-label")?.startsWith("Amina") ? n.textContent : "divider");
+    const order = Array.from(log.querySelectorAll('[role="article"], [aria-label="New messages"]')).map((n) => n.getAttribute("aria-label")?.startsWith("Amina") ? n.textContent : "divider");
     expect(divider).toBeInTheDocument();
     expect(order[0]).toContain("old one");
     expect(order[1]).toBe("divider");

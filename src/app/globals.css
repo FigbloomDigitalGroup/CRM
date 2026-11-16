@@ -1555,6 +1555,11 @@ details.card ul {
 }
 
 .auth-brand-name .accent {
+  /* The brand orange is only 2:1 on white; this darker tone meets AA on the light card, the dark theme keeps the brand orange. */
+  color: #9a4d00;
+}
+
+:root[data-theme="dark"] .auth-brand-name .accent {
   color: var(--brand-orange);
 }
 
@@ -4402,8 +4407,9 @@ a.task-link:hover {
   margin-bottom: 12px;
   padding: 3px 10px;
   border-radius: 999px;
-  background: var(--info-bg);
-  color: var(--info);
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
   font-size: 12px;
   font-weight: 700;
 }

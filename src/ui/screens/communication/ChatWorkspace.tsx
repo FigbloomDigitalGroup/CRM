@@ -305,7 +305,7 @@ export function ChatWorkspace() {
                 ) : thread.length === 0 ? (
                   <EmptyState icon={<MessagesSquare size={22} />} title={find ? "No messages match" : "No messages yet"} body={find ? "Try another word." : "Say hello. Everyone in this conversation will see it."} />
                 ) : (
-                  <div role="list" className="fb-chat__thread" aria-label="Conversation">
+                  <div className="fb-chat__thread">
                     {placed.map((p) => {
                       const day = dayOf(p.message.createdAt);
                       const showDay = day !== lastDay;
@@ -416,7 +416,7 @@ function MessageRow({ placed, isDm, mentionRe, orgSlug, canReact, onReact, onDel
   const gone = message.deleted || message.erased;
   const parts = !gone && mentionRe && message.body ? message.body.split(mentionRe) : [message.body ?? ""];
   return (
-    <div role="listitem" className="fb-chat__msg" data-mine={mine ? "true" : undefined} data-first={first ? "true" : undefined} data-last={last ? "true" : undefined} aria-label={`${mine ? "You" : name} at ${time}`}>
+    <div role="article" className="fb-chat__msg" data-mine={mine ? "true" : undefined} data-first={first ? "true" : undefined} data-last={last ? "true" : undefined} aria-label={`${mine ? "You" : name} at ${time}`}>
       {showWho ? <span className="fb-chat__who-av">{last ? <Avatar name={name} size={32} /> : null}</span> : null}
       <div className="fb-chat__col">
         {showWho && first ? <strong className="fb-chat__sender">{name}</strong> : null}
