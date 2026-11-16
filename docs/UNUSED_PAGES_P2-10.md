@@ -8,7 +8,7 @@ Given confirmed in writing. The section 1 list holds **52 files** (the "54" abov
 
 - the 52 files of the orphan cluster (section 1 list);
 - ASK #2 `src/ui/screens/team/index.ts` (unused barrel);
-- ASK #7 `public/brand/*.svg` (5 files) and ASK #8 `public/figbloom-logo.jpg` (tracked, so recoverable from git: last commit f0c0941 and e83f461). If the logo work (P2-06, P2-07) wants the brand set, restore it from those commits;
+- ASK #7 `public/brand/*.svg` (5 files, tracked, recoverable from git: last commit f0c0941). If the logo work (P2-06, P2-07) wants the brand set, restore it from that commit. **ASK #8 `public/figbloom-logo.jpg` was deleted by mistake and restored:** `public/sw.js` precaches it and `public/offline.html` shows it, so removing it broke the service worker install (the offline page) and slowed the mobile pages (CI perf budget failed). The inventory missed it because the reference search did not cover `public/`. It stays (KEEP);
 - ASK #10, #11, #12 untracked files `scratch_e4.js`, `perf-v11-results.json`, `tsconfig.w2.tsbuildinfo` and `tsconfig.tsbuildinfo` (not in git, so not recoverable; build caches and a perf output).
 - 33 entries for the deleted files were removed from `excludedFiles` in `.eslintrc.json` (the guard in `tests/uiGuards.test.ts` requires the list to shrink). The glob patterns in that file were left alone.
 
@@ -84,7 +84,7 @@ Risk: a hidden string or dynamic import would fail typecheck or the build; that 
 | 5 | `src/ui/screens/commercial/demo/` (`data.ts`, `store.ts`) | Still imported by settingsplus data and `tests/components/commercial/*`; the log (line 167) says they stay | 38b362a, 2026-10-29 | Clean-up belongs to the wiring work, not P2-10. |
 | 6 | `src/ui/screens/platform/demo/local.ts` | Imported by `platform/api.ts`, `logic.ts`, `model.ts`, `store.tsx` and tests (flags, announcements, support: V2) | 2eebb33, 2026-11-05 | Live code, not dead. |
 | 7 | `public/brand/*.svg` (5 files) | No reference by name in `src`, `e2e`, `tests`, `scripts`, `docs`, `config` | f0c0941, 2026-11-01 | Brand asset set from the design; unreferenced but may be wanted. |
-| 8 | `public/figbloom-logo.jpg` | No references | e83f461, 2026-09-25 | Probably the old logo; confirm nothing external links `/figbloom-logo.jpg` on the live domain. |
+| 8 | `public/figbloom-logo.jpg` | **Corrected 16 Nov 2026:** referenced by `public/sw.js` (precache and static cache rule) and `public/offline.html`. The first search did not cover `public/`. | e83f461, 2026-09-25 | **KEEP.** It was deleted by mistake and restored; deleting it broke the service worker install. |
 | 9 | `@types/bcryptjs` (devDependency) | Knip: unused; `bcryptjs` 3 ships its own types | package.json | Report only. `package.json` carries someone else's uncommitted edit, so do not touch it now. |
 | 10 | `scratch_e4.js` (root, untracked) | Not in git, no references | none | Not recoverable from git if deleted; owner decides. |
 | 11 | `perf-v11-results.json` (root, untracked) | Not in git; output of a perf run | none | Same; may be wanted as evidence. |
