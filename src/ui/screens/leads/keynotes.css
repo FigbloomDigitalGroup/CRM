@@ -15,3 +15,6 @@
 .fb-app .fb-kn-open:focus-visible{ outline: 2px solid var(--primary); outline-offset: 1px; }
 .fb-app .fb-hrow-wrap{ display: flex; align-items: center; gap: 4px; }
 .fb-app .fb-hrow-wrap > .fb-hrow{ flex: 1; min-width: 0; }
+.fb-app .fb-kn-sep{ border: 0; border-top: 1px solid var(--border); margin: 16px 0 12px; width: 100%; }
+.fb-app .fb-kn-log{ display: flex; flex-direction: column; gap: 8px; }
+.fb-app .fb-kn-log__actions{ display: flex; gap: 8px; }

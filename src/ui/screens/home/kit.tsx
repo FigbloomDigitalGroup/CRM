@@ -21,6 +21,7 @@ import {
   ListChecks,
   Lock,
   type LucideIcon,
+  MessageCirclePlus,
   MessageSquare,
   Package,
   Phone,
@@ -43,6 +44,7 @@ import { useId, useState, type CSSProperties, type KeyboardEvent, type ReactNode
 /** The design's icon names, drawn with the app's one icon set. */
 const ICONS: Record<string, LucideIcon> = {
   note: PenLine,
+  "chat-plus": MessageCirclePlus,
   alert: AlertTriangle,
   banknote: Banknote,
   bell: Bell,
