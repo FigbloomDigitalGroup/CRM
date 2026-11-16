@@ -5,11 +5,20 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { describeError } from "../../errors";
 import { NoAccess } from "../../components/states";
+import { useToast } from "../../components/toast";
 import { useApi, useApiQuery, queryKeyFor } from "../../data/hooks";
 import { newIdempotencyKey } from "../../data/client";
 import { useMember } from "../../data/member";
 import { useFormatters, useRefreshLeads } from "./data";
 import { SideDrawer } from "./overlay";
+
+const LOG_CHANNELS = [
+  { value: "CALL", label: "Call" },
+  { value: "WHATSAPP", label: "WhatsApp" },
+  { value: "EMAIL", label: "Email" },
+  { value: "MEETING", label: "Meeting" },
+  { value: "OTHER", label: "Other" },
+] as const;
 
 interface KeyNote {
   id: string;
@@ -35,6 +44,7 @@ export function KeyNotesPreview({ leadId, name, onClose }: { leadId: string; nam
   const qc = useQueryClient();
   const fmt = useFormatters();
   const refresh = useRefreshLeads();
+  const toast = useToast();
   const args = { params: { orgSlug }, query: { leadIds: leadId } };
   const q = useApiQuery("getLeadsKeyNotes", args);
   const key = queryKeyFor("getLeadsKeyNotes", args);
@@ -75,6 +85,37 @@ export function KeyNotesPreview({ leadId, name, onClose }: { leadId: string; nam
       inFlight.current = false;
       setBusy(false);
       box.current?.focus();
+    }
+  }
+
+  // Log a conversation (call, WhatsApp, email, meeting) against this lead without leaving the page. It is the same activity record the
+  // Conversations page lists, so it shows there at once.
+  const [logOpen, setLogOpen] = useState(false);
+  const [channel, setChannel] = useState<(typeof LOG_CHANNELS)[number]["value"]>("CALL");
+  const [summary, setSummary] = useState("");
+  const [logBusy, setLogBusy] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
+  const logInFlight = useRef(false);
+
+  async function saveLog() {
+    const body = summary.trim();
+    if (!body || logInFlight.current) return;
+    logInFlight.current = true;
+    setLogBusy(true);
+    setLogError(null);
+    const label = LOG_CHANNELS.find((c) => c.value === channel)?.label ?? "Conversation";
+    try {
+      await api.call("postActivities", { params: { orgSlug }, idempotencyKey: newIdempotencyKey(), body: { type: channel, subject: label, description: body, leadId } });
+      for (const k of ["listConversations", "listNeedsLinking"]) void qc.invalidateQueries({ queryKey: [k] });
+      await Promise.all([qc.invalidateQueries({ queryKey: key }), refresh()]);
+      toast.show({ tone: "success", message: `${label} logged.` });
+      setSummary("");
+      setLogOpen(false);
+    } catch (err) {
+      setLogError(`We could not log the conversation. ${describeError(err).body}`);
+    } finally {
+      logInFlight.current = false;
+      setLogBusy(false);
     }
   }
 
@@ -149,6 +190,55 @@ export function KeyNotesPreview({ leadId, name, onClose }: { leadId: string; nam
                   Save note
                 </button>
               </div>
+              <hr className="fb-kn-sep" />
+              {!logOpen ? (
+                <div>
+                  <button type="button" className="fb-ld-btn" onClick={() => setLogOpen(true)}>
+                    Log a conversation
+                  </button>
+                </div>
+              ) : (
+                <div className="fb-kn-log" role="group" aria-label="Log a conversation">
+                  <label htmlFor="fb-kn-channel" className="fb-ld-label">
+                    Log a conversation
+                  </label>
+                  <select id="fb-kn-channel" className="fb-ld-select" value={channel} onChange={(e) => setChannel(e.target.value as typeof channel)}>
+                    {LOG_CHANNELS.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <textarea
+                    className="fb-ld-textarea"
+                    rows={3}
+                    value={summary}
+                    maxLength={4000}
+                    aria-label="What was said"
+                    onChange={(e) => setSummary(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                        e.preventDefault();
+                        void saveLog();
+                      }
+                    }}
+                    placeholder="What was said? Ctrl+Enter saves."
+                  />
+                  {logError ? (
+                    <div role="alert" className="fb-kn-error">
+                      {logError}
+                    </div>
+                  ) : null}
+                  <div className="fb-kn-log__actions">
+                    <button type="button" className="fb-ld-btn fb-ld-btn--primary" disabled={logBusy || !summary.trim()} onClick={() => void saveLog()}>
+                      Save conversation
+                    </button>
+                    <button type="button" className="fb-ld-btn" disabled={logBusy} onClick={() => setLogOpen(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="fb-kn-noadd" role="note">

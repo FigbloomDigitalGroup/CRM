@@ -200,7 +200,7 @@ export function NewLeadsPanel({ rows, since }: { rows: NewLeadRow[]; since: numb
               </span>
             </Link>
             <button type="button" className="fb-kn-open" aria-label={`Key notes for ${l.name}`} title="Key notes" onClick={() => setNotesFor(l)}>
-              <HIcon name="note" size={16} />
+              <HIcon name="chat-plus" size={16} />
             </button>
           </div>
         );
