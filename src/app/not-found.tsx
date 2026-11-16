@@ -1,25 +1,14 @@
-import { BrandMark } from "@/app/_shared/BrandMark";
 import Link from "next/link";
+import { AuthLayout } from "@/app/_shared/AuthLayout";
 
 export default function NotFound() {
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <BrandMark className="brand-mark" />
-          <div className="auth-brand-name">
-            Figbloom<span className="accent"> CRM</span>
-          </div>
-        </div>
-        <h1 style={{ fontSize: 19 }}>Page not found</h1>
-        <p className="warning" style={{ marginTop: 8 }}>
-          The page you&apos;re looking for doesn&apos;t exist, or you may not have
-          access to it.
-        </p>
-        <p className="warning">
-          <Link href="/">Back to FigBloom CRM</Link>
-        </p>
+    <AuthLayout title="Page not found" lead="The page you are looking for does not exist, or you may not have access to it. Check the address, or go back to FigBloom CRM.">
+      <div className="auth-actions">
+        <Link className="auth-btn" href="/">
+          Back to FigBloom CRM
+        </Link>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

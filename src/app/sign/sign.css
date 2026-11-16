@@ -1,7 +1,7 @@
 /* The public quote-signing page (Q2, FIG-1193). Standalone: it is outside the organisation layout, so it does not read the app's tokens or ui.css. Mobile first. */
-.sgn { --sgn-bg: #f4f3ee; --sgn-surface: #fff; --sgn-text: #1b1d1a; --sgn-muted: #50564d; --sgn-border: #cfd3c9; --sgn-primary: #1f6b3a; --sgn-primary-text: #fff; --sgn-ok: #e3f1e6; --sgn-warn: #fff2d6;
+.sgn { --sgn-bg: #f4f3ee; --sgn-surface: #fff; --sgn-text: #1b1d1a; --sgn-muted: #50564d; --sgn-border: #cfd3c9; --sgn-primary: #1d5f8f; --sgn-primary-text: #fff; --sgn-ok: #e3f1e6; --sgn-warn: #fff2d6;
   min-height: 100vh; background: var(--sgn-bg); color: var(--sgn-text); font-family: "Instrument Sans", system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
-@media (prefers-color-scheme: dark) { .sgn { --sgn-bg: #14170f; --sgn-surface: #1d2118; --sgn-text: #f1f3ec; --sgn-muted: #b8beaf; --sgn-border: #3a4034; --sgn-primary: #7fd197; --sgn-primary-text: #0f2417; --sgn-ok: #1e3324; --sgn-warn: #3a3017; } }
+@media (prefers-color-scheme: dark) { .sgn { --sgn-bg: #14170f; --sgn-surface: #1d2118; --sgn-text: #f1f3ec; --sgn-muted: #b8beaf; --sgn-border: #3a4034; --sgn-primary: #8cc4ef; --sgn-primary-text: #0b2234; --sgn-ok: #1e3324; --sgn-warn: #3a3017; } }
 .sgn__wrap { max-width: 640px; margin: 0 auto; padding: 16px 16px 48px; display: flex; flex-direction: column; gap: 16px; }
 .sgn__bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .sgn__brand { font-weight: 700; }
@@ -22,6 +22,7 @@
 .sgn__check { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; }
 .sgn__check input { width: 24px; height: 24px; flex: none; margin-top: 2px; }
 .sgn__btn { min-height: 52px; border-radius: 12px; border: 0; background: var(--sgn-primary); color: var(--sgn-primary-text); font: inherit; font-weight: 700; font-size: 17px; cursor: pointer; }
+.sgn__btn:hover { filter: brightness(0.94); }
 .sgn__btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
 .sgn__btn--quiet { background: transparent; color: var(--sgn-text); border: 1px solid var(--sgn-border); }
 .sgn__notice { border-radius: 12px; padding: 12px 14px; background: var(--sgn-ok); font-weight: 600; }

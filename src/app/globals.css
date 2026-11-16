@@ -4351,3 +4351,374 @@ a.task-link:hover {
     margin-bottom: 10px;
   }
 }
+
+/* ---------------------------------------------------------------------
+   Side pages of the sign-in area (FIG-1592): forgot / reset password,
+   accept invite, two-step sign-in and set-up, not found, error. One frame
+   (`AuthLayout`), one set of states. Visual polish only: no behaviour.
+   Plain CSS on purpose: these pages never load the design system sheet.
+   ------------------------------------------------------------------- */
+
+.auth-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 24px 16px;
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  max-width: 440px;
+  padding: 36px 32px 28px;
+}
+
+.auth-card--wide {
+  max-width: 480px;
+}
+
+.auth-card .auth-brand {
+  margin-bottom: 20px;
+}
+
+.auth-title {
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  margin: 0 0 8px;
+  color: var(--text-primary);
+}
+
+.auth-lead {
+  margin: 0 0 18px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.auth-pill {
+  align-self: flex-start;
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--info-bg);
+  color: var(--info);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.auth-card .auth-form {
+  max-width: none;
+  gap: 16px;
+}
+
+.auth-card label {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.auth-card .auth-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.auth-card input:not([type="checkbox"]) {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  font-size: 15px;
+}
+
+.auth-card input:not([type="checkbox"]):focus-visible {
+  border-color: var(--brand-green);
+  outline: 2px solid var(--brand-orange);
+  outline-offset: 1px;
+}
+
+.auth-card input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.auth-card .auth-password-input {
+  min-width: 0;
+}
+
+.auth-card button,
+.auth-btn {
+  min-height: 44px;
+}
+
+.auth-card .auth-password-input + button {
+  min-height: 0;
+}
+
+.auth-card button:focus-visible,
+.auth-btn:focus-visible,
+.auth-card a:focus-visible {
+  outline: 2px solid var(--brand-orange);
+  outline-offset: 2px;
+}
+
+.auth-card button.auth-wide,
+.auth-wide {
+  width: 100%;
+}
+
+button[aria-busy="true"] {
+  cursor: progress;
+}
+
+/* A link that looks like the primary button (not found, error page). */
+.auth-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--brand-green);
+  background: var(--brand-green);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-btn:hover {
+  background: var(--brand-green-dark);
+  border-color: var(--brand-green-dark);
+  text-decoration: none;
+}
+
+.auth-btn--quiet {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.auth-btn--quiet:hover {
+  background: var(--bg-page);
+  border-color: var(--border-strong);
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.auth-actions > * {
+  flex: 1 1 160px;
+}
+
+.auth-card .auth-code-input {
+  font-size: 20px;
+  letter-spacing: 0.12em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.auth-check input {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* Messages: an icon, a short bold line, the detail. Colour is never the only signal. */
+.auth-notice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.auth-notice__icon {
+  flex: none;
+  display: inline-flex;
+  margin-top: 1px;
+}
+
+.auth-notice__body strong {
+  display: block;
+  font-weight: 700;
+}
+
+.auth-notice--error {
+  background: var(--danger-bg);
+  border-color: #f0c9ca;
+  color: #8f2323;
+}
+
+.auth-notice--warning {
+  background: var(--warning-bg);
+  border-color: #f3dba8;
+  color: #7a4f08;
+}
+
+.auth-notice--success {
+  background: var(--success-bg);
+  border-color: #c3dccb;
+  color: var(--success);
+}
+
+.auth-notice--info {
+  background: var(--info-bg);
+  border-color: #c9ddf1;
+  color: #1f5588;
+}
+
+.auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 18px 0 0;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+
+.auth-links a {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Password rules, live as you type. */
+.auth-rules {
+  list-style: none;
+  margin: -6px 0 0;
+  padding: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.auth-rules li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.auth-rules__mark {
+  width: 14px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.auth-rules li.is-met {
+  color: var(--success);
+}
+
+.auth-rules li.is-unmet {
+  color: #8f2323;
+}
+
+.auth-rules__state {
+  font-weight: 600;
+}
+
+.auth-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.auth-key code {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.auth-codes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: 15px;
+}
+
+.auth-codes li {
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  background: var(--bg-page);
+}
+
+.auth-ref {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.auth-ref code {
+  font-family: var(--font-mono);
+}
+
+.auth-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--brand-green);
+  border-radius: 50%;
+  animation: auth-spin 0.8s linear infinite;
+  vertical-align: -3px;
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-spinner {
+    animation: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .auth-shell {
+    padding: 12px;
+    align-items: flex-start;
+  }
+  .auth-card {
+    padding: 28px 20px 22px;
+  }
+  .auth-codes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.auth-links + .auth-form {
+  margin-top: 16px;
+}
