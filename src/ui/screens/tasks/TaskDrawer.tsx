@@ -171,7 +171,8 @@ function Body({ onClose, initialDue, link, taskId, allowActivities, initialKind,
             ...(form.link && linkIds ? { [linkIds]: form.link.id } : {}),
           },
         });
-        toast.show({ tone: "success", message: `${KIND_NOUN[form.kind][0]!.toUpperCase()}${KIND_NOUN[form.kind].slice(1)} added.` });
+        // A plain task keeps its original wording ("Task created."); a call, meeting, email, quote or visit says "<Noun> added.".
+        toast.show({ tone: "success", message: form.kind === "task" ? "Task created." : `${KIND_NOUN[form.kind][0]!.toUpperCase()}${KIND_NOUN[form.kind].slice(1)} added.` });
       }
       setDirty(false);
       refresh();
