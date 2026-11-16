@@ -1,1 +1,0 @@
-export { TeamScreen } from "./TeamScreen";
