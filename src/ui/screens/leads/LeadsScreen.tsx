@@ -687,7 +687,7 @@ export function LeadsScreen() {
                           ) : null}
                           {!isPoolRow && !l.archived && can("activities.view") ? (
                             <button type="button" className="fb-ld-iconbtn" title="Key notes" aria-label={`Key notes for ${name}`} onClick={() => setNotesFor({ id: l.id, name })}>
-                              <Icon name="note" size={15} />
+                              <Icon name="chat-plus" size={15} />
                             </button>
                           ) : null}
                           {!isPoolRow && !l.archived && c2.canEdit ? (
