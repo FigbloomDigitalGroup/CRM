@@ -25,9 +25,10 @@ import { DataPrivacy } from "./Privacy";
 import { ReferenceData } from "./ReferenceData";
 import { SecurityAccess, type MatrixData } from "./Security";
 import { CustomFields, MessageTemplates, TagManager } from "./Managers";
+import { settingsHref, type SettingsTabId } from "@/lib/settingsLinks";
 
 interface TabDef {
-  id: string;
+  id: SettingsTabId;
   label: string;
   icon: ReactNode;
   render: (matrix: MatrixData | null) => ReactNode;
@@ -101,7 +102,7 @@ export function SettingsScreen({ matrix = null }: { matrix?: MatrixData | null }
       <div className="fb-set__grid">
         <nav aria-label="Settings sections" className="fb-set__nav">
           {SETTINGS_TABS.map((t) => (
-            <Link key={t.id} href={`/o/${orgSlug}/settings?tab=${t.id}`} className="fb-set__navlink" aria-current={t.id === tab.id ? "page" : undefined} scroll={false}>
+            <Link key={t.id} href={settingsHref(orgSlug, t.id)} className="fb-set__navlink" aria-current={t.id === tab.id ? "page" : undefined} scroll={false}>
               {t.icon}
               {t.label}
             </Link>

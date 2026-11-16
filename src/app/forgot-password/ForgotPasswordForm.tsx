@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AuthLinks, AuthNotice } from "@/app/_shared/AuthLayout";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -27,24 +28,38 @@ export function ForgotPasswordForm() {
   }
 
   if (message) {
-    return <p className="warning">{message}</p>;
+    return (
+      <>
+        <AuthNotice kind="success" title="Check your email">
+          {message} It can take a minute to arrive. If you do not see it, look in your spam folder.
+        </AuthNotice>
+        <AuthLinks>
+          <a href="/login">Back to sign in</a>
+        </AuthLinks>
+      </>
+    );
   }
 
   return (
-    <form className="stack" onSubmit={handleSubmit}>
-      <label>
-        Email
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          required
-        />
-      </label>
-      <button type="submit" disabled={submitting}>
-        {submitting ? "Sending..." : "Send reset link"}
-      </button>
-    </form>
+    <>
+      <form className="stack auth-form" onSubmit={handleSubmit}>
+        <label>
+          Email
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+          />
+        </label>
+        <button type="submit" disabled={submitting} aria-busy={submitting || undefined}>
+          {submitting ? "Sending..." : "Send reset link"}
+        </button>
+      </form>
+      <AuthLinks>
+        <a href="/login">Back to sign in</a>
+      </AuthLinks>
+    </>
   );
 }

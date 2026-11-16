@@ -1,4 +1,5 @@
 import { localParts, zonedTimeToUtc } from "./timeZone";
+import { settingsPath } from "@/lib/settingsLinks";
 
 /**
  * Team activity notifications (FIG-1600, P2-17): what Management is told when a team member adds or changes
@@ -43,8 +44,8 @@ export const TEAM_EVENT_DEFS: readonly TeamEventDef[] = [
   { key: "DEAL_CLOSED", label: "A deal is marked won or lost", description: "Instant by default. Shows the deal value only if your role may see values.", defaultMode: "INSTANT", verb: "closed", noun: { one: "a deal", many: "deals" }, listPath: "deals" },
   { key: "COMPANY_CREATED", label: "A team member adds a company", description: "Grouped into a digest by default.", defaultMode: "HOURLY", verb: "added", noun: { one: "a company", many: "companies" }, listPath: "companies" },
   { key: "CONTACT_CREATED", label: "A team member adds a contact", description: "Grouped into a digest by default.", defaultMode: "HOURLY", verb: "added", noun: { one: "a contact", many: "contacts" }, listPath: "contacts" },
-  { key: "DATA_RUN", label: "A lead, contact, company or deal import or export runs", description: "When an import or export finishes.", defaultMode: "INSTANT", verb: "finished", noun: { one: "an import or export", many: "imports and exports" }, listPath: "settings" },
-  { key: "MEMBER_CHANGE", label: "A member is invited or removed", description: "When someone joins the invite list or leaves the team.", defaultMode: "INSTANT", verb: "changed", noun: { one: "a team member", many: "team members" }, listPath: "settings" },
+  { key: "DATA_RUN", label: "A lead, contact, company or deal import or export runs", description: "When an import or export finishes.", defaultMode: "INSTANT", verb: "finished", noun: { one: "an import or export", many: "imports and exports" }, listPath: settingsPath("migration").slice(1) },
+  { key: "MEMBER_CHANGE", label: "A member is invited or removed", description: "When someone joins the invite list or leaves the team.", defaultMode: "INSTANT", verb: "changed", noun: { one: "a team member", many: "team members" }, listPath: settingsPath("members").slice(1) },
   { key: "DISCOUNT_REQUESTED", label: "A large discount is requested", description: "When a quote discount goes above the approval limit and waits for a decision.", defaultMode: "INSTANT", verb: "asked approval for", noun: { one: "a discount", many: "discounts" }, listPath: "approvals" },
   { key: "NOTE_ADDED", label: "A team member adds a note to a lead", description: "Grouped into a digest by default. The note text is never included.", defaultMode: "HOURLY", verb: "added", noun: { one: "a lead note", many: "lead notes" }, listPath: "leads" },
 ];

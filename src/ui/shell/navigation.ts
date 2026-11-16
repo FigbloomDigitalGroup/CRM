@@ -1,6 +1,7 @@
 import { canUseResource, resolveScope } from "@/auth/permissions";
 import { canViewTeamPage } from "@/auth/teamAccess";
 import type { NavIcon, NavItem, NavSection, QuickCreateItem } from "./navModel";
+import { SETTINGS_ROOT } from "@/lib/settingsLinks";
 
 /**
  * The shell's navigation (F1.03), from the design's navigation map. A pure function of the person's permissions, so "each role sees only the
@@ -98,7 +99,7 @@ const DEFS: Def[] = [
   },
   { section: "insights", key: "preferences", label: () => "Preferences", path: "/preferences", icon: "preferences", tint: "o", allowed: () => true, built: true },
   // Preferences (M9) holds every member's own settings, so Settings is only for the people who manage the organisation.
-  { section: "insights", key: "settings", label: () => "Settings", path: "/settings", icon: "settings", tint: "o", allowed: (c) => has(c, "configuration.manage"), built: true },
+  { section: "insights", key: "settings", label: () => "Settings", path: SETTINGS_ROOT, icon: "settings", tint: "o", allowed: (c) => has(c, "configuration.manage"), built: true },
 ];
 
 export function buildNav(input: NavInput): NavSection[] {

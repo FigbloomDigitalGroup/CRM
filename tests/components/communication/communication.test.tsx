@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ROLE_PERMISSIONS } from "../../../prisma/seedData";
 import { copy } from "../../../src/ui";
-import { mentionQuery, mentionsIn } from "../../../src/ui/screens/communication/api";
+import { mentionQuery, mentionsIn, placeMessages } from "../../../src/ui/screens/communication/api";
 import { ChatWorkspace } from "../../../src/ui/screens/communication/ChatWorkspace";
 import { MailWorkspace } from "../../../src/ui/screens/communication/MailWorkspace";
 import { VideoConference } from "../../../src/ui/screens/communication/VideoConference";
@@ -263,5 +263,61 @@ describe("Video Conference (F6.23) reads and writes the API", () => {
     await waitFor(() => expect(calls.find((c) => c.id === "deleteCommunicationsMeetingsByActivityId")?.args).toMatchObject({ params: { activityId: "ac-1" } }));
     await user.click(screen.getByRole("tab", { name: /Past and cancelled/ }));
     expect(await screen.findByText("Cancelled")).toBeInTheDocument();
+  });
+});
+
+describe("Chat layout (P2-18): sides, runs, separators", () => {
+  const at = (min: number) => new Date(Date.UTC(2026, 10, 10, 9, min)).toISOString();
+  const m = (id: string, who: string, min: number, over: Record<string, unknown> = {}) => message({ id, seq: Number(id.slice(1)), authorMembershipId: who, createdAt: at(min), ...over }) as never;
+
+  it("puts my messages on my side and groups runs of five minutes or less by one person", () => {
+    const placed = placeMessages([m("a1", "m-2", 0), m("a2", "m-2", 2), m("a3", "m-2", 20), m("a4", "m-1", 21), m("a5", "m-2", 22)], "m-1");
+    expect(placed.map((p) => p.mine)).toEqual([false, false, false, true, false]);
+    expect(placed.map((p) => p.first)).toEqual([true, false, true, true, true]);
+    expect(placed.map((p) => p.last)).toEqual([false, true, true, true, true]);
+  });
+
+  it("starts a new run on a new day", () => {
+    const next = message({ id: "b2", authorMembershipId: "m-2", createdAt: new Date(Date.UTC(2026, 10, 11, 9, 1)).toISOString() }) as never;
+    const placed = placeMessages([m("b1", "m-2", 0), next], "m-1");
+    expect(placed.map((p) => p.first)).toEqual([true, true]);
+  });
+
+  it("draws mine on the right with a sent mark, theirs on the left with the sender once", async () => {
+    chat({
+      getChatChannelsByChannelIdMessages: () => ({
+        items: [message({ id: "x1", seq: 1, body: "Morning", createdAt: iso(2) }), message({ id: "x2", seq: 2, body: "Anyone in?", createdAt: iso(2) }), message({ id: "x3", seq: 3, authorMembershipId: "m-1", authorName: "Dev Sales", body: "Yes I am", createdAt: iso(1) })],
+        hasMore: false,
+        lastSeq: 3,
+      }),
+    });
+    const log = await screen.findByRole("log", { name: "Messages" });
+    expect(await within(log).findByText("Yes I am")).toBeInTheDocument();
+    const rows = within(log).getAllByRole("article");
+    expect(rows).toHaveLength(3);
+    expect(rows.map((r) => r.getAttribute("data-mine"))).toEqual([null, null, "true"]);
+    expect(within(log).getAllByText("Amina Wekesa")).toHaveLength(1);
+    expect(within(rows[2]!).getByText("Sent")).toBeInTheDocument();
+    expect(within(log).getAllByRole("separator", { name: "Today" })).toHaveLength(1);
+  });
+
+  it("shows a New messages divider before the unread ones when a conversation with unread messages opens", async () => {
+    const user = userEvent.setup();
+    chat({ getChatChannelsByChannelIdMessages: () => ({ items: [message({ id: "u1", seq: 1, body: "old one" }), message({ id: "u2", seq: 2, body: "fresh one" }), message({ id: "u3", seq: 3, body: "fresher one" })], hasMore: false, lastSeq: 3 }), getChatChannels: () => ({ items: [channel({ id: "ch-1", unread: 0, lastSeq: 3 }), channel({ id: "ch-2", name: "field-ops", unread: 2, lastSeq: 3 })], unreadTotal: 2, mentionTotal: 0 }) });
+    await user.click(await screen.findByRole("button", { name: /field-ops/ }));
+    const divider = await screen.findByRole("separator", { name: "New messages" });
+    const log = screen.getByRole("log", { name: "Messages" });
+    const order = Array.from(log.querySelectorAll('[role="article"], [aria-label="New messages"]')).map((n) => n.getAttribute("aria-label")?.startsWith("Amina") ? n.textContent : "divider");
+    expect(divider).toBeInTheDocument();
+    expect(order[0]).toContain("old one");
+    expect(order[1]).toBe("divider");
+  });
+
+  it("uses theme tokens only for the bubble colours, never a hard-coded colour", async () => {
+    const css = (await import("node:fs")).readFileSync("src/ui/screens/communication/communication.css", "utf8");
+    const rules = css.split("}").filter((r) => /\.fb-chat__bubble\s*\{/.test(r)).join(" ");
+    expect(rules).toMatch(/var\(--primary-btn\)/);
+    expect(rules).toMatch(/var\(--on-primary\)/);
+    expect(rules).not.toMatch(/#[0-9a-f]{3,6}\b/i);
   });
 });

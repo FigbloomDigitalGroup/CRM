@@ -1,4 +1,4 @@
-import { BrandMark } from "@/app/_shared/BrandMark";
+import { AuthLayout, AuthLinks, AuthNotice } from "@/app/_shared/AuthLayout";
 import { getInviteInfo } from "@/services/authService";
 import { AcceptInviteForm } from "./AcceptInviteForm";
 
@@ -22,23 +22,24 @@ export default async function AcceptInvitePage({
   }
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <BrandMark className="brand-mark" />
-          <div className="auth-brand-name">
-            Figbloom<span className="accent"> CRM</span>
-          </div>
-        </div>
-        <h1 style={{ fontSize: 19 }}>Accept your invite</h1>
-        {error && <p className="error">{error}</p>}
-        {info && token && (
-          <>
-            <p className="warning">Invite for {info.email}.</p>
-            <AcceptInviteForm token={token} requiresPassword={info.requiresPassword} />
-          </>
-        )}
-      </div>
-    </div>
+    <AuthLayout title="Accept your invite" lead={info ? undefined : "You need a valid invite link to join."}>
+      {error && (
+        <>
+          <AuthNotice kind="error" title="We could not open this invite">
+            {error}
+          </AuthNotice>
+          <AuthLinks>
+            <span>Ask the person who invited you to send a new invite.</span>
+            <a href="/login">Back to sign in</a>
+          </AuthLinks>
+        </>
+      )}
+      {info && token && (
+        <>
+          <AuthNotice kind="info">Invite for {info.email}.</AuthNotice>
+          <AcceptInviteForm token={token} requiresPassword={info.requiresPassword} />
+        </>
+      )}
+    </AuthLayout>
   );
 }

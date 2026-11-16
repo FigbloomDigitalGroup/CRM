@@ -2,7 +2,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
-import { BrandMark } from "@/app/_shared/BrandMark";
+import { AuthLayout } from "@/app/_shared/AuthLayout";
 
 export default function GlobalError({
   error,
@@ -21,28 +21,20 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <BrandMark className="brand-mark" />
-          <div className="auth-brand-name">
-            Figbloom<span className="accent"> CRM</span>
-          </div>
-        </div>
-        <h1 style={{ fontSize: 19 }}>Something went wrong</h1>
-        <p className="warning" style={{ marginTop: 8 }}>
-          An unexpected error occurred. You can try again, or head back to the
-          dashboard.
-        </p>
-        <div className="stack">
-          <button type="button" onClick={reset}>
-            Try again
-          </button>
-          <p className="warning">
-            <a href="/">Back to FigBloom CRM</a>
-          </p>
-        </div>
+    <AuthLayout title="Something went wrong" lead="An unexpected error occurred. Nothing you saved has been lost. You can try again, or go back to FigBloom CRM.">
+      <div className="auth-actions">
+        <button type="button" onClick={reset}>
+          Try again
+        </button>
+        <a className="auth-btn auth-btn--quiet" href="/">
+          Back to FigBloom CRM
+        </a>
       </div>
-    </div>
+      {error.digest ? (
+        <p className="auth-ref">
+          If this keeps happening, tell support this reference: <code>{error.digest}</code>
+        </p>
+      ) : null}
+    </AuthLayout>
   );
 }

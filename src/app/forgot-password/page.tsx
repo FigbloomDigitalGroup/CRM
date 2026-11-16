@@ -1,19 +1,10 @@
-import { BrandMark } from "@/app/_shared/BrandMark";
+import { AuthLayout } from "@/app/_shared/AuthLayout";
 import { ForgotPasswordForm } from "./ForgotPasswordForm";
 
 export default function ForgotPasswordPage() {
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <BrandMark className="brand-mark" />
-          <div className="auth-brand-name">
-            Figbloom<span className="accent"> CRM</span>
-          </div>
-        </div>
-        <h1 style={{ fontSize: 19 }}>Reset your password</h1>
-        <ForgotPasswordForm />
-      </div>
-    </div>
+    <AuthLayout title="Reset your password" lead="Enter the email you sign in with. We will send you a link to choose a new password.">
+      <ForgotPasswordForm />
+    </AuthLayout>
   );
 }

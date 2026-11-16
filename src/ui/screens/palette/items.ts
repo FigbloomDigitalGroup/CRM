@@ -1,4 +1,5 @@
 import { canViewTeamPage } from "../../../auth/teamAccess";
+import { SETTINGS_ROOT } from "@/lib/settingsLinks";
 
 /**
  * What the command palette (X3, FIG-1172) lists. A pure function of the person's permission keys, so "only permitted actions" is a unit test:
@@ -43,7 +44,7 @@ export const GOTO: { id: string; label: string; path: string; shortcut?: string;
   { id: "payments", label: "Payments", path: "/payments", allowed: (k) => any(k, "finance.view.payments") },
   { id: "reports", label: "Reports", path: "/reports", shortcut: "R", allowed: (k) => any(k, "reporting.view.own", "reporting.view.all") },
   { id: "preferences", label: "Preferences", path: "/preferences", allowed: () => true },
-  { id: "settings", label: "Settings", path: "/settings", allowed: (k) => any(k, "configuration.manage") },
+  { id: "settings", label: "Settings", path: SETTINGS_ROOT, allowed: (k) => any(k, "configuration.manage") },
 ];
 
 export const ACTIONS: { id: string; label: string; path?: string; run?: PaletteItem["run"]; hint?: string; allowed: (k: readonly string[]) => boolean }[] = [

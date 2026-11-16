@@ -27,6 +27,7 @@ import {
 } from "./roles";
 import type { DeliveryData, FinanceData, ManagementData, SalesTodayData, SectionAnswer, TechnicalData } from "./dash";
 import { LoaderBlock } from "../../components/loader";
+import { settingsHref } from "@/lib/settingsLinks";
 
 type Kind = "management" | "sales" | "delivery" | "finance" | "technical";
 
@@ -210,15 +211,15 @@ function Header({ kind, timeZone, quick }: { kind: Kind | null; timeZone: string
   );
 }
 
-function EmptyHome({ kind }: { kind: Kind }) {
+export function EmptyHome({ kind }: { kind: Kind }) {
   const m = useMember();
   const e = EMPTY[kind];
   const base = `/o/${m.orgSlug}`;
   const actions: Quick[] =
     kind === "management"
       ? [
-          { key: "invite", label: "Invite members", icon: "user-plus", href: `${base}/settings`, primary: true },
-          { key: "web", label: "Connect the website form", icon: "globe", href: `${base}/settings` },
+          { key: "invite", label: "Invite members", icon: "user-plus", href: settingsHref(m.orgSlug, "members"), primary: true },
+          { key: "web", label: "Connect the website form", icon: "globe", href: settingsHref(m.orgSlug, "website") },
         ]
       : kind === "sales"
         ? [

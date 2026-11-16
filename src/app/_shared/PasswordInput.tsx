@@ -48,6 +48,8 @@ export function PasswordInput({
   id,
   placeholder,
   variant = "default",
+  describedBy,
+  invalid,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -58,6 +60,9 @@ export function PasswordInput({
   placeholder?: string;
   /** "pill" is the rounded, icon-led field used on the redesigned /login screen. */
   variant?: "default" | "pill";
+  /** FIG-1592: ties the field to its hint or error text (`aria-describedby`) and marks it invalid. Optional: the sign-in and sign-up screens do not pass them. */
+  describedBy?: string;
+  invalid?: boolean;
 }) {
   const [visible, setVisible] = useState(false);
 
@@ -102,6 +107,9 @@ export function PasswordInput({
         minLength={minLength}
         required={required}
         placeholder={placeholder}
+        aria-describedby={describedBy}
+        aria-invalid={invalid ? true : undefined}
+        className="auth-password-input"
         style={{ flex: 1, paddingRight: 36 }}
       />
       <button

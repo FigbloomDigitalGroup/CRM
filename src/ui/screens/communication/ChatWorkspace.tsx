@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, AtSign, Hash, Link2, Lock, MessagesSquare, Paperclip, Plus, Search, Send, Smile, SmilePlus, Trash2, Users } from "lucide-react";
+import { ArrowLeft, AtSign, Check, Hash, Link2, Lock, MessagesSquare, Paperclip, Plus, Search, Send, Smile, SmilePlus, Trash2, Users } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Avatar, Badge, Banner, Button, IconButton } from "../../components/basics";
 import { Checkbox, Input } from "../../components/forms";
@@ -13,7 +13,7 @@ import { useApi } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { describeError } from "../../errors";
 import { QueryFailure } from "../../featureUnavailable";
-import { EMOJI, channelTitle, formatKes, mentionQuery, mentionsIn, useChannelMembers, useChannels, useChatActions, useMessages, usePeople, type CardView, type ChannelItem, type MessageItem, type PersonItem, type RecordRef } from "./api";
+import { EMOJI, channelTitle, formatKes, mentionQuery, mentionsIn, useChannelMembers, useChannels, useChatActions, useMessages, usePeople, type CardView, type ChannelItem, type MessageItem, type PersonItem, type PlacedMessage, type RecordRef, placeMessages } from "./api";
 import { RecordPicker } from "./RecordPicker";
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -32,7 +32,7 @@ const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour
  * looking (hard rule 7); the screen draws what it is given. The screen polls for new messages and unread counts.
  */
 export function ChatWorkspace() {
-  const { can, userName, orgSlug } = useMember();
+  const { can, userName, orgSlug, membershipId } = useMember();
   const toast = useToast();
   const api = useApi();
   const { channels, isLoading, error, refetch } = useChannels(can("chat.view"));
@@ -73,9 +73,26 @@ export function ChatWorkspace() {
   }, [channel?.id, channel?.unread, channel?.lastSeq, channel?.joined]);
 
   const thread = useMemo(() => messages.filter((m) => !find || (m.body ?? "").toLowerCase().includes(find.toLowerCase())), [messages, find]);
+  // Scroll to the newest message when a conversation opens, or when one arrives while the reader is at the bottom; never yank a reader who has
+  // scrolled up to older messages.
+  const atBottom = useRef(true);
+  const shownChannel = useRef<string | null>(null);
   useEffect(() => {
-    endRef.current?.scrollIntoView?.({ block: "end" });
+    if (shownChannel.current !== current) {
+      shownChannel.current = current;
+      atBottom.current = true;
+    }
+    if (atBottom.current) endRef.current?.scrollIntoView?.({ block: "end" });
   }, [thread.length, current]);
+
+  // The "New messages" divider: where the unread started when the conversation was opened, remembered before it is marked read.
+  const [dividers, setDividers] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (channel && channel.joined && channel.unread > 0 && dividers[channel.id] === undefined) {
+      setDividers((d) => ({ ...d, [channel.id]: channel.lastSeq - channel.unread }));
+    }
+  }, [channel?.id, channel?.unread, channel?.lastSeq, channel?.joined]);
+  const dividerAfter = channel ? dividers[channel.id] : undefined;
 
   const everyone = useMemo(() => people, [people]);
   const mentionRe = useMemo(() => (everyone.length ? new RegExp(`(@(?:${everyone.map((p) => escapeRe(p.name)).join("|")}))`, "g") : null), [everyone]);
@@ -161,7 +178,9 @@ export function ChatWorkspace() {
 
   const isDm = channel?.kind === "DIRECT";
   const title = channel ? channelTitle(channel) : "";
-  const days = Array.from(new Set(thread.map((m) => dayOf(m.createdAt))));
+  const placed = placeMessages(thread, membershipId);
+  let lastDay = "";
+  let dividerShown = false;
   const canPost = can("chat.post") && Boolean(channel?.joined);
 
   return (
@@ -280,20 +299,28 @@ export function ChatWorkspace() {
                 </Banner>
               ) : null}
 
-              <div className="fb-chat__scroll" role="log" aria-live="polite" aria-label="Messages">
+              <div className="fb-chat__scroll" role="log" aria-live="polite" aria-label="Messages" onScroll={(e) => { const el = e.currentTarget; atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }}>
                 {messagesError ? (
                   <QueryFailure error={messagesError} area="This conversation" />
                 ) : thread.length === 0 ? (
                   <EmptyState icon={<MessagesSquare size={22} />} title={find ? "No messages match" : "No messages yet"} body={find ? "Try another word." : "Say hello. Everyone in this conversation will see it."} />
                 ) : (
-                  days.map((day) => (
-                    <Fragment key={day}>
-                      <div className="fb-chat__day"><span>{day}</span></div>
-                      {thread.filter((m) => dayOf(m.createdAt) === day).map((m) => (
-                        <MessageRow key={m.id} message={m} mentionRe={mentionRe} orgSlug={orgSlug} canReact={canPost} onReact={(e, mine) => actions.toggleReaction(m.id, e, mine)} onDelete={() => actions.deleteMessage(m.id)} onOpenFile={(f) => void openAttachment(m, f)} />
-                      ))}
-                    </Fragment>
-                  ))
+                  <div className="fb-chat__thread">
+                    {placed.map((p) => {
+                      const day = dayOf(p.message.createdAt);
+                      const showDay = day !== lastDay;
+                      lastDay = day;
+                      const showDivider = !dividerShown && dividerAfter !== undefined && !p.mine && p.message.seq > dividerAfter;
+                      if (showDivider) dividerShown = true;
+                      return (
+                        <Fragment key={p.message.id}>
+                          {showDay ? <div className="fb-chat__day" role="separator" aria-label={day}><span>{day}</span></div> : null}
+                          {showDivider ? <div className="fb-chat__new" role="separator" aria-label="New messages"><span>New messages</span></div> : null}
+                          <MessageRow placed={p} isDm={Boolean(isDm)} mentionRe={mentionRe} orgSlug={orgSlug} canReact={canPost} onReact={(e, mine) => actions.toggleReaction(p.message.id, e, mine)} onDelete={() => actions.deleteMessage(p.message.id)} onOpenFile={(f) => void openAttachment(p.message, f)} />
+                        </Fragment>
+                      );
+                    })}
+                  </div>
                 )}
                 <div ref={endRef} />
               </div>
@@ -381,41 +408,58 @@ function MembersDialog({ open, onClose, title, channelId }: { open: boolean; onC
   );
 }
 
-function MessageRow({ message, mentionRe, orgSlug, canReact, onReact, onDelete, onOpenFile }: { message: MessageItem; mentionRe: RegExp | null; orgSlug: string; canReact: boolean; onReact: (emoji: string, mine: boolean) => void; onDelete: () => void; onOpenFile: (fileId: string) => void }) {
+function MessageRow({ placed, isDm, mentionRe, orgSlug, canReact, onReact, onDelete, onOpenFile }: { placed: PlacedMessage; isDm: boolean; mentionRe: RegExp | null; orgSlug: string; canReact: boolean; onReact: (emoji: string, mine: boolean) => void; onDelete: () => void; onOpenFile: (fileId: string) => void }) {
+  const { message, mine, first, last } = placed;
   const name = message.authorName ?? "Former member";
   const time = timeOf(message.createdAt);
-  if (message.deleted || message.erased) {
-    return <article className="fb-chat__msg" aria-label={`${name} at ${time}`}><Avatar name={name} size={32} /><div className="fb-chat__bubble"><p><em>{message.erased ? "This message was removed." : "This message was deleted."}</em></p></div></article>;
-  }
-  const parts = mentionRe && message.body ? message.body.split(mentionRe) : [message.body ?? ""];
+  const showWho = !mine && !isDm;
+  const gone = message.deleted || message.erased;
+  const parts = !gone && mentionRe && message.body ? message.body.split(mentionRe) : [message.body ?? ""];
   return (
-    <article className="fb-chat__msg" aria-label={`${name} at ${time}`}>
-      <Avatar name={name} size={32} />
-      <div className="fb-chat__bubble">
-        <div className="fb-chat__who">
-          <strong>{name}</strong>
-          <time>{time}</time>
-          {canReact ? <Menu label={`React to the message from ${name}`} triggerClassName="fb-iconbtn fb-chat__react" trigger={<SmilePlus size={14} />} align="end" items={EMOJI.map((e) => ({ key: e, label: e, onSelect: () => onReact(e, message.reactions.some((r) => r.emoji === e && r.mine)) }))} /> : null}
-          {message.canDelete ? <IconButton label={`Delete the message from ${name}`} onClick={onDelete}><Trash2 size={14} /></IconButton> : null}
+    <div role="article" className="fb-chat__msg" data-mine={mine ? "true" : undefined} data-first={first ? "true" : undefined} data-last={last ? "true" : undefined} aria-label={`${mine ? "You" : name} at ${time}`}>
+      {showWho ? <span className="fb-chat__who-av">{last ? <Avatar name={name} size={32} /> : null}</span> : null}
+      <div className="fb-chat__col">
+        {showWho && first ? <strong className="fb-chat__sender">{name}</strong> : null}
+        <div className="fb-chat__row">
+          <div className="fb-chat__bubble" title={time}>
+            {gone ? (
+              <p><em>{message.erased ? "This message was removed." : "This message was deleted."}</em></p>
+            ) : (
+              <>
+                {message.body ? <p>{parts.map((part, i) => (i % 2 === 1 ? <span key={i} className="fb-chat__mention">{part}</span> : <Fragment key={i}>{part}</Fragment>))}</p> : null}
+                {message.card ? <RecordCardView card={message.card} orgSlug={orgSlug} /> : null}
+                {message.attachments.length ? (
+                  <div className="fb-chat__files">
+                    {message.attachments.map((f) => <button key={f.fileId} type="button" className="fb-chat__file" onClick={() => onOpenFile(f.fileId)}><Paperclip size={12} aria-hidden="true" /> {f.name}</button>)}
+                  </div>
+                ) : null}
+                {message.reactions.length ? (
+                  <div className="fb-chat__reactions">
+                    {message.reactions.map((r) => (
+                      <button key={r.emoji} type="button" className="fb-chat__reaction" aria-pressed={r.mine} aria-label={`${r.emoji} ${r.count}`} disabled={!canReact} onClick={() => onReact(r.emoji, r.mine)}>
+                        {r.emoji} {r.count}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </>
+            )}
+            {last ? (
+              <div className="fb-chat__meta">
+                <time dateTime={message.createdAt}>{time}</time>
+                {mine && !gone ? <span className="fb-chat__sent"><Check size={12} aria-hidden="true" /><span className="fb-sr-only">Sent</span></span> : null}
+              </div>
+            ) : null}
+          </div>
+          {!gone && (canReact || message.canDelete) ? (
+            <div className="fb-chat__tools2">
+              {canReact ? <Menu label={`React to the message from ${name}`} triggerClassName="fb-iconbtn fb-chat__react" trigger={<SmilePlus size={14} />} align={mine ? "start" : "end"} items={EMOJI.map((e) => ({ key: e, label: e, onSelect: () => onReact(e, message.reactions.some((r) => r.emoji === e && r.mine)) }))} /> : null}
+              {message.canDelete ? <IconButton label={`Delete the message from ${name}`} className="fb-chat__react" onClick={onDelete}><Trash2 size={14} /></IconButton> : null}
+            </div>
+          ) : null}
         </div>
-        {message.body ? <p>{parts.map((part, i) => (i % 2 === 1 ? <span key={i} className="fb-chat__mention">{part}</span> : <Fragment key={i}>{part}</Fragment>))}</p> : null}
-        {message.card ? <RecordCardView card={message.card} orgSlug={orgSlug} /> : null}
-        {message.attachments.length ? (
-          <div className="fb-chat__files">
-            {message.attachments.map((f) => <button key={f.fileId} type="button" className="fb-chat__file" onClick={() => onOpenFile(f.fileId)}><Paperclip size={12} aria-hidden="true" /> {f.name}</button>)}
-          </div>
-        ) : null}
-        {message.reactions.length ? (
-          <div className="fb-chat__reactions">
-            {message.reactions.map((r) => (
-              <button key={r.emoji} type="button" className="fb-chat__reaction" aria-pressed={r.mine} aria-label={`${r.emoji} ${r.count}`} disabled={!canReact} onClick={() => onReact(r.emoji, r.mine)}>
-                {r.emoji} {r.count}
-              </button>
-            ))}
-          </div>
-        ) : null}
       </div>
-    </article>
+    </div>
   );
 }
 

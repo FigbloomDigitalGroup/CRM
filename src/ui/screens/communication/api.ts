@@ -54,6 +54,29 @@ export interface MessageItem {
   canDelete: boolean;
   createdAt: string;
 }
+/** One message with its place in a run (P2-18): a run is consecutive messages by the same person, on the same day, within five minutes. */
+export interface PlacedMessage {
+  message: MessageItem;
+  mine: boolean;
+  /** First of a run: carries the sender name (other people, group channels only). */
+  first: boolean;
+  /** Last of a run: carries the avatar, the time, the sent mark and the bubble tail. */
+  last: boolean;
+}
+const RUN_GAP_MS = 5 * 60_000;
+
+/** Sets each message on its side and groups runs. `myMembershipId` decides the side; a deleted message still sits in its run. */
+export function placeMessages(messages: MessageItem[], myMembershipId: string): PlacedMessage[] {
+  const sameRun = (a: MessageItem, b: MessageItem) =>
+    a.authorMembershipId === b.authorMembershipId && new Date(a.createdAt).toDateString() === new Date(b.createdAt).toDateString() && Math.abs(new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) <= RUN_GAP_MS;
+  return messages.map((message, i) => ({
+    message,
+    mine: message.authorMembershipId !== null && message.authorMembershipId === myMembershipId,
+    first: i === 0 || !sameRun(messages[i - 1]!, message),
+    last: i === messages.length - 1 || !sameRun(message, messages[i + 1]!),
+  }));
+}
+
 export interface PersonItem {
   membershipId: string;
   name: string;

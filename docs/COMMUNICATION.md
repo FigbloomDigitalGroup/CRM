@@ -40,6 +40,16 @@ See `docs/PRIVACY.md` (chat section): retention setting `chatMessages`, organisa
 
 Replace `demo/store.ts` with hooks on the routes above, swap the nav stand-in keys for `chat.view`, `mail.use` and `meetings.schedule` (the Video Conference entry follows the task permission today, which Restricted Technical has; the decision gives that role no meetings key, so its menu changes), pass `unread` as `badges.chat`, remove `demo: true` and the `demoScreensEnabled()` checks, and update the table in `docs/RESTRUCTURE_LOG.md`.
 
+## Chat layout (P2-18, FIG-1601; `ChatWorkspace.tsx`, `communication.css`)
+
+- **Zig-zag:** my messages are on the right, other people's on the left (`placeMessages` in `api.ts` compares the author with the signed-in membership). In group channels the other person's avatar (the shared `Avatar`) sits by the last bubble of a run and their name above the first; in direct messages neither is shown.
+- **Colours (tokens only):** my bubbles use `--primary-btn` with `--on-primary` (the pair that already meets AA in every theme, Ocean included, and in dark mode); received bubbles use `--surface` with a `--border` outline (white in light mode). Cards, files and reactions inside a bubble reset to `--text`.
+- **Runs:** consecutive messages by one person, on one day, within five minutes group tightly; the corner on the avatar side squares off on the last bubble (the tail). The time and, for my messages, a sent tick sit on the last bubble of a run; every bubble also carries the time as a tooltip.
+- **Separators:** day separators (Today, Yesterday, date) and a "New messages" divider placed where the unread started when the conversation was opened.
+- **Scrolling:** the list scrolls to the newest message when a conversation opens, and when one arrives while the reader is at the bottom; a reader who scrolled up is not moved.
+- **Accessibility:** the list is `role="list"`; each message is a `listitem` labelled with the sender ("You" for mine) and the time. Hover tools show on focus too, and stay visible on touch screens. Motion is a short fade only and is off under reduced motion.
+- **Not shown, because the API does not carry it:** delivered and read marks (the API keeps one read position per member, not exposed per message) and the typing indicator (typing is stored server side but the screen does not read it yet). Both are follow-ups that need no layout change. Behaviour, permissions and masking are unchanged: a record card is still drawn exactly as the API masked it.
+
 ## Known gaps
 
 - Deal cards show no margin (the schema has no margin column); the `deals.margin` rule is ready when one exists.
