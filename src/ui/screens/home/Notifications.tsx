@@ -177,7 +177,7 @@ export function NotificationBell() {
             <Link href={`/o/${orgSlug}/notifications`} className="fb-notifpanel__link" onClick={() => setOpen(false)}>
               Open notification centre
             </Link>
-            <Link href={`/o/${orgSlug}/settings`} className="fb-notifpanel__link fb-notifpanel__link--muted" onClick={() => setOpen(false)}>
+            <Link href={`/o/${orgSlug}/preferences?tab=notifications`} className="fb-notifpanel__link fb-notifpanel__link--muted" onClick={() => setOpen(false)}>
               Preferences
             </Link>
           </div>
@@ -240,7 +240,7 @@ export function NotificationCentre() {
           <button type="button" className="fb-qbtn fb-qbtn--lg" style={{ fontWeight: 600 }} disabled={unread === 0} onClick={() => void markAll()}>
             Mark all read
           </button>
-          <Link href={`/o/${orgSlug}/settings`} className="fb-qbtn fb-qbtn--lg" style={{ fontWeight: 600 }}>
+          <Link href={`/o/${orgSlug}/preferences?tab=notifications`} className="fb-qbtn fb-qbtn--lg" style={{ fontWeight: 600 }}>
             <HIcon name="sliders" size={15} />
             Preferences
           </Link>

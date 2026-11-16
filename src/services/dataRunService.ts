@@ -1,3 +1,4 @@
+import { settingsPath } from "@/lib/settingsLinks";
 import { Readable } from "node:stream";
 import { emitTeamActivity } from "./teamActivityNotifier";
 import { stringifyCsv as stringify } from "../lib/csv";
@@ -341,7 +342,7 @@ export async function runImportJob(runId: string, organizationId: string): Promi
       finishedAt: new Date(),
     });
     if (!summary.cancelled) {
-      await emitTeamActivity({ organizationId, eventKey: "DATA_RUN", actorMembershipId: run.createdByMembershipId, entityType: "DataRun", entityId: runId, label: `a ${run.entity.toLowerCase()} import`, route: "settings", detail: { summary: `${summary.created} created, ${summary.duplicatesSkipped} duplicates skipped, ${summary.failed} failed` } });
+      await emitTeamActivity({ organizationId, eventKey: "DATA_RUN", actorMembershipId: run.createdByMembershipId, entityType: "DataRun", entityId: runId, label: `a ${run.entity.toLowerCase()} import`, route: settingsPath("migration").slice(1), detail: { summary: `${summary.created} created, ${summary.duplicatesSkipped} duplicates skipped, ${summary.failed} failed` } });
     }
   } catch (err) {
     await fail(run, err instanceof Error ? err.message : "The import stopped unexpectedly.");
@@ -396,7 +397,7 @@ export async function runExportJob(runId: string, organizationId: string): Promi
       resultFileId: file.id,
       finishedAt: new Date(),
     });
-    await emitTeamActivity({ organizationId, eventKey: "DATA_RUN", actorMembershipId: run.createdByMembershipId, entityType: "DataRun", entityId: runId, label: `a ${run.entity.toLowerCase()} export`, route: "settings", detail: { summary: `${rows} rows exported` } });
+    await emitTeamActivity({ organizationId, eventKey: "DATA_RUN", actorMembershipId: run.createdByMembershipId, entityType: "DataRun", entityId: runId, label: `a ${run.entity.toLowerCase()} export`, route: settingsPath("migration").slice(1), detail: { summary: `${rows} rows exported` } });
     await recordAuditEvent({
       organizationId,
       actorMembershipId: run.createdByMembershipId ?? undefined,

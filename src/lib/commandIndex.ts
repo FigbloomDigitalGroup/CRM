@@ -1,6 +1,7 @@
 import type { Release } from "./featureFlags";
 import { releaseAtLeast } from "./featureFlags";
 import { canViewTeamPage } from "../auth/teamAccess";
+import { SETTINGS_ROOT } from "@/lib/settingsLinks";
 
 /**
  * The command index behind the command palette (FIG-1149, B6.17, design X3): every page a person may go to and every action they may
@@ -52,7 +53,7 @@ export const NAVIGATE: readonly Def[] = [
   { id: "go-reports", kind: "navigate", title: "Go to Reports", path: "/reports", hint: "G R", allowed: (k) => any(k, "reporting.view.own", "reporting.view.all") },
   { id: "go-forecast", kind: "navigate", title: "Go to Forecast", path: "/forecast", allowed: (k) => any(k, "forecast.view.all", "deals.view.own", "deals.edit.own"), minRelease: "v1.1" },
   { id: "go-preferences", kind: "navigate", title: "Go to Preferences", path: "/preferences", allowed: () => true },
-  { id: "go-settings", kind: "navigate", title: "Go to Settings", path: "/settings", allowed: (k) => any(k, "configuration.manage") },
+  { id: "go-settings", kind: "navigate", title: "Go to Settings", path: SETTINGS_ROOT, allowed: (k) => any(k, "configuration.manage") },
 ];
 
 export const CREATE: readonly Def[] = [

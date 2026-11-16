@@ -1,6 +1,7 @@
 import type { AuthContext } from "../auth/context";
 import { hasPermission } from "../auth/context";
 import { canUseResource } from "../auth/permissions";
+import { SETTINGS_ROOT } from "@/lib/settingsLinks";
 
 /**
  * The pages a member may open on sign-in (B1.08), and the ones the sidebar can
@@ -42,7 +43,7 @@ export const START_PAGES: readonly StartPageDef[] = [
   {
     key: "settings",
     label: "Settings",
-    path: "/settings",
+    path: SETTINGS_ROOT,
     allowed: (c) => hasPermission(c, "organization.manage_settings"),
   },
 ];

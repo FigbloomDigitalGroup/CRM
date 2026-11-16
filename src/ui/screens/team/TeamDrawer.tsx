@@ -5,6 +5,7 @@ import type { TeamMemberDetail } from "../../../api/dto/team";
 import { Avatar, Badge, Drawer, ErrorState, LoadingState, MaskedValue, EmptyState, useApiQuery, useMember } from "@/ui";
 import { ago, dueLabel, money } from "../home/format";
 import { rangePhrase, shown, STATUS_LABEL, STATUS_TONE, trendHeights } from "./model";
+import { settingsHref } from "@/lib/settingsLinks";
 
 type Detail = TeamMemberDetail;
 type Value = { amount: string | null; masked: boolean };
@@ -30,7 +31,7 @@ export function TeamDrawer({ membershipId, range, onClose }: { membershipId: str
       onClose={onClose}
       title={d ? d.member.name : "Team member"}
       footer={
-        <Link className="fb-btn fb-btn--secondary" href={`${base}/settings?tab=members`}>
+        <Link className="fb-btn fb-btn--secondary" href={settingsHref(orgSlug, "members")}>
           Open in Members settings
         </Link>
       }
