@@ -1,6 +1,9 @@
 import type { Prisma } from "@prisma/client";
-import { withOrgContext } from "../db/orgScopedClient";
+import { withOrgContext, type OrgScopedClient } from "../db/orgScopedClient";
 import { archivedWhere, type ArchiveMeta } from "../lib/archive";
+
+export type TaskTypeValue = "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT";
+export const TASK_TYPES: readonly TaskTypeValue[] = ["TASK", "CALL", "MEETING", "EMAIL", "QUOTE", "VISIT"];
 
 export interface CreateTaskInput {
   organizationId: string;
@@ -16,11 +19,21 @@ export interface CreateTaskInput {
   contactId?: string;
   leadId?: string;
   dealId?: string;
+  /** P2-22: TASK (default), CALL, MEETING, EMAIL, QUOTE or VISIT. */
+  type?: TaskTypeValue;
+  /** P2-23: the activity this task came from. */
+  sourceActivityId?: string;
+  /** P2-23: this is the lead's open follow-up. */
+  isFollowUp?: boolean;
 }
 
-export async function createTask(input: CreateTaskInput) {
-  return withOrgContext(input.organizationId, (tx) =>
-    tx.task.create({
+export async function createTask(
+  input: CreateTaskInput,
+  /** Runs in the same transaction as the insert (P2-23: a call-to-action on a lead becomes its next step). */
+  inTransaction?: (tx: OrgScopedClient, created: { id: string; organizationId: string; leadId: string | null; dueAt: Date | null; type: string; status: string }) => Promise<void>,
+) {
+  return withOrgContext(input.organizationId, async (tx) => {
+    const created = await tx.task.create({
       data: {
         organizationId: input.organizationId,
         title: input.title,
@@ -34,9 +47,14 @@ export async function createTask(input: CreateTaskInput) {
         contactId: input.contactId,
         leadId: input.leadId,
         dealId: input.dealId,
+        type: input.type,
+        sourceActivityId: input.sourceActivityId,
+        isFollowUp: input.isFollowUp,
       },
-    }),
-  );
+    });
+    if (inTransaction) await inTransaction(tx, created);
+    return inTransaction ? tx.task.findUniqueOrThrow({ where: { id: created.id } }) : created;
+  });
 }
 
 /**
@@ -53,6 +71,7 @@ export interface UpdateTaskInput {
   priority?: "LOW" | "MEDIUM" | "HIGH";
   status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   completedAt?: Date | null;
+  type?: TaskTypeValue;
 }
 
 export async function updateTask(
@@ -83,11 +102,15 @@ export interface ListTasksFilters {
   /** Any of these statuses (ignored when `status` is set, `overdueOnly` and `upcomingOnly` carry their own). */
   statuses?: ("PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED")[];
   priority?: "LOW" | "MEDIUM" | "HIGH";
+  /** P2-22: only this kind of item (task, call, meeting ...). */
+  type?: TaskTypeValue;
   companyId?: string;
   contactId?: string;
   leadId?: string;
   dealId?: string;
   overdueOnly?: boolean;
+  /** For `overdueOnly`: the moment "overdue" is measured against (default now). A task is overdue from its time, not from the end of its day. */
+  overdueAt?: Date;
   /** Archived tasks are hidden unless asked for (B2.16). */
   includeArchived?: boolean;
   /** The archived tab: only archived tasks. */
@@ -119,6 +142,7 @@ function tasksWhere(
     assigneeMembershipId: filters.assigneeMembershipId,
     status: filters.status ?? (filters.statuses ? { in: filters.statuses } : undefined),
     priority: filters.priority,
+    type: filters.type,
     companyId: filters.companyId,
     contactId: filters.contactId,
     leadId: filters.leadId,
@@ -133,7 +157,7 @@ function tasksWhere(
       : {}),
     ...(filters.overdueOnly
       ? {
-          dueAt: { lt: new Date() },
+          dueAt: { lt: filters.overdueAt ?? new Date() },
           status: { in: ["PENDING", "IN_PROGRESS"] },
         }
       : {}),

@@ -47,3 +47,8 @@ Code lives in `src/ui/screens/home/`; styles in `home.css` and `home-overlays.cs
 
 * The Management home's "Dormant clients and renewals" lists up to four rows from `GET /retention` (lapsed, due in 30 days, going quiet); the full lists are the Renewals screen (M8).
 * Notification centre pages at most 100 notices (a note says so); older ones need the API's cursor, which the centre does not follow yet.
+
+## Changes in Phase 2 (M19)
+
+* **Quick links removed (FIG-1679).** The block of tiles along the foot of every role home is gone (component, per-role link lists, CSS). The header's primary quick action (New lead, Log a note, New task for myself) stays. Every destination the tiles linked to (Leads, Deals, Tasks, Calendar, Forecast & targets, Handoffs, Payments, Reports) is in the sidebar with the same permission rule; nothing was lost.
+* **Key notes (FIG-1678).** "New since your last visit" has a notes button per lead that opens the Key notes preview (`src/ui/screens/leads/KeyNotesPreview.tsx`): the latest three notes of the lead's Conversation, an Add note box (Ctrl or Cmd + Enter), optimistic with rollback. The Leads list has the same button in each row. Data: `GET /leads/key-notes?leadIds=` (batched, masked with `textForViewer`), writes through `POST /activities` with type NOTE. See `docs/CUSTOMER_360_AND_CONVERSATIONS.md`.

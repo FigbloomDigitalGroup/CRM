@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { describeError } from "../../errors";
 import { ErrorState, NoAccess } from "../../components/states";
 import { useToast } from "../../components/toast";
+import { DateTimeField } from "../../components/forms";
 import { useApi, useApiQuery, useUndoable } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { newIdempotencyKey } from "../../data/client";
@@ -41,6 +42,10 @@ interface TaskItem {
   title: string;
   dueAt?: string | null;
   status: string;
+  /** P2-22 and P2-23: what it is, and whether it is this lead's next follow-up. */
+  type?: string;
+  isFollowUp?: boolean;
+  completedAt?: string | null;
 }
 type TimelineRow = { id: string; icon: string; kind: "comm" | "sys" | "plain"; text: string; by: string; when: string; at: number; outcome?: string };
 
@@ -155,11 +160,9 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
       setStripError({ message: d.body, missing: [] });
     }
   }
-  function reschedule(days: number) {
-    const d = new Date();
-    d.setDate(d.getDate() + days);
-    d.setHours(10, 0, 0, 0);
-    void patch({ nextFollowUpAt: d.toISOString() }, `Follow-up moved to ${fmt.when(d)}`);
+  /** Moves the follow-up to an exact date and time (the server moves the follow-up task with it). */
+  function reschedule(to: Date) {
+    void patch({ nextFollowUpAt: to.toISOString() }, `Follow-up moved to ${fmt.when(to)}`);
   }
   async function archive() {
     try {
@@ -202,7 +205,8 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
 
   // ---- derived
   const tasks = ((tasksQ.data?.items ?? []) as unknown as TaskItem[]).filter((t) => t.status !== "CANCELLED");
-  const openTask = tasks.find((t) => t.status !== "COMPLETED");
+  // The lead's next follow-up is one of its open tasks, and the field and the task carry the same time (P2-23).
+  const openTask = tasks.find((t) => t.isFollowUp && t.status !== "COMPLETED") ?? tasks.find((t) => t.status !== "COMPLETED");
   const deals = (dealsQ.data?.items ?? []) as unknown as { id: string; leadId?: string | null; outcome: string; ownerMembershipId: string; pipelineStage?: { name: string }; service?: { name: string } | null }[];
   const openDeal = deals.find((d) => d.outcome === "OPEN");
   const myDeal = deals.find((d) => d.leadId === leadId);
@@ -227,9 +231,16 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
       when: fmt.when(a.createdAt),
       at: new Date(a.createdAt).getTime(),
     }));
-    const rows = tl === "comms" ? acts.filter((r) => r.kind === "comm") : tl === "audit" ? audits : [...acts, ...audits];
+    // The lead's tasks sit on the timeline once, with their status: open ones at their due time, finished ones when they were completed.
+    const taskRows = tasks.map<TimelineRow>((t) => {
+      const done = t.status === "COMPLETED";
+      const at = new Date((done ? t.completedAt : t.dueAt) ?? t.dueAt ?? 0).getTime();
+      const kind = t.type && t.type !== "TASK" ? `${t.type[0]}${t.type.slice(1).toLowerCase()}` : "Task";
+      return { id: `t-${t.id}`, icon: "check", kind: "plain", text: `${kind}: ${t.title}`, by: done ? "Done" : t.dueAt && new Date(t.dueAt) < new Date() ? "Open, overdue" : "Open", when: t.dueAt ? fmt.when(done ? (t.completedAt ?? t.dueAt) : t.dueAt) : "No date", at };
+    });
+    const rows = tl === "comms" ? acts.filter((r) => r.kind === "comm") : tl === "audit" ? audits : [...acts, ...taskRows, ...audits];
     return rows.sort((a, b) => b.at - a.at);
-  }, [activitiesQ.data, auditQ.data, tl, ref, fmt]);
+  }, [activitiesQ.data, auditQ.data, tasksQ.data, tl, ref, fmt]);
 
   if (leadQ.isLoading) return <LoaderBlock label="Loading the lead" />;
   if (leadQ.isError) {
@@ -431,16 +442,8 @@ export function LeadDetailScreen({ leadId }: { leadId: string }) {
               <div className="fb-ld-next-card__task">{openTask ? openTask.title : "Pick a time so this lead doesn’t go cold."}</div>
             </div>
             {c.canEdit ? (
-              <div className="fb-ld-pills">
-                {[
-                  ["Tomorrow", 1],
-                  ["In 3 days", 3],
-                  ["Next week", 7],
-                ].map(([l, d]) => (
-                  <button key={l} type="button" className="fb-ld-pill" onClick={() => reschedule(d as number)}>
-                    {l}
-                  </button>
-                ))}
+              <div className="fb-ld-next-card__move">
+                <DateTimeField label="Move the follow-up" value={next ?? ""} onChange={(iso) => iso && reschedule(new Date(iso))} required warnPast={false} />
               </div>
             ) : null}
           </section>

@@ -1,4 +1,4 @@
-import { withOrgContext } from "../db/orgScopedClient";
+import { withOrgContext, type OrgScopedClient } from "../db/orgScopedClient";
 
 export interface CreateActivityInput {
   organizationId: string;
@@ -14,9 +14,13 @@ export interface CreateActivityInput {
   dealId?: string;
 }
 
-export async function createActivity(input: CreateActivityInput) {
-  return withOrgContext(input.organizationId, (tx) =>
-    tx.activity.create({
+export async function createActivity(
+  input: CreateActivityInput,
+  /** Runs in the same transaction as the insert (P2-23: the next step becomes a task together with the logged call). */
+  inTransaction?: (tx: OrgScopedClient, created: { id: string }) => Promise<void>,
+) {
+  return withOrgContext(input.organizationId, async (tx) => {
+    const created = await tx.activity.create({
       data: {
         organizationId: input.organizationId,
         type: input.type,
@@ -30,8 +34,10 @@ export async function createActivity(input: CreateActivityInput) {
         leadId: input.leadId,
         dealId: input.dealId,
       },
-    }),
-  );
+    });
+    if (inTransaction) await inTransaction(tx, created);
+    return created;
+  });
 }
 
 /**
@@ -172,6 +178,8 @@ export async function listCalendarActivities(
         type: { in: ["CALL", "MEETING"] },
         occurredAt: { gte: range.from, lt: range.to },
         authorMembershipId: range.authorMembershipId,
+        // P2-22: an activity that has a task is shown through the task, so nothing appears twice.
+        tasks: { none: {} },
       },
       include: { author: { include: { user: true } } },
       orderBy: [{ occurredAt: "asc" }, { id: "asc" }],

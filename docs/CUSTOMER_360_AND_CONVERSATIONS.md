@@ -73,3 +73,8 @@ to be Kenyan (`254`).
   a count for each filter under the others.
 - **Export** (`.../export`) takes the same filters, needs the export permission and follows the bulk-export rule
   (above 500 rows needs `export.bulk`). Neither list carries a deal value or a payment.
+
+## Key notes on the lead preview (`GET /leads/key-notes`, FIG-1678)
+
+A key note is a lead's most recent `NOTE` activity: the same record the Conversation shows and `POST /activities` writes (no second store). `leadIds` (comma separated, at most 50) returns, per lead the caller may open, `{ total, notes: [latest 3, newest first] }` with author name and masked text (`textForViewer`), plus `canAdd` (`activities.create`). Leads the caller cannot see are left out; `activities.view` is required; the read runs under the organisation's row-level security. Adding a note raises one `NOTE_ADDED` team alert (text not included). The screens open the preview on demand, so no request is made per row. Tests: `tests/leadKeyNotes.test.ts`, `tests/components/screens/leads/keyNotes.test.tsx`, `e2e/lead-key-notes.spec.ts`.
+

@@ -43,11 +43,15 @@ import {
 import { diffAuditedFields } from "./auditDiff";
 import {
   assertEligibleLeadOwner,
+  assertEligibleTaskAssignee,
   canWorkDeals,
   canWorkLeads,
   loadActiveMemberWithPermissions,
 } from "./ownerEligibility";
 import { notifyLeadAssigned } from "./notificationService";
+import { memberTimeZone } from "./notificationDeliveryPolicy";
+import { applyLeadFollowUp } from "./taskLinkService";
+import { resolveFollowUpInstant } from "../lib/followUpTime";
 import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 
 /** Beyond ownership (audited separately via `assignLead`): qualification/status changes (FIG-600 AC). */
@@ -97,7 +101,7 @@ export async function listAssignableLeadOwners(ctx: AuthContext) {
  * Every id a new lead points at must belong to this organisation. The database refuses a foreign one (the keys are per organisation), but
  * that surfaced as a 500; it is a plain "pick one of yours" validation error instead.
  */
-async function assertReferencesInOrganisation(organizationId: string, input: CreateLeadServiceInput, statusFound: boolean): Promise<void> {
+export async function assertReferencesInOrganisation(organizationId: string, input: CreateLeadServiceInput, statusFound: boolean): Promise<void> {
   const where = (id: string) => ({ id, organizationId });
   const [source, company, contact, service] = await Promise.all([
     input.leadSourceId ? adminDb.leadSource.findFirst({ where: where(input.leadSourceId), select: { id: true } }) : null,
@@ -195,6 +199,19 @@ export async function createLead(
   return { lead, possibleDuplicates, duplicates: found.candidates, hiddenDuplicates: found.hiddenCount };
 }
 
+/** Who gets the follow-up task: the lead's owner, else the person making the change, if that role can hold tasks; otherwise nobody (only the field is set). */
+async function followUpAssigneeFor(ctx: AuthContext, ownerMembershipId: string | null): Promise<string | null> {
+  for (const candidate of [ownerMembershipId, ctx.membershipId]) {
+    if (!candidate) continue;
+    try {
+      return (await assertEligibleTaskAssignee(ctx.organizationId, candidate)).id;
+    } catch {
+      // try the next one
+    }
+  }
+  return null;
+}
+
 async function loadOwnedLead(ctx: AuthContext, leadId: string) {
   const lead = await getLeadById(ctx.organizationId, leadId);
   if (!lead) {
@@ -219,8 +236,16 @@ export async function getLead(ctx: AuthContext, leadId: string) {
 export async function updateLead(
   ctx: AuthContext,
   leadId: string,
-  input: UpdateLeadInput,
+  rawInput: Omit<UpdateLeadInput, "nextFollowUpAt"> & { nextFollowUpAt?: Date | string | null },
 ) {
+  const input = rawInput as UpdateLeadInput;
+  if (rawInput.nextFollowUpAt !== undefined) {
+    // A date-only value means the default time in the person's own zone (P2-27).
+    const zone = await memberTimeZone(ctx.organizationId, ctx.membershipId);
+    const resolved = resolveFollowUpInstant(rawInput.nextFollowUpAt, zone);
+    if (resolved === undefined) throw new ValidationError("The follow-up is not a valid date and time.", [{ path: "nextFollowUpAt", message: "Use a date and a time." }]);
+    input.nextFollowUpAt = resolved;
+  }
   const lead = await loadOwnedLead(ctx, leadId);
   requireOwnedRecordPermission(
     ctx,
@@ -291,7 +316,17 @@ export async function updateLead(
   });
   if (custom) data.customFields = custom.values as Prisma.InputJsonValue;
 
-  const updated = await updateLeadRecord(ctx.organizationId, leadId, data);
+  // The lead's Next follow-up and its open follow-up task change together, in one transaction (P2-23).
+  const followUpChanged = data.nextFollowUpAt !== undefined && (data.nextFollowUpAt?.getTime() ?? null) !== (lead.nextFollowUpAt?.getTime() ?? null);
+  const followUpAssignee = followUpChanged ? await followUpAssigneeFor(ctx, lead.ownerMembershipId) : null;
+  const updated = await updateLeadRecord(
+    ctx.organizationId,
+    leadId,
+    data,
+    followUpChanged && followUpAssignee
+      ? async (tx) => void (await applyLeadFollowUp(tx, { organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, leadId, nextFollowUpAt: data.nextFollowUpAt ?? null, assigneeMembershipId: followUpAssignee }))
+      : undefined,
+  );
   await recordQualificationChange(ctx, leadId, qualification.changes);
   if (custom) await auditCustomFieldChanges(ctx, "Lead", leadId, custom.changes);
   await rescoreLeadQuietly(ctx.organizationId, leadId);

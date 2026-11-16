@@ -138,9 +138,10 @@ describe("create from a slot (FIG-1039, B2.10)", () => {
     expect(row.dueAt?.toISOString()).toBe("2026-11-12T09:00:00.000Z");
 
     const meeting = await createFromSlot(sales, { kind: "activity", type: "MEETING", title: "Demo", start: "2026-11-12T11:00:00Z", description: "Zoom", link: { type: "Lead", id: lead.id } });
-    const activity = await adminDb.activity.findUniqueOrThrow({ where: { id: meeting.id } });
-    expect(activity).toMatchObject({ type: "MEETING", subject: "Demo", description: "Zoom", leadId: lead.id, authorMembershipId: sales.membershipId });
-    expect(activity.occurredAt.toISOString()).toBe("2026-11-12T11:00:00.000Z");
+    // FIG-1676: a meeting from the calendar is a task of type MEETING (one record, so the Tasks page lists it too), not a timeline activity.
+    const meetingTask = await adminDb.task.findUniqueOrThrow({ where: { id: meeting.id } });
+    expect(meetingTask).toMatchObject({ type: "MEETING", title: "Demo", description: "Zoom", leadId: lead.id, assigneeMembershipId: sales.membershipId });
+    expect(meetingTask.dueAt?.toISOString()).toBe("2026-11-12T11:00:00.000Z");
 
     // Both show up on that day.
     const day = await listCalendar(sales, { view: "day", date: "2026-11-12" });
@@ -165,7 +166,9 @@ describe("create from a slot (FIG-1039, B2.10)", () => {
     await expect(createFromSlot(sales, { kind: "task", title: "x", start: "not a date" })).rejects.toBeInstanceOf(ValidationError);
     await expect(createFromSlot(sales, { kind: "activity", title: "x", start: "2026-11-12T09:00:00Z" })).rejects.toBeInstanceOf(ValidationError);
     await expect(createFromSlot(sales, { kind: "activity", type: "CALL", title: "  ", start: "2026-11-12T09:00:00Z" })).rejects.toBeInstanceOf(ValidationError);
-    await expect(createFromSlot(sales, { kind: "activity", type: "CALL", title: "Unlinked", start: "2026-11-12T09:00:00Z" })).rejects.toThrow(/must be linked/);
+    // A call or meeting no longer has to be linked to a record: it is a task, and a task may stand alone.
+    const unlinked = await createFromSlot(sales, { kind: "activity", type: "CALL", title: "Unlinked", start: "2026-11-12T09:00:00Z" });
+    expect(await adminDb.task.findUniqueOrThrow({ where: { id: unlinked.id } })).toMatchObject({ type: "CALL", leadId: null });
     await expect(createFromSlot(finance, { kind: "task", title: "x", start: "2026-11-12T09:00:00Z" })).rejects.toBeInstanceOf(ForbiddenError);
   });
 

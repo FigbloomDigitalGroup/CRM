@@ -380,7 +380,9 @@ describe("reports and the company and contact lists over HTTP", () => {
     expect(exported.res.headers.get("content-type")).toContain("text/csv");
     expect(exported.text).toContain("Sleepy Co");
     expect(exported.text).not.toContain("Api Ltd");
-    expect((await call(f.delivery, companyDirectoryExport.GET, "/companies/directory/export")).status).toBe(403);
+    // P2-26 (FIG-1680): Delivery may now export the companies it can see; a role with no customer access is still refused.
+    expect((await call(f.delivery, companyDirectoryExport.GET, "/companies/directory/export")).status).toBe(200);
+    expect((await call(f.technical, companyDirectoryExport.GET, "/companies/directory/export")).status).toBe(403);
     const contactCsv = await call(f.management, contactDirectoryExport.GET, "/contacts/directory/export?standalone=true");
     expect(contactCsv.text).toContain("Solo");
     expect(contactCsv.text).not.toContain("Employed");

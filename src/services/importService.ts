@@ -1,6 +1,6 @@
 import type { Readable } from "node:stream";
 import type { AuthContext } from "../auth/context";
-import { requirePermission } from "../auth/context";
+import { hasPermission, requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import type { AccountKind } from "../auth/accountAccess";
@@ -19,7 +19,7 @@ import { createLead, findConvertedLeadMatches, findPossibleDuplicateLeads } from
 import { applyValues, missingRequired, type FieldDefinition } from "../lib/customFields";
 import { loadActiveDefinitions, toFieldDefinition } from "./customFieldService";
 import { findDuplicates } from "./duplicateService";
-import { assertEligibleAccountOwner } from "./ownerEligibility";
+import { assertEligibleAccountOwner, assertEligibleLeadOwner } from "./ownerEligibility";
 import { changeTags } from "./tagService";
 import { type ResolvedRow, loadLookups, remember, resolveRow } from "./migrationRows";
 import { withOrgContext } from "../db/orgScopedClient";
@@ -129,9 +129,13 @@ async function resolveAccountOwner(
   email: string | undefined,
   kind: AccountKind,
   importerMembershipId: string,
+  canAssignOthers: boolean,
 ): Promise<string> {
   const membershipId = await resolveOwnerMembershipId(organizationId, email);
   if (!membershipId) return importerMembershipId;
+  if (membershipId !== importerMembershipId && !canAssignOthers) {
+    throw new RowValidationError("You can only import records that belong to you. Leave the owner column empty or use your own email.");
+  }
   try {
     await assertEligibleAccountOwner(organizationId, membershipId, kind);
   } catch (err) {
@@ -390,6 +394,8 @@ export async function importCompanies(
   input: ImportCompaniesInput,
 ): Promise<ImportSummary> {
   requirePermission(ctx, "companies.import");
+  requirePermission(ctx, "companies.create");
+  const canAssignOthers = hasPermission(ctx, "membership.manage");
 
   const summary = await runImport(input.mapping, {
     organizationId: ctx.organizationId,
@@ -411,6 +417,7 @@ export async function importCompanies(
         optionalCell(rawRow, mapping, "ownerEmail"),
         "companies",
         ctx.membershipId,
+        canAssignOthers,
       );
       const extra = await extraColumns(ctx.organizationId, "COMPANY", rawRow, mapping);
       return {
@@ -463,6 +470,8 @@ export async function importContacts(
   input: ImportContactsInput,
 ): Promise<ImportSummary> {
   requirePermission(ctx, "contacts.import");
+  requirePermission(ctx, "contacts.create");
+  const canAssignOthers = hasPermission(ctx, "membership.manage");
 
   const summary = await runImport(input.mapping, {
     organizationId: ctx.organizationId,
@@ -482,6 +491,7 @@ export async function importContacts(
         optionalCell(rawRow, mapping, "ownerEmail"),
         "contacts",
         ctx.membershipId,
+        canAssignOthers,
       );
       const extra = await extraColumns(ctx.organizationId, "CONTACT", rawRow, mapping);
       return {
@@ -534,6 +544,9 @@ export async function importLeads(
   input: ImportLeadsInput,
 ): Promise<ImportSummary> {
   requirePermission(ctx, "leads.import");
+  // An import creates leads, so it needs the same right as creating one by hand (P2-26).
+  requirePermission(ctx, "leads.create");
+  const canAssign = hasPermission(ctx, "leads.assign");
 
   const summary = await runImport(input.mapping, {
     organizationId: ctx.organizationId,
@@ -568,10 +581,24 @@ export async function importLeads(
         optionalCell(rawRow, mapping, "serviceInterest"),
         "serviceInterest",
       );
-      const ownerMembershipId = await resolveOwnerMembershipId(
+      // Owner defaults to the importer. Naming someone else is an assignment: it needs leads.assign and an eligible owner.
+      let ownerMembershipId = ctx.membershipId;
+      const namedOwner = await resolveOwnerMembershipId(
         ctx.organizationId,
         optionalCell(rawRow, mapping, "ownerEmail"),
       );
+      if (namedOwner && namedOwner !== ctx.membershipId) {
+        if (!canAssign) {
+          throw new RowValidationError("You can only import leads that belong to you. Leave the owner column empty or use your own email.");
+        }
+        try {
+          await assertEligibleLeadOwner(ctx.organizationId, namedOwner);
+        } catch (err) {
+          if (err instanceof ValidationError) throw new RowValidationError(err.message);
+          throw err;
+        }
+        ownerMembershipId = namedOwner;
+      }
       const temperatureRaw = optionalCell(
         rawRow,
         mapping,

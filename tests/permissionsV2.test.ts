@@ -470,11 +470,11 @@ describe("role catalogue sync", () => {
     const o = await org();
     await createTestContext(o.id, "FINANCE", "sync.fin");
     const financeRole = await adminDb.role.findUniqueOrThrow({ where: { key: "FINANCE" } });
-    const extra = await adminDb.permission.findUniqueOrThrow({ where: { key: "leads.export" } });
+    const extra = await adminDb.permission.findUniqueOrThrow({ where: { key: "contacts.import" } });
     await adminDb.rolePermission.create({ data: { roleId: financeRole.id, permissionId: extra.id } });
 
     const result = await seedRolesAndPermissions();
-    expect(result.changes.FINANCE).toEqual({ added: [], removed: ["leads.export"] });
+    expect(result.changes.FINANCE).toEqual({ added: [], removed: ["contacts.import"] });
     const stillThere = await adminDb.rolePermission.count({
       where: { roleId: financeRole.id, permissionId: extra.id },
     });
@@ -483,7 +483,7 @@ describe("role catalogue sync", () => {
     const audit = await adminDb.auditEvent.findFirst({
       where: { organizationId: o.id, action: "role.permissions_changed", entityId: financeRole.id },
     });
-    expect(audit?.metadata).toMatchObject({ roleKey: "FINANCE", removed: ["leads.export"] });
+    expect(audit?.metadata).toMatchObject({ roleKey: "FINANCE", removed: ["contacts.import"] });
 
     const again = await seedRolesAndPermissions();
     expect(again.changes).toEqual({});

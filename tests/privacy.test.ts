@@ -124,7 +124,7 @@ describe("bulk export rights and approvals", () => {
     const salesCtx = withExport(sales, "leads.export", "contacts.export");
 
     await expect(requestExportApproval(salesCtx, { entity: "SPACESHIP" })).rejects.toThrow(ValidationError);
-    await expect(requestExportApproval(sales, { entity: "LEAD" })).rejects.toThrow(ForbiddenError);
+    await expect(requestExportApproval({ ...sales, permissionKeys: sales.permissionKeys.filter((k) => k !== "leads.export") }, { entity: "LEAD" })).rejects.toThrow(ForbiddenError);
     await expect(requestExportApproval(salesCtx, { entity: "LEAD", filters: { bogus: 1 } })).rejects.toThrow(ValidationError);
     const small = await requestExportApproval(salesCtx, { entity: "CONTACT" }).catch((e) => e);
     expect(small.issues?.[0]?.code).toBe("APPROVAL_NOT_NEEDED");

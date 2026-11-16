@@ -5,6 +5,8 @@
 
 export type TaskStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
 export type TaskPriority = "LOW" | "MEDIUM" | "HIGH";
+export type TaskKind = "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT";
+export const KIND_LABEL: Record<TaskKind, string> = { TASK: "Task", CALL: "Call", MEETING: "Meeting", EMAIL: "Email", QUOTE: "Send quote", VISIT: "Visit" };
 export type GroupKey = "OVERDUE" | "TODAY" | "THIS_WEEK" | "LATER" | "NO_DATE" | "DONE";
 export type LinkType = "Lead" | "Deal" | "Company" | "Contact";
 
@@ -23,6 +25,11 @@ export interface TaskItem {
   dueAt: string | null;
   priority: TaskPriority;
   status: TaskStatus;
+  /** What it is (P2-22): a task, call, meeting, email, quote or visit. */
+  type?: TaskKind;
+  /** P2-23: it is the lead's next step, or it came from a logged or scheduled activity. */
+  isFollowUp?: boolean;
+  sourceActivityId?: string | null;
   completedAt?: string | null;
   link: { type: LinkType; id: string; label: string | null } | null;
   readOnly: boolean;

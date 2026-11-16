@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { describeError } from "../../errors";
 import { useToast } from "../../components/toast";
+import { DateTimeField } from "../../components/forms";
+import { defaultFollowUp } from "../../components/dateTimeZone";
 import { useApi, useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { newIdempotencyKey } from "../../data/client";
@@ -12,9 +14,15 @@ import { TEMPERATURES, TEMPERATURE_LABEL, tempTone, type Temperature } from "./f
 import { Icon } from "./icons";
 import { SideDrawer } from "./overlay";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ROLE_SUGGESTIONS = ["Owner", "Decision maker", "Influencer", "Procurement", "Finance", "Technical", "Other"];
+
 interface Form {
   name: string;
   phone: string;
+  email: string;
+  company: string;
+  role: string;
   sourceId: string;
   serviceId: string;
   temp: Temperature;
@@ -28,7 +36,7 @@ interface Form {
  * stops the save. The owner can be chosen only by people who may reassign; everyone else's new lead is simply theirs.
  */
 export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onClose: () => void; onSaved?: (id: string) => void }) {
-  const { orgSlug, membershipId, can } = useMember();
+  const { orgSlug, membershipId, timeZone, can } = useMember();
   const api = useApi();
   const toast = useToast();
   const ref = useReference();
@@ -39,7 +47,7 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
   const detail = detailQ.data as LeadDetail | undefined;
 
   // A new lead starts with a follow-up tomorrow, so it never goes cold unnoticed (the design's default).
-  const [f, setF] = useState<Form>(() => ({ name: "", phone: "", sourceId: "", serviceId: "", temp: "WARM", ownerId: membershipId, nextStr: editing ? "" : new Date(Date.now() + 864e5).toISOString().slice(0, 10), notes: "" }));
+  const [f, setF] = useState<Form>(() => ({ name: "", phone: "", email: "", company: "", role: "", sourceId: "", serviceId: "", temp: "WARM", ownerId: membershipId, nextStr: editing ? "" : defaultFollowUp(new Date(), timeZone).toISOString(), notes: "" }));
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -52,11 +60,14 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
     setF({
       name: detail.company?.name ?? [c?.firstName, c?.lastName].filter(Boolean).join(" "),
       phone: (c?.phone as string | null) ?? (detail.company?.phone as string | null) ?? "",
+      email: "",
+      company: "",
+      role: "",
       sourceId: (detail.leadSourceId as string | null) ?? "",
       serviceId: (detail.serviceInterestId as string | null) ?? "",
       temp: (detail.temperature as Temperature) ?? "WARM",
       ownerId: detail.ownerMembershipId ?? "",
-      nextStr: fmt.isoDate(detail.nextFollowUpAt as string | null),
+      nextStr: detail.nextFollowUpAt ? new Date(detail.nextFollowUpAt as string).toISOString() : "",
       notes: (detail.notes as string | null) ?? "",
     });
     setLoadedFor(detail.id);
@@ -65,12 +76,12 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }));
 
   // Possible duplicate: an existing company with that name, and an open lead for it. A warning, never a block.
-  const typed = useDebounced(f.name.trim(), 350);
+  const typed = useDebounced(f.company.trim() || f.name.trim(), 350);
   const check = !editing && typed.length > 2;
   const companiesQ = useApiQuery("getCompanies", { params: { orgSlug }, query: { q: typed, pageSize: "5" } }, { enabled: check });
   const leadsQ = useApiQuery("listLeads", { params: { orgSlug }, query: { q: typed, pageSize: 3 } }, { enabled: check && can("leads.view.all") || (check && can("leads.view.own")) });
   const companies = (check ? ((companiesQ.data?.items ?? []) as { id: string; name: string; ownerMembershipId?: string | null }[]) : []);
-  const exact = companies.find((c) => c.name.trim().toLowerCase() === f.name.trim().toLowerCase());
+  const exact = companies.find((c) => c.name.trim().toLowerCase() === (f.company.trim() || f.name.trim()).toLowerCase());
   const near = exact ?? companies[0];
   const openLead = check ? leadsQ.data?.items.find((l) => !l.archived && !l.convertedAt) : undefined;
   const dup = near || openLead
@@ -80,10 +91,22 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
     : null;
   const dupHref = near ? `/o/${orgSlug}/companies/${near.id}` : openLead ? `/o/${orgSlug}/leads/${openLead.id}` : null;
 
+  // A contact with this email is reused, not duplicated: say so before saving (FIG-1675).
+  const emailTyped = useDebounced(f.email.trim().toLowerCase(), 350);
+  const emailOk = EMAIL_RE.test(emailTyped);
+  const contactsQ = useApiQuery("getContacts", { params: { orgSlug }, query: { q: emailTyped, pageSize: "5" } }, { enabled: !editing && emailOk && can("contacts.view") });
+  const sameEmail = !editing && emailOk ? (((contactsQ.data?.items ?? []) as { id: string; email?: string | null; firstName?: string; lastName?: string | null }[]).find((c) => c.email?.toLowerCase() === emailTyped)) : undefined;
+  const showRole = !editing && Boolean(f.company.trim() || f.email.trim());
+
   async function save() {
     const name = f.name.trim();
     if (!name) {
       setErrors({ name: "Enter a company or person." });
+      return;
+    }
+    const email = f.email.trim().toLowerCase();
+    if (!editing && email && !EMAIL_RE.test(email)) {
+      setErrors({ email: "Enter a valid email address." });
       return;
     }
     setBusy(true);
@@ -98,7 +121,7 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
             leadSourceId: f.sourceId || null,
             serviceInterestId: f.serviceId || null,
             temperature: f.temp,
-            nextFollowUpAt: f.nextStr ? new Date(`${f.nextStr}T10:00:00`).toISOString() : null,
+            nextFollowUpAt: f.nextStr || null,
             notes: f.notes.trim() || null,
           },
         });
@@ -111,8 +134,19 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
         return;
       }
       if (!newStatus) throw new Error("The lead statuses have not loaded.");
-      let companyId = exact?.id;
-      if (!companyId) {
+      // A person or a company typed in the new fields: one request saves the lead, company and contact together (all or nothing).
+      const withPerson = Boolean(f.company.trim() || email || f.role.trim());
+      let companyId = withPerson ? undefined : exact?.id;
+      let intake: Record<string, unknown> = {};
+      if (withPerson) {
+        const companyName = f.company.trim() || name;
+        const picked = f.company.trim() ? undefined : exact;
+        if (picked) companyId = picked.id;
+        intake = {
+          ...(companyId ? {} : { newCompanyName: companyName }),
+          contact: { name, ...(email ? { email } : {}), ...(f.phone.trim() ? { phone: f.phone.trim() } : {}), ...(f.role.trim() ? { role: f.role.trim() } : {}) },
+        };
+      } else if (!companyId) {
         if (!can("companies.create")) {
           setErrors({ name: "That company is not in the system yet, and your role cannot add companies. Pick an existing one." });
           setBusy(false);
@@ -124,20 +158,21 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
       const created = await api.call("createLead", {
         params: { orgSlug },
         idempotencyKey: newIdempotencyKey(),
-        body: {
+        body: ({
           leadStatusId: newStatus.id,
-          companyId,
+          ...(companyId ? { companyId } : {}),
+          ...intake,
           ...(f.sourceId ? { leadSourceId: f.sourceId } : {}),
           ...(f.serviceId ? { serviceInterestId: f.serviceId } : {}),
           temperature: f.temp,
           ...(canAssign && f.ownerId && f.ownerId !== membershipId ? { ownerMembershipId: f.ownerId } : {}),
-        },
+        }) as never,
       });
       const id = created.lead.id;
       if (f.nextStr || f.notes.trim()) {
         await api.call("patchLeadsByLeadId", {
           params: { orgSlug, leadId: id },
-          body: { ...(f.nextStr ? { nextFollowUpAt: new Date(`${f.nextStr}T10:00:00`).toISOString() } : {}), ...(f.notes.trim() ? { notes: f.notes.trim() } : {}) },
+          body: { ...(f.nextStr ? { nextFollowUpAt: f.nextStr } : {}), ...(f.notes.trim() ? { notes: f.notes.trim() } : {}) },
         });
       }
       toast.show({ message: `${name} added as a lead` });
@@ -234,6 +269,32 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
           </select>
         </label>
       </div>
+      {!editing ? (
+        <>
+          <label className="fb-ld-field">
+            <span>Email</span>
+            <input className="fb-ld-input" type="email" inputMode="email" value={f.email} onChange={(e) => set("email", e.target.value)} placeholder="name@company.com" autoComplete="off" aria-invalid={errors.email || errors["contact.email"] ? true : undefined} />
+            {errors.email || errors["contact.email"] ? <span className="fb-ld-error" role="alert">{errors.email ?? errors["contact.email"]}</span> : null}
+            {sameEmail ? <span className="fb-ld-help" role="status">{[sameEmail.firstName, sameEmail.lastName].filter(Boolean).join(" ")} is already a contact with this email. They will be linked, not duplicated.</span> : null}
+          </label>
+          <label className="fb-ld-field">
+            <span>Company</span>
+            <input className="fb-ld-input" value={f.company} onChange={(e) => set("company", e.target.value)} placeholder="Pick an existing company or type a new one" autoComplete="off" list="fb-ld-company-suggestions" />
+            <span className="fb-ld-help">Leave empty if the name above is the company.</span>
+          </label>
+          {showRole ? (
+            <label className="fb-ld-field">
+              <span>Role in the company</span>
+              <input className="fb-ld-input" value={f.role} onChange={(e) => set("role", e.target.value)} placeholder="e.g. Procurement manager" maxLength={80} autoComplete="off" list="fb-ld-role-suggestions" />
+              <datalist id="fb-ld-role-suggestions">
+                {ROLE_SUGGESTIONS.map((r) => (
+                  <option key={r} value={r} />
+                ))}
+              </datalist>
+            </label>
+          ) : null}
+        </>
+      ) : null}
       <label className="fb-ld-field">
         <span>Service interest</span>
         <select className="fb-ld-select" value={f.serviceId} onChange={(e) => set("serviceId", e.target.value)}>
@@ -279,10 +340,7 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
           </span>
         ) : null}
       </label>
-      <label className="fb-ld-field">
-        <span>Next follow-up</span>
-        <input className="fb-ld-input" type="date" value={f.nextStr} onChange={(e) => set("nextStr", e.target.value)} />
-      </label>
+      <DateTimeField label="Next follow-up" value={f.nextStr} onChange={(iso) => set("nextStr", iso)} warnPast={false} />
       <label className="fb-ld-field">
         <span>Notes</span>
         <textarea className="fb-ld-textarea" rows={3} value={f.notes} onChange={(e) => set("notes", e.target.value)} placeholder="What do they need?" />

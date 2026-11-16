@@ -14,19 +14,31 @@ To change the API on purpose:
 A change that removes or renames a path, field or enum value, narrows what a role may do, or makes an optional field required is **breaking** and
 needs a new major version (`API_VERSION` in `src/api/openapi.ts`). Additions are minor. Wording-only and documentation changes are patches.
 
+## 1.1.0 — Phase 2 improvements, additive (FIG-1675 to FIG-1681, M19, 15 Nov 2026)
+
+contract-hash: 5e60ccf1e23f57d354285a8d1cb9ae4d99693355990159f3f7b5538bbf3e4005
+
+Additive only (still version 1.1.0). No path removed or renamed, no required field added.
+
+- **New lead (FIG-1675):** `POST /orgs/{org}/leads` and the public API accept optional `newCompanyName` and `contact { name, email, phone, role }`; the response may carry `contactReused` and `companyReused`. Quick capture accepts an optional `role`.
+- **Tasks and Calendar (FIG-1676, FIG-1677):** tasks gain `type` (TASK, CALL, MEETING, EMAIL, QUOTE, VISIT), `sourceActivityId` and `isFollowUp`; the tasks list and groups routes take an optional `type` filter; `POST /activities` takes an optional `nextStep`; `POST /calendar` with `kind: "activity"` now saves a task and answers `{ kind: "task", id, type, start }` (it used to save an activity that the Tasks page never listed).
+- **Key notes (FIG-1678):** new `GET /orgs/{org}/leads/key-notes?leadIds=` (the latest 3 notes per lead, up to 50 leads).
+- **Follow-up time (FIG-1681):** `PATCH /leads` `nextFollowUpAt` also accepts a date-only value (stored at 09:00 in the caller's time zone); quick-log `followUp.dueOn` accepts a date-time.
+- **Import and export for every role (FIG-1680):** no route changed shape. Roles other than Management now hold the import and export keys, so those routes answer according to the caller's own access instead of 403 for everyone but Management. Exports are capped at 20,000 rows and rate limited.
+
 ## 1.1.0 — Request-shape record caught up, documentation only (M19, 13 Nov 2026)
 
 The recorded request shapes now also list the optional `language` and `allowSigning` fields that `POST /orgs/{org}/api-tokens` and `PATCH /orgs/{org}/webhooks/{endpointId}` (and the user language preference) already accepted from the V2 backend work; they had not been written into the snapshot. Nothing changed for callers. The contract hash in the two sections below is the contract after this catch-up.
 
 ## 1.1.0 — Team page endpoints, additive (FIG-1598, P2-15, 12 Nov 2026)
 
-contract-hash: 7429d75d11be85fc2b0adc5654b690a75e69917732e1c5d3004bac9e092ce01b
+contract-hash: 5e60ccf1e23f57d354285a8d1cb9ae4d99693355990159f3f7b5538bbf3e4005
 
 Additive only (still version 1.1.0). Four new Management-only routes, all `GET`, under `/orgs/{org}/team`: `summary`, `members` (filter by `role`, `status`, `q`; `sort`; `page`/`pageSize`), `members/{membershipId}` and `attention`, each taking an optional `range` (`today`, `7d`, `30d`). Every other role gets the explained 403. A figure the caller's role may not see is `null`, deal values are `{ amount: null, masked: true }`, and payments never appear. No existing path changed. The hash line above is the contract as it stood when this was written: re-run `npm run contract:update` after any later API change and replace it (the same line appears in the section below when both changes are in one contract).
 
 ## 1.1.0 — Team activity preferences, additive (FIG-1600, P2-17, 12 Nov 2026)
 
-contract-hash: 7429d75d11be85fc2b0adc5654b690a75e69917732e1c5d3004bac9e092ce01b
+contract-hash: 5e60ccf1e23f57d354285a8d1cb9ae4d99693355990159f3f7b5538bbf3e4005
 
 Additive only (still version 1.1.0). `GET /me/notification-preferences` gains an optional `teamActivity` list (Management only) and `PATCH /me/notification-preferences` accepts an optional `teamActivity` object (event, channels, `mode` INSTANT, HOURLY or DAILY). Notifications gain `actorName` and a new type `TEAM_ACTIVITY`. No path changes. Re-run `npm run contract:update` after any later API change and replace the hash on this line.
 

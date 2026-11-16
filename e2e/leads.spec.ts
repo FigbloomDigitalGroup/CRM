@@ -47,7 +47,8 @@ test.describe("the Leads list, per role", () => {
     // The owner is plain text with a lock and the reason, never a select, for someone who cannot reassign.
     await expect(page.getByRole("combobox", { name: /Owner of/ })).toHaveCount(0);
     await expect(page.getByText("Only Management can reassign leads").first()).toBeAttached();
-    await expect(page.getByRole("button", { name: "Export CSV" })).toHaveCount(0);
+    // FIG-1680 (P2-26): Sales may export the leads it can see (the file holds only those rows), so the button is there.
+    await expect(page.getByRole("button", { name: "Export CSV" })).toBeVisible();
   });
 
   test("Management sees the whole organisation, Import and Export, and an Unassigned tab", async ({ page }) => {

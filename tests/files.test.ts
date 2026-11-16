@@ -148,9 +148,11 @@ describe("creating an upload", () => {
     // Attachments need attachments.manage; Finance does not have it.
     await expect(fileService.createUpload(finance, { purpose: "ATTACHMENT", ...png })).rejects.toThrow(ForbiddenError);
     await expect(fileService.createUpload(sales, { purpose: "ATTACHMENT", ...png })).resolves.toBeTruthy();
-    // Imports need an import permission.
+    // Imports need an import permission (every role holds leads.import since P2-26; a role stripped of the keys is refused).
     const csv = { name: "leads.csv", mimeType: "text/csv", sizeBytes: 100 };
-    await expect(fileService.createUpload(sales, { purpose: "IMPORT", ...csv })).rejects.toThrow(ForbiddenError);
+    const noImport = { ...sales, permissionKeys: sales.permissionKeys.filter((k) => !k.endsWith(".import")) };
+    await expect(fileService.createUpload(noImport, { purpose: "IMPORT", ...csv })).rejects.toThrow(ForbiddenError);
+    await expect(fileService.createUpload(sales, { purpose: "IMPORT", ...csv })).resolves.toBeTruthy();
     await expect(fileService.createUpload(mgmt, { purpose: "IMPORT", ...csv })).resolves.toBeTruthy();
     // Exports are produced by the system, never uploaded.
     await expect(fileService.createUpload(mgmt, { purpose: "EXPORT", ...csv })).rejects.toThrow(ValidationError);

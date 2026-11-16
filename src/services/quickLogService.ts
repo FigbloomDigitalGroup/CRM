@@ -2,12 +2,16 @@ import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
-import { cleanText, parseOptionalDate } from "../lib/inputParsing";
+import { cleanText } from "../lib/inputParsing";
 import { createActivity } from "../repositories/activities";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { createCommunication } from "../repositories/communications";
 import { touchDealActivity } from "../repositories/conversations";
 import { createTask } from "../repositories/tasks";
+import { withOrgContext } from "../db/orgScopedClient";
+import { resolveFollowUpInstant } from "../lib/followUpTime";
+import { memberTimeZone } from "./notificationDeliveryPolicy";
+import { applyLeadFollowUp } from "./taskLinkService";
 import { resolveLinks, type LinkTarget } from "./conversationService";
 import { whatsappLinkFor } from "./integrationRegistryService";
 import { assertEligibleTaskAssignee } from "./ownerEligibility";
@@ -175,18 +179,32 @@ export async function quickLog(ctx: AuthContext, input: QuickLogInput, now = new
   let taskId: string | null = null;
   if (input.followUp) {
     await assertEligibleTaskAssignee(ctx.organizationId, ctx.membershipId);
-    const task = await createTask({
-      organizationId: ctx.organizationId,
-      title: cleanText(input.followUp.title, "followUp.title", 200, { required: true })!,
-      assigneeMembershipId: ctx.membershipId,
-      createdByMembershipId: ctx.membershipId,
-      dueAt: parseOptionalDate(input.followUp.dueOn, "followUp.dueOn") ?? undefined,
-      companyId: target.links.companyId,
-      contactId: target.links.contactId,
-      leadId: target.links.leadId,
-      dealId: target.links.dealId,
-    });
-    taskId = task.id;
+    const title = cleanText(input.followUp.title, "followUp.title", 200, { required: true })!;
+    // A date and a time; a date alone means the default time in the person's zone (P2-27).
+    const due = input.followUp.dueOn ? resolveFollowUpInstant(input.followUp.dueOn, await memberTimeZone(ctx.organizationId, ctx.membershipId)) : null;
+    if (input.followUp.dueOn && !due) throw new ValidationError("followUp.dueOn is not a valid date and time.", [{ path: "followUp.dueOn", message: "Use a date and a time." }]);
+    if (target.links.leadId && due) {
+      // On a lead the follow-up is the lead's next step: the task and "Next follow-up" move together, linked to this call (P2-23).
+      const leadId = target.links.leadId;
+      const task = await withOrgContext(ctx.organizationId, (tx) =>
+        applyLeadFollowUp(tx, { organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, leadId, nextFollowUpAt: due, assigneeMembershipId: ctx.membershipId, title, type: "TASK", sourceActivityId: activity.id }),
+      );
+      taskId = task?.id ?? null;
+    } else {
+      const task = await createTask({
+        organizationId: ctx.organizationId,
+        title,
+        assigneeMembershipId: ctx.membershipId,
+        createdByMembershipId: ctx.membershipId,
+        dueAt: due ?? undefined,
+        companyId: target.links.companyId,
+        contactId: target.links.contactId,
+        leadId: target.links.leadId,
+        dealId: target.links.dealId,
+        sourceActivityId: activity.id,
+      });
+      taskId = task.id;
+    }
   }
 
   await recordAuditEvent({

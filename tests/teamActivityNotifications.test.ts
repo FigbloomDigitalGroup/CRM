@@ -238,7 +238,7 @@ describe("preferences", () => {
   it("Management sees one row per event with the defaults and can change channels and mode; Sales has none", async () => {
     const { mgmtA, sales } = await setup();
     const view = await getMyNotificationPreferencesV2(mgmtA);
-    expect(view.teamActivity).toHaveLength(8);
+    expect(view.teamActivity).toHaveLength(9);
     expect(view.teamActivity!.find((r) => r.event === "DEAL_CLOSED")).toMatchObject({ mode: "INSTANT", channels: { inApp: true, email: false, push: false } });
     expect(view.teamActivity!.find((r) => r.event === "LEAD_CREATED")!.mode).toBe("HOURLY");
 

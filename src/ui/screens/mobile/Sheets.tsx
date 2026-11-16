@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useToast } from "../../components/toast";
+import { DateTimeField } from "../../components/forms";
+import { defaultFollowUp } from "../../components/dateTimeZone";
 import { useAppearanceOptional } from "../../theme/ThemeProvider";
 import { useApi, useApiQuery } from "../../data/hooks";
 import { newIdempotencyKey } from "../../data/client";
@@ -80,11 +82,6 @@ function Chips<T extends string>({ label, options, value, onChange }: { label: s
   );
 }
 
-const dayOffset = (days: number) => {
-  const d = new Date(Date.now() + days * 864e5);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
-
 /* Quick capture ----------------------------------------------------------------------------------------------------------------- */
 
 interface Candidate {
@@ -104,7 +101,7 @@ type CaptureAnswer =
  * save anyway). With no signal the capture is kept on the phone and sent later; a duplicate found then waits in the waiting list for a choice.
  */
 export function CaptureSheet({ onClose }: { onClose: () => void }) {
-  const { orgSlug } = useMember();
+  const { orgSlug, timeZone } = useMember();
   const api = useApi();
   const router = useRouter();
   const toast = useToast();
@@ -114,10 +111,13 @@ export function CaptureSheet({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
+  const [role, setRole] = useState("");
   const [serviceId, setServiceId] = useState("");
   const [sourceId, setSourceId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [remind, setRemind] = useState(false);
+  const [remindAt, setRemindAt] = useState(() => defaultFollowUp(new Date(), timeZone).toISOString());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dupes, setDupes] = useState<Candidate[] | null>(null);
@@ -133,10 +133,12 @@ export function CaptureSheet({ onClose }: { onClose: () => void }) {
     name: name.trim(),
     ...(phone.trim() ? { phone: phone.trim() } : {}),
     ...(email.trim() ? { email: email.trim() } : {}),
+    ...(company.trim() ? { company: company.trim() } : {}),
+    ...(company.trim() && role.trim() ? { role: role.trim() } : {}),
     ...(serviceId ? { serviceId } : {}),
     ...(sourceId ? { sourceId } : {}),
     ...(note.trim() ? { note: note.trim() } : {}),
-    ...(remind ? { followUp: { title: `Follow up with ${name.trim()}`, dueOn: dayOffset(1) } } : {}),
+    ...(remind ? { followUp: { title: `Follow up with ${name.trim()}`, dueOn: remindAt } } : {}),
   });
 
   /** A scanned card is saved through its capture, so the photo is attached to the lead. The person has just checked every field on this form. */
@@ -233,6 +235,16 @@ export function CaptureSheet({ onClose }: { onClose: () => void }) {
           <span className="fb-m-label">Email (if no phone)</span>
           <input className="fb-m-input" type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" autoComplete="off" />
         </label>
+        <label>
+          <span className="fb-m-label">Company</span>
+          <input className="fb-m-input" value={company} onChange={(e) => setCompany(e.target.value)} autoComplete="off" maxLength={200} />
+        </label>
+        {company.trim() ? (
+          <label>
+            <span className="fb-m-label">Role in the company</span>
+            <input className="fb-m-input" value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Procurement manager" autoComplete="off" maxLength={80} />
+          </label>
+        ) : null}
         {ref.services.length > 0 ? (
           <label>
             <span className="fb-m-label">Service they want</span>
@@ -258,9 +270,10 @@ export function CaptureSheet({ onClose }: { onClose: () => void }) {
         </label>
         <div className="fb-m-chips">
           {scanned?.captureId ? null : <button type="button" className="fb-m-chip" aria-pressed={remind} onClick={() => setRemind((v) => !v)}>
-            Remind me to follow up tomorrow
+            Remind me to follow up
           </button>}
         </div>
+        {remind && !scanned?.captureId ? <DateTimeField label="Follow up on" value={remindAt} onChange={setRemindAt} required /> : null}
 
         {dupes ? (
           <div className="fb-m-warn" role="alert">
@@ -314,11 +327,6 @@ const OUTCOMES = [
   { value: "NO_ANSWER", label: "No answer" },
   { value: "LEFT_MESSAGE", label: "Left a message" },
 ] as const;
-const WHENS = [
-  { value: 1, label: "Tomorrow" },
-  { value: 3, label: "In 3 days" },
-  { value: 7, label: "Next week" },
-] as const;
 
 function whoOf(t: LogTarget): Record<string, string> {
   return t.contactId ? { contactId: t.contactId } : t.leadId ? { leadId: t.leadId } : t.companyId ? { companyId: t.companyId } : t.dealId ? { dealId: t.dealId } : {};
@@ -329,13 +337,14 @@ function whoOf(t: LogTarget): Record<string, string> {
  * Without a target (the Note action in the bar) the person first says who it is about.
  */
 export function LogSheet({ target: initial, mode, onClose }: { target: LogTarget | null; mode: LogMode; onClose: () => void }) {
+  const { timeZone } = useMember();
   const write = useFieldWrite();
   const toast = useToast();
   const [target, setTarget] = useState<LogTarget | null>(initial);
   const [outcome, setOutcome] = useState<(typeof OUTCOMES)[number]["value"] | null>(null);
   const [text, setText] = useState("");
   const [next, setNext] = useState("");
-  const [when, setWhen] = useState<number>(1);
+  const [when, setWhen] = useState(() => defaultFollowUp(new Date(), timeZone).toISOString());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -351,7 +360,7 @@ export function LogSheet({ target: initial, mode, onClose }: { target: LogTarget
     setBusy(true);
     setError(null);
     const who = whoOf(target);
-    const followUp = next.trim() ? { title: next.trim(), dueOn: dayOffset(when) } : undefined;
+    const followUp = next.trim() ? { title: next.trim(), dueOn: when } : undefined;
     try {
       const first = isNote
         ? await write("NOTE_ADD", { ...who, text: text.trim() }, `Note on ${target.name}`)
@@ -362,7 +371,7 @@ export function LogSheet({ target: initial, mode, onClose }: { target: LogTarget
       }
       // A note's next action is its own task.
       if (isNote && followUp) {
-        await write("TASK_CREATE", { ...who, title: followUp.title, dueAt: `${followUp.dueOn}T09:00:00` }, `Task: ${followUp.title}`);
+        await write("TASK_CREATE", { ...who, title: followUp.title, dueAt: followUp.dueOn }, `Task: ${followUp.title}`);
       }
       toast.show({ message: first.status === "queued" ? "Saved on this phone. It sends when you are back online." : isNote ? "Note saved" : `${mode === "WHATSAPP" ? "WhatsApp chat" : "Call"} with ${target.name} logged` });
       onClose();
@@ -384,13 +393,7 @@ export function LogSheet({ target: initial, mode, onClose }: { target: LogTarget
         <div className="fb-m-nextbox">
           <strong>Next action</strong>
           <input className="fb-m-input" value={next} onChange={(e) => setNext(e.target.value)} placeholder="e.g. Send the quote" aria-label="Next action" maxLength={200} />
-          <div className="fb-m-whens" role="group" aria-label="When">
-            {WHENS.map((w) => (
-              <button key={w.value} type="button" className="fb-m-chip" aria-pressed={when === w.value} onClick={() => setWhen(w.value)}>
-                {w.label}
-              </button>
-            ))}
-          </div>
+          <DateTimeField label="When" value={when} onChange={setWhen} required />
         </div>
         {error ? (
           <div className="fb-m-error" role="alert">

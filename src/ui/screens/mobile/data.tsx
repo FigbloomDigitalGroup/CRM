@@ -75,10 +75,16 @@ export function dueLabel(iso: string | null | undefined, now = new Date()): { te
   const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const days = Math.round((startOf(due) - startOf(now)) / 86_400_000);
   const time = due.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  if (days < 0) return { text: days === -1 ? "Overdue since yesterday" : `Overdue ${-days} days`, tone: "overdue" };
-  if (days === 0) return { text: due.getHours() === 0 && due.getMinutes() === 0 ? "Today" : `Today ${time}`, tone: "today" };
-  if (days === 1) return { text: "Tomorrow", tone: "later" };
-  return { text: due.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }), tone: "later" };
+  // A follow-up has a time: it is overdue from that time, not from the end of the day (P2-27).
+  const late = now.getTime() - due.getTime();
+  if (late > 0 && days === 0) {
+    const mins = Math.floor(late / 60_000);
+    return { text: mins < 60 ? `Overdue by ${Math.max(1, mins)} min` : `Overdue by ${Math.floor(mins / 60)} h`, tone: "overdue" };
+  }
+  if (days < 0) return { text: days === -1 ? `Overdue since yesterday ${time}` : `Overdue ${-days} days`, tone: "overdue" };
+  if (days === 0) return { text: `Today ${time}`, tone: "today" };
+  if (days === 1) return { text: `Tomorrow ${time}`, tone: "later" };
+  return { text: `${due.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}, ${time}`, tone: "later" };
 }
 
 export function ago(iso: string, now = new Date()): string {

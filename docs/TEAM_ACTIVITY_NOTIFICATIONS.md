@@ -15,6 +15,7 @@ deal, sets a discount or approves anything (CLAUDE.md rule 9; a test checks the 
 | `DATA_RUN` | A lead, contact, company or deal import or export finishes (a cancelled import says nothing) | instant |
 | `MEMBER_CHANGE` | A member is invited (or re-invited) or removed | instant |
 | `DISCOUNT_REQUESTED` | A quote discount above the approval limit is sent for approval | instant |
+| `NOTE_ADDED` | A note is added to a lead, from the Conversation or from the key notes preview (FIG-1678). The note text is never put in the alert | hourly digest |
 
 Not built, so nothing is sent for them (the helper is ready for each): security events (P2-02), a new custom service (P2-12),
 a Head of Sales grant and Head of Sales as an extra recipient for sales events (P2-14). To add one: add the event to

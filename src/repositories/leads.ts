@@ -1,7 +1,7 @@
 import { archivedWhere, type ArchiveMeta } from "../lib/archive";
 import type { JsonClause } from "../lib/customFields";
 import { Prisma } from "@prisma/client";
-import { withOrgContext } from "../db/orgScopedClient";
+import { withOrgContext, type OrgScopedClient } from "../db/orgScopedClient";
 import { TAG_LINKS_INCLUDE, tagFilter } from "./tags";
 import { companyIdsNamed, contactIdsNamed } from "./searchMatch";
 
@@ -62,13 +62,17 @@ export async function updateLead(
   organizationId: string,
   leadId: string,
   input: UpdateLeadInput,
+  /** Runs in the same transaction as the update (P2-23: the follow-up task moves with the lead's follow-up). */
+  inTransaction?: (tx: OrgScopedClient, updated: Awaited<ReturnType<OrgScopedClient["lead"]["update"]>>) => Promise<void>,
 ) {
-  return withOrgContext(organizationId, (tx) =>
-    tx.lead.update({
+  return withOrgContext(organizationId, async (tx) => {
+    const updated = await tx.lead.update({
       where: { id: leadId, organizationId },
       data: input,
-    }),
-  );
+    });
+    if (inTransaction) await inTransaction(tx, updated);
+    return updated;
+  });
 }
 
 /**

@@ -33,7 +33,9 @@ You can also search (Ctrl/Cmd K), add contacts and companies, and keep renewal d
 | Other people's leads and deals | You see your own, plus a shared pool of unassigned leads you can claim (take ownership). You cannot edit someone else's record. |
 | A deal value on a deal you do not own, and margins and costs | They are hidden by role. A hidden value shows as "Hidden", not a blank. |
 | Payments | Only Finance and Management see payments. |
-| Settings, the audit log, imports and bulk exports | Management only. |
+| Settings, the audit log and the bulk-export approvals | Management only. |
 | Organisation reports | You get **My metrics**: your own numbers. |
+
+**Import and Export (CSV):** you can import leads, contacts and companies, and export leads, contacts, companies and deals. Imported records belong to you (only Management can name another owner). An export holds only the rows you can see, with hidden values left out. Exports are limited per hour, a file holds at most 20,000 rows, and Management is told about large ones. Every import and export is recorded.
 
 If a page says "no access", it tells you who to ask. Moving a deal to another stage is not possible from the phone, so nothing is overwritten while you are offline. Use a computer for that.

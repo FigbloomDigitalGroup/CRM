@@ -8,7 +8,11 @@ import { createActivity } from "./activityService";
 import { createContact } from "./contactService";
 import { type DuplicateCandidate, findDuplicates } from "./duplicateService";
 import { createLead } from "./leadService";
-import { createTask } from "./taskService";
+import { createTask, resolveAssignee } from "./taskService";
+import { withOrgContext } from "../db/orgScopedClient";
+import { resolveFollowUpInstant } from "../lib/followUpTime";
+import { memberTimeZone } from "./notificationDeliveryPolicy";
+import { applyLeadFollowUp } from "./taskLinkService";
 
 /**
  * Quick capture (FIG-1065, B4.08, mobile design M1): a lead in seconds from the phone. Name, phone, service, source, note.
@@ -35,6 +39,8 @@ export interface QuickCaptureInput {
   phone?: string;
   email?: string;
   company?: string;
+  /** The person's role in the company (stored as the contact's job title). */
+  role?: string;
   serviceId?: string;
   sourceId?: string;
   note?: string;
@@ -108,12 +114,13 @@ async function defaultSourceId(ctx: AuthContext): Promise<string | undefined> {
   return (await adminDb.leadSource.findFirst({ where: { organizationId: ctx.organizationId, isActive: true }, orderBy: { sequence: "asc" }, select: { id: true } }))?.id;
 }
 
-function validate(input: QuickCaptureInput): { name: string; phone?: string; email?: string; company?: string; note?: string } {
+function validate(input: QuickCaptureInput): { name: string; phone?: string; email?: string; company?: string; role?: string; note?: string } {
   const issues: ValidationIssue[] = [];
   const name = cleanText(input.name, "name", MAX_NAME, { required: true }) ?? "";
   const phone = cleanText(input.phone, "phone", 40) ?? undefined;
   const email = cleanText(input.email, "email", 200) ?? undefined;
   const company = cleanText(input.company, "company", 200) ?? undefined;
+  const role = cleanText(input.role, "role", 80) ?? undefined;
   const note = cleanText(input.note, "note", MAX_NOTE) ?? undefined;
   if (!phone && !email) issues.push({ path: "phone", message: "Add a phone number or an email so someone can follow up." });
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) issues.push({ path: "email", message: "That does not look like an email address." });
@@ -128,11 +135,23 @@ function validate(input: QuickCaptureInput): { name: string; phone?: string; ema
     issues.push({ path: "duplicateId", message: "Say which existing record you mean." });
   }
   if (issues.length > 0) throw new ValidationError("The capture is not valid.", issues);
-  return { name, phone, email, company, note };
+  return { name, phone, email, company, role, note };
 }
 
 async function followUpFor(ctx: AuthContext, input: QuickCaptureInput, links: { leadId?: string; contactId?: string }) {
   if (!input.followUp) return null;
+  // On a lead the follow-up is its next step: the task and the lead's Next follow-up are one record set (P2-23).
+  if (links.leadId && input.followUp.dueOn) {
+    const due = resolveFollowUpInstant(input.followUp.dueOn, await memberTimeZone(ctx.organizationId, ctx.membershipId));
+    if (due) {
+      const leadId = links.leadId;
+      const assignee = await resolveAssignee(ctx);
+      const created = await withOrgContext(ctx.organizationId, (tx) =>
+        applyLeadFollowUp(tx, { organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, leadId, nextFollowUpAt: due, assigneeMembershipId: assignee, title: input.followUp!.title }),
+      );
+      if (created) return { id: created.id, title: created.title, dueAt: created.dueAt };
+    }
+  }
   const task = await createTask(ctx, {
     title: input.followUp.title,
     dueAt: input.followUp.dueOn,
@@ -236,7 +255,7 @@ export async function quickCapture(ctx: AuthContext, input: QuickCaptureInput) {
   const { statusId, sourceId, companyId } = await prepared!;
 
   // The duplicate check ran at the top of this call (and the caller chose), so the create steps do not repeat it.
-  const contactResult = await createContact(ctx, { firstName, lastName, phone: clean.phone, email: clean.email, companyId }, { skipDuplicateCheck: true, notifyTeam: false });
+  const contactResult = await createContact(ctx, { firstName, lastName, phone: clean.phone, email: clean.email, companyId, jobTitle: clean.role }, { skipDuplicateCheck: true, notifyTeam: false });
 const contact = contactResult.contact;
   let lead;
   try {

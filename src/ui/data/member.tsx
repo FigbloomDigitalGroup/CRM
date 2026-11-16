@@ -35,6 +35,11 @@ export function useMember(): Member & { can: (key: string) => boolean; canAny: (
   };
 }
 
+/** The member when there is one (a shared control reads the person's zone and clock if it can, and works without). */
+export function useMemberOrNull(): Member | null {
+  return useContext(MemberCtx);
+}
+
 /** For tests and the gallery: a member with the given keys. */
 export function testMember(partial: Partial<Member> = {}): Member {
   return { orgSlug: "figbloom", membershipId: "m-1", userName: "Test Member", roleName: "Sales", permissionKeys: [], timeZone: null, hour12: false, ...partial };

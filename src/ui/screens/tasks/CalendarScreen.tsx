@@ -350,7 +350,6 @@ export function CalendarScreen() {
         open={drawer.open}
         taskId={drawer.taskId}
         initialDue={drawer.due}
-        allowActivities={!drawer.taskId}
         onClose={() => setDrawer({ open: false })}
       />
     </div>
@@ -365,14 +364,18 @@ function toneOf(item: CalItem): "red" | "orange" | "blue" | "green" {
   return item.priority === "HIGH" ? "orange" : "green";
 }
 
-const kindText = (item: CalItem) => (item.type === "MEETING" ? "Meeting" : item.type === "CALL" ? "Call" : "Task");
+const KIND_TEXT: Record<string, string> = { MEETING: "Meeting", CALL: "Call", EMAIL: "Email", QUOTE: "Send quote", VISIT: "Visit" };
+const kindText = (item: CalItem) => KIND_TEXT[item.type] ?? "Task";
+/** A call, meeting, email, quote or visit says what it is; a plain task does not. */
+const showsKind = (item: CalItem) => item.type !== "TASK";
+const isDone = (item: CalItem) => item.status === "COMPLETED" || item.status === "CANCELLED";
 
 function Chip({ item, zone, onOpen }: { item: CalItem; zone: Zone; onOpen: () => void }) {
   const tone = toneOf(item);
   return (
-    <button type="button" data-ev className="fb-tk-chip" data-tone={tone} onClick={onOpen} aria-label={`${shortTime(new Date(item.start), zone)} ${item.title}, ${kindText(item).toLowerCase()}${item.overdue ? ", overdue" : ""}`}>
+    <button type="button" data-ev className="fb-tk-chip" data-tone={tone} data-done={isDone(item) || undefined} onClick={onOpen} aria-label={`${shortTime(new Date(item.start), zone)} ${item.title}, ${kindText(item).toLowerCase()}${isDone(item) ? ", done" : item.overdue ? ", overdue" : ""}`}>
       {item.overdue ? <span className="fb-tk-chip__dot" aria-hidden="true" /> : null}
-      {item.kind === "activity" ? (item.type === "CALL" ? <Phone size={11} aria-hidden="true" /> : <Video size={11} aria-hidden="true" />) : null}
+      {item.type === "CALL" ? <Phone size={11} aria-hidden="true" /> : item.type === "MEETING" ? <Video size={11} aria-hidden="true" /> : null}
       <span className="fb-tk-chip__text">{shortTime(new Date(item.start), zone)} {item.title}</span>
     </button>
   );
@@ -380,17 +383,17 @@ function Chip({ item, zone, onOpen }: { item: CalItem; zone: Zone; onOpen: () =>
 
 function WeekItem({ item, zone, onOpen }: { item: CalItem; zone: Zone; onOpen: () => void }) {
   return (
-    <button type="button" data-ev className="fb-tk-weekitem" data-tone={toneOf(item)} onClick={onOpen} aria-label={`${kindText(item)}: ${item.title}, ${shortTime(new Date(item.start), zone)}${item.overdue ? ", overdue" : ""}`}>
+    <button type="button" data-ev className="fb-tk-weekitem" data-tone={toneOf(item)} data-done={isDone(item) || undefined} onClick={onOpen} aria-label={`${kindText(item)}: ${item.title}, ${shortTime(new Date(item.start), zone)}${isDone(item) ? ", done" : item.overdue ? ", overdue" : ""}`}>
       <span className="fb-tk-weekitem__time">{item.overdue ? "● " : ""}{shortTime(new Date(item.start), zone)}</span>
-      <span className="fb-tk-weekitem__title">{item.kind === "activity" ? `${kindText(item)} · ` : ""}{item.title}</span>
+      <span className="fb-tk-weekitem__title">{showsKind(item) ? `${kindText(item)} · ` : ""}{item.title}</span>
     </button>
   );
 }
 
 function DayItem({ item, zone, onOpen }: { item: CalItem; zone: Zone; onOpen: () => void }) {
   return (
-    <button type="button" data-ev className="fb-tk-dayitem" data-tone={toneOf(item)} onClick={onOpen}>
-      {timeText(new Date(item.start), zone)} · {item.title} <span className="fb-tk-dayitem__who">· {item.kind === "activity" ? `${kindText(item)}, ` : ""}{item.assigneeName ?? ""}{item.linkLabel ? ` · ${item.linkLabel}` : ""}</span>
+    <button type="button" data-ev className="fb-tk-dayitem" data-tone={toneOf(item)} data-done={isDone(item) || undefined} onClick={onOpen}>
+      {timeText(new Date(item.start), zone)} · {item.title} <span className="fb-tk-dayitem__who">· {showsKind(item) ? `${kindText(item)}, ` : ""}{isDone(item) ? "done, " : ""}{item.assigneeName ?? ""}{item.linkLabel ? ` · ${item.linkLabel}` : ""}</span>
     </button>
   );
 }
@@ -429,7 +432,7 @@ function Agenda({ items, zone, today, onOpen }: { items: CalItem[]; zone: Zone; 
           {g.list.map((it) => (
             <button key={`${it.kind}-${it.id}`} type="button" className="fb-tk-agenda__item" onClick={() => onOpen(it)}>
               <span className="fb-tk-agenda__time">{timeText(new Date(it.start), zone)}</span>
-              <span className="fb-tk-agenda__title">{it.kind === "activity" ? `${kindText(it)} · ` : ""}{it.title}</span>
+              <span className="fb-tk-agenda__title">{showsKind(it) ? `${kindText(it)} · ` : ""}{it.title}</span>
               <span className="fb-tk-agenda__who">{it.assigneeName ?? ""}</span>
             </button>
           ))}

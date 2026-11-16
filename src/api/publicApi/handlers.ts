@@ -14,7 +14,8 @@ import { createCompany, getCompany, listCompaniesPage, updateCompany } from "@/s
 import { createContact, getContact, listContactsPage, updateContact } from "@/services/contactService";
 import { createDeal, getDeal, listDealsPage } from "@/services/dealService";
 import { loadStageRules, updateDealChecked } from "@/services/dealRuleService";
-import { createLead, getLead, listLeadsPage, updateLead } from "@/services/leadService";
+import { getLead, listLeadsPage, updateLead } from "@/services/leadService";
+import { createLeadFromForm } from "@/services/leadIntakeService";
 import { createTask, getTask, listTasksPage, updateTask } from "@/services/taskService";
 import { CreateLeadBodySchema, LEAD_SORTS, ListLeadsQuerySchema, toLeadDto } from "../dto/leads";
 import { DealSchema, toDealDto } from "../dto/deals";
@@ -107,7 +108,7 @@ const ENTITIES: Record<ApiEntity, Entity> = {
     async get(ctx, id) {
       return toLeadDto(ctx, await getLead(ctx, id));
     },
-    create: (ctx, request) => idempotentCreate(ctx, request, CreateLeadBodySchema, (body) => createLead(ctx, body)),
+    create: (ctx, request) => idempotentCreate(ctx, request, CreateLeadBodySchema, (body) => createLeadFromForm(ctx, body)),
     async update(ctx, id, request) {
       return updateLead(ctx, id, await parseJsonBody(request, S.UpdateLeadBody));
     },

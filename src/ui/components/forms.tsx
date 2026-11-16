@@ -14,6 +14,8 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import { cx, useDismiss } from "../internal";
+import { useMemberOrNull } from "../data/member";
+import { DEFAULT_TIME, clockLabel, clockOf, dayOf, defaultFollowUp, instantAt, quickChoices, timeOptions, zoneLabel } from "./dateTimeZone";
 
 /* The field shell: label, required marker, help and error, wired to the control for screen readers --------------------------------- */
 
@@ -124,6 +126,125 @@ export const DateField = forwardRef<HTMLInputElement, WithShell<Omit<InputHTMLAt
 export const TimeField = forwardRef<HTMLInputElement, WithShell<Omit<InputHTMLAttributes<HTMLInputElement>, "type">>>(function TimeField(props, ref) {
   return <Input ref={ref} type="time" {...props} />;
 });
+
+/* Date and time: the one follow-up input (P2-27) ---------------------------------------------------------------------------------- */
+
+export interface DateTimeFieldProps {
+  label: ReactNode;
+  /** The instant as an ISO date and time, or "" for none. */
+  value: string;
+  onChange: (iso: string) => void;
+  required?: boolean;
+  help?: ReactNode;
+  error?: string | null;
+  disabled?: boolean;
+  /** The person's time zone (IANA) and clock. Default: the signed-in member's; the browser's when there is none. */
+  timeZone?: string | null;
+  hour12?: boolean;
+  /** Time of day used when only a date is chosen, and by "Tomorrow" and "Next week". Default 09:00. */
+  defaultTime?: string;
+  /** Hide the quick choices (Today 17:00, Tomorrow 09:00, Next week). */
+  quickChoices?: boolean;
+  /** Warn when the chosen time has passed (a warning only: whether to refuse it stays the screen's call). Default true. */
+  warnPast?: boolean;
+  /** For tests: the current time. */
+  now?: Date;
+}
+
+/**
+ * One date-and-time input used wherever a follow-up or a due time is set. A date picker and a time list in steps of 5 minutes (labelled for
+ * the person's 12 or 24 hour clock), quick choices, and the time zone shown. It stores and returns an ISO instant: the zone only decides what
+ * the person sees and types, so 15:30 in Nairobi is the same moment on every screen.
+ */
+export function DateTimeField({ label, value, onChange, required, help, error, disabled, timeZone, hour12, defaultTime = DEFAULT_TIME, quickChoices: showQuick = true, warnPast = true, now }: DateTimeFieldProps) {
+  const member = useMemberOrNull();
+  const tz = timeZone !== undefined ? timeZone : (member?.timeZone ?? null);
+  const twelve = hour12 !== undefined ? hour12 : (member?.hour12 ?? false);
+  const id = useId();
+  const current = value ? new Date(value) : null;
+  const valid = current && !Number.isNaN(current.getTime()) ? current : null;
+  const day = valid ? dayOf(valid, tz) : "";
+  const clock = valid ? clockOf(valid, tz) : "";
+  const reference = now ?? new Date();
+  const options = useMemo(() => timeOptions(twelve), [twelve]);
+  const hasStored = clock && !options.some((o) => o.value === clock);
+  const choices = quickChoices(reference, tz, twelve, defaultTime);
+  const past = warnPast && valid !== null && valid.getTime() < reference.getTime();
+  const helpId = `${id}-help`;
+  const errorId = `${id}-error`;
+  const describedBy = [`${id}-zone`, help ? helpId : null, past ? `${id}-past` : null, error ? errorId : null].filter(Boolean).join(" ");
+
+  const commit = (nextDay: string, nextClock: string) => onChange(instantAt(nextDay, nextClock, tz).toISOString());
+  return (
+    <div className="fb-field fb-dt" role="group" aria-labelledby={`${id}-label`} aria-describedby={describedBy}>
+      <span className="fb-label" id={`${id}-label`}>
+        {label}
+        {required ? (
+          <>
+            <span className="fb-req" aria-hidden="true">*</span>
+            <span className="fb-sr-only"> (required)</span>
+          </>
+        ) : null}
+      </span>
+      <div className="fb-dt__row">
+        <input
+          type="date"
+          className="fb-input fb-dt__date"
+          aria-label="Date"
+          aria-invalid={error ? true : undefined}
+          aria-required={required ? true : undefined}
+          disabled={disabled}
+          value={day}
+          onChange={(e) => {
+            if (!e.target.value) {
+              if (!required) onChange("");
+              return;
+            }
+            commit(e.target.value, clock || defaultTime);
+          }}
+        />
+        <select
+          className="fb-input fb-dt__time"
+          aria-label="Time"
+          aria-invalid={error ? true : undefined}
+          aria-required={required ? true : undefined}
+          disabled={disabled}
+          value={clock}
+          onChange={(e) => {
+            if (!e.target.value) return;
+            commit(day || dayOf(defaultFollowUp(reference, tz, defaultTime), tz), e.target.value);
+          }}
+        >
+          {!clock ? <option value="">Time</option> : null}
+          {hasStored ? <option value={clock}>{clockLabel(clock, twelve)}</option> : null}
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {showQuick && !disabled ? (
+        <div className="fb-dt__quick" role="group" aria-label="Quick choices">
+          {choices.map((c) => (
+            <button key={c.key} type="button" className="fb-dt__chip" onClick={() => onChange(c.at.toISOString())}>
+              {c.label}
+            </button>
+          ))}
+          {!required && valid ? (
+            <button type="button" className="fb-dt__chip" onClick={() => onChange("")}>
+              Clear
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      <span id={`${id}-zone`} className="fb-help">Time zone: {zoneLabel(tz, valid ?? reference)}</span>
+      {help ? <span id={helpId} className="fb-help">{help}</span> : null}
+      {past ? <span id={`${id}-past`} className="fb-help fb-dt__past" role="status">That time has already passed.</span> : null}
+      {error ? <span id={errorId} className="fb-error" role="alert">{error}</span> : null}
+    </div>
+  );
+}
 
 /* Searchable select (the ARIA combobox pattern) --------------------------------------------------------------------------------- */
 

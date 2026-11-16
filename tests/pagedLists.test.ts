@@ -435,8 +435,12 @@ describe("CSV export covers the whole filtered set, not one page", () => {
       await dealService.createDeal(mgmt, { companyId: company.id, pipelineStageId, value: 100 });
     }
     const delivery = await createTestContext(org.id, "DELIVERY", "page.exportdel");
-    // Delivery has no export permission, so the export is refused outright.
-    await expect(exportService.exportDealsCsv(delivery)).rejects.toThrow(ForbiddenError);
+    // Delivery may export (P2-26) but sees only won deals, so none of these open deals is in its file, and a role without the key is refused.
+    const tech = await createTestContext(org.id, "RESTRICTED_TECHNICAL", "page.exporttech");
+    await expect(exportService.exportDealsCsv(tech)).rejects.toThrow(ForbiddenError);
+    const deliveryRows: Record<string, unknown>[] = [];
+    for await (const row of (await exportService.exportDealsCsv(delivery)).rows) deliveryRows.push(row);
+    expect(deliveryRows).toHaveLength(0);
 
     const rows: Record<string, unknown>[] = [];
     for await (const row of (await exportService.exportDealsCsv(mgmt)).rows) rows.push(row);

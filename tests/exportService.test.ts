@@ -22,7 +22,7 @@ async function collectRows(csv: exportService.CsvExport) {
 describe("exportService: companies", () => {
   it("rejects export for a role without companies.export", async () => {
     const org = await createTestOrganization();
-    const ctx = await createTestContext(org.id, "SALES");
+    const ctx = await createTestContext(org.id, "RESTRICTED_TECHNICAL");
 
     await expect(exportService.exportCompaniesCsv(ctx)).rejects.toThrow(
       ForbiddenError,

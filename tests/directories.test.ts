@@ -102,7 +102,7 @@ describe("company lists (FIG-1056)", () => {
     const f = await companyFixture();
     await expect(listCompanyDirectory(f.technical, {})).rejects.toBeInstanceOf(ForbiddenError);
     expect((await listCompanyDirectory(f.delivery, {})).total).toBe(4);
-    await expect(exportCompaniesCsv(f.delivery, {})).rejects.toBeInstanceOf(ForbiddenError); // no companies.export
+    await expect(exportCompaniesCsv(f.technical, {})).rejects.toBeInstanceOf(ForbiddenError); // no companies.export (Delivery now has it, P2-26)
 
     const dormantExport = await rowsOf(await exportCompaniesCsv(f.management, await companyFiltersForTab(f.management, { tab: "DORMANT" })));
     expect(dormantExport.map((r) => r.name)).toEqual(["Dormant Co"]);
@@ -185,7 +185,7 @@ describe("contact lists (FIG-1056)", () => {
     const f = await contactFixture();
     await expect(listContactDirectory(f.technical, {})).rejects.toBeInstanceOf(ForbiddenError);
     expect((await listContactDirectory(f.delivery, {})).total).toBe(6);
-    await expect(exportContactsCsv(f.delivery, {})).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(exportContactsCsv(f.technical, {})).rejects.toBeInstanceOf(ForbiddenError); // Delivery may export contacts now (P2-26)
     const exported = await rowsOf(await exportContactsCsv(f.management, contactFiltersForExport({ missingEmail: true, standalone: true })));
     expect(exported.map((r) => r.firstName)).toEqual(["Nothing"]);
     const archivedExport = await rowsOf(await exportContactsCsv(f.management, contactFiltersForExport({ archived: true })));

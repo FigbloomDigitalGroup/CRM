@@ -11,6 +11,7 @@ import { dueLabel, money, moneyTotal } from "./format";
 import { HIcon, Panel, stageShade } from "./kit";
 import { leadName, linkChipLabel, recordHref, type TaskItem } from "./dash";
 import { LoaderBlock } from "../../components/loader";
+import { KeyNotesPreview } from "../leads/KeyNotesPreview";
 
 /** Names for ids the dashboard answers with (stages, services, sources): one cached read, shared by every block. */
 export function useReferenceData() {
@@ -176,6 +177,7 @@ export function NewLeadsPanel({ rows, since }: { rows: NewLeadRow[]; since: numb
   const { orgSlug, timeZone, hour12 } = useMember();
   const fresh = since === null ? rows : rows.filter((r) => Date.parse(r.createdAt) > since);
   const shown = fresh.slice(0, 5);
+  const [notesFor, setNotesFor] = useState<NewLeadRow | null>(null);
   const sub = since
     ? `Since ${new Date(since).toLocaleString("en-GB", { weekday: "long", hour: "numeric", minute: "2-digit", hour12, timeZone: timeZone ?? undefined })}`
     : "Newest first";
@@ -184,18 +186,23 @@ export function NewLeadsPanel({ rows, since }: { rows: NewLeadRow[]; since: numb
       {shown.map((l) => {
         const t = TEMP[l.temperature] ?? TEMP.COLD!;
         return (
-          <Link key={l.id} href={`/o/${orgSlug}/leads/${l.id}`} className="fb-hrow fb-hrow--link">
-            <span className="fb-hav" aria-hidden="true">
-              {initialsOf(l.name)}
-            </span>
-            <span className="fb-hrow__main">
-              <span className="fb-hrow__title">{l.name}</span>
-              <span className="fb-hrow__sub fb-block">{l.meta}</span>
-            </span>
-            <span className="fb-temp" style={{ background: t.bg, color: t.fg }}>
-              {t.label}
-            </span>
-          </Link>
+          <div key={l.id} className="fb-hrow-wrap">
+            <Link href={`/o/${orgSlug}/leads/${l.id}`} className="fb-hrow fb-hrow--link">
+              <span className="fb-hav" aria-hidden="true">
+                {initialsOf(l.name)}
+              </span>
+              <span className="fb-hrow__main">
+                <span className="fb-hrow__title">{l.name}</span>
+                <span className="fb-hrow__sub fb-block">{l.meta}</span>
+              </span>
+              <span className="fb-temp" style={{ background: t.bg, color: t.fg }}>
+                {t.label}
+              </span>
+            </Link>
+            <button type="button" className="fb-kn-open" aria-label={`Key notes for ${l.name}`} title="Key notes" onClick={() => setNotesFor(l)}>
+              <HIcon name="note" size={16} />
+            </button>
+          </div>
         );
       })}
       {shown.length === 0 ? (
@@ -207,6 +214,7 @@ export function NewLeadsPanel({ rows, since }: { rows: NewLeadRow[]; since: numb
           <span>New leads assigned to you will show here.</span>
         </div>
       ) : null}
+      {notesFor ? <KeyNotesPreview leadId={notesFor.id} name={notesFor.name} onClose={() => setNotesFor(null)} /> : null}
     </Panel>
   );
 }
