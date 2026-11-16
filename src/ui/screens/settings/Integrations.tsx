@@ -8,6 +8,7 @@ import { Button, Dialog, Input, ReleaseTag, Textarea } from "../..";
 import { useApiMutation, useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { Gate, Panel, asArray, rel, useReport } from "./kit";
+import { settingsHref, type SettingsTabId } from "@/lib/settingsLinks";
 
 interface Entry {
   key: string;
@@ -32,7 +33,7 @@ const ICON: Record<string, React.ReactNode> = {
   INBOUND_EMAIL: <Inbox size={18} aria-hidden="true" />,
   WHATSAPP_CLICK_TO_CHAT: <MessageCircle size={18} aria-hidden="true" />,
 };
-const TAB: Record<string, string> = { WEBSITE: "website", INBOUND_EMAIL: "email" };
+const TAB: Record<string, SettingsTabId> = { WEBSITE: "website", INBOUND_EMAIL: "email" };
 
 /**
  * Integrations (S6, FIG-1108): every integration with its real state (Connected, Not connected or Planned, derived from signals such as a submission that
@@ -64,7 +65,7 @@ export function Integrations() {
                   {e.state === "PLANNED" || !e.configurable ? (
                     <Button size="sm" disabledReason={e.state === "PLANNED" ? "Planned for a later release." : "Nothing to configure yet."}>{e.state === "PLANNED" ? "Planned" : "Connect"}</Button>
                   ) : TAB[e.key] ? (
-                    <Link className="fb-btn fb-btn--secondary fb-btn--sm" href={`/o/${orgSlug}/settings?tab=${TAB[e.key]}`}>Manage</Link>
+                    <Link className="fb-btn fb-btn--secondary fb-btn--sm" href={settingsHref(orgSlug, TAB[e.key]!)}>Manage</Link>
                   ) : (
                     <Button size="sm" onClick={() => setConfig(true)}>{e.key === "WHATSAPP_CLICK_TO_CHAT" ? "Configure" : "Manage"}</Button>
                   )}

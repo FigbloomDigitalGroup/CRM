@@ -13,6 +13,7 @@ import { logger } from "../lib/logger";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { notifyEvent } from "./notificationService";
 import { recordPlatformAudit } from "./platformAuditService";
+import { settingsHref } from "@/lib/settingsLinks";
 
 /**
  * Support access, the break-glass for customer data (FIG-1183, B7.01; screens PL7, OS2, OS3, OS4).
@@ -196,7 +197,7 @@ async function notifyManagement(organizationId: string, slug: string, title: str
         body,
         entityType: "SupportAccessGrant",
         entityId: grantId,
-        path: `/o/${slug}/settings?tab=supportaccess`,
+        path: settingsHref(slug, "security"),
       });
     }
   } catch (err) {

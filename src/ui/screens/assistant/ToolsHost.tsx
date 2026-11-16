@@ -13,6 +13,7 @@ import { AssistantPanel } from "./AssistantPanel";
 import { describeError } from "../../errors";
 import { explainAssistantError, useAssistantActions, useAssistantSettings, type AssistantSettingsDto } from "./api";
 import type { AskContext, ProposedAction } from "./types";
+import { settingsHref } from "@/lib/settingsLinks";
 
 /**
  * The V1.1 tools in the shell (X2 Ask Figbloom, X3 command palette and help): three buttons in the top bar and the panels they open.
@@ -169,7 +170,7 @@ export function ToolsOverlays() {
           } else store.set(run === "assistant" ? "assistant" : "help");
         }}
       />
-      <AssistantPanel open={panel === "assistant"} onClose={() => store.set(null)} enabled={settings?.enabled ?? false} ctx={ctx} respond={actions.respond} onConfirmAction={confirmAction} onDismissAction={actions.dismiss} onFeedback={actions.feedback} usage={settings ? { today: settings.usage.today, limit: settings.limits.perUser } : null} unavailable={unavailable} loading={settingsQuery.isLoading} settingsHref={member.can("configuration.manage") ? `/o/${orgSlug}/settings?tab=ai` : undefined} />
+      <AssistantPanel open={panel === "assistant"} onClose={() => store.set(null)} enabled={settings?.enabled ?? false} ctx={ctx} respond={actions.respond} onConfirmAction={confirmAction} onDismissAction={actions.dismiss} onFeedback={actions.feedback} usage={settings ? { today: settings.usage.today, limit: settings.limits.perUser } : null} unavailable={unavailable} loading={settingsQuery.isLoading} settingsHref={member.can("configuration.manage") ? settingsHref(orgSlug, "ai") : undefined} />
       <HelpPanel open={panel === "help"} onClose={() => store.set(null)} pathname={pathname} orgSlug={orgSlug} />
     </>
   );

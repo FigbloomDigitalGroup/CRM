@@ -10,6 +10,7 @@ import { ago, moneyShort } from "../home/format";
 import { Seg } from "../home/kit";
 import { TeamDrawer } from "./TeamDrawer";
 import { balanceRows, RANGES, rangePhrase, shown, sortParam, STATUS_LABEL, STATUS_TONE } from "./model";
+import { settingsHref } from "@/lib/settingsLinks";
 
 /**
  * Team (P2-15, FIG-1598): who is on the sales team, what each person is doing and who needs help. Everything shown is the API's answer; the
@@ -210,7 +211,7 @@ function TeamPage() {
               icon={<Users size={20} />}
               title={filtered ? "No one matches these filters" : "No team members yet"}
               body={filtered ? "Try another name, role or status." : "Invite people in Members settings and they appear here."}
-              action={filtered ? undefined : <Link className="fb-btn fb-btn--secondary" href={`${base}/settings?tab=members`}>Open Members settings</Link>}
+              action={filtered ? undefined : <Link className="fb-btn fb-btn--secondary" href={settingsHref(orgSlug, "members")}>Open Members settings</Link>}
             />
           ) : (
             <>

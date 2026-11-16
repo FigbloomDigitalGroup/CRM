@@ -1,3 +1,4 @@
+import { settingsPath } from "@/lib/settingsLinks";
 import { invalidateMeContext } from "./meContextCache";
 import { emitTeamActivity } from "./teamActivityNotifier";
 import { findAssignableRole } from "../repositories/roles";
@@ -147,7 +148,7 @@ export async function inviteMember(
     entityId: membership.id,
     metadata: { email: user.email, roleKey: role.key },
   });
-  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "MEMBER_CHANGE", actorMembershipId: ctx.membershipId, entityType: "Membership", entityId: membership.id, label: user.name, route: "settings", detail: { action: "INVITED" } });
+  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "MEMBER_CHANGE", actorMembershipId: ctx.membershipId, entityType: "Membership", entityId: membership.id, label: user.name, route: settingsPath("members").slice(1), detail: { action: "INVITED" } });
 
   return { membershipId: membership.id };
 }
@@ -386,7 +387,7 @@ export async function removeMember(ctx: AuthContext, membershipId: string) {
     previousValue: { status: membership.status, roleKey: membership.role.key },
     metadata: { sessionsRevoked },
   });
-  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "MEMBER_CHANGE", actorMembershipId: ctx.membershipId, entityType: "Membership", entityId: membershipId, label: removedName, route: "settings", detail: { action: "REMOVED" } });
+  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "MEMBER_CHANGE", actorMembershipId: ctx.membershipId, entityType: "Membership", entityId: membershipId, label: removedName, route: settingsPath("members").slice(1), detail: { action: "REMOVED" } });
 
   invalidateMeContext({ organizationId: ctx.organizationId });
   return updated;

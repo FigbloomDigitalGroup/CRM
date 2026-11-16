@@ -9,6 +9,7 @@ import { dueLabel, money, moneyShort, pct } from "./format";
 import { ChartCard, HIcon, Panel, SectionFailed, type KpiDef } from "./kit";
 import { useCompleteTask, useReferenceData } from "./blocks";
 import type { DeliveryData, FinanceData, ManagementData, TaskItem, TechnicalData } from "./dash";
+import { settingsPath } from "@/lib/settingsLinks";
 
 const MASK_REASON = "Amounts are shown only to roles that may see them.";
 
@@ -237,9 +238,9 @@ export function AdoptionCard({ data }: { data: ManagementData }) {
 }
 
 const FIRST_RUN = [
-  { key: "invite", label: "Invite your team", path: "/settings?tab=members" },
-  { key: "import", label: "Import existing data", path: "/settings?tab=migration" },
-  { key: "website", label: "Connect the website form", path: "/settings?tab=website" },
+  { key: "invite", label: "Invite your team", path: settingsPath("members") },
+  { key: "import", label: "Import existing data", path: settingsPath("migration") },
+  { key: "website", label: "Connect the website form", path: settingsPath("website") },
   { key: "mobile", label: "Install on your phone", path: "" },
 ] as const;
 

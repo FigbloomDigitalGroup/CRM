@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { resolveRequestContext } from "@/auth/requestContext";
 import { completeConnection, organizationSlugForState } from "@/services/oauthConnectionService";
+import { settingsHref } from "@/lib/settingsLinks";
 
 // Where Google and Microsoft send the person back (FIG-1153). The one fixed redirect address registered with the providers: the
 // organisation is found from the one-time `state`, the session must be the one that started the connection, then the person
@@ -15,9 +16,9 @@ export async function GET(request: Request) {
     // An unknown or used state and a provider-side denial both go through the same refusal inside the service.
     const ctx = await resolveRequestContext(slug ?? "unknown");
     if (url.searchParams.get("error")) {
-      return NextResponse.redirect(new URL(`/o/${slug}/settings?tab=connect&connection=denied`, url.origin));
+      return NextResponse.redirect(new URL(settingsHref(slug, "connect", { connection: "denied" }), url.origin));
     }
     await completeConnection(ctx, { state, code });
-    return NextResponse.redirect(new URL(`/o/${slug}/settings?tab=connect&connection=connected`, url.origin));
+    return NextResponse.redirect(new URL(settingsHref(slug, "connect", { connection: "connected" }), url.origin));
   });
 }
