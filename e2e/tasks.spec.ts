@@ -112,7 +112,8 @@ test.describe("Calendar", () => {
     const title = `E2E slot ${uniqueSuffix()}`;
     await page.locator('[data-day][aria-current="date"] [data-cell]').click({ position: { x: 6, y: 6 } }); // the top-left corner: the rest of a busy day is covered by its events
     const drawer = page.getByRole("dialog", { name: "New task" });
-    await expect(drawer.getByLabel(/^Due/)).toHaveValue(/T10:00$/);
+    // The due field is the shared date-and-time field (FIG-1681): a group named "Due" with a Date and a Time box; a slot opens at 10:00.
+    await expect(drawer.getByRole("group", { name: /^Due/ }).getByLabel("Time")).toHaveValue("10:00");
     await drawer.getByLabel(/Title/).fill(title);
     await drawer.getByRole("button", { name: "Create task" }).click();
     await expect(page.getByText("Task created.")).toBeVisible();
@@ -129,9 +130,7 @@ test.describe("Calendar", () => {
     await page.getByRole("radio", { name: "Meeting" }).click();
     const drawer = page.getByRole("dialog", { name: "New meeting" });
     await drawer.getByLabel(/Title/).fill(title);
-    // A call or meeting is logged against a record (the API requires it): pick one.
-    await drawer.getByRole("combobox", { name: /Linked record/ }).fill("Java");
-    await drawer.getByRole("option").first().click();
+    // A meeting from the Calendar is a task of type MEETING (FIG-1676) and needs no linked record.
     await drawer.getByRole("button", { name: "Add meeting" }).click();
     await expect(page.getByText("Meeting added.")).toBeVisible();
     await expect(page.getByRole("dialog", { name: "New meeting" })).toHaveCount(0);
