@@ -257,7 +257,7 @@ export function ContactsExportDialog({ total, filters, format = "csv", onClose }
         }
         onClose();
       } catch (err) {
-        setError(err instanceof PdfExportError ? err.message : describeError(err).body);
+        setError(err instanceof PdfExportError ? err.message : `${describeError(err).body}${format === "pdf" ? " A PDF follows the same limits as the CSV. Narrow the filters first." : ""}`);
         setBusy(false);
       }
     })();

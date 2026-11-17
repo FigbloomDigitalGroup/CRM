@@ -144,7 +144,7 @@ export function CompaniesScreen() {
       else downloadText(`companies-${stamp}.csv`, csv);
       toast.show({ tone: "success", message: format === "pdf" ? "Exported companies as PDF." : "Exported companies." });
     } catch (e) {
-      toast.show({ tone: "danger", message: e instanceof PdfExportError ? e.message : describeError(e).body });
+      toast.show({ tone: "danger", message: e instanceof PdfExportError ? e.message : `${describeError(e).body}${format === "pdf" ? " A PDF follows the same limits as the CSV. Narrow the filters first." : ""}` });
     } finally {
       setExporting(false);
     }
