@@ -173,7 +173,7 @@ describe("Import CSV", () => {
         },
       },
     });
-    expect(screen.getByText("Drop a .csv file here")).toBeInTheDocument();
+    expect(screen.getByText("Drop a CSV or Excel (.xlsx) file here")).toBeInTheDocument();
     await user.upload(screen.getByLabelText("CSV file"), upload(csv));
     expect(await screen.findByRole("heading", { name: "Check the columns" })).toBeInTheDocument();
     expect(screen.getByLabelText("Company or person")).toHaveValue("name");

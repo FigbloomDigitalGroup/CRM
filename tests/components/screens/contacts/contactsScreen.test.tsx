@@ -86,7 +86,7 @@ describe("Contacts list (F3.02, C3)", () => {
     expect(screen.getByText(/Read-only · /)).toBeInTheDocument();
     expect(screen.getByText("You can view contacts and reach them by phone or WhatsApp.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "New contact" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Import CSV" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Import CSV / Excel" })).toBeNull();
     expect(screen.queryByRole("tab", { name: /My contacts/ })).toBeNull();
     expect(screen.queryByRole("link", { name: /^Call / })).toBeNull();
   });
@@ -95,7 +95,7 @@ describe("Contacts list (F3.02, C3)", () => {
     setup({}, MANAGEMENT);
     await screen.findByRole("table", { name: "Contacts" });
     expect(screen.getByText(/All organisation contacts · /)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Import CSV" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Import CSV / Excel" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Export CSV" })).toBeInTheDocument();
   });
 

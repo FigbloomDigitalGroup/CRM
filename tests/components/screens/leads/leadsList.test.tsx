@@ -48,7 +48,7 @@ describe("the Leads list, as Sales", () => {
     renderScreen(<LeadsScreen />, { keys: SALES_KEYS });
     expect(await screen.findByText("Nothing here yet. Start with your first lead.")).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "New lead" })).toHaveLength(2); // the header action and the empty state
-    expect(screen.getAllByRole("button", { name: "Import CSV" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Import CSV / Excel" })).toHaveLength(2);
   });
 
   it("answers a refusal with the explained no-access, and a failure with Retry", async () => {

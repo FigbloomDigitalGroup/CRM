@@ -7,6 +7,7 @@ import { useMember } from "../../data/member";
 import { newIdempotencyKey } from "../../data/client";
 import { parseCsv, toCsv } from "../leads/csv";
 import { Icon } from "../leads/icons";
+import { readSheetText, sheetProblem, SHEET_ACCEPT } from "../leads/sheet";
 import { ModalShell } from "../leads/overlay";
 
 type Kind = "companies" | "contacts";
@@ -44,15 +45,6 @@ const FIELDS: Record<Kind, FieldDef[]> = {
 
 const CHUNK = 500;
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-const readText = (file: Blob): Promise<string> =>
-  typeof file.text === "function"
-    ? file.text()
-    : new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(String(r.result ?? ""));
-        r.onerror = () => reject(r.error);
-        r.readAsText(file);
-      });
 
 interface Totals {
   totalRows: number;
@@ -85,7 +77,7 @@ export function ImportCsvDialog({ kind, onClose, onDone }: { kind: Kind; onClose
     setProblem(null);
     try {
       if (file.size > 25 * 1024 * 1024) throw new Error("That file is over 25 MB.");
-      const [h, ...rest] = parseCsv(await readText(file));
+      const [h, ...rest] = parseCsv(await readSheetText(file));
       if (!h || h.length < 2 || rest.length === 0) throw new Error("That file has no rows to import. Check that the first row holds the column names.");
       const guess: Record<string, string> = {};
       for (const f of fields) {
@@ -98,7 +90,7 @@ export function ImportCsvDialog({ kind, onClose, onDone }: { kind: Kind; onClose
       setMapping(guess);
       setStep("map");
     } catch (e) {
-      setProblem(e instanceof Error ? e.message : "That file could not be read.");
+      setProblem(sheetProblem(e) ?? (e instanceof Error ? e.message : "That file could not be read."));
     }
   }
 
@@ -141,7 +133,7 @@ export function ImportCsvDialog({ kind, onClose, onDone }: { kind: Kind; onClose
 
   return (
     <ModalShell
-      title={`Import ${kind} from CSV`}
+      title={`Import ${kind} from CSV or Excel`}
       intro="Duplicates are flagged, never silently merged."
       onClose={() => (step === "running" ? undefined : onClose())}
       dismissible={step !== "running"}
@@ -176,12 +168,12 @@ export function ImportCsvDialog({ kind, onClose, onDone }: { kind: Kind; onClose
           <div className="fb-ld-drop__icon">
             <Icon name="upload" size={26} />
           </div>
-          <div className="fb-ld-drop__title">Choose a CSV file</div>
+          <div className="fb-ld-drop__title">Choose a CSV or Excel (.xlsx) file</div>
           <div className="fb-ld-drop__sub">The first row holds the column names. Up to 25 MB.</div>
           <div className="fb-ld-drop__row">
             <label className="fb-ld-btn fb-ld-btn--primary" style={{ cursor: "pointer" }}>
               Choose file
-              <input type="file" accept=".csv,text/csv" className="fb-sr-only" aria-label="CSV file" onChange={(e) => load(e.target.files?.[0])} />
+              <input type="file" accept={SHEET_ACCEPT} className="fb-sr-only" aria-label="CSV file" onChange={(e) => load(e.target.files?.[0])} />
             </label>
           </div>
           {problem ? (

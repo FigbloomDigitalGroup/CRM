@@ -225,7 +225,7 @@ test.describe("import and export", () => {
     await page.getByRole("button", { name: "Import CSV" }).first().click();
     // The dialog is renamed by its step ("Check the columns", then the result), so it is found by role alone once it is open.
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByText("Drop a .csv file here")).toBeVisible();
+    await expect(dialog.getByText("Drop a CSV or Excel (.xlsx) file here")).toBeVisible();
     const csv = ["name,phone,email,source,service", `E2E Import One ${suffix},+254700000011,one.${suffix}@example.com,Phone,`, `E2E Import Two ${suffix},+254700000012,two.${suffix}@example.com,Website,`, `E2E Ghost ${suffix},+254700000013,,,`].join("\n");
     await dialog.locator('input[type="file"]').setInputFiles({ name: "leads.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
     await expect(dialog.getByRole("heading", { name: "Check the columns" })).toBeVisible();

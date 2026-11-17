@@ -7,6 +7,7 @@ import { useMember } from "../../data/member";
 import { newIdempotencyKey } from "../../data/client";
 import { parseCsv, toCsv } from "./csv";
 import { downloadText, useReference } from "./data";
+import { readSheetText, sheetProblem, SHEET_ACCEPT } from "./sheet";
 import { Icon } from "./icons";
 import { ModalShell } from "./overlay";
 
@@ -30,15 +31,6 @@ const FIELDS: FieldDef[] = [
   { key: "notes", label: "Notes", synonyms: ["notes", "note", "message", "comments"] },
 ];
 const CHUNK = 500;
-const readText = (file: Blob): Promise<string> =>
-  typeof file.text === "function"
-    ? file.text()
-    : new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(String(r.result ?? ""));
-        r.onerror = () => reject(r.error);
-        r.readAsText(file);
-      });
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 interface Outcome {
@@ -84,7 +76,7 @@ export function ImportWizard({ onClose, onDone }: { onClose: () => void; onDone:
     setProblem(null);
     try {
       if (file.size > 25 * 1024 * 1024) throw new Error("That file is over 25 MB.");
-      const rows = parseCsv(await readText(file));
+      const rows = parseCsv(await readSheetText(file));
       const [h, ...rest] = rows;
       if (!h || h.length < 2 || h.every((c) => !c.trim()) || rest.length === 0) throw new Error("empty");
       const guess: Record<string, string> = {};
@@ -97,7 +89,8 @@ export function ImportWizard({ onClose, onDone }: { onClose: () => void; onDone:
       setData(rest);
       setMapping(guess);
       setStep("map");
-    } catch {
+    } catch (err) {
+      setProblem(sheetProblem(err));
       setStep("failed");
     }
   }
@@ -153,7 +146,7 @@ export function ImportWizard({ onClose, onDone }: { onClose: () => void; onDone:
 
   const pct = data.length ? Math.round((done / data.length) * 100) : 0;
   const needLook = totals.duplicatesSkipped + totals.alreadyConverted + totals.failed;
-  const title = step === "map" ? "Check the columns" : "Import leads from CSV";
+  const title = step === "map" ? "Check the columns" : "Import leads from CSV or Excel";
 
   return (
     <ModalShell
@@ -218,7 +211,7 @@ export function ImportWizard({ onClose, onDone }: { onClose: () => void; onDone:
           <div className="fb-ld-drop__icon">
             <Icon name="upload" size={26} />
           </div>
-          <div className="fb-ld-drop__title">Drop a .csv file here</div>
+          <div className="fb-ld-drop__title">Drop a CSV or Excel (.xlsx) file here</div>
           <div className="fb-ld-drop__sub">Columns: name, phone, email, source, service, owner</div>
           <div className="fb-ld-drop__row">
             <button type="button" className="fb-ld-btn fb-ld-btn--md fb-ld-btn--primary" onClick={() => input.current?.click()}>
@@ -232,7 +225,7 @@ export function ImportWizard({ onClose, onDone }: { onClose: () => void; onDone:
               Download a template
             </button>
           </div>
-          <input ref={input} type="file" accept=".csv,text/csv" hidden aria-label="CSV file" onChange={(e) => void load(e.target.files?.[0])} />
+          <input ref={input} type="file" accept={SHEET_ACCEPT} hidden aria-label="CSV file" onChange={(e) => void load(e.target.files?.[0])} />
         </div>
       ) : null}
 
@@ -356,7 +349,7 @@ export function ImportWizard({ onClose, onDone }: { onClose: () => void; onDone:
           <Icon name="alert" size={20} />
           <div>
             <strong>We couldn’t read that file.</strong>
-            <small>{problem ?? "It doesn’t look like a CSV with a header row. Nothing was imported."}</small>
+            <small>{problem ?? "It doesn’t look like a CSV or Excel sheet with a header row. Nothing was imported."}</small>
           </div>
         </div>
       ) : null}
