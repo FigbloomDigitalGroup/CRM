@@ -3,7 +3,8 @@ import { PDFDocument } from "pdf-lib";
 import { describe, expect, it } from "vitest";
 import { parseCsv } from "../src/ui/screens/leads/csv";
 import { csvToPdf, PDF_MAX_ROWS, PdfExportError, pdfSubtitle } from "../src/ui/screens/leads/pdfExport";
-import { cellText, isXlsxName, readSheetText, SheetError, SHEET_ACCEPT } from "../src/ui/screens/leads/sheet";
+import { guessMapping } from "../src/ui/screens/leads/columnGuess";
+import { cellText, isXlsxName, readSheetText, SheetError, SHEET_ACCEPT, trimToTable } from "../src/ui/screens/leads/sheet";
 
 /**
  * Excel import and PDF export for the lead, contact and company lists (FIG-1680 follow-up, requested by Sales). Both run in the browser on
@@ -91,6 +92,69 @@ describe("Excel import: .xlsx becomes the CSV text the wizards read", () => {
     expect(SHEET_ACCEPT).toContain(".csv");
     expect(isXlsxName("Leads.XLSX")).toBe(true);
     expect(isXlsxName("leads.csv")).toBe(false);
+  });
+});
+
+describe("Excel import: a sheet with a title and a summary band above the table", () => {
+  it("finds the real header row and drops the rows above it", async () => {
+    const file = await workbook((s) => {
+      s.getCell("B2").value = "Schools Outreach CRM";
+      s.getCell("B4").value = "Outreach Target";
+      s.mergeCells("B4:C4");
+      s.getCell("D4").value = "Schools Logged";
+      s.getCell("B5").value = 20;
+      s.mergeCells("B5:C5");
+      s.getCell("D5").value = 0;
+      s.getRow(8).values = [undefined, "School Name", "Email Address", "Phone Number", "Urgency Level"];
+      s.getRow(12).values = [undefined, "Rockside academy", "info@rocksideacademy.sc.ke", "254 734 808 355", "Medium"];
+      s.getRow(13).values = [undefined, "Tassia School", "info@tassiaschool.co.ke", "254 722 603 400", "High"];
+    });
+    const rows = parseCsv(await readSheetText(file));
+    expect(rows[0]).toEqual(["School Name", "Email Address", "Phone Number", "Urgency Level"]);
+    expect(rows).toHaveLength(3);
+    expect(rows[1]![0]).toBe("Rockside academy");
+  });
+
+  it("leaves an ordinary sheet alone: the first row stays the header", () => {
+    const rows = [["name", "phone", "email"], ["Acme", "+254700000001", "a@acme.co"], ["Baraka", "+254700000002", "b@baraka.co"]];
+    expect(trimToTable(rows)).toEqual(rows);
+  });
+
+  it("drops columns that have no heading, since nothing can be mapped to them", () => {
+    const rows = [["name", "phone", ""], ["Acme", "+254700000001", "Nairobi"]];
+    expect(trimToTable(rows)[0]).toEqual(["name", "phone"]);
+  });
+});
+
+describe("Import wizards: columns are matched by name, loosely", () => {
+  const fields = [
+    { key: "company", label: "Company or person", synonyms: ["name", "company", "school", "schoolname"] },
+    { key: "contactEmail", label: "Email", synonyms: ["email", "emailaddress"] },
+    { key: "contactPhone", label: "Phone", synonyms: ["phone", "phonenumber"] },
+    { key: "contactName", label: "Person's name (optional)", synonyms: ["contactperson", "contactname"] },
+    { key: "temperature", label: "Temperature", synonyms: ["temperature", "urgency", "urgencylevel"] },
+    { key: "notes", label: "Notes", synonyms: ["notes", "feedback", "clientfeedback"] },
+  ];
+
+  it("maps School Name, Email Address, Phone Number, Urgency Level and Client Feedback", () => {
+    expect(guessMapping(fields, ["School Name", "Email Address", "Phone Number", "Date Contacted", "Contact Method", "Urgency Level", "Client Feedback", "Follow-up"])).toEqual({
+      company: "School Name",
+      contactEmail: "Email Address",
+      contactPhone: "Phone Number",
+      temperature: "Urgency Level",
+      notes: "Client Feedback",
+    });
+  });
+
+  it("prefers an exact header, and uses a column for one field only", () => {
+    const m = guessMapping(fields, ["Contact Person Name", "Company", "Email"]);
+    expect(m.company).toBe("Company");
+    expect(m.contactEmail).toBe("Email");
+    expect(m.contactName).toBe("Contact Person Name");
+  });
+
+  it("does not match on a short word by accident", () => {
+    expect(guessMapping(fields, ["ID", "No", "Region"])).toEqual({});
   });
 });
 

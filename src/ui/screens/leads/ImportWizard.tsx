@@ -7,6 +7,7 @@ import { useMember } from "../../data/member";
 import { newIdempotencyKey } from "../../data/client";
 import { parseCsv, toCsv } from "./csv";
 import { downloadText, useReference } from "./data";
+import { guessMapping } from "./columnGuess";
 import { readSheetText, sheetProblem, SHEET_ACCEPT } from "./sheet";
 import { Icon } from "./icons";
 import { ModalShell } from "./overlay";
@@ -20,18 +21,18 @@ interface FieldDef {
 }
 
 const FIELDS: FieldDef[] = [
-  { key: "company", label: "Company or person", synonyms: ["name", "company", "companyname", "lead", "leadname"] },
-  { key: "contactEmail", label: "Email", synonyms: ["email", "emailaddress", "contactemail"] },
-  { key: "contactPhone", label: "Phone", synonyms: ["phone", "phonenumber", "mobile", "contactphone", "tel"] },
-  { key: "leadSource", label: "Source", synonyms: ["source", "leadsource"] },
-  { key: "serviceInterest", label: "Service", synonyms: ["service", "serviceinterest"] },
-  { key: "temperature", label: "Temperature (Hot, Warm, Cold)", synonyms: ["temperature", "temp"] },
+  { key: "company", label: "Company or person", synonyms: ["name", "company", "companyname", "lead", "leadname", "school", "schoolname", "organisation", "organization", "business", "institution", "client", "customer", "account"] },
+  { key: "contactEmail", label: "Email", synonyms: ["email", "emailaddress", "contactemail", "mail", "emailid"] },
+  { key: "contactPhone", label: "Phone", synonyms: ["phone", "phonenumber", "mobile", "contactphone", "tel", "telephone", "cell", "whatsapp", "contactnumber"] },
+  { key: "contactName", label: "Person's name (optional)", synonyms: ["contactperson", "contactname", "person", "fullname", "representative", "attention", "pointofcontact"] },
+  { key: "leadSource", label: "Source", synonyms: ["source", "leadsource", "channel", "howfound"] },
+  { key: "serviceInterest", label: "Service", synonyms: ["service", "serviceinterest", "interest", "product"] },
+  { key: "temperature", label: "Temperature (Hot, Warm, Cold)", synonyms: ["temperature", "temp", "urgency", "urgencylevel", "priority"] },
   { key: "ownerEmail", label: "Owner (by email)", synonyms: ["owner", "owneremail", "assignedto"] },
   { key: "leadStatus", label: "Status (by name)", synonyms: ["status", "leadstatus"] },
-  { key: "notes", label: "Notes", synonyms: ["notes", "note", "message", "comments"] },
+  { key: "notes", label: "Notes", synonyms: ["notes", "note", "message", "comments", "comment", "feedback", "clientfeedback", "remarks", "description"] },
 ];
 const CHUNK = 500;
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 interface Outcome {
   row: number;
@@ -79,11 +80,7 @@ export function ImportWizard({ onClose, onDone }: { onClose: () => void; onDone:
       const rows = parseCsv(await readSheetText(file));
       const [h, ...rest] = rows;
       if (!h || h.length < 2 || h.every((c) => !c.trim()) || rest.length === 0) throw new Error("empty");
-      const guess: Record<string, string> = {};
-      for (const f of FIELDS) {
-        const hit = h.find((col) => [f.key, f.label, ...f.synonyms].some((s) => norm(s) === norm(col)));
-        if (hit) guess[f.key] = hit;
-      }
+      const guess = guessMapping(FIELDS, h);
       setFileName(file.name);
       setHeader(h);
       setData(rest);
@@ -146,6 +143,8 @@ export function ImportWizard({ onClose, onDone }: { onClose: () => void; onDone:
 
   const pct = data.length ? Math.round((done / data.length) * 100) : 0;
   const needLook = totals.duplicatesSkipped + totals.alreadyConverted + totals.failed;
+  // Rows that came in but have something to add later (a company or source that does not exist yet, a missing phone).
+  const toAdd = new Set(totals.errors.filter((e) => e.outcome === "warning").map((e) => e.row)).size;
   const title = step === "map" ? "Check the columns" : "Import leads from CSV or Excel";
 
   return (
@@ -296,6 +295,7 @@ export function ImportWizard({ onClose, onDone }: { onClose: () => void; onDone:
                 {totals.created} of {totals.totalRows} rows imported.
               </strong>
               <small>{needLook ? `${needLook} row${needLook === 1 ? "" : "s"} need a look before they can come in.` : "Everything came in."}</small>
+              {toAdd ? <small>{`${toAdd} imported lead${toAdd === 1 ? " has" : "s have"} details to add later (listed below, and in the report).`}</small> : null}
             </div>
           </div>
           {problem ? (
@@ -331,7 +331,7 @@ export function ImportWizard({ onClose, onDone }: { onClose: () => void; onDone:
               {totals.errors.slice(0, 50).map((e, i) => (
                 <div key={i} role="listitem">
                   <code>Row {e.row}</code>
-                  <span style={e.outcome === "failed" ? { color: "var(--red)" } : undefined}>{e.reason}</span>
+                  <span style={e.outcome === "failed" ? { color: "var(--red)" } : e.outcome === "warning" ? { color: "var(--amber, #a15c00)" } : undefined}>{e.reason}</span>
                 </div>
               ))}
               {totals.errors.length > 50 ? (
