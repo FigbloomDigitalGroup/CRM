@@ -5,7 +5,7 @@ import { describeError } from "../../errors";
 import { useToast } from "../../components/toast";
 import { useApi } from "../../data/hooks";
 import { useMember } from "../../data/member";
-import { newIdempotencyKey } from "../../data/client";
+import { getCsvText, newIdempotencyKey } from "../../data/client";
 import { parseCsv, toCsv } from "../leads/csv";
 import { downloadText } from "../leads/data";
 import { csvToPdf, downloadPdf, pdfSubtitle, PdfExportError } from "../leads/pdfExport";
@@ -234,7 +234,6 @@ export const CONTACT_EXPORT_BULK_ROWS = 500;
  */
 export function ContactsExportDialog({ total, filters, format = "csv", onClose }: { total: number; filters: Record<string, string>; format?: "csv" | "pdf"; onClose: () => void }) {
   const { orgSlug, userName } = useMember();
-  const api = useApi();
   const toast = useToast();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
@@ -246,7 +245,8 @@ export function ContactsExportDialog({ total, filters, format = "csv", onClose }
     (async () => {
       try {
         const query = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
-        const csv = (await api.call("exportContactDirectory", { params: { orgSlug }, query: query as never })) as string;
+        // Read as text: the frozen contract lists this operation as JSON, so the typed client would try to parse the CSV (same as the audit export).
+        const csv = await getCsvText(`/api/orgs/${orgSlug}/contacts/directory/export`, query as Record<string, string>);
         const stamp = new Date().toISOString().slice(0, 10);
         if (format === "pdf") {
           downloadPdf(`contacts-${stamp}.pdf`, await csvToPdf({ title: "Contacts", subtitle: pdfSubtitle(userName, csv), csv }));
@@ -261,7 +261,7 @@ export function ContactsExportDialog({ total, filters, format = "csv", onClose }
         setBusy(false);
       }
     })();
-  }, [api, orgSlug, filters, toast, onClose, format, userName]);
+  }, [orgSlug, filters, toast, onClose, format, userName]);
 
   return (
     <ModalShell

@@ -10,7 +10,7 @@ import { NoAccess } from "../../components/states";
 import { useToast } from "../../components/toast";
 import { useApi, useApiMutation, useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
-import { newIdempotencyKey } from "../../data/client";
+import { getCsvText, newIdempotencyKey } from "../../data/client";
 import { downloadText } from "../leads/data";
 import { csvToPdf, downloadPdf, pdfSubtitle, PdfExportError } from "../leads/pdfExport";
 import { Icon } from "../leads/icons";
@@ -138,7 +138,8 @@ export function CompaniesScreen() {
   async function exportCsv(format: "csv" | "pdf" = "csv") {
     setExporting(true);
     try {
-      const csv = (await api.call("exportCompanyDirectory", { params: { orgSlug }, query: { tab: query.tab, q: search || undefined, lifecycle: lifecycle || undefined } as never })) as unknown as string;
+      // Read as text: the frozen contract lists this operation as JSON, so the typed client would try to parse the CSV (same as the audit export).
+      const csv = await getCsvText(`/api/orgs/${orgSlug}/companies/directory/export`, { tab: query.tab, q: search || undefined, lifecycle: lifecycle || undefined });
       const stamp = new Date().toISOString().slice(0, 10);
       if (format === "pdf") downloadPdf(`companies-${stamp}.pdf`, await csvToPdf({ title: "Companies", subtitle: pdfSubtitle(member.userName, csv), csv }));
       else downloadText(`companies-${stamp}.csv`, csv);
