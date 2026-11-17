@@ -3,7 +3,7 @@ import type { AuthContext } from "../auth/context";
 import { hasPermission, requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
-import type { AccountKind } from "../auth/accountAccess";
+import { canWorkAccounts, type AccountKind } from "../auth/accountAccess";
 import { processInBatches } from "../lib/asyncBatch";
 import { parseCsvRows } from "../lib/csv";
 import { recordAuditEvent } from "../repositories/auditEvents";
@@ -279,6 +279,8 @@ interface RunImportOptions<TCandidate> {
   /** A reason to leave this row out (a duplicate, an already-converted lead), or null to import it. */
   findHold: (candidate: TCandidate, strategy: DuplicateStrategy) => Promise<RowHold | null>;
   create: (candidate: TCandidate) => Promise<{ id: string }>;
+  /** Things to add later on a row that WAS imported (a company that could not be linked, a missing phone): each becomes a "warning" line in the report. */
+  warningsFor?: (rawRow: Record<string, string>) => string[] | undefined;
   /** Tags from the row, applied after the record exists. A failure is a warning, not a failed row. */
   afterCreate?: (record: { id: string }, rawRow: Record<string, string>, mapping: Record<string, string | undefined>) => Promise<void>;
   hooks?: ImportHooks;
@@ -315,6 +317,7 @@ async function runImport<TCandidate>(
       }
       const record = await opts.create(candidate);
       summary.created += 1;
+      for (const w of opts.warningsFor?.(rawRow) ?? []) note({ row, reason: `Imported, but ${w}`, outcome: "warning" });
       if (opts.afterCreate) {
         try {
           await opts.afterCreate(record, rawRow, mapping);
@@ -539,6 +542,63 @@ export interface ImportLeadsInput {
   hooks?: ImportHooks;
 }
 
+const TEMPERATURE_WORDS: Record<string, "HOT" | "WARM" | "COLD"> = {
+  HOT: "HOT", HIGH: "HOT", URGENT: "HOT",
+  WARM: "WARM", MEDIUM: "WARM", MED: "WARM", NORMAL: "WARM",
+  COLD: "COLD", LOW: "COLD",
+};
+
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** "254 734 808 355 / 254 718 164 141": the first number is the phone, the rest are kept in the contact's notes. */
+function splitPhones(raw: string | undefined): { phone?: string; others?: string } {
+  if (!raw) return {};
+  const parts = raw.split(/\s*(?:\/|;|,|\bor\b|\band\b)\s*/i).map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return {};
+  const first = parts[0]!.slice(0, 40);
+  return { phone: first, others: parts.length > 1 ? parts.slice(1).join(", ") : undefined };
+}
+
+async function findCompaniesByName(organizationId: string, name: string): Promise<{ id: string }[]> {
+  return adminDb.company.findMany({
+    where: { organizationId, archivedAt: null, mergedIntoId: null, name: { equals: name, mode: "insensitive" } },
+    select: { id: true },
+    take: 2,
+  });
+}
+
+async function defaultLeadStatusId(organizationId: string): Promise<string | undefined> {
+  const named = await adminDb.leadStatus.findFirst({ where: { organizationId, key: "NEW", isActive: true }, select: { id: true } });
+  if (named) return named.id;
+  const first = await adminDb.leadStatus.findFirst({ where: { organizationId, isActive: true }, orderBy: { sequence: "asc" }, select: { id: true } });
+  return first?.id;
+}
+
+interface LeadCandidate {
+  organizationId: string;
+  leadStatusId: string;
+  companyId?: string;
+  contactId?: string;
+  leadSourceId?: string;
+  serviceInterestId?: string;
+  ownerMembershipId: string;
+  temperature?: "HOT" | "WARM" | "COLD";
+  createdByMembershipId: string;
+  notes?: string;
+  customFields?: never;
+  /** Made when the lead is saved, not before: a row that turns out to be a duplicate must leave nothing behind. */
+  _newCompanyName?: string;
+  _newContact?: { firstName: string; lastName?: string; email?: string; phone?: string; notes?: string };
+  _contactEmail?: string;
+  _contactPhone?: string;
+}
+
+/**
+ * Leads from a spreadsheet. A row comes in with whatever it has: the company is linked when it exists and created when it does not, the
+ * person is reused by email or created from the email and phone, and anything the file names that this organisation does not have yet (a
+ * source, a service, a status, an owner, a temperature word) is left at its default and reported as a note to add later. Only a row with
+ * nothing in it at all, or one the importer's role may not create, is refused. Email, phone and notes are kept, on the contact and the lead.
+ */
 export async function importLeads(
   ctx: AuthContext,
   input: ImportLeadsInput,
@@ -547,114 +607,212 @@ export async function importLeads(
   // An import creates leads, so it needs the same right as creating one by hand (P2-26).
   requirePermission(ctx, "leads.create");
   const canAssign = hasPermission(ctx, "leads.assign");
+  const canCreateCompanies = hasPermission(ctx, "companies.create");
+  const canCreateContacts = hasPermission(ctx, "contacts.create");
+  const orgId = ctx.organizationId;
+
+  const warningsByRow = new WeakMap<Record<string, string>, string[]>();
+  // Rows are processed in parallel batches: one company or contact per name or email, however many rows name it.
+  const companyMemo = new Map<string, Promise<string>>();
+  const contactMemo = new Map<string, Promise<string>>();
+  let companiesCreated = 0;
+  let contactsCreated = 0;
+
+  const getOrCreateCompany = (name: string): Promise<string> => {
+    const key = name.toLowerCase();
+    let p = companyMemo.get(key);
+    if (!p) {
+      p = (async () => {
+        const [existing] = await findCompaniesByName(orgId, name);
+        if (existing) return existing.id;
+        const made = await createCompany({
+          organizationId: orgId,
+          name,
+          createdByMembershipId: ctx.membershipId,
+          ownerMembershipId: canWorkAccounts(ctx.permissionKeys, "companies") ? ctx.membershipId : undefined,
+        });
+        companiesCreated += 1;
+        return made.id;
+      })();
+      companyMemo.set(key, p);
+    }
+    return p;
+  };
 
   const summary = await runImport(input.mapping, {
-    organizationId: ctx.organizationId,
+    organizationId: orgId,
     fileStream: input.fileStream,
     duplicateStrategy: input.duplicateStrategy,
     hooks: input.hooks,
-    resolveCandidate: async (rawRow, mapping) => {
-      const leadStatusId = await resolveByName(
-        ctx.organizationId,
-        "leadStatus",
-        requiredCell(rawRow, mapping, "leadStatus"),
-        "leadStatus",
-      );
-      if (!leadStatusId) {
-        throw new RowValidationError('"leadStatus" is required.');
-      }
-      const contactEmail = optionalCell(rawRow, mapping, "contactEmail");
-      const contactPhone = optionalCell(rawRow, mapping, "contactPhone");
-      const companyId = await resolveCompanyIdByName(
-        ctx.organizationId,
-        optionalCell(rawRow, mapping, "company"),
-      );
-      const leadSourceId = await resolveByName(
-        ctx.organizationId,
-        "leadSource",
-        optionalCell(rawRow, mapping, "leadSource"),
-        "leadSource",
-      );
-      const serviceInterestId = await resolveByName(
-        ctx.organizationId,
-        "service",
-        optionalCell(rawRow, mapping, "serviceInterest"),
-        "serviceInterest",
-      );
-      // Owner defaults to the importer. Naming someone else is an assignment: it needs leads.assign and an eligible owner.
-      let ownerMembershipId = ctx.membershipId;
-      const namedOwner = await resolveOwnerMembershipId(
-        ctx.organizationId,
-        optionalCell(rawRow, mapping, "ownerEmail"),
-      );
-      if (namedOwner && namedOwner !== ctx.membershipId) {
-        if (!canAssign) {
-          throw new RowValidationError("You can only import leads that belong to you. Leave the owner column empty or use your own email.");
-        }
-        try {
-          await assertEligibleLeadOwner(ctx.organizationId, namedOwner);
-        } catch (err) {
-          if (err instanceof ValidationError) throw new RowValidationError(err.message);
-          throw err;
-        }
-        ownerMembershipId = namedOwner;
-      }
-      const temperatureRaw = optionalCell(
-        rawRow,
-        mapping,
-        "temperature",
-      )?.toUpperCase();
-      if (
-        temperatureRaw &&
-        temperatureRaw !== "HOT" &&
-        temperatureRaw !== "WARM" &&
-        temperatureRaw !== "COLD"
-      ) {
-        throw new RowValidationError(
-          `"temperature" must be HOT, WARM, or COLD -- got "${temperatureRaw}".`,
-        );
+    warningsFor: (rawRow) => warningsByRow.get(rawRow),
+    resolveCandidate: async (rawRow, mapping): Promise<LeadCandidate> => {
+      const warns: string[] = [];
+      warningsByRow.set(rawRow, warns);
+
+      const companyName = optionalCell(rawRow, mapping, "company");
+      const rawEmail = optionalCell(rawRow, mapping, "contactEmail");
+      const { phone, others } = splitPhones(optionalCell(rawRow, mapping, "contactPhone"));
+      const personName = optionalCell(rawRow, mapping, "contactName");
+      const notes = optionalCell(rawRow, mapping, "notes");
+      const sourceName = optionalCell(rawRow, mapping, "leadSource");
+      const serviceName = optionalCell(rawRow, mapping, "serviceInterest");
+      const ownerEmail = optionalCell(rawRow, mapping, "ownerEmail");
+      const temperatureRaw = optionalCell(rawRow, mapping, "temperature");
+      if (![companyName, rawEmail, phone, personName, notes, sourceName, serviceName, ownerEmail, temperatureRaw].some(Boolean)) {
+        throw new RowValidationError("This row is empty.");
       }
 
-      const extra = await extraColumns(ctx.organizationId, "LEAD", rawRow, mapping);
+      // Status: the file's, else the organisation's default. An unknown name is not a reason to lose the row.
+      const statusName = optionalCell(rawRow, mapping, "leadStatus");
+      let leadStatusId = statusName ? (await findByOrgAndName("leadStatus", orgId, statusName))?.id : undefined;
+      if (!leadStatusId) {
+        leadStatusId = await defaultLeadStatusId(orgId);
+        if (statusName) warns.push(`the status "${statusName}" is not one of your lead statuses, so the default was used. Change it on the lead.`);
+      }
+      if (!leadStatusId) throw new RowValidationError("This organisation has no lead status to start a lead in.");
+
+      // Company: link the one that exists, create it when it does not (the importer's role permitting).
+      let companyId: string | undefined;
+      let newCompanyName: string | undefined;
+      if (companyName) {
+        const found = await findCompaniesByName(orgId, companyName);
+        if (found.length === 1) companyId = found[0]!.id;
+        else if (found.length > 1) warns.push(`more than one company is named "${companyName}", so the lead is not linked to one. Link it on the lead.`);
+        else if (canCreateCompanies) newCompanyName = companyName;
+        else warns.push(`there is no company named "${companyName}" and your role cannot create one. Ask for it to be added, then link the lead.`);
+      }
+
+      // Person: reuse a contact with this email, else make one from what the row has.
+      let email: string | undefined;
+      if (rawEmail) {
+        if (EMAIL_SHAPE.test(rawEmail)) email = rawEmail.toLowerCase();
+        else warns.push(`"${rawEmail}" is not a valid email address, so it was not saved. Add the right one on the contact.`);
+      }
+      let contactId: string | undefined;
+      let newContact: LeadCandidate["_newContact"];
+      const existingContact = email
+        ? await adminDb.contact.findFirst({ where: { organizationId: orgId, archivedAt: null, mergedIntoId: null, email: { equals: email, mode: "insensitive" } }, select: { id: true } })
+        : null;
+      if (existingContact) contactId = existingContact.id;
+      else if (email || phone || personName) {
+        if (canCreateContacts) {
+          // A school or business often has no named person: the contact takes the company's name until someone adds the person.
+          const named = personName ?? companyName ?? email?.split("@")[0] ?? phone ?? "Contact";
+          const t = named.trim().replace(/\s+/g, " ");
+          const at = t.indexOf(" ");
+          newContact = {
+            firstName: personName ? (at === -1 ? t : t.slice(0, at)) : t,
+            lastName: personName && at !== -1 ? t.slice(at + 1) : undefined,
+            email,
+            phone,
+            notes: others ? `Other phone: ${others}` : undefined,
+          };
+        } else warns.push("your role cannot create contacts, so the email and phone were not saved. Add the contact on the lead.");
+      }
+      if (!email && !phone && !personName) warns.push(companyName ? "there is no email or phone yet. Add one on the lead." : "there is no company, email or phone yet. Add them on the lead.");
+
+      const leadSourceId = sourceName ? (await findByOrgAndName("leadSource", orgId, sourceName))?.id : undefined;
+      if (sourceName && !leadSourceId) warns.push(`the source "${sourceName}" is not one of your lead sources, so it was left blank. Set it on the lead.`);
+      const serviceInterestId = serviceName ? (await findByOrgAndName("service", orgId, serviceName))?.id : undefined;
+      if (serviceName && !serviceInterestId) warns.push(`the service "${serviceName}" is not one of your services, so it was left blank. Set it on the lead.`);
+
+      // Owner defaults to the importer. Naming someone else is an assignment: it needs leads.assign and an eligible owner.
+      let ownerMembershipId = ctx.membershipId;
+      if (ownerEmail) {
+        let namedOwner: string | undefined;
+        try {
+          namedOwner = await resolveOwnerMembershipId(orgId, ownerEmail);
+        } catch (err) {
+          if (!(err instanceof RowValidationError)) throw err;
+          warns.push(`nobody on the team has the email "${ownerEmail}", so the lead is yours. Reassign it on the lead.`);
+        }
+        if (namedOwner && namedOwner !== ctx.membershipId) {
+          if (!canAssign) throw new RowValidationError("You can only import leads that belong to you. Leave the owner column empty or use your own email.");
+          try {
+            await assertEligibleLeadOwner(orgId, namedOwner);
+          } catch (err) {
+            if (err instanceof ValidationError) throw new RowValidationError(err.message);
+            throw err;
+          }
+          ownerMembershipId = namedOwner;
+        }
+      }
+
+      let temperature: LeadCandidate["temperature"];
+      if (temperatureRaw) {
+        temperature = TEMPERATURE_WORDS[temperatureRaw.trim().toUpperCase()];
+        if (!temperature) warns.push(`"${temperatureRaw}" is not a temperature (hot, warm or cold), so the default was used. Set it on the lead.`);
+      }
+
+      const extra = await extraColumns(orgId, "LEAD", rawRow, mapping);
       return {
         customFields: extra.customFields as never,
-        organizationId: ctx.organizationId,
+        organizationId: orgId,
         leadStatusId,
         companyId,
+        contactId,
         leadSourceId,
         serviceInterestId,
         ownerMembershipId,
-        temperature: temperatureRaw as "HOT" | "WARM" | "COLD" | undefined,
+        temperature,
         createdByMembershipId: ctx.membershipId,
-        notes: optionalCell(rawRow, mapping, "notes"),
-        _contactEmail: contactEmail,
-        _contactPhone: contactPhone,
+        notes,
+        _newCompanyName: newCompanyName,
+        _newContact: newContact,
+        _contactEmail: email,
+        _contactPhone: phone,
       };
     },
     findHold: async (candidate, strategy) => {
       if (strategy !== "skip") return null;
       const probe = { contactEmail: candidate._contactEmail, contactPhone: candidate._contactPhone, companyId: candidate.companyId };
-      const converted = await findConvertedLeadMatches(ctx.organizationId, probe);
+      const converted = await findConvertedLeadMatches(orgId, probe);
       if (converted.length > 0) {
         return { outcome: "already_converted", matchedId: converted[0]!.id, reason: "Skipped: this contact or company already has a lead that became a deal." };
       }
-      const open = await findPossibleDuplicateLeads(ctx.organizationId, probe);
+      const open = await findPossibleDuplicateLeads(orgId, probe);
       if (open.length > 0) return { outcome: "duplicate", matchedId: open[0]!.id, reason: "Skipped: an open lead for this contact or company already exists." };
       const found = await findDuplicates(ctx, { entity: "lead", email: candidate._contactEmail, phone: candidate._contactPhone, companyId: candidate.companyId });
       const high = found.candidates.find((c) => c.confidence === "high");
       return high ? { outcome: "duplicate", matchedId: high.id, reason: `Skipped: looks like the existing record "${high.label}".` } : null;
     },
-    create: ({ _contactEmail, _contactPhone, ...candidate }) =>
-      createLead(candidate),
+    create: async ({ _contactEmail, _contactPhone, _newCompanyName, _newContact, ...candidate }) => {
+      let companyId = candidate.companyId;
+      if (!companyId && _newCompanyName) companyId = await getOrCreateCompany(_newCompanyName);
+      let contactId = candidate.contactId;
+      if (!contactId && _newContact) {
+        const make = async () => {
+          const made = await createContact({
+            organizationId: orgId,
+            ..._newContact,
+            companyId,
+            createdByMembershipId: ctx.membershipId,
+            ownerMembershipId: canWorkAccounts(ctx.permissionKeys, "contacts") ? ctx.membershipId : undefined,
+          });
+          contactsCreated += 1;
+          return made.id;
+        };
+        if (_newContact.email) {
+          const key = _newContact.email.toLowerCase();
+          let p = contactMemo.get(key);
+          if (!p) {
+            p = make();
+            contactMemo.set(key, p);
+          }
+          contactId = await p;
+        } else contactId = await make();
+      }
+      return createLead({ ...candidate, companyId, contactId });
+    },
     afterCreate: (record, rawRow, mapping) => applyTags(ctx, "lead", record.id, rawRow, mapping),
   });
 
   await recordAuditEvent({
-    organizationId: ctx.organizationId,
+    organizationId: orgId,
     actorMembershipId: ctx.membershipId,
     action: "leads.imported",
     entityType: "Lead",
-    metadata: { ...summary, errors: undefined },
+    metadata: { ...summary, errors: undefined, companiesCreated, contactsCreated },
   });
 
   return summary;

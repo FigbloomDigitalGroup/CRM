@@ -7,6 +7,7 @@ import { useMember } from "../../data/member";
 import { newIdempotencyKey } from "../../data/client";
 import { parseCsv, toCsv } from "../leads/csv";
 import { Icon } from "../leads/icons";
+import { guessMapping } from "../leads/columnGuess";
 import { readSheetText, sheetProblem, SHEET_ACCEPT } from "../leads/sheet";
 import { ModalShell } from "../leads/overlay";
 
@@ -44,7 +45,6 @@ const FIELDS: Record<Kind, FieldDef[]> = {
 };
 
 const CHUNK = 500;
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 interface Totals {
   totalRows: number;
@@ -79,11 +79,7 @@ export function ImportCsvDialog({ kind, onClose, onDone }: { kind: Kind; onClose
       if (file.size > 25 * 1024 * 1024) throw new Error("That file is over 25 MB.");
       const [h, ...rest] = parseCsv(await readSheetText(file));
       if (!h || h.length < 2 || rest.length === 0) throw new Error("That file has no rows to import. Check that the first row holds the column names.");
-      const guess: Record<string, string> = {};
-      for (const f of fields) {
-        const hit = h.find((col) => [f.key, f.label].some((s) => norm(s) === norm(col)));
-        if (hit) guess[f.key] = hit;
-      }
+      const guess = guessMapping(fields, h);
       setFileName(file.name);
       setHeader(h);
       setData(rest);

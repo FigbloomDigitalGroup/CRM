@@ -17,6 +17,8 @@ export interface CreateLeadInput {
   ownerMembershipId?: string;
   createdByMembershipId?: string;
   qualificationData?: Prisma.InputJsonValue;
+  /** Free text kept on the lead (an import's notes column). */
+  notes?: string;
 }
 
 export async function createLead(input: CreateLeadInput) {
@@ -34,6 +36,7 @@ export async function createLead(input: CreateLeadInput) {
         createdByMembershipId: input.createdByMembershipId,
         qualificationData: input.qualificationData,
         customFields: input.customFields,
+        notes: input.notes,
       },
     }),
   );

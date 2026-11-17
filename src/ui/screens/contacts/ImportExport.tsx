@@ -9,6 +9,7 @@ import { getCsvText, newIdempotencyKey } from "../../data/client";
 import { parseCsv, toCsv } from "../leads/csv";
 import { downloadText } from "../leads/data";
 import { csvToPdf, downloadPdf, pdfSubtitle, PdfExportError } from "../leads/pdfExport";
+import { guessMapping } from "../leads/columnGuess";
 import { isXlsxName, readSheetText, sheetProblem, SHEET_ACCEPT } from "../leads/sheet";
 import { Icon } from "../leads/icons";
 import { ModalShell } from "../leads/overlay";
@@ -25,7 +26,6 @@ const FIELDS: { key: string; label: string; synonyms: string[]; required?: boole
   { key: "notes", label: "Notes", synonyms: ["notes", "note", "comments"] },
   { key: "ownerEmail", label: "Owner (by email)", synonyms: ["owner", "owneremail", "assignedto"] },
 ];
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 interface Result {
   totalRows: number;
@@ -64,11 +64,7 @@ export function ContactsImportDialog({ onClose, onDone }: { onClose: () => void;
       const rows = parseCsv(text);
       const [h, ...rest] = rows;
       if (!h || h.length < 1 || h.every((c) => !c.trim()) || rest.length === 0) throw new Error("empty");
-      const guess: Record<string, string> = {};
-      for (const fd of FIELDS) {
-        const hit = h.find((col) => [fd.key, fd.label, ...fd.synonyms].some((s) => norm(s) === norm(col)));
-        if (hit) guess[fd.key] = hit;
-      }
+      const guess = guessMapping(FIELDS, h);
       setFile(f);
       setSheetCsv(isXlsxName(f.name) ? text : null);
       setHeader(h);

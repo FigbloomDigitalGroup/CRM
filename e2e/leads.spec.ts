@@ -216,17 +216,17 @@ test.describe("the lead page", () => {
 });
 
 test.describe("import and export", () => {
-  test("import: map the columns, import, and get a usable report for the rows that did not come in", async ({ page }) => {
+  test("import: map the columns, import, and get a usable report for the rows that came in with details to add later", async ({ page }) => {
     const suffix = uniqueSuffix();
     await loginAs(page, MANAGEMENT);
-    // The API imports a lead against a company that already exists (it never creates one from a CSV row), so the two good rows name companies that do.
+    // A company that exists is linked, one that does not is created. A source this organisation does not have is not a reason to lose the row: it comes in with a note to add the source later.
     for (const n of ["One", "Two"]) expect((await apiPost(page, `/api/orgs/${ORG_SLUG}/companies`, { name: `E2E Import ${n} ${suffix}` })).ok()).toBe(true);
     await gotoAndSettle(page, `/o/${ORG_SLUG}/leads`);
     await page.getByRole("button", { name: "Import CSV" }).first().click();
     // The dialog is renamed by its step ("Check the columns", then the result), so it is found by role alone once it is open.
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText("Drop a CSV or Excel (.xlsx) file here")).toBeVisible();
-    const csv = ["name,phone,email,source,service", `E2E Import One ${suffix},+254700000011,one.${suffix}@example.com,Phone,`, `E2E Import Two ${suffix},+254700000012,two.${suffix}@example.com,Website,`, `E2E Ghost ${suffix},+254700000013,,,`].join("\n");
+    const csv = ["name,phone,email,source,service", `E2E Import One ${suffix},+254700000011,one.${suffix}@example.com,Phone,`, `E2E Import Two ${suffix},+254700000012,two.${suffix}@example.com,Website,`, `E2E Ghost ${suffix},+254700000013,,Unknown Source ${suffix},`].join("\n");
     await dialog.locator('input[type="file"]').setInputFiles({ name: "leads.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
     await expect(dialog.getByRole("heading", { name: "Check the columns" })).toBeVisible();
     await expect(dialog.getByLabel("Company or person")).toHaveValue("name");

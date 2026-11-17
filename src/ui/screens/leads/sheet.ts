@@ -67,6 +67,31 @@ export function cellText(value: unknown): string {
   return String(value).trim();
 }
 
+/**
+ * Finds the table inside a sheet that has a title, a summary band or notes above it (a "dashboard" style sheet: a heading, four totals, then
+ * the real column names). The header row is the one with the most different text cells among the first 40 rows; a number is not a column
+ * name, so a row of totals never wins. If the first row is nearly as wide as the winner it stays the header, so an ordinary sheet is read
+ * exactly as before. Columns with no name are dropped, because nothing can be mapped to them.
+ */
+export function trimToTable(rows: string[][]): string[][] {
+  if (rows.length < 2) return rows;
+  const score = (r: string[]) => new Set(r.filter((c) => c !== "" && !/^[\d\s.,+\-:/%]+$/.test(c)).map((c) => c.toLowerCase())).size;
+  const limit = Math.min(rows.length - 1, 40);
+  let best = 0;
+  let bestScore = score(rows[0]!);
+  for (let i = 1; i < limit; i += 1) {
+    const s = score(rows[i]!);
+    if (s > bestScore) {
+      best = i;
+      bestScore = s;
+    }
+  }
+  if (best !== 0 && score(rows[0]!) >= 0.7 * bestScore) best = 0;
+  const table = rows.slice(best);
+  const keep = table[0]!.map((h, i) => (h !== "" ? i : -1)).filter((i) => i >= 0);
+  return keep.length === 0 ? table : table.map((r) => keep.map((i) => r[i] ?? ""));
+}
+
 /** The first sheet of a workbook as CSV text. Throws a SheetError the wizards turn into a plain message. */
 export async function xlsxToCsvText(file: Blob): Promise<string> {
   const { default: ExcelJS } = await import("exceljs");
@@ -87,7 +112,7 @@ export async function xlsxToCsvText(file: Blob): Promise<string> {
     for (let c = 1; c <= columns; c += 1) line.push(cellText(row.getCell(c).value));
     if (line.some((cell) => cell !== "")) rows.push(line);
   });
-  return toCsv(rows);
+  return toCsv(trimToTable(rows));
 }
 
 /** The text of a chosen file as CSV, whether it is a CSV or an Excel workbook. */
