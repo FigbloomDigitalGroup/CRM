@@ -36,6 +36,6 @@ You can also search (Ctrl/Cmd K), add contacts and companies, and keep renewal d
 | Settings, the audit log and the bulk-export approvals | Management only. |
 | Organisation reports | You get **My metrics**: your own numbers. |
 
-**Import and Export (CSV):** you can import leads, contacts and companies, and export leads, contacts, companies and deals. Imported records belong to you (only Management can name another owner). An export holds only the rows you can see, with hidden values left out. Exports are limited per hour, a file holds at most 20,000 rows, and Management is told about large ones. Every import and export is recorded.
+**Import and Export (CSV, Excel and PDF):** you can import leads, contacts and companies from a CSV file or an Excel sheet (.xlsx, first sheet, column names in the first row; the button says Import CSV / Excel), and export leads, contacts, companies and deals as CSV or as a PDF (Export PDF, up to 1,000 rows; use CSV for more). A PDF holds exactly what the CSV would hold for you. Imported records belong to you (only Management can name another owner). An export holds only the rows you can see, with hidden values left out. Exports are limited per hour, a file holds at most 20,000 rows, and Management is told about large ones. Every import and export is recorded.
 
 If a page says "no access", it tells you who to ask. Moving a deal to another stage is not possible from the phone, so nothing is overwritten while you are offline. Use a computer for that.

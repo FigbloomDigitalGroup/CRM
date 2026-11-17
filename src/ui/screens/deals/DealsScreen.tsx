@@ -4,6 +4,9 @@ import { AlertTriangle, ArrowLeftRight, Archive, Ban, Briefcase, Calendar, Clock
 import Link from "next/link";
 import { useState, type DragEvent, type ReactNode } from "react";
 import { useMember } from "../../data/member";
+import { getCsvText } from "../../data/client";
+import { describeError } from "../../errors";
+import { csvToPdf, downloadPdf, pdfSubtitle, PdfExportError } from "../leads/pdfExport";
 import { ErrorState } from "../../components/states";
 import { useToast } from "../../components/toast";
 import { usePipelines } from "../commercial/api";
@@ -30,6 +33,20 @@ export function DealsScreen() {
   const nameOf = useMemberName();
   const [view, setView] = useState<"board" | "list">("board");
   const [archived, setArchived] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  // The PDF is drawn from the same CSV the "Export CSV" link downloads, so it carries the same rows and the same masking for this role.
+  async function exportPdf() {
+    setPdfBusy(true);
+    try {
+      const csv = await getCsvText(`/api/orgs/${orgSlug}/deals/export`);
+      downloadPdf(`deals-${new Date().toISOString().slice(0, 10)}.pdf`, await csvToPdf({ title: "Deals", subtitle: pdfSubtitle(member.userName, csv), csv }));
+      toast.show({ message: "Exporting deals… your PDF is downloading." });
+    } catch (e) {
+      toast.show({ tone: "danger", message: e instanceof PdfExportError ? e.message : describeError(e).body });
+    } finally {
+      setPdfBusy(false);
+    }
+  }
   const [drawer, setDrawer] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [over, setOver] = useState<string | null>(null);
@@ -154,10 +171,16 @@ export function DealsScreen() {
             Show archived
           </label>
           {can("deals.export") ? (
-            <a className="fb-dtool" href={`/api/orgs/${orgSlug}/deals/export`} download onClick={() => toast.show({ message: "Exporting deals… your CSV is downloading." })}>
-              <Download size={16} aria-hidden="true" />
-              Export CSV
-            </a>
+            <>
+              <a className="fb-dtool" href={`/api/orgs/${orgSlug}/deals/export`} download onClick={() => toast.show({ message: "Exporting deals… your CSV is downloading." })}>
+                <Download size={16} aria-hidden="true" />
+                Export CSV
+              </a>
+              <button type="button" className="fb-dtool" disabled={pdfBusy} onClick={() => void exportPdf()}>
+                <Download size={16} aria-hidden="true" />
+                Export PDF
+              </button>
+            </>
           ) : null}
           {can("deals.create") ? (
             <button type="button" className="fb-dtool fb-dtool--primary" onClick={() => setDrawer(true)}>

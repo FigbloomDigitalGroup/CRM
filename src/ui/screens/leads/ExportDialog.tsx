@@ -8,6 +8,7 @@ import { useApi, useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { newIdempotencyKey } from "../../data/client";
 import { downloadText } from "./data";
+import { csvToPdf, downloadPdf, pdfSubtitle, PdfExportError } from "./pdfExport";
 import { Icon } from "./icons";
 import { ModalShell } from "./overlay";
 
@@ -24,11 +25,14 @@ interface RunLike {
  * Export CSV (L3): small exports download at once. Above 500 rows the server wants either the bulk-export right (Management: the export
  * runs in the background) or an approval; this shows which applies, asks for the approval, and shows its status instead of failing.
  */
-export function ExportDialog({ total, filters, onClose }: { total: number; filters: Record<string, string>; onClose: () => void }) {
-  const { orgSlug, can } = useMember();
+export function ExportDialog({ total, filters, format = "csv", onClose }: { total: number; filters: Record<string, string>; format?: "csv" | "pdf"; onClose: () => void }) {
+  const { orgSlug, can, userName } = useMember();
+  const pdf = format === "pdf";
   const api = useApi();
   const toast = useToast();
-  const needsApproval = total > EXPORT_APPROVAL_THRESHOLD;
+  // A PDF is for reading and sharing a list, not for taking a big file away, so it never goes through the bulk or approval path: it is
+  // built from the same download the CSV uses, and the PDF cap (1,000 rows) applies. Bigger lists are exported as CSV.
+  const needsApproval = !pdf && total > EXPORT_APPROVAL_THRESHOLD;
   const bulk = can("export.bulk");
   const [phase, setPhase] = useState<"working" | "confirm" | "approval" | "started" | "failed">(needsApproval ? (bulk ? "confirm" : "approval") : "working");
   const [reason, setReason] = useState("");
@@ -47,10 +51,25 @@ export function ExportDialog({ total, filters, onClose }: { total: number; filte
     try {
       const csv = (await api.call("getLeadsExport", { params: { orgSlug }, query: query as never })) as string;
       const stamp = new Date().toISOString().slice(0, 10);
-      downloadText(`leads-${stamp}.csv`, csv);
-      toast.show({ message: `Exporting leads… leads-${stamp}.csv is downloading` });
+      if (pdf) {
+        downloadPdf(`leads-${stamp}.pdf`, await csvToPdf({ title: "Leads", subtitle: pdfSubtitle(userName, csv), csv }));
+        toast.show({ message: `Exporting leads… leads-${stamp}.pdf is downloading` });
+      } else {
+        downloadText(`leads-${stamp}.csv`, csv);
+        toast.show({ message: `Exporting leads… leads-${stamp}.csv is downloading` });
+      }
       onClose();
     } catch (err) {
+      if (err instanceof PdfExportError) {
+        setError(err.message);
+        setPhase("failed");
+        return;
+      }
+      if (pdf && err instanceof ApiRequestError && err.status === 403) {
+        setError(`${describeError(err).body} A PDF follows the same limits as the CSV. Narrow the filters, or use Export CSV, which can ask for approval.`);
+        setPhase("failed");
+        return;
+      }
       if (err instanceof ApiRequestError && err.status === 403) {
         setPhase("approval");
         return;
@@ -107,7 +126,7 @@ export function ExportDialog({ total, filters, onClose }: { total: number; filte
             : undefined
       }
       onClose={onClose}
-      label="Export leads"
+      label={pdf ? "Export leads as PDF" : "Export leads"}
       footer={
         phase === "confirm" ? (
           <>

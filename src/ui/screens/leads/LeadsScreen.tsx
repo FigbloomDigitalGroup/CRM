@@ -110,7 +110,7 @@ export function LeadsScreen() {
   }, [wantsNew, router, pathname]);
   const [convertId, setConvertId] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
-  const [exporting, setExporting] = useState<{ ids?: string[] } | null>(null);
+  const [exporting, setExporting] = useState<{ ids?: string[]; format?: "csv" | "pdf" } | null>(null);
   const [hiddenCols, setHiddenCols] = useState<ColumnId[]>([]);
   const [saved, setSaved] = useState<Saved[]>([]);
   const [savingName, setSavingName] = useState<string | null>(null);
@@ -349,14 +349,20 @@ export function LeadsScreen() {
           {can("leads.import") ? (
             <button type="button" className="fb-ld-btn" onClick={() => setImporting(true)}>
               <Icon name="upload" size={16} />
-              Import CSV
+              Import CSV / Excel
             </button>
           ) : null}
           {can("leads.export") ? (
-            <button type="button" className="fb-ld-btn" onClick={() => setExporting({})}>
-              <Icon name="download" size={16} />
-              Export CSV
-            </button>
+            <>
+              <button type="button" className="fb-ld-btn" onClick={() => setExporting({})}>
+                <Icon name="download" size={16} />
+                Export CSV
+              </button>
+              <button type="button" className="fb-ld-btn" onClick={() => setExporting({ format: "pdf" })}>
+                <Icon name="download" size={16} />
+                Export PDF
+              </button>
+            </>
           ) : null}
           {can("leads.create") ? (
             <button type="button" className="fb-ld-btn fb-ld-btn--primary" onClick={() => setDrawer({})}>
@@ -742,7 +748,7 @@ export function LeadsScreen() {
               ) : null}
               {can("leads.import") ? (
                 <button type="button" className="fb-ld-btn" onClick={() => setImporting(true)}>
-                  Import CSV
+                  Import CSV / Excel
                 </button>
               ) : null}
             </div>
@@ -824,7 +830,7 @@ export function LeadsScreen() {
         />
       ) : null}
       {importing ? <ImportWizard onClose={() => setImporting(false)} onDone={() => void refresh()} /> : null}
-      {exporting ? <ExportDialog total={tab === "archived" || tab === "converted" ? total : (allCount.data?.total ?? total)} filters={{ q, leadStatusId: filters.status, leadSourceId: filters.source, ownerMembershipId: filters.owner }} onClose={() => setExporting(null)} /> : null}
+      {exporting ? <ExportDialog total={tab === "archived" || tab === "converted" ? total : (allCount.data?.total ?? total)} filters={{ q, leadStatusId: filters.status, leadSourceId: filters.source, ownerMembershipId: filters.owner }} format={exporting.format} onClose={() => setExporting(null)} /> : null}
     </div>
   );
 }

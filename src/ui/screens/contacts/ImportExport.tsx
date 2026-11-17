@@ -8,6 +8,8 @@ import { useMember } from "../../data/member";
 import { newIdempotencyKey } from "../../data/client";
 import { parseCsv, toCsv } from "../leads/csv";
 import { downloadText } from "../leads/data";
+import { csvToPdf, downloadPdf, pdfSubtitle, PdfExportError } from "../leads/pdfExport";
+import { isXlsxName, readSheetText, sheetProblem, SHEET_ACCEPT } from "../leads/sheet";
 import { Icon } from "../leads/icons";
 import { ModalShell } from "../leads/overlay";
 
@@ -24,15 +26,6 @@ const FIELDS: { key: string; label: string; synonyms: string[]; required?: boole
   { key: "ownerEmail", label: "Owner (by email)", synonyms: ["owner", "owneremail", "assignedto"] },
 ];
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-const readText = (file: Blob): Promise<string> =>
-  typeof file.text === "function"
-    ? file.text()
-    : new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(String(r.result ?? ""));
-        r.onerror = () => reject(r.error);
-        r.readAsText(file);
-      });
 
 interface Result {
   totalRows: number;
@@ -52,6 +45,8 @@ export function ContactsImportDialog({ onClose, onDone }: { onClose: () => void;
   const api = useApi();
   const [step, setStep] = useState<"pick" | "map" | "running" | "done" | "failed">("pick");
   const [file, setFile] = useState<File | null>(null);
+  // An Excel workbook is read in the browser and sent as the CSV text below; a CSV goes up as the file itself.
+  const [sheetCsv, setSheetCsv] = useState<string | null>(null);
   const [header, setHeader] = useState<string[]>([]);
   const [rowCount, setRowCount] = useState(0);
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -65,7 +60,8 @@ export function ContactsImportDialog({ onClose, onDone }: { onClose: () => void;
     setProblem(null);
     try {
       if (f.size > 25 * 1024 * 1024) throw new Error("That file is over 25 MB.");
-      const rows = parseCsv(await readText(f));
+      const text = await readSheetText(f);
+      const rows = parseCsv(text);
       const [h, ...rest] = rows;
       if (!h || h.length < 1 || h.every((c) => !c.trim()) || rest.length === 0) throw new Error("empty");
       const guess: Record<string, string> = {};
@@ -74,12 +70,13 @@ export function ContactsImportDialog({ onClose, onDone }: { onClose: () => void;
         if (hit) guess[fd.key] = hit;
       }
       setFile(f);
+      setSheetCsv(isXlsxName(f.name) ? text : null);
       setHeader(h);
       setRowCount(rest.filter((r) => r.some((c) => c.trim())).length);
       setMapping(guess);
       setStep("map");
-    } catch {
-      setProblem("That file couldn’t be read as a contacts list. Use a .csv file with a header row and at least one contact.");
+    } catch (err) {
+      setProblem(sheetProblem(err) ?? "That file couldn’t be read as a contacts list. Use a CSV or Excel (.xlsx) file with a header row and at least one contact.");
       setStep("failed");
     }
   }
@@ -89,7 +86,8 @@ export function ContactsImportDialog({ onClose, onDone }: { onClose: () => void;
     setStep("running");
     try {
       const form = new FormData();
-      form.append("file", file, file.name || "contacts.csv");
+      if (sheetCsv !== null) form.append("file", new Blob([sheetCsv], { type: "text/csv" }), (file.name || "contacts").replace(/\.xlsx$/i, ".csv"));
+      else form.append("file", file, file.name || "contacts.csv");
       form.append("mapping", JSON.stringify(mapping));
       form.append("duplicateStrategy", strategy);
       const r = (await api.call("postContactsImport", { params: { orgSlug }, body: form, idempotencyKey: newIdempotencyKey() } as never)) as Result;
@@ -105,7 +103,7 @@ export function ContactsImportDialog({ onClose, onDone }: { onClose: () => void;
   const canStart = Boolean(mapping.firstName);
   return (
     <ModalShell
-      title="Import contacts from CSV"
+      title="Import contacts from CSV or Excel"
       intro="Duplicates are flagged, never silently merged."
       onClose={step === "running" ? () => undefined : onClose}
       dismissible={step !== "running"}
@@ -131,12 +129,12 @@ export function ContactsImportDialog({ onClose, onDone }: { onClose: () => void;
         <div>
           <div className="fb-ct-drop">
             <Icon name="upload" size={26} />
-            <div className="fb-ct-drop__title">Choose a .csv file</div>
+            <div className="fb-ct-drop__title">Choose a CSV or Excel (.xlsx) file</div>
             <div className="fb-ct-drop__hint">Columns: first name, last name, company, phone, email, job title, department, owner</div>
             <button type="button" className="fb-ld-btn fb-ld-btn--primary fb-ld-btn--md" onClick={() => input.current?.click()}>
               Choose file
             </button>
-            <input ref={input} type="file" accept=".csv,text/csv" className="fb-sr-only" aria-label="Contacts CSV file" onChange={(e) => load(e.target.files?.[0])} />
+            <input ref={input} type="file" accept={SHEET_ACCEPT} className="fb-sr-only" aria-label="Contacts CSV file" onChange={(e) => load(e.target.files?.[0])} />
           </div>
           {problem ? (
             <div role="alert" className="fb-ld-error" style={{ marginTop: 12 }}>
@@ -234,8 +232,8 @@ export const CONTACT_EXPORT_BULK_ROWS = 500;
  * Export CSV: downloads what the list is showing (same filters). The API decides who may and how many; a refusal is explained here instead
  * of failing silently.
  */
-export function ContactsExportDialog({ total, filters, onClose }: { total: number; filters: Record<string, string>; onClose: () => void }) {
-  const { orgSlug } = useMember();
+export function ContactsExportDialog({ total, filters, format = "csv", onClose }: { total: number; filters: Record<string, string>; format?: "csv" | "pdf"; onClose: () => void }) {
+  const { orgSlug, userName } = useMember();
   const api = useApi();
   const toast = useToast();
   const [error, setError] = useState<string | null>(null);
@@ -249,22 +247,28 @@ export function ContactsExportDialog({ total, filters, onClose }: { total: numbe
       try {
         const query = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
         const csv = (await api.call("exportContactDirectory", { params: { orgSlug }, query: query as never })) as string;
-        downloadText(`contacts-${new Date().toISOString().slice(0, 10)}.csv`, csv);
-        toast.show({ message: "Exporting contacts… the CSV is downloading" });
+        const stamp = new Date().toISOString().slice(0, 10);
+        if (format === "pdf") {
+          downloadPdf(`contacts-${stamp}.pdf`, await csvToPdf({ title: "Contacts", subtitle: pdfSubtitle(userName, csv), csv }));
+          toast.show({ message: "Exporting contacts… the PDF is downloading" });
+        } else {
+          downloadText(`contacts-${stamp}.csv`, csv);
+          toast.show({ message: "Exporting contacts… the CSV is downloading" });
+        }
         onClose();
       } catch (err) {
-        setError(describeError(err).body);
+        setError(err instanceof PdfExportError ? err.message : describeError(err).body);
         setBusy(false);
       }
     })();
-  }, [api, orgSlug, filters, toast, onClose]);
+  }, [api, orgSlug, filters, toast, onClose, format, userName]);
 
   return (
     <ModalShell
       title={error ? "We couldn’t export" : "Exporting contacts…"}
       intro={total > CONTACT_EXPORT_BULK_ROWS ? `Exports of more than ${CONTACT_EXPORT_BULK_ROWS} contacts need Management’s bulk-export right. This one has ${total}.` : undefined}
       onClose={onClose}
-      label="Export contacts"
+      label={format === "pdf" ? "Export contacts as PDF" : "Export contacts"}
       footer={
         <button type="button" className="fb-ld-btn fb-ld-btn--primary fb-ld-btn--lg" onClick={onClose}>
           {busy ? "Cancel" : "Close"}

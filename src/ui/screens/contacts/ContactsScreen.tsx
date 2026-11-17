@@ -49,7 +49,7 @@ export function ContactsScreen() {
   const [perPage, setPerPage] = useState(25);
   const [drawer, setDrawer] = useState<{ id?: string } | null>(null);
   const [importing, setImporting] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState<false | "csv" | "pdf">(false);
 
   // A link from the quick-create menu or the home arrives as ?new=1: open the drawer once and clear the parameter.
   const wantsNew = params?.get("new") === "1";
@@ -147,14 +147,20 @@ export function ContactsScreen() {
           {can("contacts.import") ? (
             <button type="button" className="fb-ld-btn" onClick={() => setImporting(true)}>
               <Icon name="upload" size={16} />
-              Import CSV
+              Import CSV / Excel
             </button>
           ) : null}
           {can("contacts.export") ? (
-            <button type="button" className="fb-ld-btn" onClick={() => setExporting(true)}>
-              <Icon name="download" size={16} />
-              Export CSV
-            </button>
+            <>
+              <button type="button" className="fb-ld-btn" onClick={() => setExporting("csv")}>
+                <Icon name="download" size={16} />
+                Export CSV
+              </button>
+              <button type="button" className="fb-ld-btn" onClick={() => setExporting("pdf")}>
+                <Icon name="download" size={16} />
+                Export PDF
+              </button>
+            </>
           ) : null}
           {can("contacts.create") ? (
             <button type="button" className="fb-ld-btn fb-ld-btn--primary" onClick={() => setDrawer({})}>
@@ -311,7 +317,7 @@ export function ContactsScreen() {
               ) : null}
               {can("contacts.import") ? (
                 <button type="button" className="fb-ld-btn" onClick={() => setImporting(true)}>
-                  Import CSV
+                  Import CSV / Excel
                 </button>
               ) : null}
             </div>
@@ -375,7 +381,7 @@ export function ContactsScreen() {
         />
       ) : null}
       {importing ? <ContactsImportDialog onClose={() => setImporting(false)} onDone={() => void refresh()} /> : null}
-      {exporting ? <ContactsExportDialog total={total} filters={filterForExport} onClose={() => setExporting(false)} /> : null}
+      {exporting ? <ContactsExportDialog total={total} filters={filterForExport} format={exporting} onClose={() => setExporting(false)} /> : null}
       {prompt.element}
     </div>
   );

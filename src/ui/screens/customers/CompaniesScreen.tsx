@@ -12,6 +12,7 @@ import { useApi, useApiMutation, useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
 import { newIdempotencyKey } from "../../data/client";
 import { downloadText } from "../leads/data";
+import { csvToPdf, downloadPdf, pdfSubtitle, PdfExportError } from "../leads/pdfExport";
 import { Icon } from "../leads/icons";
 import { ArchiveDialog } from "./ArchiveDialog";
 import { ImportCsvDialog } from "./ImportCsvDialog";
@@ -134,14 +135,16 @@ export function CompaniesScreen() {
       toast.show({ tone: "danger", message: describeError(e).body });
     }
   }
-  async function exportCsv() {
+  async function exportCsv(format: "csv" | "pdf" = "csv") {
     setExporting(true);
     try {
       const csv = (await api.call("exportCompanyDirectory", { params: { orgSlug }, query: { tab: query.tab, q: search || undefined, lifecycle: lifecycle || undefined } as never })) as unknown as string;
-      downloadText(`companies-${new Date().toISOString().slice(0, 10)}.csv`, csv);
-      toast.show({ tone: "success", message: "Exported companies." });
+      const stamp = new Date().toISOString().slice(0, 10);
+      if (format === "pdf") downloadPdf(`companies-${stamp}.pdf`, await csvToPdf({ title: "Companies", subtitle: pdfSubtitle(member.userName, csv), csv }));
+      else downloadText(`companies-${stamp}.csv`, csv);
+      toast.show({ tone: "success", message: format === "pdf" ? "Exported companies as PDF." : "Exported companies." });
     } catch (e) {
-      toast.show({ tone: "danger", message: describeError(e).body });
+      toast.show({ tone: "danger", message: e instanceof PdfExportError ? e.message : describeError(e).body });
     } finally {
       setExporting(false);
     }
@@ -196,14 +199,20 @@ export function CompaniesScreen() {
           {can("companies.import") ? (
             <button type="button" className="fb-ld-btn" onClick={() => setImporting(true)}>
               <Icon name="upload" size={16} />
-              Import CSV
+              Import CSV / Excel
             </button>
           ) : null}
           {can("companies.export") ? (
-            <button type="button" className="fb-ld-btn" disabled={exporting} onClick={exportCsv}>
-              <Icon name="download" size={16} />
-              Export CSV
-            </button>
+            <>
+              <button type="button" className="fb-ld-btn" disabled={exporting} onClick={() => void exportCsv("csv")}>
+                <Icon name="download" size={16} />
+                Export CSV
+              </button>
+              <button type="button" className="fb-ld-btn" disabled={exporting} onClick={() => void exportCsv("pdf")}>
+                <Icon name="download" size={16} />
+                Export PDF
+              </button>
+            </>
           ) : null}
           {can("companies.create") ? (
             <button type="button" className="fb-ld-btn fb-ld-btn--primary" onClick={() => setDrawer(true)}>
