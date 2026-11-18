@@ -44,7 +44,7 @@ describe("the lead drawer (New lead / Edit lead)", () => {
     expect(screen.getByRole("combobox", { name: /^Owner/ })).toBeDisabled();
     expect(screen.getByText("Leads you create are yours. Management can reassign them.")).toBeInTheDocument();
     await user.type(screen.getByRole("combobox", { name: /Company or person/ }) /* an input with suggestions */, "Sarova Hotels");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Service interest" }), "svc-cctv");
+    await user.type(screen.getByRole("combobox", { name: "Service interest" }), "CCTV"); // pick or type: a name the organisation has is sent as its id
     await user.click(screen.getByRole("button", { name: "Hot" }));
     await user.click(create);
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith("lead-new"));

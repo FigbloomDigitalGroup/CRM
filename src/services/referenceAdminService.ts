@@ -1,7 +1,7 @@
 import type { CustomFieldEntity, CustomFieldSection } from "@prisma/client";
 import type { AuthContext } from "../auth/context";
 import { hasPermission, requirePermission } from "../auth/context";
-import { NotFoundError, ValidationError } from "../auth/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { countRecordsWithValue, getDefinition, listDefinitions, updateDefinition } from "../repositories/customFields";
 import { getEmailTemplate, listEmailTemplates } from "../repositories/emailTemplates";
@@ -20,6 +20,7 @@ import {
   CATALOG_KEYS,
   type CatalogEntry,
   type CatalogKey,
+  createCatalogEntry as createCatalogEntryRecord,
   getCatalogEntryById,
   listCatalogEntries,
 } from "../repositories/referenceCatalogs";
@@ -282,6 +283,40 @@ export interface CreateReferenceInput {
   name: string;
   /** Kind-specific extras: description/probability/category for catalogs, colour for tags, subject/body for templates, entityType/key/fieldType/options/section for custom fields. */
   [extra: string]: unknown;
+}
+
+/**
+ * A person who may create leads can add a service by typing it on the new-lead form (Sales request, 18 Nov 2026): it adds a plain entry to the
+ * organisation's service list, or returns the one that already has that name. Renaming, hiding, merging and deleting stay with Settings.
+ */
+export async function findOrAddServiceForLead(ctx: AuthContext, rawName: string): Promise<string> {
+  if (!hasPermission(ctx, "leads.create") && !hasPermission(ctx, "leads.edit.own") && !hasPermission(ctx, "leads.edit.all")) throw new ForbiddenError("leads.create");
+  const name = rawName.trim().replace(/\s+/g, " ");
+  if (!name) throw new ValidationError("Type the service name.");
+  if (name.length > 80) throw new ValidationError("A service name can be 80 characters at most.");
+  const existing = (await listCatalogEntries(ctx.organizationId, "services")).find((e) => e.name.toLowerCase() === name.toLowerCase());
+  const baseKey = name.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "SERVICE";
+  let entry = existing;
+  if (!entry) {
+    try {
+      entry = await createCatalogEntryRecord(ctx.organizationId, "services", { key: baseKey, name, category: "Other" });
+    } catch {
+      // Another service already has this key (for example "C.R.M" and "CRM"): the name is what people see, so make the key unique.
+      entry = await createCatalogEntryRecord(ctx.organizationId, "services", { key: `${baseKey}_${Date.now().toString(36).toUpperCase()}`, name, category: "Other" });
+    }
+  }
+  if (!existing) {
+    await recordAuditEvent({
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      action: "reference_catalog.created",
+      entityType: "Service",
+      entityId: entry.id,
+      newValue: { key: entry.key, name: entry.name },
+      metadata: { catalogKey: "services", from: "lead_form" },
+    });
+  }
+  return entry.id;
 }
 
 export async function createReferenceValue(ctx: AuthContext, kindParam: string, input: CreateReferenceInput): Promise<ReferenceValueView> {

@@ -6487,6 +6487,7 @@ export interface Operations {
       leadSourceId?: string;
       temperature?: "HOT" | "WARM" | "COLD";
       serviceInterestId?: string;
+      serviceInterestName?: string;
       ownerMembershipId?: string;
       qualificationData?: unknown;
       customFields?: {
@@ -6662,6 +6663,7 @@ export interface Operations {
       leadSourceId?: string | null;
       temperature?: "HOT" | "WARM" | "COLD";
       serviceInterestId?: string | null;
+      serviceInterestName?: string;
       qualificationData?: unknown;
       lostReasonId?: string | null;
       nextFollowUpAt?: string | unknown | null;

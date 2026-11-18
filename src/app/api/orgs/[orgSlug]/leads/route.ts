@@ -1,3 +1,4 @@
+import { findOrAddServiceForLead } from "@/services/referenceAdminService";
 import { customFieldFilters } from "@/app/api/_lib/pageQuery";
 import { buildCustomFieldWhere } from "@/services/customFieldService";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
@@ -65,7 +66,8 @@ export async function POST(
   return handleRoute(async () => {
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    const body = await parseJsonBody(request, CreateLeadBodySchema);
+    const { serviceInterestName, ...parsed } = await parseJsonBody(request, CreateLeadBodySchema);
+    const body = serviceInterestName?.trim() && !parsed.serviceInterestId ? { ...parsed, serviceInterestId: await findOrAddServiceForLead(ctx, serviceInterestName) } : parsed;
     return withIdempotency(ctx, request, body, async () =>
       respond(CreateLeadResponseSchema, await createLeadFromForm(ctx, body)),
     );
