@@ -51009,6 +51009,10 @@
                       "null"
                     ]
                   },
+                  "serviceInterestName": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
                   "qualificationData": {},
                   "lostReasonId": {
                     "type": [

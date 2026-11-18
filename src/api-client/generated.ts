@@ -6663,6 +6663,7 @@ export interface Operations {
       leadSourceId?: string | null;
       temperature?: "HOT" | "WARM" | "COLD";
       serviceInterestId?: string | null;
+      serviceInterestName?: string;
       qualificationData?: unknown;
       lostReasonId?: string | null;
       nextFollowUpAt?: string | unknown | null;

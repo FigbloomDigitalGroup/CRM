@@ -2817,7 +2817,7 @@ Create a lead
 `patchLeadsByLeadId` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales
-- **Body:** `customFields`?: object, `leadStatusId`?: string, `companyId`?: string | null, `contactId`?: string | null, `leadSourceId`?: string | null, `temperature`?: "HOT" | "WARM" | "COLD", `serviceInterestId`?: string | null, `qualificationData`?: any, `lostReasonId`?: string | null, `nextFollowUpAt`?: string | any | null, `notes`?: string | null
+- **Body:** `customFields`?: object, `leadStatusId`?: string, `companyId`?: string | null, `contactId`?: string | null, `leadSourceId`?: string | null, `temperature`?: "HOT" | "WARM" | "COLD", `serviceInterestId`?: string | null, `serviceInterestName`?: string, `qualificationData`?: any, `lostReasonId`?: string | null, `nextFollowUpAt`?: string | any | null, `notes`?: string | null
 - **Returns:** `id`: string, `organizationId`: string, `companyId`: string, `contactId`: string, `leadSourceId`?: null, `leadStatusId`: string, `temperature`: string, `serviceInterestId`?: null, `ownerMembershipId`: string, `qualificationData`?: null, `lostReasonId`?: null, `nextFollowUpAt`?: null, `convertedAt`?: null, `notes`?: null, `createdByMembershipId`: string, `archivedAt`?: null, `archivedByMembershipId`?: null, `archiveReason`?: null, `customFields`: object, `scoreValue`: number, `scoreBand`: string, `scoreFactors`: object[], `scoredAt`: string, `lastContactedAt`?: null, `createdAt`: string, `updatedAt`: string, `importSessionId`?: null
 - **Errors:** 400, 401, 403, 404
 

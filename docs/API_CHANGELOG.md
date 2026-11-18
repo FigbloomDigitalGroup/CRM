@@ -16,7 +16,7 @@ needs a new major version (`API_VERSION` in `src/api/openapi.ts`). Additions are
 
 ## 1.1.0, addendum — typed service interest (18 Nov 2026)
 
-contract-hash: bb13a33bdea367b808fc518c21196568669c84d834523d80f30b1bf6b35947cd
+contract-hash: 6e840859ead1653d3302937498fac3cfce491356398792b1f062c2b78f0eea22
 
 Additive only. `POST /orgs/{org}/leads` and `PATCH /orgs/{org}/leads/{leadId}` accept an optional `serviceInterestName`: the service with that name is used, or it is added to the organisation's service list (needs `leads.create` or `leads.edit`). Ignored when `serviceInterestId` is sent on create. No existing caller is affected.
 
