@@ -94,6 +94,7 @@ const SERVICES: { key: string; name: string; category: string; sequence: number 
     category: "Connectivity",
   },
   { key: "ISP_BILLING", name: "ISP Billing", category: "Software" },
+  { key: "SCHOOL_MANAGEMENT_SYSTEM", name: "School Management System", category: "Software" },
   { key: "WEB_DEVELOPMENT", name: "Web Development", category: "Digital" },
   { key: "BRANDING", name: "Branding", category: "Digital" },
   {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { describeError } from "../../errors";
 import { useToast } from "../../components/toast";
@@ -8,13 +9,15 @@ import { DateTimeField } from "../../components/forms";
 import { defaultFollowUp } from "../../components/dateTimeZone";
 import { useApi, useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
-import { newIdempotencyKey } from "../../data/client";
+import { callUncontracted, newIdempotencyKey } from "../../data/client";
 import { contactOf, ownerLabel, useDebounced, useFormatters, useReference, useRefreshLeads, type LeadDetail } from "./data";
 import { TEMPERATURES, TEMPERATURE_LABEL, tempTone, type Temperature } from "./format";
 import { Icon } from "./icons";
 import { SideDrawer } from "./overlay";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Offered even before the organisation has them; choosing one adds it to the service list. */
+const EXTRA_SERVICES = ["School Management System"];
 const ROLE_SUGGESTIONS = ["Owner", "Decision maker", "Influencer", "Procurement", "Finance", "Technical", "Other"];
 
 interface Form {
@@ -25,6 +28,8 @@ interface Form {
   role: string;
   sourceId: string;
   serviceId: string;
+  /** What is typed in the service field; null while untouched (then the lead's current service shows). */
+  serviceText: string | null;
   temp: Temperature;
   ownerId: string;
   nextStr: string;
@@ -40,6 +45,7 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
   const api = useApi();
   const toast = useToast();
   const ref = useReference();
+  const qc = useQueryClient();
   const fmt = useFormatters();
   const refresh = useRefreshLeads();
   const editing = Boolean(leadId);
@@ -47,7 +53,7 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
   const detail = detailQ.data as LeadDetail | undefined;
 
   // A new lead starts with a follow-up tomorrow, so it never goes cold unnoticed (the design's default).
-  const [f, setF] = useState<Form>(() => ({ name: "", phone: "", email: "", company: "", role: "", sourceId: "", serviceId: "", temp: "WARM", ownerId: membershipId, nextStr: editing ? "" : defaultFollowUp(new Date(), timeZone).toISOString(), notes: "" }));
+  const [f, setF] = useState<Form>(() => ({ name: "", phone: "", email: "", company: "", role: "", sourceId: "", serviceId: "", serviceText: null, temp: "WARM", ownerId: membershipId, nextStr: editing ? "" : defaultFollowUp(new Date(), timeZone).toISOString(), notes: "" }));
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -65,6 +71,7 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
       role: "",
       sourceId: (detail.leadSourceId as string | null) ?? "",
       serviceId: (detail.serviceInterestId as string | null) ?? "",
+      serviceText: null,
       temp: (detail.temperature as Temperature) ?? "WARM",
       ownerId: detail.ownerMembershipId ?? "",
       nextStr: detail.nextFollowUpAt ? new Date(detail.nextFollowUpAt as string).toISOString() : "",
@@ -113,13 +120,24 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
     setErrors({});
     setFormError(null);
     try {
+      let serviceId = f.serviceId;
+      if (f.serviceText !== null) {
+        const typed = f.serviceText.trim().replace(/s+/g, " ");
+        const known = ref.services.find((s) => s.name.toLowerCase() === typed.toLowerCase());
+        if (!typed) serviceId = "";
+        else if (known) serviceId = known.id;
+        else {
+          serviceId = (await callUncontracted<{ id: string }>("POST", `/api/orgs/${orgSlug}/reference-admin/services`, { name: typed })).id;
+          await qc.invalidateQueries({ queryKey: ["getReferenceData"] });
+        }
+      }
       const newStatus = ref.statusByKey("NEW") ?? ref.statuses[0];
       if (editing && leadId) {
         await api.call("patchLeadsByLeadId", {
           params: { orgSlug, leadId },
           body: {
             leadSourceId: f.sourceId || null,
-            serviceInterestId: f.serviceId || null,
+            serviceInterestId: serviceId || null,
             temperature: f.temp,
             nextFollowUpAt: f.nextStr || null,
             notes: f.notes.trim() || null,
@@ -163,7 +181,7 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
           ...(companyId ? { companyId } : {}),
           ...intake,
           ...(f.sourceId ? { leadSourceId: f.sourceId } : {}),
-          ...(f.serviceId ? { serviceInterestId: f.serviceId } : {}),
+          ...(serviceId ? { serviceInterestId: serviceId } : {}),
           temperature: f.temp,
           ...(canAssign && f.ownerId && f.ownerId !== membershipId ? { ownerMembershipId: f.ownerId } : {}),
         }) as never,
@@ -297,14 +315,20 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
       ) : null}
       <label className="fb-ld-field">
         <span>Service interest</span>
-        <select className="fb-ld-select" value={f.serviceId} onChange={(e) => set("serviceId", e.target.value)}>
-          <option value="">Not decided yet</option>
-          {ref.services.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
+        <input
+          className="fb-ld-input"
+          value={f.serviceText ?? ref.service(f.serviceId)?.name ?? ""}
+          onChange={(e) => set("serviceText", e.target.value)}
+          placeholder="Not decided yet: pick one or type your own"
+          maxLength={80}
+          autoComplete="off"
+          list="fb-ld-service-options"
+        />
+        <datalist id="fb-ld-service-options">
+          {[...ref.services.map((s) => s.name), ...EXTRA_SERVICES.filter((n) => !ref.services.some((s) => s.name.toLowerCase() === n.toLowerCase()))].map((n) => (
+            <option key={n} value={n} />
           ))}
-        </select>
+        </datalist>
       </label>
       <div className="fb-ld-field">
         <span id="fb-ld-temp-label" className="fb-ld-label">

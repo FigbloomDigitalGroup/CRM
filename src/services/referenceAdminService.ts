@@ -20,6 +20,7 @@ import {
   CATALOG_KEYS,
   type CatalogEntry,
   type CatalogKey,
+  createCatalogEntry as createCatalogEntryRecord,
   getCatalogEntryById,
   listCatalogEntries,
 } from "../repositories/referenceCatalogs";
@@ -284,7 +285,41 @@ export interface CreateReferenceInput {
   [extra: string]: unknown;
 }
 
+/**
+ * A person who may create leads can add a service by typing it on the new-lead form (Sales request, 18 Nov 2026): it adds a plain entry to the
+ * organisation's service list, or returns the one that already has that name. Renaming, hiding, merging and deleting stay with Settings.
+ */
+async function addServiceFromLeadForm(ctx: AuthContext, input: CreateReferenceInput): Promise<ReferenceValueView> {
+  const name = input.name.trim().replace(/s+/g, " ");
+  if (!name) throw new ValidationError("Type the service name.");
+  if (name.length > 80) throw new ValidationError("A service name can be 80 characters at most.");
+  const existing = (await listCatalogEntries(ctx.organizationId, "services")).find((e) => e.name.toLowerCase() === name.toLowerCase());
+  const baseKey = name.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "SERVICE";
+  let entry = existing;
+  if (!entry) {
+    try {
+      entry = await createCatalogEntryRecord(ctx.organizationId, "services", { key: baseKey, name, category: "Other" });
+    } catch {
+      // Another service already has this key (for example "C.R.M" and "CRM"): the name is what people see, so make the key unique.
+      entry = await createCatalogEntryRecord(ctx.organizationId, "services", { key: `${baseKey}_${Date.now().toString(36).toUpperCase()}`, name, category: "Other" });
+    }
+  }
+  if (!existing) {
+    await recordAuditEvent({
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      action: "reference_catalog.created",
+      entityType: "Service",
+      entityId: entry.id,
+      newValue: { key: entry.key, name: entry.name },
+      metadata: { catalogKey: "services", from: "lead_form" },
+    });
+  }
+  return { id: entry.id, kind: "services", name: entry.name, key: entry.key, hidden: false, order: null, usageCount: 0, protected: false, entityType: null, fieldType: null, capabilities: { rename: true, reorder: false, hide: false, delete: false, merge: false } };
+}
+
 export async function createReferenceValue(ctx: AuthContext, kindParam: string, input: CreateReferenceInput): Promise<ReferenceValueView> {
+  if (kindParam === "services" && !hasPermission(ctx, KINDS.services.permission) && hasPermission(ctx, "leads.create")) return addServiceFromLeadForm(ctx, input);
   const kind = requireKind(ctx, kindParam);
   const def = KINDS[kind];
   if (!def.create) throw new ValidationError(def.fixedNote ?? `${def.label} cannot be added.`, [{ path: "kind", message: def.fixedNote ?? "Not allowed.", code: "FIXED_LIST" }]);
