@@ -1,10 +1,16 @@
 import type { Prisma } from "@prisma/client";
-import { withOrgContext } from "../db/orgScopedClient";
+import { withOrgContext, type OrgScopedClient } from "../db/orgScopedClient";
+import { archivedWhere, type ArchiveMeta } from "../lib/archive";
+
+export type TaskTypeValue = "TASK" | "CALL" | "MEETING" | "EMAIL" | "QUOTE" | "VISIT";
+export const TASK_TYPES: readonly TaskTypeValue[] = ["TASK", "CALL", "MEETING", "EMAIL", "QUOTE", "VISIT"];
 
 export interface CreateTaskInput {
   organizationId: string;
   title: string;
   description?: string;
+  /** Client requirements snapshot (FIG-1038). */
+  requirements?: string;
   assigneeMembershipId: string;
   createdByMembershipId: string;
   dueAt?: Date;
@@ -13,15 +19,26 @@ export interface CreateTaskInput {
   contactId?: string;
   leadId?: string;
   dealId?: string;
+  /** P2-22: TASK (default), CALL, MEETING, EMAIL, QUOTE or VISIT. */
+  type?: TaskTypeValue;
+  /** P2-23: the activity this task came from. */
+  sourceActivityId?: string;
+  /** P2-23: this is the lead's open follow-up. */
+  isFollowUp?: boolean;
 }
 
-export async function createTask(input: CreateTaskInput) {
-  return withOrgContext(input.organizationId, (tx) =>
-    tx.task.create({
+export async function createTask(
+  input: CreateTaskInput,
+  /** Runs in the same transaction as the insert (P2-23: a call-to-action on a lead becomes its next step). */
+  inTransaction?: (tx: OrgScopedClient, created: { id: string; organizationId: string; leadId: string | null; dueAt: Date | null; type: string; status: string }) => Promise<void>,
+) {
+  return withOrgContext(input.organizationId, async (tx) => {
+    const created = await tx.task.create({
       data: {
         organizationId: input.organizationId,
         title: input.title,
         description: input.description,
+        requirements: input.requirements,
         assigneeMembershipId: input.assigneeMembershipId,
         createdByMembershipId: input.createdByMembershipId,
         dueAt: input.dueAt,
@@ -30,9 +47,14 @@ export async function createTask(input: CreateTaskInput) {
         contactId: input.contactId,
         leadId: input.leadId,
         dealId: input.dealId,
+        type: input.type,
+        sourceActivityId: input.sourceActivityId,
+        isFollowUp: input.isFollowUp,
       },
-    }),
-  );
+    });
+    if (inTransaction) await inTransaction(tx, created);
+    return inTransaction ? tx.task.findUniqueOrThrow({ where: { id: created.id } }) : created;
+  });
 }
 
 /**
@@ -43,11 +65,13 @@ export async function createTask(input: CreateTaskInput) {
 export interface UpdateTaskInput {
   title?: string;
   description?: string | null;
+  requirements?: string | null;
   assigneeMembershipId?: string;
   dueAt?: Date | null;
   priority?: "LOW" | "MEDIUM" | "HIGH";
   status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
   completedAt?: Date | null;
+  type?: TaskTypeValue;
 }
 
 export async function updateTask(
@@ -75,12 +99,22 @@ export interface ListTasksFilters {
   query?: string;
   assigneeMembershipId?: string;
   status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  /** Any of these statuses (ignored when `status` is set, `overdueOnly` and `upcomingOnly` carry their own). */
+  statuses?: ("PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED")[];
   priority?: "LOW" | "MEDIUM" | "HIGH";
+  /** P2-22: only this kind of item (task, call, meeting ...). */
+  type?: TaskTypeValue;
   companyId?: string;
   contactId?: string;
   leadId?: string;
   dealId?: string;
   overdueOnly?: boolean;
+  /** For `overdueOnly`: the moment "overdue" is measured against (default now). A task is overdue from its time, not from the end of its day. */
+  overdueAt?: Date;
+  /** Archived tasks are hidden unless asked for (B2.16). */
+  includeArchived?: boolean;
+  /** The archived tab: only archived tasks. */
+  archivedOnly?: boolean;
   /** Still open and not yet past due (no due date counts): the dashboard's "upcoming" list (FIG-789). */
   upcomingOnly?: boolean;
   /** "Due today," "due this week," etc. (FIG-443) -- independent of overdueOnly. */
@@ -104,9 +138,11 @@ function tasksWhere(
 ): Prisma.TaskWhereInput {
   return {
     organizationId,
+    ...archivedWhere(filters),
     assigneeMembershipId: filters.assigneeMembershipId,
-    status: filters.status,
+    status: filters.status ?? (filters.statuses ? { in: filters.statuses } : undefined),
     priority: filters.priority,
+    type: filters.type,
     companyId: filters.companyId,
     contactId: filters.contactId,
     leadId: filters.leadId,
@@ -121,7 +157,7 @@ function tasksWhere(
       : {}),
     ...(filters.overdueOnly
       ? {
-          dueAt: { lt: new Date() },
+          dueAt: { lt: filters.overdueAt ?? new Date() },
           status: { in: ["PENDING", "IN_PROGRESS"] },
         }
       : {}),
@@ -171,11 +207,135 @@ export async function deleteTasksByIds(organizationId: string, ids: string[]) {
 }
 
 /** Rows matching `filters` across all pages (FIG-789) -- ignores `take`/`skip`. */
+/** Tasks per assignee for the same filters a list would use (FIG-1043). */
+export async function countTasksByAssignee(organizationId: string, filters: ListTasksFilters = {}) {
+  return withOrgContext(organizationId, async (tx) => {
+    const rows = await tx.task.groupBy({ by: ["assigneeMembershipId"], where: tasksWhere(organizationId, filters), _count: { _all: true } });
+    return rows.map((r) => ({ assigneeMembershipId: r.assigneeMembershipId, count: r._count._all }));
+  });
+}
+
 export async function countTasks(
   organizationId: string,
   filters: ListTasksFilters = {},
 ) {
   return withOrgContext(organizationId, (tx) =>
     tx.task.count({ where: tasksWhere(organizationId, filters) }),
+  );
+}
+
+/** Sets `archivedAt`, who and why (FIG-1045, B2.16) -- never a hard delete. */
+export async function archiveTask(organizationId: string, taskId: string, meta: ArchiveMeta = {}) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.task.update({
+      where: { id: taskId, organizationId },
+      data: {
+        archivedAt: new Date(),
+        archivedByMembershipId: meta.membershipId ?? null,
+        archiveReason: meta.reason ?? null,
+      },
+    }),
+  );
+}
+
+export async function restoreTask(organizationId: string, taskId: string) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.task.update({
+      where: { id: taskId, organizationId },
+      data: { archivedAt: null, archivedByMembershipId: null, archiveReason: null },
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Due-state groups (FIG-1038, B2.09)
+// ---------------------------------------------------------------------------
+
+export type TaskGroupKey = "OVERDUE" | "TODAY" | "THIS_WEEK" | "LATER" | "NO_DATE" | "DONE";
+export const TASK_GROUP_KEYS: readonly TaskGroupKey[] = ["OVERDUE", "TODAY", "THIS_WEEK", "LATER", "NO_DATE", "DONE"];
+
+/** The moments that divide the groups, in the viewer's own time zone. */
+export interface TaskGroupBounds {
+  /** Start of today. */
+  todayStart: Date;
+  /** Start of tomorrow: the end of today. */
+  tomorrowStart: Date;
+  /** Start of the next week (Monday): the end of this week. */
+  nextWeekStart: Date;
+}
+
+const OPEN = ["PENDING", "IN_PROGRESS"] as const;
+
+/**
+ * The one predicate for each group, used by both the counts and the rows, so a
+ * group's count always equals what its list holds.
+ *   Overdue   open, due before today
+ *   Today     open, due today
+ *   This week open, due after today and before next Monday
+ *   Later     open, due from next Monday on
+ *   No date   open, no due date
+ *   Done      completed or cancelled
+ */
+export function taskGroupWhere(group: TaskGroupKey, bounds: TaskGroupBounds): Prisma.TaskWhereInput {
+  switch (group) {
+    case "OVERDUE":
+      return { status: { in: [...OPEN] }, dueAt: { lt: bounds.todayStart } };
+    case "TODAY":
+      return { status: { in: [...OPEN] }, dueAt: { gte: bounds.todayStart, lt: bounds.tomorrowStart } };
+    case "THIS_WEEK":
+      return { status: { in: [...OPEN] }, dueAt: { gte: bounds.tomorrowStart, lt: bounds.nextWeekStart } };
+    case "LATER":
+      return { status: { in: [...OPEN] }, dueAt: { gte: bounds.nextWeekStart } };
+    case "NO_DATE":
+      return { status: { in: [...OPEN] }, dueAt: null };
+    case "DONE":
+      return { status: { in: ["COMPLETED", "CANCELLED"] } };
+  }
+}
+
+/** Counts per group for one set of filters, in one pass of six cheap counts. */
+export async function countTaskGroups(organizationId: string, filters: ListTasksFilters, bounds: TaskGroupBounds) {
+  return withOrgContext(organizationId, async (tx) => {
+    const base = tasksWhere(organizationId, { ...filters, overdueOnly: undefined, upcomingOnly: undefined, dueAfter: undefined, dueBefore: undefined, status: undefined });
+    const counts = await Promise.all(TASK_GROUP_KEYS.map((g) => tx.task.count({ where: { AND: [base, taskGroupWhere(g, bounds)] } })));
+    return Object.fromEntries(TASK_GROUP_KEYS.map((g, i) => [g, counts[i]!])) as Record<TaskGroupKey, number>;
+  });
+}
+
+/** One page of one group, ordered the way the group reads: soonest due first, done most recent first. */
+export async function listTaskGroup(
+  organizationId: string,
+  filters: ListTasksFilters,
+  group: TaskGroupKey,
+  bounds: TaskGroupBounds,
+  paging: { skip: number; take: number },
+) {
+  return withOrgContext(organizationId, async (tx) => {
+    const base = tasksWhere(organizationId, { ...filters, overdueOnly: undefined, upcomingOnly: undefined, dueAfter: undefined, dueBefore: undefined, status: undefined });
+    const where: Prisma.TaskWhereInput = { AND: [base, taskGroupWhere(group, bounds)] };
+    const orderBy: Prisma.TaskOrderByWithRelationInput[] =
+      group === "DONE"
+        ? [{ completedAt: { sort: "desc", nulls: "last" } }, { updatedAt: "desc" }, { id: "asc" }]
+        : [{ dueAt: { sort: "asc", nulls: "last" } }, { priority: "desc" }, { createdAt: "desc" }, { id: "asc" }];
+    const items = await tx.task.findMany({
+      where,
+      include: { assignee: { include: { user: true } } },
+      orderBy,
+      skip: paging.skip,
+      take: paging.take,
+    });
+    return items;
+  });
+}
+
+/** Attachments of several tasks at once (the technician's My work shows the files each task carries). */
+export async function listAttachmentsForTasks(organizationId: string, taskIds: string[]) {
+  if (taskIds.length === 0) return [];
+  return withOrgContext(organizationId, (tx) =>
+    tx.attachment.findMany({
+      where: { organizationId, taskId: { in: taskIds }, deletedAt: null, file: { status: "READY" } },
+      select: { id: true, taskId: true, title: true, file: { select: { id: true, name: true, sizeBytes: true, mimeType: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
   );
 }

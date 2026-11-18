@@ -27,3 +27,13 @@ type Env = Record<string, string | undefined>;
 export function devAccountsAllowed(env: Env = process.env): boolean {
   return env.NODE_ENV === "development" && env.ALLOW_DEV_ACCOUNTS === "true";
 }
+
+/**
+ * The one exception to "no dev chips in a production build", for `npm run preview` only (Given's approval, 31 Oct 2026; CLAUDE.md rule 10).
+ * The preview build lives in its own folder (`.next-preview`), so the standard build and its check stay clean. At run time the chips also
+ * need every one of these, which only `scripts/preview-local.js` sets, and only for a database on this computer. In this mode the chips sign in
+ * through the real password login (never the no-password dev route), and the dev Super Admin is not offered.
+ */
+export function previewChipsAllowed(env: Env = process.env): boolean {
+  return env.PREVIEW_DEV_CHIPS === "true" && env.ALLOW_DEV_ACCOUNTS === "true" && env.E2E_ALLOW_DEV_ACCOUNTS === "true";
+}

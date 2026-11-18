@@ -1,9 +1,11 @@
+import { canView } from "../auth/permissions";
 import type { AuthContext } from "../auth/context";
-import { hasPermission, requirePermission } from "../auth/context";
+import { requirePermission } from "../auth/context";
+import { ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import {
   createActivity as createActivityRecord,
-  countActivities as countActivitiesRecord,
+  listActivitiesWithCount,
   listActivities as listActivitiesRecord,
   countActivitiesForTimeline as countActivitiesForTimelineRecord,
   listActivitiesForTimeline as listActivitiesForTimelineRecord,
@@ -11,26 +13,89 @@ import {
 } from "../repositories/activities";
 import { getCompany } from "./companyService";
 import { getContact } from "./contactService";
+import { touchDealActivity } from "../repositories/deals";
+import { rescoreCompanyQuietly, rescoreLeadQuietly } from "./scoreEngine";
 import { assertCanAccessLinkedRecords, type LinkedRecordIds } from "./recordAccess";
+import { emitTeamActivity, leadLabelFor } from "./teamActivityNotifier";
 import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
+import { TASK_TYPES, type TaskTypeValue } from "../repositories/tasks";
+import { applyLeadFollowUp } from "./taskLinkService";
+import { resolveAssignee } from "./taskService";
+
+/**
+ * "Log a call, then say what happens next" (P2-23). A logged activity is history and never makes an open task by itself; the next step
+ * does, as the lead's follow-up, in the same transaction as the activity. Only for an activity logged on a lead.
+ */
+export interface NextStepInput {
+  /** What the next step is: TASK (a plain follow-up), CALL, MEETING, EMAIL, QUOTE or VISIT. */
+  type: TaskTypeValue;
+  /** ISO date and time of the next step. */
+  dueAt: string;
+  title?: string;
+  /** Default: the lead's owner. Only someone who may assign tasks can choose another person. */
+  assigneeMembershipId?: string;
+}
 
 export type CreateActivityServiceInput = Omit<
   CreateActivityInput,
   "organizationId" | "authorMembershipId"
->;
+> & { nextStep?: NextStepInput };
 
 export async function createActivity(
   ctx: AuthContext,
-  input: CreateActivityServiceInput,
+  rawInput: CreateActivityServiceInput,
 ) {
-  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true });
+  const { nextStep, ...input } = rawInput;
+  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true, requireWritable: true });
   requirePermission(ctx, "activities.create");
 
-  return createActivityRecord({
-    ...input,
-    organizationId: ctx.organizationId,
-    authorMembershipId: ctx.membershipId,
-  });
+  let followUp: Parameters<typeof applyLeadFollowUp>[1] | null = null;
+  if (nextStep) {
+    if (!input.leadId) throw new ValidationError("A next step can only be added to something logged on a lead.", [{ path: "nextStep", message: "Log it on a lead." }]);
+    requirePermission(ctx, "tasks.create");
+    const due = new Date(nextStep.dueAt);
+    if (Number.isNaN(due.getTime())) throw new ValidationError("The next step needs a valid date and time.", [{ path: "nextStep.dueAt", message: "Use a date and time." }]);
+    if (!TASK_TYPES.includes(nextStep.type)) throw new ValidationError("The next step type is not valid.", [{ path: "nextStep.type", message: `Use one of ${TASK_TYPES.join(", ")}.` }]);
+    const lead = await adminDb.lead.findFirst({ where: { id: input.leadId, organizationId: ctx.organizationId }, select: { ownerMembershipId: true } });
+    const wanted = nextStep.assigneeMembershipId ?? lead?.ownerMembershipId ?? undefined;
+    const assignee = await resolveAssignee(ctx, wanted).catch(() => ctx.membershipId);
+    followUp = {
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      leadId: input.leadId,
+      nextFollowUpAt: due,
+      assigneeMembershipId: assignee,
+      type: nextStep.type,
+      title: nextStep.title?.trim() || undefined,
+    };
+  }
+
+  const activity = await createActivityRecord(
+    {
+      ...input,
+      organizationId: ctx.organizationId,
+      authorMembershipId: ctx.membershipId,
+    },
+    followUp ? async (tx, created) => void (await applyLeadFollowUp(tx, { ...followUp!, sourceActivityId: created.id })) : undefined,
+  );
+  // A contact with a lead or a customer changes how it scores (B2.03).
+  await rescoreLeadQuietly(ctx.organizationId, input.leadId);
+  if (input.dealId) await touchDealActivity(ctx.organizationId, input.dealId);
+  await rescoreCompanyQuietly(ctx.organizationId, input.companyId);
+  // One team alert per note on a lead (FIG-1678). The same service serves the Conversation and the dashboard preview. The text is not sent.
+  if (input.type === "NOTE" && input.leadId) {
+    const lead = await adminDb.lead.findFirst({ where: { id: input.leadId, organizationId: ctx.organizationId }, select: { companyId: true, contactId: true } });
+    await emitTeamActivity({
+      organizationId: ctx.organizationId,
+      actorMembershipId: ctx.membershipId,
+      eventKey: "NOTE_ADDED",
+      entityType: "Lead",
+      entityId: input.leadId,
+      label: lead ? await leadLabelFor(ctx.organizationId, lead) : "a lead",
+      route: `leads/${input.leadId}`,
+    });
+  }
+  return activity;
 }
 
 async function listActivitiesFor(ctx: AuthContext, ids: LinkedRecordIds) {
@@ -56,14 +121,7 @@ export async function listActivitiesPage(
   await assertCanAccessLinkedRecords(ctx, ids);
   requirePermission(ctx, "activities.view");
   const paging = resolvePaging(request);
-  const [items, total] = await Promise.all([
-    listActivitiesRecord(ctx.organizationId, {
-      ...ids,
-      take: paging.take,
-      skip: paging.skip,
-    }),
-    countActivitiesRecord(ctx.organizationId, ids),
-  ]);
+  const { items, total } = await listActivitiesWithCount(ctx.organizationId, { ...ids, take: paging.take, skip: paging.skip });
   return buildPage(items, total, paging);
 }
 
@@ -90,20 +148,16 @@ async function visibleLeadAndDealIds(
 
   const [leads, deals] = await Promise.all([
     adminDb.lead.findMany({ where: leadWhere, select: { id: true, ownerMembershipId: true } }),
-    adminDb.deal.findMany({ where: dealWhere, select: { id: true, ownerMembershipId: true } }),
+    adminDb.deal.findMany({
+      where: dealWhere,
+      select: { id: true, ownerMembershipId: true, outcome: true },
+    }),
   ]);
 
-  const leadIds = hasPermission(ctx, "leads.view.all")
-    ? leads.map((l) => l.id)
-    : hasPermission(ctx, "leads.view.own")
-      ? leads.filter((l) => l.ownerMembershipId === ctx.membershipId).map((l) => l.id)
-      : [];
-
-  const dealIds = hasPermission(ctx, "deals.view.all")
-    ? deals.map((d) => d.id)
-    : hasPermission(ctx, "deals.view.own")
-      ? deals.filter((d) => d.ownerMembershipId === ctx.membershipId).map((d) => d.id)
-      : [];
+  // The scope resolver decides record by record: own, organisation, shared
+  // pool and won-only all come out of the same place (B1.01).
+  const leadIds = leads.filter((l) => canView(ctx, "leads", l)).map((l) => l.id);
+  const dealIds = deals.filter((d) => canView(ctx, "deals", d)).map((d) => d.id);
 
   return { leadIds, dealIds };
 }

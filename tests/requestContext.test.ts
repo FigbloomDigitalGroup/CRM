@@ -7,6 +7,7 @@ import {
 } from "../src/auth/requestContext";
 import {
   NoActiveMembershipError,
+  OrganizationUnavailableError,
   NotFoundError,
   UnauthorizedError,
 } from "../src/auth/errors";
@@ -137,6 +138,60 @@ describe("resolveRequestContext: real session cookie", () => {
     await expect(
       resolveRequestContext(org.slug, cookieReaderFrom({ [SESSION_COOKIE_NAME]: token })),
     ).rejects.toThrow(NoActiveMembershipError);
+  });
+});
+
+describe("resolveRequestContext: nothing is remembered between calls", () => {
+  async function signedInMember(roleKey: string) {
+    const org = await createTestOrganization();
+    const password = "fresh-every-call-password";
+    const user = await createUserWithPassword(password);
+    const role = await adminDb.role.findUniqueOrThrow({ where: { key: roleKey } });
+    const membership = await adminDb.membership.create({
+      data: { organizationId: org.id, userId: user.id, roleId: role.id, joinedAt: new Date() },
+    });
+    const { token } = await authService.login(user.email, password);
+    return { org, user, membership, jar: cookieReaderFrom({ [SESSION_COOKIE_NAME]: token }) };
+  }
+
+  it("carries the role's permission keys, and a role change applies on the very next call", async () => {
+    const { org, membership, jar } = await signedInMember("SALES");
+    const before = await resolveRequestContext(org.slug, jar);
+    expect(before.roleKey).toBe("SALES");
+    expect(before.permissionKeys.length).toBeGreaterThan(0);
+
+    const management = await adminDb.role.findUniqueOrThrow({ where: { key: "MANAGEMENT" } });
+    await adminDb.membership.update({ where: { id: membership.id }, data: { roleId: management.id } });
+
+    const after = await resolveRequestContext(org.slug, jar);
+    expect(after.roleKey).toBe("MANAGEMENT");
+    expect(after.permissionKeys).not.toEqual(before.permissionKeys);
+  });
+
+  it("a deactivated or removed membership is refused on the very next call", async () => {
+    const { org, membership, jar } = await signedInMember("SALES");
+    await expect(resolveRequestContext(org.slug, jar)).resolves.toMatchObject({ membershipId: membership.id });
+
+    await adminDb.membership.update({ where: { id: membership.id }, data: { status: "INACTIVE" } });
+    await expect(resolveRequestContext(org.slug, jar)).rejects.toThrow(NoActiveMembershipError);
+  });
+
+  it("a membership in one organisation never opens another", async () => {
+    const { user, jar } = await signedInMember("MANAGEMENT");
+    const other = await createTestOrganization("Other Org");
+    await expect(resolveRequestContext(other.slug, jar)).rejects.toThrow(NoActiveMembershipError);
+    expect(user.id).toBeTruthy();
+  });
+
+  it("a suspended organisation is refused on the very next call, and reactivation restores it", async () => {
+    const { org, jar } = await signedInMember("SALES");
+    await resolveRequestContext(org.slug, jar);
+
+    await adminDb.organization.update({ where: { id: org.id }, data: { status: "SUSPENDED" } });
+    await expect(resolveRequestContext(org.slug, jar)).rejects.toThrow(OrganizationUnavailableError);
+
+    await adminDb.organization.update({ where: { id: org.id }, data: { status: "ACTIVE" } });
+    await expect(resolveRequestContext(org.slug, jar)).resolves.toMatchObject({ organizationId: org.id });
   });
 });
 

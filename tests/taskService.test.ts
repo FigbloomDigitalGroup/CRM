@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ForbiddenError, ValidationError } from "../src/auth/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../src/auth/errors";
 import * as leadService from "../src/services/leadService";
 import * as taskService from "../src/services/taskService";
 import {
@@ -98,7 +98,7 @@ describe("taskService", () => {
 
     await expect(
       taskService.updateTask(otherCtx, task.id, { status: "COMPLETED" }),
-    ).rejects.toThrow(ForbiddenError);
+    ).rejects.toThrow(NotFoundError);
   });
 
   it("Sales cannot reassign a task to someone else even if they are its creator", async () => {

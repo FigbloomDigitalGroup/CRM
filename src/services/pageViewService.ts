@@ -1,5 +1,8 @@
+import { after } from "next/server";
 import type { AuthContext } from "../auth/context";
+import { resolveRequestContext, snapshotRequestCookies } from "../auth/requestContext";
 import { requirePermission } from "../auth/context";
+import { NoActiveMembershipError, NotFoundError, UnauthorizedError } from "../auth/errors";
 import {
   createPageView,
   getPageUsageSummary as getPageUsageSummaryRecord,
@@ -48,6 +51,32 @@ export async function recordPageView(
     await createPageView(ctx.organizationId, ctx.membershipId, page);
   } catch (err) {
     console.error(`Failed to record a page view for "${page}":`, err);
+  }
+}
+
+/**
+ * Records a page view without making the page wait for it. Called from a server page, it reads the request's cookies, hands the response back
+ * straight away and does the rest (who the viewer is, and the insert) once the page is on its way with `after()`. The page therefore costs the
+ * person no database round trips, which is the point: this write used to sit in front of every page click. Still best-effort, like
+ * `recordPageView`: nothing here can fail the page.
+ */
+export async function schedulePageView(orgSlug: string, page: PageViewLabel): Promise<void> {
+  try {
+    const cookieJar = await snapshotRequestCookies();
+    after(async () => {
+      try {
+        // Not the per-render cached lookup: this runs after the render, with the snapshot taken above.
+        const ctx = await resolveRequestContext(orgSlug, cookieJar);
+        await recordPageView(ctx, page);
+      } catch (err) {
+        // Signed out, or not a member: the page itself already answered that; there is just nothing to count.
+        if (!(err instanceof UnauthorizedError || err instanceof NoActiveMembershipError || err instanceof NotFoundError)) {
+          console.error(`Failed to record a page view for "${page}":`, err);
+        }
+      }
+    });
+  } catch (err) {
+    console.error(`Failed to schedule a page view for "${page}":`, err);
   }
 }
 

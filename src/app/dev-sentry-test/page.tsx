@@ -6,7 +6,7 @@ import { SentryTestButtons } from "./SentryTestButtons";
  * buttons trigger a real, deliberate error through the actual app code paths
  * (error.tsx boundary / the logger.error -> Sentry bridge), not a mock.
  * Enabled ONLY when NODE_ENV is explicitly "development" (FIG-605 convention,
- * see src/app/dev-login/page.tsx).
+ * see src/app/api/dev-session/route.ts).
  */
 export default function DevSentryTestPage() {
   if (process.env.NODE_ENV !== "development") {

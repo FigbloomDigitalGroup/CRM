@@ -31,6 +31,7 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY public ./public
 COPY package.json next.config.js ./
+COPY config ./config
 COPY prisma ./prisma
 COPY scripts ./scripts
 COPY docker/entrypoint.sh ./docker/entrypoint.sh

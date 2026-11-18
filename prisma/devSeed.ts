@@ -10,6 +10,7 @@ import {
   type SampleData,
 } from "./sampleData";
 import { seedRolesAndPermissions } from "./seedReference";
+import { seedDemoChat } from "./devSeedChat";
 
 /**
  * The development and demo seed (FIG-1016, B0.08): two organizations, the
@@ -24,8 +25,7 @@ import { seedRolesAndPermissions } from "./seedReference";
  *
  * Also creates the Dev Super Admin platform identity (FIG-1196, B0.09).
  *
- * Not seeded yet because the models do not exist: the Customer Support
- * account (its role arrives with B1.01 / B6.23), payments, tags and
+ * Not seeded yet because the models do not exist: payments, tags and
  * templates (B3.03 and later issues add them to this seed).
  */
 export interface DevUser {
@@ -36,12 +36,13 @@ export interface DevUser {
 }
 
 export const DEV_USERS: readonly DevUser[] = [
-  { id: "mg", email: "dev.management@figbloom.local", name: "Dev Management", roleKey: "MANAGEMENT" },
-  { id: "s1", email: "dev.sales@figbloom.local", name: "Dev Sales", roleKey: "SALES" },
-  { id: "s2", email: "dev.sales2@figbloom.local", name: "Dev Sales Two", roleKey: "SALES" },
-  { id: "dl", email: "dev.delivery@figbloom.local", name: "Dev Delivery", roleKey: "DELIVERY" },
-  { id: "fn", email: "dev.finance@figbloom.local", name: "Dev Finance", roleKey: "FINANCE" },
-  { id: "tc", email: "dev.tech@figbloom.local", name: "Dev Restricted Technical", roleKey: "RESTRICTED_TECHNICAL" },
+  { id: "mg", email: "dev.management@figbloom.local", name: "Luke Kipruto", roleKey: "MANAGEMENT" },
+  { id: "s1", email: "dev.sales@figbloom.local", name: "Ruth Kibet", roleKey: "SALES" },
+  { id: "s2", email: "dev.sales2@figbloom.local", name: "Victor Ogola", roleKey: "SALES" },
+  { id: "dl", email: "dev.delivery@figbloom.local", name: "Zion Suzuki", roleKey: "DELIVERY" },
+  { id: "fn", email: "dev.finance@figbloom.local", name: "Zilpa Okoth", roleKey: "FINANCE" },
+  { id: "tc", email: "dev.tech@figbloom.local", name: "Katam Kipkemboi", roleKey: "RESTRICTED_TECHNICAL" },
+  // There is no Customer Support role (dropped 5 Nov 2026, docs/DECISIONS.md 5.0 decision 12). With the Dev Super Admin below, these are the seven dev accounts.
 ];
 
 /**
@@ -52,7 +53,7 @@ export const DEV_USERS: readonly DevUser[] = [
  */
 export const DEV_PLATFORM_IDENTITY = {
   email: "dev.superadmin@platform.figbloom.local",
-  name: "Dev Super Admin",
+  name: "Michael Kiruti",
 } as const;
 
 export const DEV_ORGANIZATIONS = {
@@ -442,6 +443,7 @@ async function seedOrganization(
     });
     members.set(id, membership.id);
   }
+  await seedDemoChat(organization.id, members, options.now);
 
   const marker = await adminDb.organizationSetting.findUnique({
     where: { organizationId_key: { organizationId: organization.id, key: SEED_MARKER_KEY } },

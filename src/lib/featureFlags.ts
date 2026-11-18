@@ -60,10 +60,48 @@ export const TOGGLES: readonly ToggleDef[] = [
     defaultValue: true,
     minRelease: "v1",
   },
+  // The five departures, one switch each (B1.03). Each is only effective
+  // while the umbrella toggle above is also on.
+  {
+    key: "departure.won_only",
+    description: "Delivery and Finance see won deals only (decision 1.2).",
+    defaultValue: true,
+    minRelease: "v1",
+  },
+  {
+    key: "departure.shared_pool",
+    description: "Sales sees a shared pool of unassigned leads and can claim from it (decision 1.3).",
+    defaultValue: true,
+    minRelease: "v1",
+  },
+  {
+    key: "departure.technical_my_work",
+    description: "Restricted Technical gets My work: tasks plus their client requirements (decision 1.4).",
+    defaultValue: true,
+    minRelease: "v1",
+  },
+  {
+    key: "departure.finance_followup",
+    description: "Finance adds a follow-up note on won deals instead of tasks (decision 1.5).",
+    defaultValue: true,
+    minRelease: "v1",
+  },
+  {
+    key: "departure.handoff_permission",
+    description: "The delivery-handoff permission: Sales and Management start, Delivery receives (decision 1.6).",
+    defaultValue: true,
+    minRelease: "v1",
+  },
   {
     key: "assistant.enabled",
     description: "The Ask Figbloom assistant.",
     defaultValue: false,
+    minRelease: "v1.1",
+  },
+  {
+    key: "preferences.own_colours",
+    description: "Members may set their own sidebar, accent, highlight and page colours (each checked for readability).",
+    defaultValue: true,
     minRelease: "v1.1",
   },
   {
@@ -79,9 +117,9 @@ export const TOGGLES: readonly ToggleDef[] = [
     minRelease: "v1.1",
   },
   {
-    key: "customer_support.role",
-    description: "The Customer Support role (decision-gated).",
-    defaultValue: false,
+    key: "communication.group",
+    description: "The Communication group: Chat, Mail and Meetings (FIG-1384).",
+    defaultValue: true,
     minRelease: "v1.1",
   },
 ];
@@ -117,6 +155,11 @@ export interface FeatureConfig {
   release: Release;
   /** The organization's saved toggle values. */
   toggles: Record<string, boolean>;
+  /**
+   * Toggle values the platform fixed for this organisation (B7.02, FIG-1184). They win over `toggles`, never over the release: a V2
+   * feature stays off in V1 whatever the platform says. Absent means the organisation decides.
+   */
+  platformOverrides?: Record<string, boolean>;
 }
 
 export type FeatureReason = "release" | "toggle";
@@ -144,7 +187,7 @@ export function resolveFeature(key: string, config: FeatureConfig): FeatureResol
   if (!releaseAtLeast(config.release, toggle.minRelease)) {
     return { enabled: false, reason: "release", availableIn: toggle.minRelease };
   }
-  const value = config.toggles[key] ?? toggle.defaultValue;
+  const value = config.platformOverrides?.[key] ?? config.toggles[key] ?? toggle.defaultValue;
   return value ? { enabled: true } : { enabled: false, reason: "toggle" };
 }
 

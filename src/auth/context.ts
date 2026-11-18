@@ -10,6 +10,23 @@ import { ForbiddenError } from "./errors";
  */
 export type AuthContext = ActiveMembership;
 
+/**
+ * A denial that carries who is asking, so the explained no-access response
+ * (S4) can name the role, the roles that own the area and who to ask. Use it
+ * wherever a service refuses on a rule that is not a single `requirePermission`.
+ */
+export function deny(
+  ctx: AuthContext,
+  label: string,
+  permissionKeys: string[] = [],
+): ForbiddenError {
+  return new ForbiddenError(label, {
+    roleKey: ctx.roleKey,
+    organizationId: ctx.organizationId,
+    permissionKeys: permissionKeys.length > 0 ? permissionKeys : undefined,
+  });
+}
+
 export function hasPermission(
   ctx: AuthContext,
   permissionKey: string,
@@ -25,6 +42,7 @@ export function requirePermission(
   if (!hasPermission(ctx, permissionKey)) {
     throw new ForbiddenError(permissionKey, {
       roleKey: ctx.roleKey,
+      organizationId: ctx.organizationId,
       permissionKeys: [permissionKey],
     });
   }
@@ -68,6 +86,7 @@ export function requireOwnedRecordPermission(
       `${ownPermissionKey} (own) or ${allPermissionKey} (all)`,
       {
         roleKey: ctx.roleKey,
+        organizationId: ctx.organizationId,
         permissionKeys: [ownPermissionKey, allPermissionKey],
       },
     );

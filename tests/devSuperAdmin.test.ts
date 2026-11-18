@@ -1,7 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { UnauthorizedError } from "../src/auth/errors";
 import { devAccountsAllowed, isDevAccountEmail } from "../src/auth/devAccounts";
@@ -68,7 +67,7 @@ describe("guard 1: the dev seed", () => {
     const identity = await adminDb.platformIdentity.findUniqueOrThrow({
       where: { email: DEV_PLATFORM_IDENTITY.email },
     });
-    expect(identity).toMatchObject({ name: "Dev Super Admin", isDev: true });
+    expect(identity).toMatchObject({ name: "Michael Kiruti", isDev: true });
     expect(identity.passwordHash).toBeTruthy();
 
     // Separate from tenant users: no `users` row, so no membership can exist.
@@ -308,9 +307,10 @@ describe("the platform identity cannot reach tenant data", () => {
       SELECT relrowsecurity AS rls, relforcerowsecurity AS forced
       FROM pg_class WHERE relname = 'platform_identities'`;
     expect(row).toEqual({ rls: true, forced: true });
-    const policies = await adminDb.$queryRaw<{ n: bigint }[]>`
-      SELECT COUNT(*) AS n FROM pg_policies WHERE tablename = 'platform_identities'`;
-    expect(Number(policies[0]!.n)).toBe(0);
+    // FIG-1135 (B6.03): the only policy is the platform role's own; the tenant role has none.
+    const policies = await adminDb.$queryRaw<{ roles: string[] }[]>`
+      SELECT roles::text[] AS roles FROM pg_policies WHERE tablename = 'platform_identities'`;
+    expect(policies.map((p) => p.roles)).toEqual([["figbloom_platform"]]);
   });
 
   it("sees no tenant rows even with a tenant context set for it", async () => {
@@ -324,28 +324,26 @@ describe("the platform identity cannot reach tenant data", () => {
   });
 });
 
-describe("the holding page", () => {
-
-  it("says the platform console arrives in V1.1 and shows the signed-in Dev Super Admin", async () => {
+describe("the platform console's door (FIG-1160, replaces the V1.1 holding page)", () => {
+  it("lets the signed-in Dev Super Admin in and says who they are", async () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("ALLOW_DEV_ACCOUNTS", "true");
     holder.jar = cookies({ [DEV_PLATFORM_COOKIE_NAME]: createPlatformCookieValue(platformId) });
-    const { default: Page } = await import("../src/app/platform/page");
-    const html = renderToStaticMarkup(await Page());
-    expect(html).toContain("Platform console arrives in V1.1");
-    expect(html).toContain("Dev Super Admin");
-    expect(html).toContain("no tenant view");
+    const { requireConsole } = await import("../src/app/platform/requireConsole");
+    const who = await requireConsole();
+    expect(who.name).toBe("Michael Kiruti");
+    expect(who.email).toBe(DEV_PLATFORM_IDENTITY.email);
   });
 
   it("is a 404 without a platform session, and in production even with one", async () => {
-    const { default: Page } = await import("../src/app/platform/page");
+    const { requireConsole } = await import("../src/app/platform/requireConsole");
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("ALLOW_DEV_ACCOUNTS", "true");
     holder.jar = cookies({});
-    await expect(Page()).rejects.toMatchObject({ digest: expect.stringContaining("NEXT_HTTP_ERROR_FALLBACK;404") });
+    await expect(requireConsole()).rejects.toMatchObject({ digest: expect.stringContaining("NEXT_HTTP_ERROR_FALLBACK;404") });
 
     vi.stubEnv("NODE_ENV", "production");
     holder.jar = cookies({ [DEV_PLATFORM_COOKIE_NAME]: createPlatformCookieValue(platformId) });
-    await expect(Page()).rejects.toMatchObject({ digest: expect.stringContaining("404") });
+    await expect(requireConsole()).rejects.toMatchObject({ digest: expect.stringContaining("404") });
   });
 });

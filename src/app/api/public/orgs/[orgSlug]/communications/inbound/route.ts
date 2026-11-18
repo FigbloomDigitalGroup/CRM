@@ -1,4 +1,6 @@
+import { getClientIp } from "@/app/api/_lib/clientRequest";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { limitInboundEmail } from "@/auth/publicLimits";
 import { ValidationError } from "@/auth/errors";
 import {
   INBOUND_EMAIL_KEY_HEADER,
@@ -26,6 +28,7 @@ export async function POST(
 ) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
+    await limitInboundEmail(getClientIp(request), orgSlug);
     const { searchParams } = new URL(request.url);
     const token =
       request.headers.get(INBOUND_EMAIL_KEY_HEADER) ??

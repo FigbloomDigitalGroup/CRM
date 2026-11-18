@@ -9,6 +9,8 @@ interface DevAccount {
   email: string;
   name: string;
   roleName: string;
+  /** Set by the server only for an account that does not sign in with a password (the dev Super Admin): where to post the sign-in. */
+  devSignInPath?: string;
 }
 
 export function LoginForm({ devAccounts = [] }: { devAccounts?: DevAccount[] }) {
@@ -50,7 +52,34 @@ export function LoginForm({ devAccounts = [] }: { devAccounts?: DevAccount[] }) 
     }
   }
 
+  // The dev Super Admin has no password sign-in: it signs in through the dev route the server named, like the floating dev chips, and lands on /platform.
+  async function performDevPlatformLogin(account: DevAccount, path: string) {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: account.email }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(body.error ?? "Login failed.");
+      }
+      router.push(body.landing ?? "/platform");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Login failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   function handleQuickLogin(account: DevAccount) {
+    if (account.devSignInPath) {
+      void performDevPlatformLogin(account, account.devSignInPath);
+      return;
+    }
     setEmail(account.email);
     setPassword(DEV_FIXTURE_PASSWORD);
     void performLogin(account.email, DEV_FIXTURE_PASSWORD);

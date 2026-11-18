@@ -23,9 +23,9 @@ rest of the foundation on every run (see "What the smoke test guards").
 
 | Measure | Value |
 |---|---|
-| Test files | 64 (54 integration, 10 component) |
-| Tests | 698, all passing (as of FIG-801/802; 661 at FIG-1016, 521 at the original baseline) |
-| Duration | 150 to 200 s (the last two runs: 189 s with coverage, 175 s without) |
+| Test files | 97 (87 integration, 10 component) |
+| Tests | 1242, all passing (as of Stage 2 / M2; 999 at Stage 1, 698 at FIG-801/802, 521 at the original baseline) |
+| Duration | about 17 minutes locally with coverage as of Stage 2 (1021 s) (was 150 to 200 s at the original baseline); CI time is the reference |
 | Failing / skipped | 0 / 0 |
 | Lint, typecheck | clean |
 | e2e (Playwright) | 20 tests, all passing (run separately, `npm run e2e`) |
@@ -34,9 +34,9 @@ Coverage (`npm run test:coverage`, Vitest v8):
 
 | Metric | Value | CI floor (`vitest.config.ts`) |
 |---|---|---|
-| Lines and statements | 42.37 % (41.83 % at FIG-1016, 35.98 % at the original baseline) | 42 % |
-| Branches | 81.28 % | 80 % |
-| Functions | 69.76 % | 69 % |
+| Lines and statements | 51.42 % (42.37 % at FIG-801/802, 35.98 % at the original baseline) | 42 % |
+| Branches | 85.10 % | 80 % |
+| Functions | 76.42 % | 69 % |
 
 By area (lines):
 
@@ -72,6 +72,8 @@ By area (lines):
 | `authService password reset > returns the same generic message whether or not the email exists` (failed in 2 of 3 baseline runs) and the matching unknown-email login test | Both used the fixed address `nobody@example.test`. The durable auth rate limiter (FIG-784) stores attempts in the test database for an hour, so repeated runs pushed that address over its limit and the test got `RateLimitedError`. | A unique address per call (`tests/authService.test.ts`). No assertion changed. |
 
 After the fix: two further full runs passed with no failures (521 of 521).
+
+**Local test database growth (found at Stage 2).** `tests/globalSetup.ts` only applies migrations, so a long-lived local `figbloom_crm_test` collects every throwaway organisation (about 32,000 by Stage 2). `permissionsV2 > role catalogue sync` syncs roles across every organisation and timed out at 20 s in two full runs (it passed alone). After `prisma migrate reset --force` on the test database (`DATABASE_URL` set to the test URL) the full suite passed 1242 of 1242. CI starts from a fresh database, so it is not affected. If it recurs locally, reset the test database. A stale rolled-back row in `_prisma_migrations` (from a failed migration attempt) also fails `databaseSmoke > has every migration applied`; a reset clears it.
 
 Nothing is quarantined, so no follow-up issues are needed.
 

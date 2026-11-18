@@ -44,7 +44,7 @@
 import "dotenv/config";
 import { adminDb } from "../src/db/adminClient";
 import { withOrgContext } from "../src/db/orgScopedClient";
-import { recordAuditEvent } from "../src/repositories/auditEvents";
+import { eraseContactData } from "../src/services/erasureService";
 
 function parseArgs(argv: string[]) {
   const get = (flag: string) => {
@@ -81,19 +81,24 @@ async function main(): Promise<void> {
       throw new Error(`No contact ${contactId} in organization "${orgSlug}".`);
     }
 
-    const [leads, deals, activities, tasks, communications] = await Promise.all([
+    const [leads, deals, activities, tasks, communications, attachments] = await Promise.all([
       tx.lead.count({ where: { organizationId: org.id, contactId } }),
       tx.deal.count({ where: { organizationId: org.id, primaryContactId: contactId } }),
       tx.activity.count({ where: { organizationId: org.id, contactId } }),
       tx.task.count({ where: { organizationId: org.id, contactId } }),
       tx.communication.count({ where: { organizationId: org.id, contactId } }),
+      // Files attached to the contact or to its tasks (FIG-796): the rows cascade, the stored bytes are removed below.
+      tx.attachment.findMany({
+        where: { organizationId: org.id, OR: [{ contactId }, { task: { contactId } }] },
+        select: { fileId: true, file: { select: { storageKey: true } } },
+      }),
     ]);
 
     console.log(
       `Contact: ${contact.firstName} ${contact.lastName ?? ""} <${contact.email ?? "no email"}>`,
     );
     console.log(
-      `Will DELETE (cascades from this contact): ${activities} activities, ${tasks} tasks, ${communications} communications.`,
+      `Will DELETE (cascades from this contact): ${activities} activities, ${tasks} tasks, ${communications} communications, ${attachments.length} attached files.`,
     );
     console.log(
       `Will UNLINK, not delete (contactId cleared, record kept): ${leads} leads, ${deals} deals.`,
@@ -104,26 +109,9 @@ async function main(): Promise<void> {
       return;
     }
 
-    // Recorded before the delete, not after -- it needs the contact's own
-    // details to be a useful processing record, and `entityId` pointing at
-    // a now-deleted row is fine (AuditEvent.entityType/entityId are plain
-    // strings, no FK -- see prisma/schema.prisma).
-    await recordAuditEvent({
-      organizationId: org.id,
-      action: "data_subject.erased",
-      entityType: "Contact",
-      entityId: contact.id,
-      metadata: {
-        firstName: contact.firstName,
-        lastName: contact.lastName,
-        email: contact.email,
-        phone: contact.phone,
-        unlinkedLeads: leads,
-        unlinkedDeals: deals,
-      },
-    });
-
-    await tx.contact.delete({ where: { id: contact.id } });
+    // The erasure itself lives in the service (FIG-1062): the same code the Data and privacy screen runs after two confirmations.
+    const result = await eraseContactData({ organizationId: org.id, contactId });
+    console.log(JSON.stringify(result, null, 2));
     console.log(`Erased contact ${contactId}.`);
   });
 }

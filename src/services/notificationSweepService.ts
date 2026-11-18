@@ -1,63 +1,21 @@
 import { adminDb } from "../db/adminClient";
 import { logger } from "../lib/logger";
-import { listTasks } from "../repositories/tasks";
+import { enqueueAndRunNow } from "../jobs/runner";
+import {
+  NOTIFICATIONS_SWEEP_JOB_TYPE,
+  sweepIntervalMinutes,
+} from "../jobs/handlers/notificationSweep";
 import {
   getJobRunState,
+  getJobTypeOutcome,
   releaseJobLock,
   tryAcquireJobLock,
   type ScheduledJobRunState,
 } from "../repositories/scheduledJobRuns";
-import {
-  notifyTaskDue,
-  notifyTaskOverdue,
-  retryDueDeliveries,
-} from "./notificationService";
 
 export const NOTIFICATIONS_SWEEP_JOB_KEY = "notifications-sweep";
-const DEFAULT_INTERVAL_MINUTES = 15;
+export { sweepIntervalMinutes };
 const MIN_STALE_LOCK_MINUTES = 15;
-
-/** `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES` (FIG-783 AC: "configurable through env") -- see docs/DEPLOYMENT.md's "Scheduled jobs" section. */
-export function sweepIntervalMinutes(): number {
-  const raw = Number(process.env.NOTIFICATIONS_SWEEP_INTERVAL_MINUTES);
-  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_INTERVAL_MINUTES;
-}
-
-function startOfDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-async function sweepOrganization(organizationId: string): Promise<{
-  due: number;
-  overdue: number;
-  retried: number;
-}> {
-  const today = startOfDay(new Date());
-  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-
-  const dueToday = await listTasks(organizationId, {
-    dueAfter: today,
-    dueBefore: tomorrow,
-  });
-  for (const task of dueToday) {
-    if (task.status !== "PENDING" && task.status !== "IN_PROGRESS") continue;
-    await notifyTaskDue(organizationId, task.assigneeMembershipId, {
-      id: task.id,
-      title: task.title,
-    });
-  }
-
-  const overdue = await listTasks(organizationId, { overdueOnly: true });
-  for (const task of overdue) {
-    await notifyTaskOverdue(organizationId, task.assigneeMembershipId, {
-      id: task.id,
-      title: task.title,
-    });
-  }
-
-  const { attempted } = await retryDueDeliveries(organizationId);
-  return { due: dueToday.length, overdue: overdue.length, retried: attempted };
-}
 
 export interface NotificationSweepResult {
   ran: boolean;
@@ -140,14 +98,14 @@ export async function runNotificationsSweep(
       select: { id: true, slug: true },
     });
 
+    // Each organisation's sweep runs as a background job (FIG-1066): it is
+    // logged with the organisation, retried by the framework when it fails, and
+    // visible in the job status API. One organisation failing never stops the rest.
     for (const org of organizations) {
       try {
-        const { due, overdue, retried } = await sweepOrganization(org.id);
-        if (due > 0 || overdue > 0 || retried > 0) {
-          logger.info(
-            { orgSlug: org.slug, due, overdue, deliveriesRetried: retried },
-            "Notifications sweep: organization processed",
-          );
+        const run = await enqueueAndRunNow({ organizationId: org.id, type: NOTIFICATIONS_SWEEP_JOB_TYPE });
+        if (run.outcome !== "succeeded") {
+          logger.error({ orgSlug: org.slug, outcome: run.outcome }, "Notifications sweep failed for organization");
         }
       } catch (err) {
         logger.error({ err, orgSlug: org.slug }, "Notifications sweep failed for organization");
@@ -174,9 +132,48 @@ export async function runNotificationsSweep(
   }
 }
 
-/** Read-only status for `/api/health` and anything else that wants to show the last successful sweep time (FIG-783 AC). */
+/** Shown instead of the job's own error: `/api/health` is public and a raw error can name tables or hosts. */
+export const SWEEP_JOB_FAILED_MESSAGE = "The latest scheduled notifications sweep failed; see the job log.";
+
+export interface NotificationsSweepStatusOptions {
+  /**
+   * Which background job type to read the scheduled runs from. Defaults to the real sweep job when `jobKey` is the
+   * real key, and to none otherwise -- a test-only seam like `RunNotificationsSweepOptions.jobKey`, so a test can use
+   * a disposable type instead of reading every organisation's real sweep rows.
+   */
+  jobType?: string;
+}
+
+/**
+ * Read-only status for `/api/health` and anything else that wants to show the last successful sweep time (FIG-783 AC).
+ *
+ * The sweep now runs two ways: the legacy, throttled route (`/api/cron/notifications-sweep`, which records its run in
+ * `scheduled_job_runs`) and the job framework (`/api/cron/jobs`: one `notifications.sweep` background job per
+ * organisation every `NOTIFICATIONS_SWEEP_INTERVAL_MINUTES`). On a host with only the second (the Vercel MVP), the legacy
+ * row moves once a day at best, so `lastCompletedAt` is the later of the two. The shape is unchanged.
+ */
 export async function getNotificationsSweepStatus(
   jobKey: string = NOTIFICATIONS_SWEEP_JOB_KEY,
+  options: NotificationsSweepStatusOptions = {},
 ): Promise<ScheduledJobRunState | null> {
-  return getJobRunState(jobKey);
+  const legacy = await getJobRunState(jobKey);
+  const jobType = options.jobType ?? (jobKey === NOTIFICATIONS_SWEEP_JOB_KEY ? NOTIFICATIONS_SWEEP_JOB_TYPE : undefined);
+  if (!jobType) return legacy;
+
+  const outcome = await getJobTypeOutcome(jobType);
+  if (outcome.lastSucceededAt === null && !outcome.failedSinceLastSuccess) return legacy;
+
+  const legacyAt = legacy?.completedAt ?? null;
+  const completedAt =
+    outcome.lastSucceededAt !== null && (legacyAt === null || outcome.lastSucceededAt > legacyAt)
+      ? outcome.lastSucceededAt
+      : legacyAt;
+  const lastError = legacy?.lastError ?? (outcome.failedSinceLastSuccess ? SWEEP_JOB_FAILED_MESSAGE : null);
+  return {
+    jobKey,
+    status: legacy?.status ?? "IDLE",
+    startedAt: legacy?.startedAt ?? null,
+    completedAt,
+    lastError,
+  };
 }

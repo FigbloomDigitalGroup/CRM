@@ -1,16 +1,29 @@
 import type { AuthContext } from "../auth/context";
 import {
+  deny,
   hasPermission,
   requirePermission,
-  requireOwnedRecordPermission,
 } from "../auth/context";
 import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
+import { assertRecordVisible } from "../auth/visibility";
+import { assertWritable, cleanArchiveReason, canRestoreRecord } from "../lib/archive";
+import { recordAuditEvent } from "../repositories/auditEvents";
+import { emitWebhookEvent } from "./webhookService";
 import {
   createTask as createTaskRecord,
+  archiveTask as archiveTaskRecord,
+  restoreTask as restoreTaskRecord,
   getTaskById,
+  countTaskGroups,
   countTasks as countTasksRecords,
+  listAttachmentsForTasks,
+  listTaskGroup,
+  TASK_GROUP_KEYS,
+  type TaskGroupBounds,
+  type TaskGroupKey,
   listTasks as listTasksRecords,
-  updateTask as updateTaskRecord,
+  TASK_TYPES,
+  type TaskTypeValue,
   type CreateTaskInput,
   type ListTasksFilters,
 } from "../repositories/tasks";
@@ -22,8 +35,13 @@ import {
   assertEligibleTaskAssignee,
   listTaskAssigneeCandidates,
 } from "./ownerEligibility";
+import { rescoreCompanyQuietly } from "./scoreEngine";
+import { invalidateSignals } from "./signalService";
 import { assertCanAccessLinkedRecords } from "./recordAccess";
 import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
+import { localParts, startOfLocalDay, startOfNextLocalDay } from "../notifications/timeZone";
+import { memberTimeZone } from "./notificationDeliveryPolicy";
+import { clearFollowUpOnArchive, promoteIfNextStep, restoreFollowUp, updateTaskLinked, isCallToAction } from "./taskLinkService";
 
 function parseDueDate(value: string | null | undefined): Date | null | undefined {
   if (value === undefined) return undefined;
@@ -50,12 +68,24 @@ function withAssigneeName<
   return { ...rest, assigneeName: assignee?.user.name ?? null };
 }
 
+const MAX_REQUIREMENTS = 5000;
+
+function cleanRequirements(value: string | null | undefined): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  const trimmed = value.trim();
+  if (trimmed.length > MAX_REQUIREMENTS) {
+    throw new ValidationError(`The requirements are too long (at most ${MAX_REQUIREMENTS} characters).`, [{ path: "requirements", message: `At most ${MAX_REQUIREMENTS} characters.` }]);
+  }
+  return trimmed || null;
+}
+
 export type CreateTaskServiceInput = Omit<
   CreateTaskInput,
   "organizationId" | "createdByMembershipId" | "assigneeMembershipId" | "dueAt"
 > & { assigneeMembershipId?: string; dueAt?: string };
 
-async function resolveAssignee(ctx: AuthContext, requested?: string) {
+export async function resolveAssignee(ctx: AuthContext, requested?: string) {
   if (hasPermission(ctx, "tasks.assign.any")) {
     if (!requested || requested === ctx.membershipId) {
       return ctx.membershipId;
@@ -80,20 +110,35 @@ export async function createTask(
   requirePermission(ctx, "tasks.create");
   const title = cleanTitle(input.title);
   const dueAt = parseDueDate(input.dueAt);
-  await assertCanAccessLinkedRecords(ctx, input);
+  await assertCanAccessLinkedRecords(ctx, input, { requireWritable: true });
   const assigneeMembershipId = await resolveAssignee(
     ctx,
     input.assigneeMembershipId,
   );
 
-  return createTaskRecord({
-    ...input,
-    title: title!,
-    organizationId: ctx.organizationId,
-    createdByMembershipId: ctx.membershipId,
-    assigneeMembershipId,
-    dueAt: dueAt ?? undefined,
-  });
+  // A call or meeting from the Calendar is a task of that type (P2-22); a call-to-action on a lead that comes first becomes its next step (P2-23), in the same transaction.
+  const type = input.type ?? "TASK";
+  if (!TASK_TYPES.includes(type)) {
+    throw new ValidationError("The task type is not valid.", [{ path: "type", message: `Use one of ${TASK_TYPES.join(", ")}.` }]);
+  }
+  const task = await createTaskRecord(
+    {
+      ...input,
+      type,
+      isFollowUp: undefined,
+      title: title!,
+      requirements: cleanRequirements(input.requirements) ?? undefined,
+      organizationId: ctx.organizationId,
+      createdByMembershipId: ctx.membershipId,
+      assigneeMembershipId,
+      dueAt: dueAt ?? undefined,
+    },
+    input.leadId && isCallToAction(type) ? (tx, created) => promoteIfNextStep(tx, created).then(() => undefined) : undefined,
+  );
+  await rescoreCompanyQuietly(ctx.organizationId, task.companyId);
+  await invalidateSignals(ctx.organizationId);
+  await emitWebhookEvent({ organizationId: ctx.organizationId, type: "task.created", record: task });
+  return task;
 }
 
 async function loadVisibleTask(ctx: AuthContext, taskId: string) {
@@ -101,12 +146,9 @@ async function loadVisibleTask(ctx: AuthContext, taskId: string) {
   if (!task) {
     throw new NotFoundError("Task", taskId);
   }
-  requireOwnedRecordPermission(
-    ctx,
-    "tasks.view.own",
-    "tasks.view.all",
-    task.assigneeMembershipId,
-  );
+  assertRecordVisible(ctx, "tasks", "Task", taskId, {
+    ownerMembershipId: task.assigneeMembershipId,
+  });
   return task;
 }
 
@@ -287,10 +329,13 @@ function canManageTask(
 export interface UpdateTaskServiceInput {
   title?: string;
   description?: string | null;
+  /** Client requirements snapshot (FIG-1038). */
+  requirements?: string | null;
   assigneeMembershipId?: string;
   dueAt?: string | null;
   priority?: "LOW" | "MEDIUM" | "HIGH";
   status?: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+  type?: TaskTypeValue;
 }
 
 export async function updateTask(
@@ -300,10 +345,11 @@ export async function updateTask(
 ) {
   const task = await loadVisibleTask(ctx, taskId);
   if (!canManageTask(ctx, task)) {
-    throw new ForbiddenError(
-      "tasks.assign.any, or being this task's assignee/creator",
-    );
+    throw deny(ctx, "tasks.assign.any, or being this task's assignee/creator", [
+      "tasks.assign.any",
+    ]);
   }
+  assertWritable(ctx, "task", task);
 
   // A finished task is a record of what happened: reopen it (status back to
   // Pending / In progress) before changing its details.
@@ -342,9 +388,16 @@ export async function updateTask(
   const statusChanged =
     input.status !== undefined && input.status !== task.status;
 
-  return updateTaskRecord(ctx.organizationId, taskId, {
+  if (input.type !== undefined && !TASK_TYPES.includes(input.type)) {
+    throw new ValidationError("The task type is not valid.", [{ path: "type", message: `Use one of ${TASK_TYPES.join(", ")}.` }]);
+  }
+
+  // The task and the lead's Next follow-up change together (P2-23).
+  const updatedTask = await updateTaskLinked(ctx.organizationId, taskId, {
+    type: input.type,
     title,
     description: input.description,
+    requirements: cleanRequirements(input.requirements),
     assigneeMembershipId,
     dueAt,
     priority: input.priority,
@@ -357,4 +410,181 @@ export async function updateTask(
         : null
       : undefined,
   });
+  await invalidateSignals(ctx.organizationId);
+  return updatedTask;
+}
+
+/** Soft-delete (FIG-1045, B2.16): the assignee, the creator or Management; read-only until restored. */
+export async function archiveTask(ctx: AuthContext, taskId: string, input: { reason?: string | null } = {}) {
+  const task = await loadVisibleTask(ctx, taskId);
+  if (!canRestoreRecord(ctx, "task", task)) {
+    throw deny(ctx, "tasks.assign.any, or being this task's assignee/creator", ["tasks.assign.any"]);
+  }
+  if (task.archivedAt) throw new ValidationError("This task is already archived.");
+  const reason = cleanArchiveReason(input.reason);
+  const archived = await archiveTaskRecord(ctx.organizationId, taskId, { membershipId: ctx.membershipId, reason });
+  await clearFollowUpOnArchive(ctx.organizationId, task);
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "task.archived",
+    entityType: "Task",
+    entityId: taskId,
+    metadata: reason ? { reason } : undefined,
+  });
+  return archived;
+}
+
+export async function restoreTask(ctx: AuthContext, taskId: string) {
+  const task = await loadVisibleTask(ctx, taskId);
+  if (!canRestoreRecord(ctx, "task", task)) {
+    throw deny(ctx, "tasks.assign.any, or being this task's assignee/creator", ["tasks.assign.any"]);
+  }
+  if (!task.archivedAt) throw new ValidationError("This task is not archived.");
+  await restoreFollowUp(ctx.organizationId, task);
+  const restored = await restoreTaskRecord(ctx.organizationId, taskId);
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "task.restored",
+    entityType: "Task",
+    entityId: taskId,
+  });
+  return restored;
+}
+
+// ---------------------------------------------------------------------------
+// Tasks grouped by due state (FIG-1038, B2.09)
+// ---------------------------------------------------------------------------
+
+export const TASK_GROUP_LABELS: Record<TaskGroupKey, string> = {
+  OVERDUE: "Overdue",
+  TODAY: "Today",
+  THIS_WEEK: "This week",
+  LATER: "Later",
+  NO_DATE: "No date",
+  DONE: "Done",
+};
+
+export const DEFAULT_GROUP_PAGE_SIZE = 10;
+
+/**
+ * Where the groups divide, in the viewer's own time zone: today, tomorrow and
+ * the start of next week (Monday). "Today" is the viewer's wall-clock day, so a
+ * task due at 23:30 in Nairobi is today for a Nairobi user.
+ */
+export async function taskGroupBounds(ctx: AuthContext, now = new Date()): Promise<TaskGroupBounds & { timeZone: string }> {
+  const timeZone = await memberTimeZone(ctx.organizationId, ctx.membershipId);
+  const todayStart = startOfLocalDay(now, timeZone);
+  const tomorrowStart = startOfNextLocalDay(now, timeZone);
+  const p = localParts(now, timeZone);
+  const weekday = new Date(Date.UTC(p.year, p.month - 1, p.day)).getUTCDay(); // 0 Sunday .. 6 Saturday
+  const daysToNextMonday = (8 - weekday) % 7 || 7;
+  let nextWeekStart = tomorrowStart;
+  for (let i = 1; i < daysToNextMonday; i += 1) nextWeekStart = startOfNextLocalDay(new Date(nextWeekStart.getTime() + 60_000), timeZone);
+  return { todayStart, tomorrowStart, nextWeekStart, timeZone };
+}
+
+function isGroupKey(value: string): value is TaskGroupKey {
+  return (TASK_GROUP_KEYS as readonly string[]).includes(value);
+}
+
+async function decorate(ctx: AuthContext, rows: Awaited<ReturnType<typeof listTaskGroup>>) {
+  const links = await describeTaskLinks(ctx, rows);
+  return rows.map(withAssigneeName).map((task) => ({
+    ...task,
+    link: links[task.id] ?? null,
+    // Someone else's task can be read but not changed (B2.09).
+    readOnly: !canManageTask(ctx, task),
+  }));
+}
+
+export interface GroupedTasksQuery {
+  filters?: ListTasksFilters;
+  /** Rows per group on the first page. Default 10. */
+  pageSize?: number;
+  /** Only these groups. */
+  groups?: string[];
+}
+
+/**
+ * Tasks in due-state groups with a count per group and the first page of each.
+ * A group's count and its rows come from one predicate, so they always agree.
+ * Done is returned collapsed (its count, no rows) until it is asked for.
+ */
+export async function listTasksGrouped(ctx: AuthContext, query: GroupedTasksQuery = {}) {
+  const scoped = scopeTaskFilters(ctx, query.filters ?? {});
+  const bounds = await taskGroupBounds(ctx);
+  const wanted = (query.groups?.length ? query.groups : [...TASK_GROUP_KEYS]).filter(isGroupKey);
+  const paging = resolvePaging({ page: 1, pageSize: query.pageSize ?? DEFAULT_GROUP_PAGE_SIZE });
+  // The counts and every group's rows are independent reads, so they run together rather than the rows waiting for the counts.
+  const countsPromise = countTaskGroups(ctx.organizationId, scoped, bounds);
+  const decorated = Promise.all(
+    TASK_GROUP_KEYS.filter((g) => wanted.includes(g)).map(async (key) => {
+      const collapsed = key === "DONE" && !query.groups?.includes("DONE");
+      const rows = collapsed ? [] : await listTaskGroup(ctx.organizationId, scoped, key, bounds, paging);
+      return { key, collapsed, rows: await decorate(ctx, rows) };
+    }),
+  );
+  const [counts, loaded] = await Promise.all([countsPromise, decorated]);
+  const groups = loaded.map(({ key, collapsed, rows }) => {
+    const page = buildPage(rows, counts[key], paging);
+    return { key, label: TASK_GROUP_LABELS[key], count: counts[key], collapsed, ...page };
+  });
+  return { timeZone: bounds.timeZone, counts, groups };
+}
+
+/** One page of one group (server-side paging per group). */
+export async function listTaskGroupPage(ctx: AuthContext, group: string, filters: ListTasksFilters = {}, request: PageRequest = {}) {
+  if (!isGroupKey(group)) {
+    throw new ValidationError("Unknown task group.", [{ path: "group", message: `Use one of ${TASK_GROUP_KEYS.join(", ")}.` }]);
+  }
+  const scoped = scopeTaskFilters(ctx, filters);
+  const bounds = await taskGroupBounds(ctx);
+  const paging = resolvePaging({ pageSize: DEFAULT_GROUP_PAGE_SIZE, ...request });
+  const [counts, rows] = await Promise.all([
+    countTaskGroups(ctx.organizationId, scoped, bounds),
+    listTaskGroup(ctx.organizationId, scoped, group, bounds, paging),
+  ]);
+  return { key: group, label: TASK_GROUP_LABELS[group], count: counts[group], ...buildPage(await decorate(ctx, rows), counts[group], paging) };
+}
+
+// ---------------------------------------------------------------------------
+// Restricted Technical: My work (FIG-1038, T1, D3)
+// ---------------------------------------------------------------------------
+
+/**
+ * A technician's tasks with the requirements and files each carries, grouped
+ * like any task list. Nothing else about the work leaks: no linked record, no
+ * deal, no contact, no value. The requirements text is a snapshot taken when
+ * the task was created, so it stays as written whatever happens to the deal.
+ */
+export async function getMyWork(ctx: AuthContext, query: { pageSize?: number; groups?: string[] } = {}) {
+  requirePermission(ctx, "mywork.view");
+  const bounds = await taskGroupBounds(ctx);
+  const filters: ListTasksFilters = { assigneeMembershipId: ctx.membershipId };
+  const wanted = (query.groups?.length ? query.groups : [...TASK_GROUP_KEYS]).filter(isGroupKey);
+  const counts = await countTaskGroups(ctx.organizationId, filters, bounds);
+  const paging = resolvePaging({ page: 1, pageSize: query.pageSize ?? DEFAULT_GROUP_PAGE_SIZE });
+
+  const groups = await Promise.all(
+    TASK_GROUP_KEYS.filter((g) => wanted.includes(g)).map(async (key) => {
+      const collapsed = key === "DONE" && !query.groups?.includes("DONE");
+      const rows = collapsed ? [] : await listTaskGroup(ctx.organizationId, filters, key, bounds, paging);
+      const files = await listAttachmentsForTasks(ctx.organizationId, rows.map((r) => r.id));
+      const items = rows.map((task) => ({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        requirements: task.requirements,
+        status: task.status,
+        priority: task.priority,
+        dueAt: task.dueAt,
+        completedAt: task.completedAt,
+        files: files.filter((f) => f.taskId === task.id).map((f) => ({ attachmentId: f.id, title: f.title, fileId: f.file.id, name: f.file.name, sizeBytes: f.file.sizeBytes, mimeType: f.file.mimeType })),
+      }));
+      return { key, label: TASK_GROUP_LABELS[key], count: counts[key], collapsed, ...buildPage(items, counts[key], paging) };
+    }),
+  );
+  return { timeZone: bounds.timeZone, counts, groups };
 }

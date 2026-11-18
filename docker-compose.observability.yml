@@ -1,0 +1,79 @@
+# Observability for the local staging stack (FIG-1124, P1.02): Prometheus, Alertmanager, blackbox probe, Grafana.
+# Plain open-source images with no vendor services, so the same config runs on AWS later. Joins the staging network to reach the app and Mailpit.
+# Alerts are delivered as email to the Mailpit sandbox (http://localhost:38025). Secrets come from the same env file as the staging stack.
+#
+#   docker compose -p figbloom_crm_observability -f docker-compose.observability.yml --env-file C:/Users/Admin/.figbloom/staging.env up -d --wait
+#
+# Ports (localhost only): Prometheus 39090, Alertmanager 39093, Grafana 33030.
+name: figbloom_crm_observability
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: figbloom_crm_obs_prometheus
+    restart: unless-stopped
+    environment:
+      METRICS_TOKEN: ${METRICS_TOKEN:?set in the secrets file}
+    # The token is written to a file inside the container at start; it is never in a config file in the repo.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - printf '%s' "$$METRICS_TOKEN" > /tmp/metrics-token && exec /bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus --storage.tsdb.retention.time=15d --web.enable-lifecycle
+    volumes:
+      - ./ops/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - figbloom_crm_obs_prom:/prometheus
+    ports:
+      - "127.0.0.1:39090:9090"
+    networks: [staging]
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: figbloom_crm_obs_alertmanager
+    restart: unless-stopped
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    volumes:
+      - ./ops/observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - figbloom_crm_obs_am:/alertmanager
+    ports:
+      - "127.0.0.1:39093:9093"
+    networks: [staging]
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: figbloom_crm_obs_blackbox
+    restart: unless-stopped
+    command: ["--config.file=/etc/blackbox/blackbox.yml"]
+    volumes:
+      - ./ops/observability/blackbox.yml:/etc/blackbox/blackbox.yml:ro
+    networks: [staging]
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    container_name: figbloom_crm_obs_grafana
+    restart: unless-stopped
+    depends_on: [prometheus]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set in the secrets file}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - ./ops/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - figbloom_crm_obs_grafana:/var/lib/grafana
+    ports:
+      - "127.0.0.1:33030:3000"
+    networks: [staging]
+
+networks:
+  staging:
+    external: true
+    name: figbloom_crm_staging_default
+
+volumes:
+  figbloom_crm_obs_prom:
+  figbloom_crm_obs_am:
+  figbloom_crm_obs_grafana:

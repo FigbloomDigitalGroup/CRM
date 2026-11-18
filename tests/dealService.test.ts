@@ -22,6 +22,16 @@ async function createTestDeal(
   });
 }
 
+/** Moves a deal to the won stage using its owner's context (Delivery and Finance only see won deals). */
+async function winDeal(
+  ownerCtx: Awaited<ReturnType<typeof createTestContext>>,
+  dealId: string,
+) {
+  return dealService.updateDeal(ownerCtx, dealId, {
+    pipelineStageId: await getPipelineStageId(ownerCtx.organizationId, "CLOSED_WON"),
+  });
+}
+
 describe("dealService", () => {
   it("defaults a newly created deal's owner to its creator", async () => {
     const org = await createTestOrganization();
@@ -52,12 +62,13 @@ describe("dealService", () => {
     expect(Number(deal.value)).toBe(5000);
   });
 
-  it("masks value for a viewer with deals.view.all but not deals.view.value (Delivery)", async () => {
+  it("masks value for a viewer with deals.view.won but not deals.view.value (Delivery)", async () => {
     const org = await createTestOrganization();
     const salesCtx = await createTestContext(org.id, "SALES", "owner");
     const deliveryCtx = await createTestContext(org.id, "DELIVERY", "viewer");
 
     const deal = await createTestDeal(salesCtx, { value: "5000" });
+    await winDeal(salesCtx, deal.id);
     const seen = await dealService.getDeal(deliveryCtx, deal.id);
 
     expect(seen.valueMasked).toBe(true);
@@ -70,20 +81,21 @@ describe("dealService", () => {
     const financeCtx = await createTestContext(org.id, "FINANCE", "viewer");
 
     const deal = await createTestDeal(salesCtx, { value: "5000" });
+    await winDeal(salesCtx, deal.id);
     const seen = await dealService.getDeal(financeCtx, deal.id);
 
     expect(seen.valueMasked).toBe(false);
     expect(Number(seen.value)).toBe(5000);
   });
 
-  it("Sales (deals.view.own only) cannot see a deal owned by a different Sales user", async () => {
+  it("Sales (deals.view.own only) gets a 404, not a 403, for a deal owned by a different Sales user", async () => {
     const org = await createTestOrganization();
     const ownerCtx = await createTestContext(org.id, "SALES", "owner");
     const otherCtx = await createTestContext(org.id, "SALES", "other");
 
     const deal = await createTestDeal(ownerCtx);
     await expect(dealService.getDeal(otherCtx, deal.id)).rejects.toThrow(
-      ForbiddenError,
+      NotFoundError,
     );
   });
 
@@ -108,7 +120,7 @@ describe("dealService", () => {
     ).rejects.toThrow(NotFoundError);
   });
 
-  it("Sales cannot edit a deal they do not own", async () => {
+  it("Sales cannot edit a deal they do not own (it is not even visible: 404)", async () => {
     const org = await createTestOrganization();
     const ownerCtx = await createTestContext(org.id, "SALES", "owner");
     const otherCtx = await createTestContext(org.id, "SALES", "other");
@@ -116,7 +128,7 @@ describe("dealService", () => {
 
     await expect(
       dealService.updateDeal(otherCtx, deal.id, { notes: "sneaky edit" }),
-    ).rejects.toThrow(ForbiddenError);
+    ).rejects.toThrow(NotFoundError);
   });
 
   it("moving a deal onto a won-flagged stage records the WON outcome", async () => {
@@ -313,7 +325,7 @@ describe("dealService: who can change what (roles & deal states)", () => {
       expect(updated.notes).toBe("follow up Friday");
       await expect(
         dealService.updateDeal(salesTwo, deal.id, { notes: "nope" }),
-      ).rejects.toThrow(ForbiddenError);
+      ).rejects.toThrow(NotFoundError);
     });
 
     it("an edit can never change the owner", async () => {
@@ -327,9 +339,10 @@ describe("dealService: who can change what (roles & deal states)", () => {
       expect(after.ownerMembershipId).toBe(sales.membershipId);
     });
 
-    it("Delivery and Finance can view deals but not edit or archive them", async () => {
+    it("Delivery and Finance can view won deals but not edit or archive them", async () => {
       const { sales, finance, delivery } = await setup();
       const deal = await createTestDeal(sales);
+      await winDeal(sales, deal.id);
       for (const ctx of [finance, delivery]) {
         await expect(dealService.getDeal(ctx, deal.id)).resolves.toBeTruthy();
         await expect(
@@ -370,6 +383,7 @@ describe("dealService: who can change what (roles & deal states)", () => {
     it("every role that can view deals can resolve the owners of what it sees", async () => {
       const { sales, finance, delivery } = await setup();
       const deal = await createTestDeal(sales);
+      await winDeal(sales, deal.id);
       for (const ctx of [sales, finance, delivery]) {
         const names = await dealService.getDealOwnerNames(ctx, [
           deal.ownerMembershipId,

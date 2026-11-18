@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getClientIp } from "@/app/api/_lib/clientRequest";
+import { getClientInfo } from "@/app/api/_lib/clientRequest";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
-import { SESSION_COOKIE_NAME } from "@/auth/session";
+import { setSessionCookie } from "@/app/api/_lib/sessionCookie";
 import { signup } from "@/services/authService";
 
 const SignupSchema = z.object({
@@ -20,22 +20,18 @@ const SignupSchema = z.object({
 export async function POST(request: Request) {
   return handleRoute(async () => {
     const body = await parseJsonBody(request, SignupSchema);
-    const { token, expiresAt, userId } = await signup(
+    const client = getClientInfo(request);
+    const { token, expiresAt, userId, access } = await signup(
       body.email,
       body.password,
       body.name,
-      request.headers.get("user-agent"),
-      getClientIp(request),
+      client.userAgent,
+      client.ipAddress,
+      client.place,
     );
 
-    const response = NextResponse.json({ userId });
-    response.cookies.set(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      expires: expiresAt,
-    });
+    const response = NextResponse.json({ userId, awaitingAccess: access.awaitingAccess, access });
+    setSessionCookie(response, token, expiresAt);
     return response;
   });
 }

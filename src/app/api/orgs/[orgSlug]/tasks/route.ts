@@ -6,26 +6,35 @@ import { resolveRequestContext } from "@/auth/requestContext";
 import { createTask, listTasksPage } from "@/services/taskService";
 
 const StatusEnum = z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]);
+/** What kind of item: a task, or a call, meeting, email, quote or visit (P2-22). Default TASK. */
+const TypeEnum = z.enum(["TASK", "CALL", "MEETING", "EMAIL", "QUOTE", "VISIT"]);
 const PriorityEnum = z.enum(["LOW", "MEDIUM", "HIGH"]);
 
 const ListTasksQuerySchema = z.object({
   status: StatusEnum.optional(),
+  type: TypeEnum.optional(),
   companyId: z.string().optional(),
   contactId: z.string().optional(),
   leadId: z.string().optional(),
   dealId: z.string().optional(),
   overdueOnly: z.enum(["true", "false"]).optional(),
+  includeArchived: z.enum(["true", "false"]).optional(),
+  /** The archived tab: only archived tasks. */
+  archivedOnly: z.enum(["true", "false"]).optional(),
   ...pageQueryShape,
 });
 
 const CreateTaskSchema = z.object({
   title: requiredString("title is required."),
   description: z.string().optional(),
+  /** Client requirements snapshot (FIG-1038). */
+  requirements: z.string().max(5000).optional(),
   assigneeMembershipId: z.string().optional(),
   // Deliberately a string, not z.coerce.date() -- taskService.createTask
   // does its own new Date() conversion.
   dueAt: z.string().optional(),
   priority: PriorityEnum.optional(),
+  type: TypeEnum.optional(),
   companyId: z.string().optional(),
   contactId: z.string().optional(),
   leadId: z.string().optional(),
@@ -45,11 +54,14 @@ export async function GET(
       ctx,
       {
         status: query.status,
+        type: query.type,
         companyId: query.companyId,
         contactId: query.contactId,
         leadId: query.leadId,
         dealId: query.dealId,
         overdueOnly: query.overdueOnly === "true",
+        includeArchived: query.includeArchived === "true",
+        archivedOnly: query.archivedOnly === "true",
       },
       toPageRequest(query),
     );

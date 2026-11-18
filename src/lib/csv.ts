@@ -1,7 +1,31 @@
 import { parse } from "csv-parse";
 import { parse as parseSync } from "csv-parse/sync";
 import { stringify } from "csv-stringify";
+import { stringify as stringifySync, type Options as StringifyOptions } from "csv-stringify/sync";
 import type { Readable } from "node:stream";
+
+/**
+ * Spreadsheet programs run a cell that begins with `=`, `+`, `-`, `@`, a tab or a carriage return as a formula, so a lead who types
+ * `=HYPERLINK(...)` into the website form could run something when Management opens an export (CSV / formula injection, OWASP).
+ * Every CSV the app writes goes through here: such a cell gets a leading apostrophe, which the program shows as plain text. A cell that is
+ * just a number (`-12.50`, `+254722000111`) is left alone, because a number is not a formula and finance needs it as it is.
+ */
+const NUMBER_LIKE = /^[-+]?[0-9][0-9., ]*$/;
+
+export function neutraliseSpreadsheetFormula(value: string): string {
+  if (value.length === 0) return value;
+  const first = value[0]!;
+  if (first === "=" || first === "@" || first.charCodeAt(0) === 9 || first.charCodeAt(0) === 13) return `'${value}`;
+  if ((first === "+" || first === "-") && !NUMBER_LIKE.test(value)) return `'${value}`;
+  return value;
+}
+
+const CAST = { string: (value: string) => neutraliseSpreadsheetFormula(value) };
+
+/** The only way the app writes a whole CSV in memory (the streaming form below is the other). Drop-in for `csv-stringify/sync`. */
+export function stringifyCsv(rows: readonly unknown[], options: StringifyOptions = {}): string {
+  return stringifySync(rows as unknown[], { ...options, cast: { ...(options.cast ?? {}), ...CAST } });
+}
 
 /**
  * Streams a CSV file row-by-row as objects keyed by the file's own header
@@ -42,7 +66,7 @@ export function csvResponseStream(
   columns: string[],
   rows: AsyncIterable<Record<string, unknown>>,
 ): ReadableStream<Uint8Array> {
-  const stringifier = stringify({ header: true, columns });
+  const stringifier = stringify({ header: true, columns, cast: CAST });
 
   (async () => {
     try {

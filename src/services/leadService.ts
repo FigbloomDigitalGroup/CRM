@@ -1,12 +1,24 @@
+import { LIFECYCLE_KEYS, transitionCompany } from "./lifecycleService";
+import { emitTeamActivity, leadLabelFor } from "./teamActivityNotifier";
+import { assertConvertStageAllowed } from "./dealStageGate";
+import type { Prisma } from "@prisma/client";
+import { assertWritable, cleanArchiveReason } from "../lib/archive";
+import { findDuplicates } from "./duplicateService";
+import { rescoreLeadQuietly } from "./scoreEngine";
+import { auditCustomFieldChanges, prepareCustomFields } from "./customFieldService";
+import { checkQualificationForSave, recordQualificationChange } from "./qualificationRules";
 import type { AuthContext } from "../auth/context";
 import {
+  deny,
   hasPermission,
   requirePermission,
   requireOwnedRecordPermission,
 } from "../auth/context";
-import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
+import { NotFoundError, ValidationError } from "../auth/errors";
+import { assertRecordVisible } from "../auth/visibility";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import { emitWebhookEvent } from "./webhookService";
 import {
   convertLeadToDeal,
   LeadAlreadyConvertedError,
@@ -31,11 +43,15 @@ import {
 import { diffAuditedFields } from "./auditDiff";
 import {
   assertEligibleLeadOwner,
+  assertEligibleTaskAssignee,
   canWorkDeals,
   canWorkLeads,
   loadActiveMemberWithPermissions,
 } from "./ownerEligibility";
 import { notifyLeadAssigned } from "./notificationService";
+import { memberTimeZone } from "./notificationDeliveryPolicy";
+import { applyLeadFollowUp } from "./taskLinkService";
+import { resolveFollowUpInstant } from "../lib/followUpTime";
 import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 
 /** Beyond ownership (audited separately via `assignLead`): qualification/status changes (FIG-600 AC). */
@@ -81,9 +97,32 @@ export async function listAssignableLeadOwners(ctx: AuthContext) {
     }));
 }
 
+/**
+ * Every id a new lead points at must belong to this organisation. The database refuses a foreign one (the keys are per organisation), but
+ * that surfaced as a 500; it is a plain "pick one of yours" validation error instead.
+ */
+export async function assertReferencesInOrganisation(organizationId: string, input: CreateLeadServiceInput, statusFound: boolean): Promise<void> {
+  const where = (id: string) => ({ id, organizationId });
+  const [source, company, contact, service] = await Promise.all([
+    input.leadSourceId ? adminDb.leadSource.findFirst({ where: where(input.leadSourceId), select: { id: true } }) : null,
+    input.companyId ? adminDb.company.findFirst({ where: where(input.companyId), select: { id: true } }) : null,
+    input.contactId ? adminDb.contact.findFirst({ where: where(input.contactId), select: { id: true } }) : null,
+    input.serviceInterestId ? adminDb.service.findFirst({ where: where(input.serviceInterestId), select: { id: true } }) : null,
+  ]);
+  const problems: { path: string; message: string }[] = [];
+  if (!statusFound) problems.push({ path: "leadStatusId", message: "Pick a status from this organisation." });
+  if (input.leadSourceId && !source) problems.push({ path: "leadSourceId", message: "Pick a source from this organisation." });
+  if (input.companyId && !company) problems.push({ path: "companyId", message: "Pick a company from this organisation." });
+  if (input.contactId && !contact) problems.push({ path: "contactId", message: "Pick a contact from this organisation." });
+  if (input.serviceInterestId && !service) problems.push({ path: "serviceInterestId", message: "Pick a service from this organisation." });
+  if (problems.length) throw new ValidationError("Something on this lead was not found in this organisation.", problems);
+}
+
 export async function createLead(
   ctx: AuthContext,
   input: CreateLeadServiceInput,
+  /** `skipDuplicateCheck`: the caller already checked (quick capture warns first), so do not search a second time. */
+  options: { skipDuplicateCheck?: boolean } = {},
 ) {
   requirePermission(ctx, "leads.create");
 
@@ -100,15 +139,39 @@ export async function createLead(
     ownerMembershipId = input.ownerMembershipId;
   }
 
-  const possibleDuplicates = await findPossibleDuplicateLeads(
-    ctx.organizationId,
-    {
-      companyId: input.companyId,
-    },
-  );
+  const possibleDuplicates = options.skipDuplicateCheck
+    ? []
+    : await findPossibleDuplicateLeads(ctx.organizationId, { companyId: input.companyId });
+
+  const found = options.skipDuplicateCheck
+    ? { candidates: [], hiddenCount: 0 }
+    : await findDuplicates(ctx, {
+        entity: "lead",
+        companyId: input.companyId,
+        contactId: input.contactId,
+      });
+
+  const createStatus = await adminDb.leadStatus.findFirst({
+    where: { id: input.leadStatusId, organizationId: ctx.organizationId },
+    select: { key: true },
+  });
+  await assertReferencesInOrganisation(ctx.organizationId, input, createStatus !== null);
+  const qualification = await checkQualificationForSave({
+    organizationId: ctx.organizationId,
+    serviceInterestId: input.serviceInterestId ?? null,
+    existing: null,
+    incoming: input.qualificationData,
+    becomingQualified: createStatus?.key === "QUALIFIED",
+  });
+  const custom = await prepareCustomFields(ctx.organizationId, "LEAD", {
+    incoming: input.customFields as Record<string, unknown> | undefined,
+    mode: "create",
+  });
 
   const lead = await createLeadRecord({
     ...input,
+    qualificationData: qualification.values,
+    customFields: custom?.values as Prisma.InputJsonValue | undefined,
     organizationId: ctx.organizationId,
     createdByMembershipId: ctx.membershipId,
     ownerMembershipId,
@@ -130,7 +193,23 @@ export async function createLead(
     });
   }
 
-  return { lead, possibleDuplicates };
+  await rescoreLeadQuietly(ctx.organizationId, lead.id);
+  await emitWebhookEvent({ organizationId: ctx.organizationId, type: "lead.created", record: lead });
+  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "LEAD_CREATED", actorMembershipId: ctx.membershipId, entityType: "Lead", entityId: lead.id, label: await leadLabelFor(ctx.organizationId, lead), route: `leads/${lead.id}` });
+  return { lead, possibleDuplicates, duplicates: found.candidates, hiddenDuplicates: found.hiddenCount };
+}
+
+/** Who gets the follow-up task: the lead's owner, else the person making the change, if that role can hold tasks; otherwise nobody (only the field is set). */
+async function followUpAssigneeFor(ctx: AuthContext, ownerMembershipId: string | null): Promise<string | null> {
+  for (const candidate of [ownerMembershipId, ctx.membershipId]) {
+    if (!candidate) continue;
+    try {
+      return (await assertEligibleTaskAssignee(ctx.organizationId, candidate)).id;
+    } catch {
+      // try the next one
+    }
+  }
+  return null;
 }
 
 async function loadOwnedLead(ctx: AuthContext, leadId: string) {
@@ -138,6 +217,8 @@ async function loadOwnedLead(ctx: AuthContext, leadId: string) {
   if (!lead) {
     throw new NotFoundError("Lead", leadId);
   }
+  // A lead the caller cannot see answers 404, same as one that does not exist.
+  assertRecordVisible(ctx, "leads", "Lead", leadId, lead);
   return lead;
 }
 
@@ -149,21 +230,22 @@ async function loadOwnedLead(ctx: AuthContext, leadId: string) {
  * colleagues in the same org.
  */
 export async function getLead(ctx: AuthContext, leadId: string) {
-  const lead = await loadOwnedLead(ctx, leadId);
-  requireOwnedRecordPermission(
-    ctx,
-    "leads.view.own",
-    "leads.view.all",
-    lead.ownerMembershipId,
-  );
-  return lead;
+  return loadOwnedLead(ctx, leadId);
 }
 
 export async function updateLead(
   ctx: AuthContext,
   leadId: string,
-  input: UpdateLeadInput,
+  rawInput: Omit<UpdateLeadInput, "nextFollowUpAt"> & { nextFollowUpAt?: Date | string | null },
 ) {
+  const input = rawInput as UpdateLeadInput;
+  if (rawInput.nextFollowUpAt !== undefined) {
+    // A date-only value means the default time in the person's own zone (P2-27).
+    const zone = await memberTimeZone(ctx.organizationId, ctx.membershipId);
+    const resolved = resolveFollowUpInstant(rawInput.nextFollowUpAt, zone);
+    if (resolved === undefined) throw new ValidationError("The follow-up is not a valid date and time.", [{ path: "nextFollowUpAt", message: "Use a date and a time." }]);
+    input.nextFollowUpAt = resolved;
+  }
   const lead = await loadOwnedLead(ctx, leadId);
   requireOwnedRecordPermission(
     ctx,
@@ -172,11 +254,7 @@ export async function updateLead(
     lead.ownerMembershipId,
   );
 
-  if (lead.archivedAt) {
-    throw new ValidationError(
-      "This lead is archived. Restore it before making changes.",
-    );
-  }
+  assertWritable(ctx, "lead", lead, "making changes");
 
   // Ownership is deliberately not part of an edit -- it only ever changes
   // through `assignLead` (which needs `leads.assign`). Dropping the key
@@ -185,6 +263,7 @@ export async function updateLead(
     ownerMembershipId?: unknown;
   };
   delete data.ownerMembershipId;
+  let becomingQualified = false;
 
   if (data.leadStatusId !== undefined && data.leadStatusId !== lead.leadStatusId) {
     if (lead.convertedAt) {
@@ -198,6 +277,7 @@ export async function updateLead(
     if (!nextStatus) {
       throw new ValidationError("Unknown lead status.");
     }
+    becomingQualified = nextStatus.key === "QUALIFIED";
     if (nextStatus.key === LEAD_LOCKED_STATUS_KEYS.converted) {
       throw new ValidationError(
         "A lead becomes Converted by converting it to a deal, not by picking the status.",
@@ -219,7 +299,37 @@ export async function updateLead(
     data.lostReasonId = lead.lostReasonId;
   }
 
-  const updated = await updateLeadRecord(ctx.organizationId, leadId, data);
+  // Qualification answers are checked against the questions for the lead's service, and the
+  // required ones must be there before it can become Qualified (FIG-1030, B2.01).
+  const qualification = await checkQualificationForSave({
+    organizationId: ctx.organizationId,
+    serviceInterestId: data.serviceInterestId !== undefined ? data.serviceInterestId : lead.serviceInterestId,
+    existing: lead.qualificationData,
+    incoming: data.qualificationData,
+    becomingQualified,
+  });
+  if (qualification.values !== undefined) data.qualificationData = qualification.values;
+  const custom = await prepareCustomFields(ctx.organizationId, "LEAD", {
+    existing: lead.customFields as Record<string, unknown>,
+    incoming: input.customFields as Record<string, unknown> | undefined,
+    mode: "update",
+  });
+  if (custom) data.customFields = custom.values as Prisma.InputJsonValue;
+
+  // The lead's Next follow-up and its open follow-up task change together, in one transaction (P2-23).
+  const followUpChanged = data.nextFollowUpAt !== undefined && (data.nextFollowUpAt?.getTime() ?? null) !== (lead.nextFollowUpAt?.getTime() ?? null);
+  const followUpAssignee = followUpChanged ? await followUpAssigneeFor(ctx, lead.ownerMembershipId) : null;
+  const updated = await updateLeadRecord(
+    ctx.organizationId,
+    leadId,
+    data,
+    followUpChanged && followUpAssignee
+      ? async (tx) => void (await applyLeadFollowUp(tx, { organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, leadId, nextFollowUpAt: data.nextFollowUpAt ?? null, assigneeMembershipId: followUpAssignee }))
+      : undefined,
+  );
+  await recordQualificationChange(ctx, leadId, qualification.changes);
+  if (custom) await auditCustomFieldChanges(ctx, "Lead", leadId, custom.changes);
+  await rescoreLeadQuietly(ctx.organizationId, leadId);
 
   // Ownership is audited separately via assignLead -- this covers the
   // other important field changes updateLead never audited at all before
@@ -252,6 +362,11 @@ function scopeLeadFilters(
 ): ListLeadsFilters {
   if (hasPermission(ctx, "leads.view.all")) return filters;
   requirePermission(ctx, "leads.view.own");
+  // Sales shared pool (departure.shared_pool): own leads plus unassigned ones.
+  if (hasPermission(ctx, "leads.view.shared")) {
+    // A forged owner filter is dropped, never trusted: the pool is the boundary.
+    return { ...filters, ownerMembershipId: undefined, ownedByOrUnassigned: ctx.membershipId };
+  }
   return { ...filters, ownerMembershipId: ctx.membershipId };
 }
 
@@ -320,11 +435,7 @@ export async function assignLead(
     );
   }
 
-  if (lead.archivedAt) {
-    throw new ValidationError(
-      "This lead is archived. Restore it before reassigning it.",
-    );
-  }
+  assertWritable(ctx, "lead", lead, "reassigning it");
   if (lead.convertedAt) {
     throw new ValidationError(
       "This lead has been converted -- the deal now owns the work.",
@@ -361,6 +472,7 @@ export async function assignLead(
     label: lead.company?.name ?? lead.contact?.firstName ?? "a lead",
   });
 
+  await emitWebhookEvent({ organizationId: ctx.organizationId, type: "lead.assigned", record: reassigned, extra: { previousOwnerMembershipId: lead.ownerMembershipId ?? null } });
   return reassigned;
 }
 
@@ -401,11 +513,7 @@ export async function convertLead(
   );
   requirePermission(ctx, "leads.convert");
 
-  if (lead.archivedAt) {
-    throw new ValidationError(
-      "This lead is archived. Restore it before converting it.",
-    );
-  }
+  assertWritable(ctx, "lead", lead, "converting it");
   if (lead.convertedAt) {
     throw new ValidationError(
       "This lead has already been converted to a deal.",
@@ -427,7 +535,7 @@ export async function convertLead(
     dealOwnerMembershipId !== (lead.ownerMembershipId ?? ctx.membershipId)
   ) {
     if (!hasPermission(ctx, "leads.assign")) {
-      throw new ForbiddenError("leads.assign (to choose a different deal owner)");
+      throw deny(ctx, "leads.assign (to choose a different deal owner)", ["leads.assign"]);
     }
     const member = await loadActiveMemberWithPermissions(
       ctx.organizationId,
@@ -457,8 +565,10 @@ export async function convertLead(
     }
   }
 
+  await assertConvertStageAllowed(ctx.organizationId, input.pipelineStageId);
+
   try {
-    return await convertLeadToDeal({
+    const deal = await convertLeadToDeal({
       organizationId: ctx.organizationId,
       leadId,
       companyId: input.companyId,
@@ -473,6 +583,18 @@ export async function convertLead(
         : undefined,
       notes: input.notes,
     });
+    // A converted lead makes its company a Prospect, unless it already has a lifecycle state (B3.02).
+    await transitionCompany({
+      organizationId: ctx.organizationId,
+      companyId: deal.companyId,
+      toKey: LIFECYCLE_KEYS.PROSPECT,
+      reason: "LEAD_CONVERTED",
+      actorMembershipId: ctx.membershipId,
+      onlyIfUnset: true,
+      detail: { leadId, dealId: deal.id },
+    });
+    await emitWebhookEvent({ organizationId: ctx.organizationId, type: "lead.converted", record: { ...lead, convertedAt: new Date() }, extra: { dealId: deal.id } });
+    return deal;
   } catch (err) {
     if (
       err instanceof LeadAlreadyConvertedError ||
@@ -485,7 +607,7 @@ export async function convertLead(
 }
 
 /** Soft-delete (FIG-601) -- own/all split, same tier as `leads.edit.own/.all`. */
-export async function archiveLead(ctx: AuthContext, leadId: string) {
+export async function archiveLead(ctx: AuthContext, leadId: string, input: { reason?: string | null } = {}) {
   const lead = await loadOwnedLead(ctx, leadId);
   requireOwnedRecordPermission(
     ctx,
@@ -497,7 +619,11 @@ export async function archiveLead(ctx: AuthContext, leadId: string) {
     throw new ValidationError("This lead is already archived.");
   }
 
-  const archived = await archiveLeadRecord(ctx.organizationId, leadId);
+  const reason = cleanArchiveReason(input.reason);
+  const archived = await archiveLeadRecord(ctx.organizationId, leadId, {
+    membershipId: ctx.membershipId,
+    reason,
+  });
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -505,6 +631,7 @@ export async function archiveLead(ctx: AuthContext, leadId: string) {
     action: "lead.archived",
     entityType: "Lead",
     entityId: leadId,
+    metadata: reason ? { reason } : undefined,
   });
 
   return archived;

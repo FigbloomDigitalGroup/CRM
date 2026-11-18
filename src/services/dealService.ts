@@ -1,10 +1,19 @@
+import type { Prisma } from "@prisma/client";
+import { companyNameFor, emitTeamActivity } from "./teamActivityNotifier";
+import { assertNewDealStageAllowed } from "./dealStageGate";
+import { auditCustomFieldChanges, prepareCustomFields } from "./customFieldService";
+import { assertWritable, cleanArchiveReason } from "../lib/archive";
+import { maskDeal } from "../auth/masking";
 import type { AuthContext } from "../auth/context";
 import {
+  deny,
   hasPermission,
   requirePermission,
   requireOwnedRecordPermission,
 } from "../auth/context";
-import { ForbiddenError, NotFoundError, ValidationError } from "../auth/errors";
+import { NotFoundError, ValidationError } from "../auth/errors";
+import { canUseResource, viewPermissionKeys } from "../auth/permissions";
+import { assertRecordVisible } from "../auth/visibility";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
@@ -25,7 +34,11 @@ import {
   listDealOwnerCandidates,
 } from "./ownerEligibility";
 import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
-import { assertValidHandoffOwner, startDealWonHandoff } from "./handoffService";
+import { assertValidHandoffOwner, startDealWonHandoff, type HandoffOptions } from "./handoffService";
+import { rescoreCompanyQuietly } from "./scoreEngine";
+import { invalidateSignals } from "./signalService";
+import { emitWebhookEvent } from "./webhookService";
+import { touchDealActivity } from "../repositories/deals";
 
 /**
  * Beyond outcome (audited separately, below): other important field
@@ -58,13 +71,7 @@ function maskValue<T extends DealWithOwner>(
   ctx: AuthContext,
   deal: T,
 ): T & { valueMasked: boolean } {
-  if (
-    hasPermission(ctx, "deals.view.value") ||
-    deal.ownerMembershipId === ctx.membershipId
-  ) {
-    return { ...deal, valueMasked: false };
-  }
-  return { ...deal, value: null, valueMasked: true };
+  return maskDeal(ctx, deal);
 }
 
 /**
@@ -81,7 +88,7 @@ function canReassignDeals(ctx: AuthContext): boolean {
 /** Owners a deal may be handed to: active members whose role can view and edit deals. */
 export async function listAssignableDealOwners(ctx: AuthContext) {
   if (!canReassignDeals(ctx)) {
-    throw new ForbiddenError("deals.edit.all (to choose a deal owner)");
+    throw deny(ctx, "deals.edit.all (to choose a deal owner)", ["deals.edit.all"]);
   }
   return listDealOwnerCandidates(ctx.organizationId);
 }
@@ -96,11 +103,8 @@ export async function getDealOwnerNames(
   ctx: AuthContext,
   membershipIds: string[],
 ): Promise<Record<string, string>> {
-  if (
-    !hasPermission(ctx, "deals.view.all") &&
-    !hasPermission(ctx, "deals.view.own")
-  ) {
-    throw new ForbiddenError("deals.view.own or deals.view.all");
+  if (!canUseResource(ctx, "deals")) {
+    throw deny(ctx, "deals.view", viewPermissionKeys("deals"));
   }
   const ids = [...new Set(membershipIds)];
   if (ids.length === 0) return {};
@@ -126,7 +130,7 @@ export async function createDeal(
     input.ownerMembershipId !== ctx.membershipId
   ) {
     if (!canReassignDeals(ctx)) {
-      throw new ForbiddenError("deals.edit.all (to create a deal for someone else)");
+      throw deny(ctx, "deals.edit.all (to create a deal for someone else)", ["deals.edit.all"]);
     }
     await assertEligibleDealOwner(ctx.organizationId, input.ownerMembershipId);
     ownerMembershipId = input.ownerMembershipId;
@@ -149,9 +153,16 @@ export async function createDeal(
       "A new deal must start in an open pipeline stage.",
     );
   }
+  await assertNewDealStageAllowed(ctx.organizationId, stage);
+
+  const custom = await prepareCustomFields(ctx.organizationId, "DEAL", {
+    incoming: input.customFields as Record<string, unknown> | undefined,
+    mode: "create",
+  });
 
   const deal = await createDealRecord({
     ...input,
+    customFields: custom?.values as Prisma.InputJsonValue | undefined,
     organizationId: ctx.organizationId,
     createdByMembershipId: ctx.membershipId,
     ownerMembershipId,
@@ -162,6 +173,8 @@ export async function createDeal(
       ? new Date(input.expectedCloseDate)
       : undefined,
   });
+  await invalidateSignals(ctx.organizationId);
+  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "DEAL_CREATED", actorMembershipId: ctx.membershipId, entityType: "Deal", entityId: deal.id, label: await companyNameFor(ctx.organizationId, deal.companyId), route: `deals/${deal.id}`, detail: { value: deal.value === null || deal.value === undefined ? null : String(deal.value), currency: deal.currency } });
   return maskValue(ctx, deal);
 }
 
@@ -170,6 +183,8 @@ async function loadOwnedDeal(ctx: AuthContext, dealId: string) {
   if (!deal) {
     throw new NotFoundError("Deal", dealId);
   }
+  // A deal the caller cannot see answers 404, same as one that does not exist.
+  assertRecordVisible(ctx, "deals", "Deal", dealId, deal);
   return deal;
 }
 
@@ -181,12 +196,6 @@ async function loadOwnedDeal(ctx: AuthContext, dealId: string) {
  */
 export async function getDeal(ctx: AuthContext, dealId: string) {
   const deal = await loadOwnedDeal(ctx, dealId);
-  requireOwnedRecordPermission(
-    ctx,
-    "deals.view.own",
-    "deals.view.all",
-    deal.ownerMembershipId,
-  );
   return maskValue(ctx, deal);
 }
 
@@ -199,8 +208,14 @@ function scopeDealFilters(
   filters: ListDealsFilters,
 ): ListDealsFilters {
   if (hasPermission(ctx, "deals.view.all")) return filters;
-  requirePermission(ctx, "deals.view.own");
-  return { ...filters, ownerMembershipId: ctx.membershipId };
+  if (hasPermission(ctx, "deals.view.own")) {
+    return { ...filters, ownerMembershipId: ctx.membershipId };
+  }
+  // Won-only viewers (Delivery and Finance while departure.won_only is on).
+  if (hasPermission(ctx, "deals.view.won")) {
+    return { ...filters, visibleOutcome: "WON" };
+  }
+  throw deny(ctx, "deals.view", viewPermissionKeys("deals"));
 }
 
 /** Every matching deal, unpaged -- internal use; list screens and the API use `listDealsPage` (FIG-789). */
@@ -263,7 +278,7 @@ export async function getDealSummary(ctx: AuthContext) {
 
   const valuesVisible =
     hasPermission(ctx, "deals.view.value") ||
-    summary.openNotOwnedByViewer === 0;
+    (summary.openNotOwnedByViewer === 0 && !ctx.hiddenFields?.includes("deal.value"));
   const [only] = summary.openByCurrency;
   const openValue =
     summary.open > 0 &&
@@ -342,12 +357,14 @@ export interface UpdateDealServiceInput {
   currency?: string;
   expectedCloseDate?: string | null;
   notes?: string | null;
+  /** Organisation-defined custom fields (FIG-803); a field sent as null is cleared. */
+  customFields?: Record<string, unknown>;
   /**
    * Only read when this update moves the deal to a won stage (FIG-792):
    * who in Delivery receives the onboarding tasks. Defaults to the deal's
    * owner. The handoff dialog (F2.06) sends this.
    */
-  handoff?: { deliveryOwnerMembershipId?: string };
+  handoff?: HandoffOptions;
 }
 
 export async function updateDeal(
@@ -363,11 +380,13 @@ export async function updateDeal(
     deal.ownerMembershipId,
   );
 
-  if (deal.archivedAt) {
-    throw new ValidationError(
-      "This deal is archived. Restore it before making changes.",
-    );
-  }
+  assertWritable(ctx, "deal", deal, "making changes");
+
+  const custom = await prepareCustomFields(ctx.organizationId, "DEAL", {
+    existing: deal.customFields as Record<string, unknown>,
+    incoming: input.customFields,
+    mode: "update",
+  });
 
   const outcomeFields = input.pipelineStageId
     ? await resolveOutcomeFields(
@@ -389,6 +408,7 @@ export async function updateDeal(
   }
 
   const updated = await updateDealRecord(ctx.organizationId, dealId, {
+    customFields: custom?.values as Prisma.InputJsonValue | undefined,
     primaryContactId: input.primaryContactId,
     serviceId: input.serviceId,
     value: input.value,
@@ -440,6 +460,21 @@ export async function updateDeal(
     });
   }
 
+  // Webhooks (FIG-804): a move to another stage, and a deal that became won or lost. Facts only; nothing here decides anything.
+  if (input.pipelineStageId && input.pipelineStageId !== deal.pipelineStageId) {
+    await emitWebhookEvent({ organizationId: ctx.organizationId, type: "deal.stage_changed", record: updated, extra: { previousStageId: deal.pipelineStageId, stageId: input.pipelineStageId } });
+  }
+  if (outcomeChanged && (updated.outcome === "WON" || updated.outcome === "LOST")) {
+    await emitWebhookEvent({ organizationId: ctx.organizationId, type: updated.outcome === "WON" ? "deal.won" : "deal.lost", record: updated, extra: { previousOutcome: deal.outcome } });
+  }
+  if (custom) await auditCustomFieldChanges(ctx, "Deal", dealId, custom.changes);
+  if (outcomeChanged) await rescoreCompanyQuietly(ctx.organizationId, deal.companyId);
+  if (outcomeChanged && (updated.outcome === "WON" || updated.outcome === "LOST")) {
+    await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "DEAL_CLOSED", actorMembershipId: ctx.membershipId, entityType: "Deal", entityId: dealId, label: await companyNameFor(ctx.organizationId, deal.companyId), route: `deals/${dealId}`, detail: { outcome: updated.outcome, value: updated.value === null || updated.value === undefined ? null : String(updated.value), currency: updated.currency } });
+  }
+  await invalidateSignals(ctx.organizationId);
+  if (input.pipelineStageId && input.pipelineStageId !== deal.pipelineStageId) await touchDealActivity(ctx.organizationId, dealId);
+
   // Winning a deal hands it to Delivery (FIG-792). Idempotent per deal: a
   // deal that is re-opened and won again does not get a second handoff.
   if (becomingWon) {
@@ -451,7 +486,7 @@ export async function updateDeal(
         serviceId: updated.serviceId,
         ownerMembershipId: deal.ownerMembershipId,
       },
-      { deliveryOwnerMembershipId: input.handoff?.deliveryOwnerMembershipId },
+      input.handoff ?? {},
     );
   }
 
@@ -469,14 +504,10 @@ export async function assignDeal(
   newOwnerMembershipId: string,
 ) {
   if (!canReassignDeals(ctx)) {
-    throw new ForbiddenError("deals.edit.all (to reassign a deal)");
+    throw deny(ctx, "deals.edit.all (to reassign a deal)", ["deals.edit.all"]);
   }
   const deal = await loadOwnedDeal(ctx, dealId);
-  if (deal.archivedAt) {
-    throw new ValidationError(
-      "This deal is archived. Restore it before reassigning it.",
-    );
-  }
+  assertWritable(ctx, "deal", deal, "reassigning it");
   const target = await assertEligibleDealOwner(
     ctx.organizationId,
     newOwnerMembershipId,
@@ -503,7 +534,7 @@ export async function assignDeal(
 }
 
 /** Soft-delete (FIG-601) -- own/all split, same tier as `deals.edit.own/.all`. */
-export async function archiveDeal(ctx: AuthContext, dealId: string) {
+export async function archiveDeal(ctx: AuthContext, dealId: string, input: { reason?: string | null } = {}) {
   const deal = await loadOwnedDeal(ctx, dealId);
   requireOwnedRecordPermission(
     ctx,
@@ -515,7 +546,11 @@ export async function archiveDeal(ctx: AuthContext, dealId: string) {
     throw new ValidationError("This deal is already archived.");
   }
 
-  const archived = await archiveDealRecord(ctx.organizationId, dealId);
+  const reason = cleanArchiveReason(input.reason);
+  const archived = await archiveDealRecord(ctx.organizationId, dealId, {
+    membershipId: ctx.membershipId,
+    reason,
+  });
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -523,6 +558,7 @@ export async function archiveDeal(ctx: AuthContext, dealId: string) {
     action: "deal.archived",
     entityType: "Deal",
     entityId: dealId,
+    metadata: reason ? { reason } : undefined,
   });
 
   return maskValue(ctx, archived);

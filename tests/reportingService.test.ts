@@ -238,10 +238,10 @@ describe("reportingService", () => {
       expect(sales).toEqual({ mode: "personal", leads: "own", deals: "own", tasks: "own" });
 
       const delivery = reportingService.getReportScope(await createTestContext(org.id, "DELIVERY"));
-      expect(delivery).toEqual({ mode: "personal", leads: null, deals: "all", tasks: "own" });
+      expect(delivery).toEqual({ mode: "personal", leads: null, deals: "won", tasks: "own" });
 
       const finance = reportingService.getReportScope(await createTestContext(org.id, "FINANCE"));
-      expect(finance).toEqual({ mode: "personal", leads: null, deals: "all", tasks: null });
+      expect(finance).toEqual({ mode: "personal", leads: null, deals: "won", tasks: null });
     });
 
     it("refuses Restricted Technical", async () => {
@@ -294,29 +294,39 @@ describe("reportingService", () => {
       expect(total).toBe(1);
     });
 
-    it("gives Finance deals only, with values; Delivery deals and tasks, values hidden", async () => {
+    it("gives Finance won deals only, with values; Delivery won deals and tasks, values hidden", async () => {
       const org = await createTestOrganization();
       const management = await createTestContext(org.id, "MANAGEMENT");
       const finance = await createTestContext(org.id, "FINANCE");
       const delivery = await createTestContext(org.id, "DELIVERY");
       const pipelineStageId = await getPipelineStageId(org.id);
       const { company } = await createCompany(management, { name: "Shared Co" });
-      await dealService.createDeal(management, { companyId: company.id, pipelineStageId, value: "900" });
+      const won = await dealService.createDeal(management, { companyId: company.id, pipelineStageId, value: "900" });
+      await dealService.updateDeal(management, won.id, {
+        pipelineStageId: await getPipelineStageId(org.id, "CLOSED_WON"),
+      });
+      // An open deal: won-only viewers must not see it in any figure.
+      await dealService.createDeal(management, { companyId: company.id, pipelineStageId, value: "700" });
 
       const fin = await reportingService.getMyMetrics(finance);
       expect(fin.leadVolumeBySource).toBeNull();
       expect(fin.leadConversion).toBeNull();
       expect(fin.followUpBreakdown).toBeNull();
       expect(fin.valueMasked).toBe(false);
-      expect(fin.pipelineByStage).toHaveLength(1);
-      expect(Number(fin.pipelineByStage?.[0]?._sum.value)).toBe(900);
+      expect(fin.scope.deals).toBe("won");
+      // The open pipeline is not theirs to see; the won figures are.
+      expect(fin.pipelineByStage).toBeNull();
+      expect(fin.dealOutcomes?.won.count).toBe(1);
+      expect(Number(fin.dealOutcomes?.won.value)).toBe(900);
+      expect(fin.dealOutcomes?.lost.count).toBe(0);
 
       const del = await reportingService.getMyMetrics(delivery);
       expect(del.leadConversion).toBeNull();
       expect(del.followUpBreakdown).not.toBeNull();
       expect(del.valueMasked).toBe(true);
-      expect(del.pipelineByStage?.[0]?._count._all).toBe(1);
-      expect(del.pipelineByStage?.[0]?._sum.value).toBeNull();
+      expect(del.pipelineByStage).toBeNull();
+      expect(del.dealOutcomes?.won.count).toBe(1);
+      expect(del.dealOutcomes?.won.value).toBeNull();
     });
   });
 

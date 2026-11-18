@@ -1,5 +1,5 @@
 import { adminDb } from "../db/adminClient";
-import { devAccountsAllowed } from "./devAccounts";
+import { devAccountsAllowed, previewChipsAllowed } from "./devAccounts";
 import {
   DEV_PLATFORM_COOKIE_NAME,
   verifyPlatformCookieValue,
@@ -30,7 +30,7 @@ export async function resolveDevPlatformIdentity(
   cookieStore: CookieReader,
   env: Record<string, string | undefined> = process.env,
 ) {
-  if (!devAccountsAllowed(env)) return null;
+  if (!devAccountsAllowed(env) && !previewChipsAllowed(env)) return null;
   const id = verifyPlatformCookieValue(
     cookieStore.get(DEV_PLATFORM_COOKIE_NAME)?.value,
   );

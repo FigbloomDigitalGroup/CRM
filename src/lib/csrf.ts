@@ -3,7 +3,7 @@
  *
  * The session cookie is `sameSite: lax`, which blocks most cross-site POSTs
  * but still travels on a top-level form navigation. So every state-changing
- * request under `/api/orgs/**` and `/api/auth/**` must prove it came from our
+ * request under `/api/orgs/**`, `/api/auth/**`, `/api/me/**`, `/api/session/**` and `/api/platform/**` must prove it came from our
  * own pages: its `Origin` header (or, when the browser sent none, `Referer`)
  * has to match the app origin. Browsers always attach `Origin` to cross-site
  * and same-site POSTs, so a request carrying neither is not a browser form
@@ -16,7 +16,7 @@
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /** Path prefixes whose non-GET requests carry the session cookie. `/api/public/**` (API-key) and `/api/cron/**` (secret header) are deliberately absent. */
-const PROTECTED_PREFIXES = ["/api/orgs/", "/api/auth/"];
+const PROTECTED_PREFIXES = ["/api/orgs/", "/api/auth/", "/api/me/", "/api/session/", "/api/platform/"];
 
 export function isCsrfProtectedRequest(method: string, pathname: string): boolean {
   if (SAFE_METHODS.has(method.toUpperCase())) return false;

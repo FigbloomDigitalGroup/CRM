@@ -1,5 +1,9 @@
-import { MembershipStatus } from "@prisma/client";
+import { MembershipStatus, Prisma, type OrganizationStatus } from "@prisma/client";
+import { OrganizationUnavailableError } from "../auth/errors";
+import { effectivePermissionKeys } from "../auth/permissions";
 import { adminDb } from "../db/adminClient";
+import { loadFeatureConfig } from "../lib/featureConfig";
+import { hiddenFieldsOf } from "../lib/roleLimits";
 
 export interface AddMembershipInput {
   organizationId: string;
@@ -33,10 +37,34 @@ export async function addMembership(input: AddMembershipInput) {
   });
 }
 
-export async function deactivateMembership(membershipId: string) {
+export async function deactivateMembership(
+  membershipId: string,
+  actorMembershipId?: string,
+) {
   return adminDb.membership.update({
     where: { id: membershipId },
-    data: { status: MembershipStatus.INACTIVE },
+    data: {
+      status: MembershipStatus.INACTIVE,
+      deactivatedAt: new Date(),
+      deactivatedByMembershipId: actorMembershipId ?? null,
+    },
+  });
+}
+
+/** Ends a membership (B1.05). The row stays, so history keeps pointing at a real member. */
+export async function removeMembership(
+  membershipId: string,
+  actorMembershipId?: string,
+) {
+  return adminDb.membership.update({
+    where: { id: membershipId },
+    data: {
+      status: MembershipStatus.REMOVED,
+      removedAt: new Date(),
+      removedByMembershipId: actorMembershipId ?? null,
+      inviteTokenHash: null,
+      inviteTokenExpiresAt: null,
+    },
   });
 }
 
@@ -49,26 +77,75 @@ export async function deactivateMembership(membershipId: string) {
 export async function resolveActiveMembership(
   userId: string,
   organizationId: string,
+  options: { allowOffboarding?: boolean } = {},
 ) {
-  const membership = await adminDb.membership.findFirst({
-    where: { userId, organizationId, status: MembershipStatus.ACTIVE },
-    include: {
-      role: { include: { rolePermissions: { include: { permission: true } } } },
-    },
-  });
+  // One statement for the membership, its role, the role's permission keys and the organisation's status (the nested Prisma `include` this
+  // replaces cost five separate statements on every request). Nothing is cached: it is read afresh on each call, so a removed membership,
+  // a changed role or a suspended organisation takes effect on the very next request. The feature configuration does not depend on the
+  // membership, so it is read at the same time.
+  const [rows, config] = await Promise.all([
+    adminDb.$queryRaw<
+      Array<{ id: string; user_id: string; organization_id: string; role_id: string; role_key: string; role_org: string | null; org_status: string; org_name: string; keys: string[] }>
+    >(Prisma.sql`
+      SELECT m.id, m.user_id, m.organization_id, r.id AS role_id, r.key AS role_key, r.organization_id AS role_org, o.status::text AS org_status, o.name AS org_name,
+             COALESCE(array_agg(p.key) FILTER (WHERE p.key IS NOT NULL), ARRAY[]::text[]) AS keys
+      FROM memberships m
+      JOIN roles r ON r.id = m.role_id
+      JOIN organizations o ON o.id = m.organization_id
+      LEFT JOIN role_permissions rp ON rp.role_id = r.id
+      LEFT JOIN permissions p ON p.id = rp.permission_id
+      WHERE m.user_id = ${userId} AND m.organization_id = ${organizationId}
+        AND m.status = ${MembershipStatus.ACTIVE}::"MembershipStatus"
+        -- B7.06: a custom role counts only for its own organisation and only while it is not archived.
+        AND (r.organization_id IS NULL OR (r.organization_id = m.organization_id AND r.archived_at IS NULL))
+      GROUP BY m.id, r.id, r.key, r.organization_id, o.status, o.name
+      ORDER BY m.created_at ASC
+      LIMIT 1`),
+    // B1.01/B1.03: the keys a request carries are the role's catalogue keys
+    // adjusted for this organization's release, departure flags and (for
+    // Customer Support) role flag.
+    loadFeatureConfig(organizationId),
+  ]);
+  const membership = rows[0] ?? null;
 
   if (!membership) {
     return null;
   }
 
+  // B6.05: the one choke point for "may this person use this organisation".
+  // Every request context, job-side membership lookup and /me call goes through
+  // here, so a suspended, offboarding or offboarded organisation serves nothing.
+  // Only the data-request routes pass `allowOffboarding`, so Management can still
+  // follow their export while the organisation is leaving.
+  const lock = membership.org_status as OrganizationStatus;
+  if (lock === "SUSPENDED" || lock === "OFFBOARDED" || (lock === "OFFBOARDING" && !options.allowOffboarding)) {
+    throw new OrganizationUnavailableError(lock, membership.org_name);
+  }
+
+  // B7.06: a custom role may hide fields from people who would otherwise see them (the owner of a deal, for its value). Built-in
+  // roles have no field rules, so they cost no extra query.
+  const hiddenFields = membership.role_org
+    ? hiddenFieldsOf(
+        Object.fromEntries(
+          (await adminDb.roleFieldRule.findMany({ where: { roleId: membership.role_id, organizationId: membership.organization_id } })).map(
+            (r) => [r.field, r.access],
+          ),
+        ),
+      )
+    : [];
+
   return {
     membershipId: membership.id,
-    userId: membership.userId,
-    organizationId: membership.organizationId,
-    roleKey: membership.role.key,
-    permissionKeys: membership.role.rolePermissions.map(
-      (rp) => rp.permission.key,
-    ),
+    userId: membership.user_id,
+    organizationId: membership.organization_id,
+    roleKey: membership.role_key,
+    permissionKeys: effectivePermissionKeys({
+      roleKey: membership.role_key,
+      catalogueKeys: membership.keys,
+      config,
+      custom: membership.role_org !== null,
+    }),
+    ...(hiddenFields.length > 0 ? { hiddenFields } : {}),
   };
 }
 
@@ -106,6 +183,18 @@ export async function listAllMembershipsForAdmin(organizationId: string) {
     orderBy: { createdAt: "asc" },
   });
 
+  // B4.01: when each person last signed in here.
+  const lastSignIns = await adminDb.signInEvent.groupBy({
+    by: ["userId"],
+    where: { organizationId, outcome: "SUCCESS" },
+    _max: { createdAt: true },
+  });
+  const lastSignInByUser = new Map(lastSignIns.map((r) => [r.userId, r._max.createdAt]));
+
+  const names = new Map(memberships.map((m) => [m.id, m.user.name]));
+  const actor = (id: string | null) => (id ? (names.get(id) ?? null) : null);
+  const now = Date.now();
+
   return memberships.map((m) => ({
     membershipId: m.id,
     userId: m.userId,
@@ -114,9 +203,41 @@ export async function listAllMembershipsForAdmin(organizationId: string) {
     roleKey: m.role.key,
     roleName: m.role.name,
     status: m.status,
+    /** B1.12: the four states the Settings screen shows. */
+    state: membershipState(m.status),
     invitedAt: m.invitedAt,
     joinedAt: m.joinedAt,
+    inviteExpiresAt: m.status === "PENDING" ? m.inviteTokenExpiresAt : null,
+    inviteExpired:
+      m.status === "PENDING" &&
+      (!m.inviteTokenExpiresAt || m.inviteTokenExpiresAt.getTime() <= now),
+    inviteLastSentAt: m.inviteLastSentAt,
+    invitedByName: actor(m.invitedByMembershipId),
+    deactivatedAt: m.deactivatedAt,
+    deactivatedByName: actor(m.deactivatedByMembershipId),
+    removedAt: m.removedAt,
+    removedByName: actor(m.removedByMembershipId),
+    /** B4.01: the most recent successful sign-in to this organisation, or null if they never have. */
+    lastSignInAt: lastSignInByUser.get(m.userId) ?? null,
+    /** B1.05: set while the account is locked after repeated failed sign-ins. */
+    lockedUntil: m.user.lockedUntil && m.user.lockedUntil.getTime() > now ? m.user.lockedUntil : null,
   }));
+}
+
+export type MembershipState = "invited" | "active" | "deactivated" | "removed";
+
+/** The API's name for a membership's status. */
+export function membershipState(status: MembershipStatus): MembershipState {
+  switch (status) {
+    case "PENDING":
+      return "invited";
+    case "ACTIVE":
+      return "active";
+    case "INACTIVE":
+      return "deactivated";
+    case "REMOVED":
+      return "removed";
+  }
 }
 
 /** A single membership, tenant-scoped -- the lookup every mutation below starts from. */
@@ -153,7 +274,24 @@ export async function upsertPendingInvite(input: {
   roleId: string;
   tokenHash: string;
   expiresAt: Date;
+  invitedByMembershipId?: string;
 }) {
+  const now = new Date();
+  // A re-invite starts the membership's story over: whoever removed or
+  // deactivated them earlier no longer describes its current state.
+  const fresh = {
+    roleId: input.roleId,
+    status: MembershipStatus.PENDING,
+    invitedAt: now,
+    inviteLastSentAt: now,
+    invitedByMembershipId: input.invitedByMembershipId ?? null,
+    inviteTokenHash: input.tokenHash,
+    inviteTokenExpiresAt: input.expiresAt,
+    deactivatedAt: null,
+    deactivatedByMembershipId: null,
+    removedAt: null,
+    removedByMembershipId: null,
+  };
   return adminDb.membership.upsert({
     where: {
       organizationId_userId: {
@@ -164,20 +302,33 @@ export async function upsertPendingInvite(input: {
     create: {
       organizationId: input.organizationId,
       userId: input.userId,
-      roleId: input.roleId,
-      status: MembershipStatus.PENDING,
-      invitedAt: new Date(),
-      inviteTokenHash: input.tokenHash,
-      inviteTokenExpiresAt: input.expiresAt,
+      ...fresh,
     },
-    update: {
-      roleId: input.roleId,
-      status: MembershipStatus.PENDING,
-      invitedAt: new Date(),
-      inviteTokenHash: input.tokenHash,
-      inviteTokenExpiresAt: input.expiresAt,
-    },
+    update: fresh,
   });
+}
+
+/**
+ * Like `findMembershipByInviteToken`, but tells an expired invite apart from
+ * one that does not exist (B1.12) -- the holder of a real token is entitled
+ * to know it ran out and to ask for a new one. A used token is cleared from
+ * the row on acceptance, so it reads as unknown, not expired.
+ */
+export async function inspectInviteToken(tokenHash: string) {
+  const membership = await adminDb.membership.findUnique({
+    where: { inviteTokenHash: tokenHash },
+    include: { user: true },
+  });
+  if (!membership || membership.status !== MembershipStatus.PENDING) {
+    return { state: "unknown" as const, membership: null };
+  }
+  if (
+    !membership.inviteTokenExpiresAt ||
+    membership.inviteTokenExpiresAt.getTime() <= Date.now()
+  ) {
+    return { state: "expired" as const, membership };
+  }
+  return { state: "valid" as const, membership };
 }
 
 /** Read-only lookup for the accept-invite page -- does not consume the token. */
@@ -231,7 +382,11 @@ export async function setInviteToken(
 ) {
   return adminDb.membership.update({
     where: { id: membershipId },
-    data: { inviteTokenHash: tokenHash, inviteTokenExpiresAt: expiresAt },
+    data: {
+      inviteTokenHash: tokenHash,
+      inviteTokenExpiresAt: expiresAt,
+      inviteLastSentAt: new Date(),
+    },
   });
 }
 
@@ -245,7 +400,11 @@ export async function setMembershipRole(membershipId: string, roleId: string) {
 export async function reactivateMembership(membershipId: string) {
   return adminDb.membership.update({
     where: { id: membershipId },
-    data: { status: MembershipStatus.ACTIVE },
+    data: {
+      status: MembershipStatus.ACTIVE,
+      deactivatedAt: null,
+      deactivatedByMembershipId: null,
+    },
   });
 }
 

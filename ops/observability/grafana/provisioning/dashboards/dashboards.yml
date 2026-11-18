@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: figbloom
+    folder: Figbloom CRM
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

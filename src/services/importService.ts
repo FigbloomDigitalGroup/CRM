@@ -1,9 +1,9 @@
 import type { Readable } from "node:stream";
 import type { AuthContext } from "../auth/context";
-import { requirePermission } from "../auth/context";
+import { hasPermission, requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
-import type { AccountKind } from "../auth/accountAccess";
+import { canWorkAccounts, type AccountKind } from "../auth/accountAccess";
 import { processInBatches } from "../lib/asyncBatch";
 import { parseCsvRows } from "../lib/csv";
 import { recordAuditEvent } from "../repositories/auditEvents";
@@ -15,8 +15,14 @@ import {
   createContact,
   findPossibleDuplicateContacts,
 } from "../repositories/contacts";
-import { createLead, findPossibleDuplicateLeads } from "../repositories/leads";
-import { assertEligibleAccountOwner } from "./ownerEligibility";
+import { createLead, findConvertedLeadMatches, findPossibleDuplicateLeads } from "../repositories/leads";
+import { applyValues, missingRequired, type FieldDefinition } from "../lib/customFields";
+import { loadActiveDefinitions, toFieldDefinition } from "./customFieldService";
+import { findDuplicates } from "./duplicateService";
+import { assertEligibleAccountOwner, assertEligibleLeadOwner } from "./ownerEligibility";
+import { changeTags } from "./tagService";
+import { type ResolvedRow, loadLookups, remember, resolveRow } from "./migrationRows";
+import { withOrgContext } from "../db/orgScopedClient";
 
 /**
  * Hard ceiling on rows processed per import call, independent of upload
@@ -36,18 +42,36 @@ const MAX_REPORTED_ERRORS = 500;
 
 export type DuplicateStrategy = "skip" | "create";
 
+export type ImportRowOutcome = "failed" | "duplicate" | "already_converted" | "warning";
+
 export interface ImportRowError {
   row: number;
   reason: string;
+  /** What happened to the row; rows that failed leave nothing behind, a warning means the record was created. */
+  outcome?: ImportRowOutcome;
+  /** The existing record a duplicate or already-converted row matched. */
+  matchedId?: string;
 }
 
 export interface ImportSummary {
   totalRows: number;
   created: number;
   duplicatesSkipped: number;
+  /** Leads only: rows for a contact or company that already has a converted lead. */
+  alreadyConverted: number;
   failed: number;
   truncated: boolean;
+  cancelled: boolean;
+  /** At most 500 in the request-time summary; background runs keep every row for the error report. */
   errors: ImportRowError[];
+}
+
+/** What a background import adds: progress, cancelling, and a complete error list. */
+export interface ImportHooks {
+  onProgress?: (summary: ImportSummary) => Promise<void>;
+  isCancelled?: () => Promise<boolean>;
+  /** Keep every problem row (up to this many) instead of the first 500. */
+  maxErrors?: number;
 }
 
 /** Thrown by a row resolver for a problem specific to that one row -- caught per-row, never aborts the whole import. */
@@ -105,9 +129,13 @@ async function resolveAccountOwner(
   email: string | undefined,
   kind: AccountKind,
   importerMembershipId: string,
+  canAssignOthers: boolean,
 ): Promise<string> {
   const membershipId = await resolveOwnerMembershipId(organizationId, email);
   if (!membershipId) return importerMembershipId;
+  if (membershipId !== importerMembershipId && !canAssignOthers) {
+    throw new RowValidationError("You can only import records that belong to you. Leave the owner column empty or use your own email.");
+  }
   try {
     await assertEligibleAccountOwner(organizationId, membershipId, kind);
   } catch (err) {
@@ -180,6 +208,66 @@ async function resolveByName(
   return match.id;
 }
 
+/** The text of one CSV cell as the value a custom field of this type stores. */
+function csvValueFor(def: FieldDefinition, cell: string): unknown {
+  switch (def.fieldType) {
+    case "NUMBER":
+      return Number(cell);
+    case "BOOLEAN": {
+      const v = cell.toLowerCase();
+      if (["true", "yes", "1"].includes(v)) return true;
+      if (["false", "no", "0"].includes(v)) return false;
+      return cell;
+    }
+    case "MULTISELECT":
+      return cell.split(";").map((s) => s.trim()).filter(Boolean);
+    default:
+      return cell;
+  }
+}
+
+/**
+ * Tags and custom fields from the file (FIG-798, FIG-803). A `tags` column holds names
+ * separated by ";"; a `cf:<key>` column holds that custom field. The headers an export
+ * writes are read back as they are, with no mapping needed, and a mapping entry can point
+ * either at another header.
+ */
+async function extraColumns(
+  organizationId: string,
+  entityType: "LEAD" | "CONTACT" | "COMPANY",
+  rawRow: Record<string, string>,
+  mapping: Record<string, string | undefined>,
+): Promise<{ customFields?: Record<string, unknown>; tags: string[] }> {
+  const tagHeader = mapping.tags ?? "tags";
+  const tags = (rawRow[tagHeader] ?? "").split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+
+  const incoming: Record<string, unknown> = {};
+  const defs = (await loadActiveDefinitions(organizationId, entityType, "GENERAL")).map(toFieldDefinition);
+  const byKey = new Map(defs.map((d) => [d.key, d]));
+  for (const key of new Set([...Object.keys(rawRow).filter((h) => h.startsWith("cf:")).map((h) => h.slice(3)), ...Object.keys(mapping).filter((f) => f.startsWith("cf:")).map((f) => f.slice(3))])) {
+    const header = mapping[`cf:${key}`] ?? `cf:${key}`;
+    const cell = rawRow[header]?.trim();
+    const def = byKey.get(key);
+    if (!cell) continue;
+    if (!def) throw new RowValidationError(`"${header}" is not a custom field of this record.`);
+    incoming[key] = csvValueFor(def, cell);
+  }
+
+  if (Object.keys(incoming).length === 0) {
+    // Required fields still apply to an imported record.
+    const missing = missingRequired(defs, {}, "save");
+    if (missing.length > 0) throw new RowValidationError(missing.map((i) => i.message).join(" "));
+    return { tags };
+  }
+  const result = applyValues(defs, incoming, { unknownKeys: "reject" });
+  const issues = [...result.issues, ...missingRequired(defs, result.values, "save")];
+  if (issues.length > 0) throw new RowValidationError(issues.map((i) => i.message).join(" "));
+  return { customFields: result.values, tags };
+}
+
+/** Why a row was not imported although it is not an error: the matching record, if any. */
+export type RowHold = { outcome: "duplicate" | "already_converted"; matchedId?: string; reason: string };
+
 interface RunImportOptions<TCandidate> {
   organizationId: string;
   fileStream: Readable;
@@ -188,8 +276,14 @@ interface RunImportOptions<TCandidate> {
     rawRow: Record<string, string>,
     mapping: Record<string, string | undefined>,
   ) => Promise<TCandidate>;
-  findDuplicates: (candidate: TCandidate) => Promise<unknown[]>;
-  create: (candidate: TCandidate) => Promise<unknown>;
+  /** A reason to leave this row out (a duplicate, an already-converted lead), or null to import it. */
+  findHold: (candidate: TCandidate, strategy: DuplicateStrategy) => Promise<RowHold | null>;
+  create: (candidate: TCandidate) => Promise<{ id: string }>;
+  /** Things to add later on a row that WAS imported (a company that could not be linked, a missing phone): each becomes a "warning" line in the report. */
+  warningsFor?: (rawRow: Record<string, string>) => string[] | undefined;
+  /** Tags from the row, applied after the record exists. A failure is a warning, not a failed row. */
+  afterCreate?: (record: { id: string }, rawRow: Record<string, string>, mapping: Record<string, string | undefined>) => Promise<void>;
+  hooks?: ImportHooks;
 }
 
 async function runImport<TCandidate>(
@@ -200,42 +294,51 @@ async function runImport<TCandidate>(
     totalRows: 0,
     created: 0,
     duplicatesSkipped: 0,
+    alreadyConverted: 0,
     failed: 0,
     truncated: false,
+    cancelled: false,
     errors: [],
+  };
+  const maxErrors = opts.hooks?.maxErrors ?? MAX_REPORTED_ERRORS;
+  const note = (entry: ImportRowError) => {
+    if (summary.errors.length < maxErrors) summary.errors.push(entry);
   };
 
   async function handleRow(rawRow: Record<string, string>, row: number) {
     try {
       const candidate = await opts.resolveCandidate(rawRow, mapping);
-      if (opts.duplicateStrategy === "skip") {
-        const duplicates = await opts.findDuplicates(candidate);
-        if (duplicates.length > 0) {
-          summary.duplicatesSkipped += 1;
-          return;
+      const hold = await opts.findHold(candidate, opts.duplicateStrategy);
+      if (hold) {
+        if (hold.outcome === "already_converted") summary.alreadyConverted += 1;
+        else summary.duplicatesSkipped += 1;
+        note({ row, reason: hold.reason, outcome: hold.outcome, matchedId: hold.matchedId });
+        return;
+      }
+      const record = await opts.create(candidate);
+      summary.created += 1;
+      for (const w of opts.warningsFor?.(rawRow) ?? []) note({ row, reason: `Imported, but ${w}`, outcome: "warning" });
+      if (opts.afterCreate) {
+        try {
+          await opts.afterCreate(record, rawRow, mapping);
+        } catch (err) {
+          note({ row, reason: `Created, but the tags were not applied: ${err instanceof Error ? err.message : "unknown error"}`, outcome: "warning" });
         }
       }
-      await opts.create(candidate);
-      summary.created += 1;
     } catch (err) {
       summary.failed += 1;
-      if (summary.errors.length < MAX_REPORTED_ERRORS) {
-        summary.errors.push({
-          row,
-          reason:
-            err instanceof RowValidationError
-              ? err.message
-              : err instanceof Error
-                ? err.message
-                : "Unknown error.",
-        });
-      }
+      note({
+        row,
+        reason: err instanceof Error ? err.message : "Unknown error.",
+        outcome: "failed",
+      });
     }
   }
 
   const maxRows = maxImportRows();
   let rowNumber = 1; // header is row 1, first data row is row 2
   let stopped = false;
+  const PROGRESS_EVERY = 50;
 
   async function* boundedRows() {
     for await (const rawRow of parseCsvRows(opts.fileStream)) {
@@ -244,6 +347,14 @@ async function runImport<TCandidate>(
         stopped = true;
         summary.truncated = true;
         return;
+      }
+      if (opts.hooks && (rowNumber - 1) % PROGRESS_EVERY === 0) {
+        await opts.hooks.onProgress?.(summary);
+        if (await opts.hooks.isCancelled?.()) {
+          stopped = true;
+          summary.cancelled = true;
+          return;
+        }
       }
       summary.totalRows = rowNumber - 1;
       yield { rawRow, row: rowNumber };
@@ -258,14 +369,27 @@ async function runImport<TCandidate>(
     // Drain the rest of the stream so it doesn't dangle.
     opts.fileStream.destroy();
   }
+  await opts.hooks?.onProgress?.(summary);
 
   return summary;
+}
+
+async function applyTags(
+  ctx: AuthContext,
+  entity: "lead" | "contact" | "company",
+  id: string,
+  rawRow: Record<string, string>,
+  mapping: Record<string, string | undefined>,
+) {
+  const names = (rawRow[mapping.tags ?? "tags"] ?? "").split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+  if (names.length > 0) await changeTags(ctx, entity, id, { addTagNames: names });
 }
 
 export interface ImportCompaniesInput {
   fileStream: Readable;
   mapping: Record<string, string | undefined>;
   duplicateStrategy: DuplicateStrategy;
+  hooks?: ImportHooks;
 }
 
 export async function importCompanies(
@@ -273,11 +397,14 @@ export async function importCompanies(
   input: ImportCompaniesInput,
 ): Promise<ImportSummary> {
   requirePermission(ctx, "companies.import");
+  requirePermission(ctx, "companies.create");
+  const canAssignOthers = hasPermission(ctx, "membership.manage");
 
   const summary = await runImport(input.mapping, {
     organizationId: ctx.organizationId,
     fileStream: input.fileStream,
     duplicateStrategy: input.duplicateStrategy,
+    hooks: input.hooks,
     resolveCandidate: async (rawRow, mapping) => {
       const name = requiredCell(rawRow, mapping, "name");
       const email = optionalCell(rawRow, mapping, "email");
@@ -293,8 +420,11 @@ export async function importCompanies(
         optionalCell(rawRow, mapping, "ownerEmail"),
         "companies",
         ctx.membershipId,
+        canAssignOthers,
       );
+      const extra = await extraColumns(ctx.organizationId, "COMPANY", rawRow, mapping);
       return {
+        customFields: extra.customFields as never,
         organizationId: ctx.organizationId,
         name,
         industry: optionalCell(rawRow, mapping, "industry"),
@@ -308,9 +438,16 @@ export async function importCompanies(
         createdByMembershipId: ctx.membershipId,
       };
     },
-    findDuplicates: (candidate) =>
-      findPossibleDuplicateCompanies(ctx.organizationId, candidate),
+    findHold: async (candidate, strategy) => {
+      if (strategy !== "skip") return null;
+      const existing = await findPossibleDuplicateCompanies(ctx.organizationId, candidate);
+      if (existing.length > 0) return { outcome: "duplicate", matchedId: existing[0]!.id, reason: `Skipped: a company with the same name, email or phone already exists.` };
+      const found = await findDuplicates(ctx, { entity: "company", companyName: candidate.name, email: candidate.email, phone: candidate.phone, website: candidate.website });
+      const high = found.candidates.find((c) => c.confidence === "high");
+      return high ? { outcome: "duplicate", matchedId: high.id, reason: `Skipped: looks like the existing company "${high.label}".` } : null;
+    },
     create: (candidate) => createCompany(candidate),
+    afterCreate: (record, rawRow, mapping) => applyTags(ctx, "company", record.id, rawRow, mapping),
   });
 
   await recordAuditEvent({
@@ -328,6 +465,7 @@ export interface ImportContactsInput {
   fileStream: Readable;
   mapping: Record<string, string | undefined>;
   duplicateStrategy: DuplicateStrategy;
+  hooks?: ImportHooks;
 }
 
 export async function importContacts(
@@ -335,11 +473,14 @@ export async function importContacts(
   input: ImportContactsInput,
 ): Promise<ImportSummary> {
   requirePermission(ctx, "contacts.import");
+  requirePermission(ctx, "contacts.create");
+  const canAssignOthers = hasPermission(ctx, "membership.manage");
 
   const summary = await runImport(input.mapping, {
     organizationId: ctx.organizationId,
     fileStream: input.fileStream,
     duplicateStrategy: input.duplicateStrategy,
+    hooks: input.hooks,
     resolveCandidate: async (rawRow, mapping) => {
       const firstName = requiredCell(rawRow, mapping, "firstName");
       const email = optionalCell(rawRow, mapping, "email");
@@ -353,8 +494,11 @@ export async function importContacts(
         optionalCell(rawRow, mapping, "ownerEmail"),
         "contacts",
         ctx.membershipId,
+        canAssignOthers,
       );
+      const extra = await extraColumns(ctx.organizationId, "CONTACT", rawRow, mapping);
       return {
+        customFields: extra.customFields as never,
         organizationId: ctx.organizationId,
         firstName,
         lastName: optionalCell(rawRow, mapping, "lastName"),
@@ -368,9 +512,16 @@ export async function importContacts(
         createdByMembershipId: ctx.membershipId,
       };
     },
-    findDuplicates: (candidate) =>
-      findPossibleDuplicateContacts(ctx.organizationId, candidate),
+    findHold: async (candidate, strategy) => {
+      if (strategy !== "skip") return null;
+      const existing = await findPossibleDuplicateContacts(ctx.organizationId, candidate);
+      if (existing.length > 0) return { outcome: "duplicate", matchedId: existing[0]!.id, reason: `Skipped: a contact with the same email or phone already exists.` };
+      const found = await findDuplicates(ctx, { entity: "contact", firstName: candidate.firstName, lastName: candidate.lastName, email: candidate.email, phone: candidate.phone });
+      const high = found.candidates.find((c) => c.confidence === "high");
+      return high ? { outcome: "duplicate", matchedId: high.id, reason: `Skipped: looks like the existing contact "${high.label}".` } : null;
+    },
     create: (candidate) => createContact(candidate),
+    afterCreate: (record, rawRow, mapping) => applyTags(ctx, "contact", record.id, rawRow, mapping),
   });
 
   await recordAuditEvent({
@@ -388,98 +539,347 @@ export interface ImportLeadsInput {
   fileStream: Readable;
   mapping: Record<string, string | undefined>;
   duplicateStrategy: DuplicateStrategy;
+  hooks?: ImportHooks;
 }
 
+const TEMPERATURE_WORDS: Record<string, "HOT" | "WARM" | "COLD"> = {
+  HOT: "HOT", HIGH: "HOT", URGENT: "HOT",
+  WARM: "WARM", MEDIUM: "WARM", MED: "WARM", NORMAL: "WARM",
+  COLD: "COLD", LOW: "COLD",
+};
+
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** "254 734 808 355 / 254 718 164 141": the first number is the phone, the rest are kept in the contact's notes. */
+function splitPhones(raw: string | undefined): { phone?: string; others?: string } {
+  if (!raw) return {};
+  const parts = raw.split(/\s*(?:\/|;|,|\bor\b|\band\b)\s*/i).map((p) => p.trim()).filter(Boolean);
+  if (parts.length === 0) return {};
+  const first = parts[0]!.slice(0, 40);
+  return { phone: first, others: parts.length > 1 ? parts.slice(1).join(", ") : undefined };
+}
+
+async function findCompaniesByName(organizationId: string, name: string): Promise<{ id: string }[]> {
+  return adminDb.company.findMany({
+    where: { organizationId, archivedAt: null, mergedIntoId: null, name: { equals: name, mode: "insensitive" } },
+    select: { id: true },
+    take: 2,
+  });
+}
+
+async function defaultLeadStatusId(organizationId: string): Promise<string | undefined> {
+  const named = await adminDb.leadStatus.findFirst({ where: { organizationId, key: "NEW", isActive: true }, select: { id: true } });
+  if (named) return named.id;
+  const first = await adminDb.leadStatus.findFirst({ where: { organizationId, isActive: true }, orderBy: { sequence: "asc" }, select: { id: true } });
+  return first?.id;
+}
+
+interface LeadCandidate {
+  organizationId: string;
+  leadStatusId: string;
+  companyId?: string;
+  contactId?: string;
+  leadSourceId?: string;
+  serviceInterestId?: string;
+  ownerMembershipId: string;
+  temperature?: "HOT" | "WARM" | "COLD";
+  createdByMembershipId: string;
+  notes?: string;
+  customFields?: never;
+  /** Made when the lead is saved, not before: a row that turns out to be a duplicate must leave nothing behind. */
+  _newCompanyName?: string;
+  _newContact?: { firstName: string; lastName?: string; email?: string; phone?: string; notes?: string };
+  _contactEmail?: string;
+  _contactPhone?: string;
+}
+
+/**
+ * Leads from a spreadsheet. A row comes in with whatever it has: the company is linked when it exists and created when it does not, the
+ * person is reused by email or created from the email and phone, and anything the file names that this organisation does not have yet (a
+ * source, a service, a status, an owner, a temperature word) is left at its default and reported as a note to add later. Only a row with
+ * nothing in it at all, or one the importer's role may not create, is refused. Email, phone and notes are kept, on the contact and the lead.
+ */
 export async function importLeads(
   ctx: AuthContext,
   input: ImportLeadsInput,
 ): Promise<ImportSummary> {
   requirePermission(ctx, "leads.import");
+  // An import creates leads, so it needs the same right as creating one by hand (P2-26).
+  requirePermission(ctx, "leads.create");
+  const canAssign = hasPermission(ctx, "leads.assign");
+  const canCreateCompanies = hasPermission(ctx, "companies.create");
+  const canCreateContacts = hasPermission(ctx, "contacts.create");
+  const orgId = ctx.organizationId;
+
+  const warningsByRow = new WeakMap<Record<string, string>, string[]>();
+  // Rows are processed in parallel batches: one company or contact per name or email, however many rows name it.
+  const companyMemo = new Map<string, Promise<string>>();
+  const contactMemo = new Map<string, Promise<string>>();
+  let companiesCreated = 0;
+  let contactsCreated = 0;
+
+  const getOrCreateCompany = (name: string): Promise<string> => {
+    const key = name.toLowerCase();
+    let p = companyMemo.get(key);
+    if (!p) {
+      p = (async () => {
+        const [existing] = await findCompaniesByName(orgId, name);
+        if (existing) return existing.id;
+        const made = await createCompany({
+          organizationId: orgId,
+          name,
+          createdByMembershipId: ctx.membershipId,
+          ownerMembershipId: canWorkAccounts(ctx.permissionKeys, "companies") ? ctx.membershipId : undefined,
+        });
+        companiesCreated += 1;
+        return made.id;
+      })();
+      companyMemo.set(key, p);
+    }
+    return p;
+  };
 
   const summary = await runImport(input.mapping, {
-    organizationId: ctx.organizationId,
+    organizationId: orgId,
     fileStream: input.fileStream,
     duplicateStrategy: input.duplicateStrategy,
-    resolveCandidate: async (rawRow, mapping) => {
-      const leadStatusId = await resolveByName(
-        ctx.organizationId,
-        "leadStatus",
-        requiredCell(rawRow, mapping, "leadStatus"),
-        "leadStatus",
-      );
-      if (!leadStatusId) {
-        throw new RowValidationError('"leadStatus" is required.');
-      }
-      const contactEmail = optionalCell(rawRow, mapping, "contactEmail");
-      const contactPhone = optionalCell(rawRow, mapping, "contactPhone");
-      const companyId = await resolveCompanyIdByName(
-        ctx.organizationId,
-        optionalCell(rawRow, mapping, "company"),
-      );
-      const leadSourceId = await resolveByName(
-        ctx.organizationId,
-        "leadSource",
-        optionalCell(rawRow, mapping, "leadSource"),
-        "leadSource",
-      );
-      const serviceInterestId = await resolveByName(
-        ctx.organizationId,
-        "service",
-        optionalCell(rawRow, mapping, "serviceInterest"),
-        "serviceInterest",
-      );
-      const ownerMembershipId = await resolveOwnerMembershipId(
-        ctx.organizationId,
-        optionalCell(rawRow, mapping, "ownerEmail"),
-      );
-      const temperatureRaw = optionalCell(
-        rawRow,
-        mapping,
-        "temperature",
-      )?.toUpperCase();
-      if (
-        temperatureRaw &&
-        temperatureRaw !== "HOT" &&
-        temperatureRaw !== "WARM" &&
-        temperatureRaw !== "COLD"
-      ) {
-        throw new RowValidationError(
-          `"temperature" must be HOT, WARM, or COLD -- got "${temperatureRaw}".`,
-        );
+    hooks: input.hooks,
+    warningsFor: (rawRow) => warningsByRow.get(rawRow),
+    resolveCandidate: async (rawRow, mapping): Promise<LeadCandidate> => {
+      const warns: string[] = [];
+      warningsByRow.set(rawRow, warns);
+
+      const companyName = optionalCell(rawRow, mapping, "company");
+      const rawEmail = optionalCell(rawRow, mapping, "contactEmail");
+      const { phone, others } = splitPhones(optionalCell(rawRow, mapping, "contactPhone"));
+      const personName = optionalCell(rawRow, mapping, "contactName");
+      const notes = optionalCell(rawRow, mapping, "notes");
+      const sourceName = optionalCell(rawRow, mapping, "leadSource");
+      const serviceName = optionalCell(rawRow, mapping, "serviceInterest");
+      const ownerEmail = optionalCell(rawRow, mapping, "ownerEmail");
+      const temperatureRaw = optionalCell(rawRow, mapping, "temperature");
+      if (![companyName, rawEmail, phone, personName, notes, sourceName, serviceName, ownerEmail, temperatureRaw].some(Boolean)) {
+        throw new RowValidationError("This row is empty.");
       }
 
+      // Status: the file's, else the organisation's default. An unknown name is not a reason to lose the row.
+      const statusName = optionalCell(rawRow, mapping, "leadStatus");
+      let leadStatusId = statusName ? (await findByOrgAndName("leadStatus", orgId, statusName))?.id : undefined;
+      if (!leadStatusId) {
+        leadStatusId = await defaultLeadStatusId(orgId);
+        if (statusName) warns.push(`the status "${statusName}" is not one of your lead statuses, so the default was used. Change it on the lead.`);
+      }
+      if (!leadStatusId) throw new RowValidationError("This organisation has no lead status to start a lead in.");
+
+      // Company: link the one that exists, create it when it does not (the importer's role permitting).
+      let companyId: string | undefined;
+      let newCompanyName: string | undefined;
+      if (companyName) {
+        const found = await findCompaniesByName(orgId, companyName);
+        if (found.length === 1) companyId = found[0]!.id;
+        else if (found.length > 1) warns.push(`more than one company is named "${companyName}", so the lead is not linked to one. Link it on the lead.`);
+        else if (canCreateCompanies) newCompanyName = companyName;
+        else warns.push(`there is no company named "${companyName}" and your role cannot create one. Ask for it to be added, then link the lead.`);
+      }
+
+      // Person: reuse a contact with this email, else make one from what the row has.
+      let email: string | undefined;
+      if (rawEmail) {
+        if (EMAIL_SHAPE.test(rawEmail)) email = rawEmail.toLowerCase();
+        else warns.push(`"${rawEmail}" is not a valid email address, so it was not saved. Add the right one on the contact.`);
+      }
+      let contactId: string | undefined;
+      let newContact: LeadCandidate["_newContact"];
+      const existingContact = email
+        ? await adminDb.contact.findFirst({ where: { organizationId: orgId, archivedAt: null, mergedIntoId: null, email: { equals: email, mode: "insensitive" } }, select: { id: true } })
+        : null;
+      if (existingContact) contactId = existingContact.id;
+      else if (email || phone || personName) {
+        if (canCreateContacts) {
+          // A school or business often has no named person: the contact takes the company's name until someone adds the person.
+          const named = personName ?? companyName ?? email?.split("@")[0] ?? phone ?? "Contact";
+          const t = named.trim().replace(/\s+/g, " ");
+          const at = t.indexOf(" ");
+          newContact = {
+            firstName: personName ? (at === -1 ? t : t.slice(0, at)) : t,
+            lastName: personName && at !== -1 ? t.slice(at + 1) : undefined,
+            email,
+            phone,
+            notes: others ? `Other phone: ${others}` : undefined,
+          };
+        } else warns.push("your role cannot create contacts, so the email and phone were not saved. Add the contact on the lead.");
+      }
+      if (!email && !phone && !personName) warns.push(companyName ? "there is no email or phone yet. Add one on the lead." : "there is no company, email or phone yet. Add them on the lead.");
+
+      const leadSourceId = sourceName ? (await findByOrgAndName("leadSource", orgId, sourceName))?.id : undefined;
+      if (sourceName && !leadSourceId) warns.push(`the source "${sourceName}" is not one of your lead sources, so it was left blank. Set it on the lead.`);
+      const serviceInterestId = serviceName ? (await findByOrgAndName("service", orgId, serviceName))?.id : undefined;
+      if (serviceName && !serviceInterestId) warns.push(`the service "${serviceName}" is not one of your services, so it was left blank. Set it on the lead.`);
+
+      // Owner defaults to the importer. Naming someone else is an assignment: it needs leads.assign and an eligible owner.
+      let ownerMembershipId = ctx.membershipId;
+      if (ownerEmail) {
+        let namedOwner: string | undefined;
+        try {
+          namedOwner = await resolveOwnerMembershipId(orgId, ownerEmail);
+        } catch (err) {
+          if (!(err instanceof RowValidationError)) throw err;
+          warns.push(`nobody on the team has the email "${ownerEmail}", so the lead is yours. Reassign it on the lead.`);
+        }
+        if (namedOwner && namedOwner !== ctx.membershipId) {
+          if (!canAssign) throw new RowValidationError("You can only import leads that belong to you. Leave the owner column empty or use your own email.");
+          try {
+            await assertEligibleLeadOwner(orgId, namedOwner);
+          } catch (err) {
+            if (err instanceof ValidationError) throw new RowValidationError(err.message);
+            throw err;
+          }
+          ownerMembershipId = namedOwner;
+        }
+      }
+
+      let temperature: LeadCandidate["temperature"];
+      if (temperatureRaw) {
+        temperature = TEMPERATURE_WORDS[temperatureRaw.trim().toUpperCase()];
+        if (!temperature) warns.push(`"${temperatureRaw}" is not a temperature (hot, warm or cold), so the default was used. Set it on the lead.`);
+      }
+
+      const extra = await extraColumns(orgId, "LEAD", rawRow, mapping);
       return {
-        organizationId: ctx.organizationId,
+        customFields: extra.customFields as never,
+        organizationId: orgId,
         leadStatusId,
         companyId,
+        contactId,
         leadSourceId,
         serviceInterestId,
         ownerMembershipId,
-        temperature: temperatureRaw as "HOT" | "WARM" | "COLD" | undefined,
+        temperature,
         createdByMembershipId: ctx.membershipId,
-        notes: optionalCell(rawRow, mapping, "notes"),
-        _contactEmail: contactEmail,
-        _contactPhone: contactPhone,
+        notes,
+        _newCompanyName: newCompanyName,
+        _newContact: newContact,
+        _contactEmail: email,
+        _contactPhone: phone,
       };
     },
-    findDuplicates: (candidate) =>
-      findPossibleDuplicateLeads(ctx.organizationId, {
-        contactEmail: candidate._contactEmail,
-        contactPhone: candidate._contactPhone,
-        companyId: candidate.companyId,
-      }),
-    create: ({ _contactEmail, _contactPhone, ...candidate }) =>
-      createLead(candidate),
+    findHold: async (candidate, strategy) => {
+      if (strategy !== "skip") return null;
+      const probe = { contactEmail: candidate._contactEmail, contactPhone: candidate._contactPhone, companyId: candidate.companyId };
+      const converted = await findConvertedLeadMatches(orgId, probe);
+      if (converted.length > 0) {
+        return { outcome: "already_converted", matchedId: converted[0]!.id, reason: "Skipped: this contact or company already has a lead that became a deal." };
+      }
+      const open = await findPossibleDuplicateLeads(orgId, probe);
+      if (open.length > 0) return { outcome: "duplicate", matchedId: open[0]!.id, reason: "Skipped: an open lead for this contact or company already exists." };
+      const found = await findDuplicates(ctx, { entity: "lead", email: candidate._contactEmail, phone: candidate._contactPhone, companyId: candidate.companyId });
+      const high = found.candidates.find((c) => c.confidence === "high");
+      return high ? { outcome: "duplicate", matchedId: high.id, reason: `Skipped: looks like the existing record "${high.label}".` } : null;
+    },
+    create: async ({ _contactEmail, _contactPhone, _newCompanyName, _newContact, ...candidate }) => {
+      let companyId = candidate.companyId;
+      if (!companyId && _newCompanyName) companyId = await getOrCreateCompany(_newCompanyName);
+      let contactId = candidate.contactId;
+      if (!contactId && _newContact) {
+        const make = async () => {
+          const made = await createContact({
+            organizationId: orgId,
+            ..._newContact,
+            companyId,
+            createdByMembershipId: ctx.membershipId,
+            ownerMembershipId: canWorkAccounts(ctx.permissionKeys, "contacts") ? ctx.membershipId : undefined,
+          });
+          contactsCreated += 1;
+          return made.id;
+        };
+        if (_newContact.email) {
+          const key = _newContact.email.toLowerCase();
+          let p = contactMemo.get(key);
+          if (!p) {
+            p = make();
+            contactMemo.set(key, p);
+          }
+          contactId = await p;
+        } else contactId = await make();
+      }
+      return createLead({ ...candidate, companyId, contactId });
+    },
+    afterCreate: (record, rawRow, mapping) => applyTags(ctx, "lead", record.id, rawRow, mapping),
+  });
+
+  await recordAuditEvent({
+    organizationId: orgId,
+    actorMembershipId: ctx.membershipId,
+    action: "leads.imported",
+    entityType: "Lead",
+    metadata: { ...summary, errors: undefined, companiesCreated, contactsCreated },
+  });
+
+  return summary;
+}
+
+export interface ImportDealsInput {
+  fileStream: Readable;
+  /** CRM field to CSV header: company, contactEmail, value, currency, stage, ownerEmail, service, expectedCloseDate, closedOn, lostReason, notes, name, createdAt. */
+  mapping: Record<string, string | undefined>;
+  duplicateStrategy: DuplicateStrategy;
+  hooks?: ImportHooks;
+}
+
+/**
+ * Deals from a spreadsheet (FIG-800, B4.04): company matched by name or created, primary contact by email, stage matched by name,
+ * owner matched by email, service, expected close date. A row with an unknown stage or owner, or no company, goes to the error report
+ * with the reason; nothing is silently defaulted. Rows are understood by the same resolver as the data migration (`migrationRows.ts`),
+ * so a deal means the same thing here and there. Imported deals are audited (`deals.imported`). No handoff, notification or lifecycle
+ * move runs for a won deal: this is history, not a sale happening now.
+ */
+export async function importDeals(ctx: AuthContext, input: ImportDealsInput): Promise<ImportSummary> {
+  requirePermission(ctx, "deals.create");
+  const mapping = Object.fromEntries(Object.entries(input.mapping).filter((e): e is [string, string] => typeof e[1] === "string" && e[1] !== ""));
+  const lookups = await loadLookups(ctx.organizationId, ctx.membershipId, "DEAL");
+  const options = { mapping, valueMappings: {}, createMissingCompanies: true };
+
+  const summary = await runImport<ResolvedRow>(input.mapping, {
+    organizationId: ctx.organizationId,
+    fileStream: input.fileStream,
+    duplicateStrategy: input.duplicateStrategy,
+    hooks: input.hooks,
+    resolveCandidate: async (rawRow) => {
+      const resolved = resolveRow("DEAL", rawRow, options, lookups, new Date());
+      if (!resolved.ok) throw new RowValidationError(resolved.issues.filter((i) => i.severity === "ERROR").map((i) => i.message).join(" "));
+      return resolved;
+    },
+    findHold: async (row, strategy) =>
+      strategy === "skip" && row.match ? { outcome: "duplicate", matchedId: row.match.id, reason: `Skipped: ${row.match.reason}` } : null,
+    create: async (row) => {
+      const data = { ...row.data } as Record<string, unknown>;
+      if (row.newCompany) {
+        let companyId = lookups.pendingCompanies.get(row.newCompany.key);
+        if (!companyId) {
+          const company = await createCompany({ organizationId: ctx.organizationId, name: row.newCompany.name, ownerMembershipId: ctx.membershipId, createdByMembershipId: ctx.membershipId });
+          companyId = company.id;
+          lookups.pendingCompanies.set(row.newCompany.key, companyId);
+          lookups.companiesByName.set(row.newCompany.key, [companyId]);
+        }
+        data.companyId = companyId;
+      }
+      const deal = await withOrgContext(ctx.organizationId, (tx) => tx.deal.create({ data: { ...data, organizationId: ctx.organizationId } as never, select: { id: true } }));
+      remember("DEAL", { ...row, data }, deal.id, lookups);
+      return deal;
+    },
+    afterCreate: async (record, rawRow, map) => {
+      const names = (rawRow[map.tags ?? "tags"] ?? "").split(/[;,]/).map((s) => s.trim()).filter(Boolean);
+      if (names.length > 0) await changeTags(ctx, "deal", record.id, { addTagNames: names });
+    },
   });
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
     actorMembershipId: ctx.membershipId,
-    action: "leads.imported",
-    entityType: "Lead",
+    action: "deals.imported",
+    entityType: "Deal",
     metadata: { ...summary, errors: undefined },
   });
-
   return summary;
 }
 

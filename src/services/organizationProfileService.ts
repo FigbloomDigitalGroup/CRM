@@ -1,3 +1,4 @@
+import { invalidateMeContext } from "./meContextCache";
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
@@ -194,5 +195,6 @@ export async function updateOrganizationProfile(
     });
   }
 
+  invalidateMeContext({ organizationId: ctx.organizationId });
   return toProfile(updated);
 }

@@ -1,5 +1,6 @@
 import type { AuthContext } from "../auth/context";
 import { ValidationError } from "../auth/errors";
+import { assertWritable } from "../lib/archive";
 import { getCompany } from "./companyService";
 import { getContact } from "./contactService";
 import { getDeal } from "./dealService";
@@ -26,7 +27,14 @@ export interface LinkedRecordIds {
 export async function assertCanAccessLinkedRecords(
   ctx: AuthContext,
   ids: LinkedRecordIds,
-  { requireAtLeastOne = false }: { requireAtLeastOne?: boolean } = {},
+  {
+    requireAtLeastOne = false,
+    requireWritable = false,
+  }: {
+    requireAtLeastOne?: boolean;
+    /** Creating something under an archived record is a write to it (B2.16): refuse with `ARCHIVED_READ_ONLY`. */
+    requireWritable?: boolean;
+  } = {},
 ) {
   if (
     requireAtLeastOne &&
@@ -39,8 +47,20 @@ export async function assertCanAccessLinkedRecords(
       "Must be linked to at least one of company, contact, lead, or deal.",
     );
   }
-  if (ids.companyId) await getCompany(ctx, ids.companyId);
-  if (ids.contactId) await getContact(ctx, ids.contactId);
-  if (ids.leadId) await getLead(ctx, ids.leadId);
-  if (ids.dealId) await getDeal(ctx, ids.dealId);
+  if (ids.companyId) {
+    const company = await getCompany(ctx, ids.companyId);
+    if (requireWritable) assertWritable(ctx, "company", company, "adding to it");
+  }
+  if (ids.contactId) {
+    const contact = await getContact(ctx, ids.contactId);
+    if (requireWritable) assertWritable(ctx, "contact", contact, "adding to it");
+  }
+  if (ids.leadId) {
+    const lead = await getLead(ctx, ids.leadId);
+    if (requireWritable) assertWritable(ctx, "lead", lead, "adding to it");
+  }
+  if (ids.dealId) {
+    const deal = await getDeal(ctx, ids.dealId);
+    if (requireWritable) assertWritable(ctx, "deal", deal, "adding to it");
+  }
 }

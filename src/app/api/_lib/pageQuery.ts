@@ -41,3 +41,17 @@ export function toPageRequest(query: {
     cursor: query.cursor,
   };
 }
+
+/**
+ * `customField[budget_range]=500k` query parameters (FIG-803) as a plain
+ * object of key to value. Keys are checked against the organisation's field
+ * definitions by `buildCustomFieldWhere` before they reach a query.
+ */
+export function customFieldFilters(searchParams: URLSearchParams): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [name, value] of searchParams.entries()) {
+    const match = /^customField\[([^\]]+)\]$/.exec(name);
+    if (match) out[match[1]!] = value;
+  }
+  return out;
+}

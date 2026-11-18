@@ -1,13 +1,28 @@
+import { settingsPath } from "@/lib/settingsLinks";
+import { invalidateMeContext } from "./meContextCache";
+import { emitTeamActivity } from "./teamActivityNotifier";
+import { findAssignableRole } from "../repositories/roles";
+import { withAvatars } from "./profileService";
+import { requiredFeatureForRole, roleIsAvailable } from "../auth/permissions";
+import { loadFeatureConfig } from "../lib/featureConfig";
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { sendMembershipInviteEmail } from "../auth/email";
-import { NotFoundError, ValidationError } from "../auth/errors";
+import {
+  NotFoundError,
+  RateLimitedError,
+  ReassignmentRequiredError,
+  ValidationError,
+} from "../auth/errors";
 import { generateInviteToken } from "../auth/membershipInvite";
+import { revokeSessionsForUser } from "../auth/session";
 import { adminDb } from "../db/adminClient";
+import { assertSeatAvailable } from "./orgLimitService";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
   countActiveManagementMemberships,
   deactivateMembership,
+  removeMembership,
   findMembershipById,
   findMembershipByOrgAndUser,
   listAllMembershipsForAdmin,
@@ -16,6 +31,8 @@ import {
   setMembershipRole,
   upsertPendingInvite,
 } from "../repositories/memberships";
+import { clearLoginRateLimitForEmail } from "./authService";
+import { buildReassignmentChecklist } from "./reassignmentService";
 
 /**
  * Member/role administration (FIG-593). `membership.manage` covers adding,
@@ -25,6 +42,23 @@ import {
  */
 const MANAGE = "membership.manage";
 const ASSIGN_ROLE = "role.assign";
+
+/**
+ * A flag-gated role (B1.01; none exists today) cannot be given to anyone until
+ * the organisation switches its feature on: a member holding it would carry
+ * no permissions at all, which is a trap, not a role.
+ */
+async function assertRoleAssignable(organizationId: string, roleKey: string) {
+  const feature = requiredFeatureForRole(roleKey);
+  if (!feature) return;
+  const config = await loadFeatureConfig(organizationId);
+  if (!roleIsAvailable(roleKey, config)) {
+    throw new ValidationError(
+      `The ${roleKey.replace(/_/g, " ").toLowerCase()} role is not switched on for this organisation yet.`,
+      [{ path: "roleKey", message: `Turn on "${feature}" first.` }],
+    );
+  }
+}
 const VIEW = "membership.view";
 const MANAGEMENT_ROLE_KEY = "MANAGEMENT";
 
@@ -40,7 +74,8 @@ async function assertNotLastActiveManagement(
 
 export async function listMemberships(ctx: AuthContext) {
   requirePermission(ctx, VIEW);
-  return listAllMembershipsForAdmin(ctx.organizationId);
+  const rows = await listAllMembershipsForAdmin(ctx.organizationId);
+  return withAvatars(ctx.organizationId, rows, (r) => r.userName);
 }
 
 export interface InviteMemberInput {
@@ -70,10 +105,11 @@ export async function inviteMember(
     throw new ValidationError("Name and email are required.");
   }
 
-  const role = await adminDb.role.findUnique({ where: { key: input.roleKey } });
+  const role = await findAssignableRole(ctx.organizationId, input.roleKey);
   if (!role) {
     throw new ValidationError(`Unknown role "${input.roleKey}".`);
   }
+  await assertRoleAssignable(ctx.organizationId, role.key);
 
   let user = await adminDb.user.findUnique({ where: { email } });
   if (!user) {
@@ -84,6 +120,13 @@ export async function inviteMember(
   if (existing?.status === "ACTIVE") {
     throw new ValidationError("This person is already an active member.");
   }
+  if (existing?.status === "INACTIVE" && existing.joinedAt) {
+    throw new ValidationError(
+      "This person is deactivated -- reactivate them instead of sending a new invite.",
+    );
+  }
+  // B7.02: a new invitation takes a seat; re-sending one that is already pending does not.
+  if (existing?.status !== "PENDING") await assertSeatAvailable(ctx.organizationId);
 
   const { plaintext, tokenHash, expiresAt } = generateInviteToken();
   const membership = await upsertPendingInvite({
@@ -92,6 +135,7 @@ export async function inviteMember(
     roleId: role.id,
     tokenHash,
     expiresAt,
+    invitedByMembershipId: ctx.membershipId,
   });
 
   await sendMembershipInviteEmail(user.email, buildAcceptUrl(plaintext));
@@ -104,8 +148,69 @@ export async function inviteMember(
     entityId: membership.id,
     metadata: { email: user.email, roleKey: role.key },
   });
+  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "MEMBER_CHANGE", actorMembershipId: ctx.membershipId, entityType: "Membership", entityId: membership.id, label: user.name, route: settingsPath("members").slice(1), detail: { action: "INVITED" } });
 
   return { membershipId: membership.id };
+}
+
+/**
+ * How soon a pending invite can be sent again. A fresh send replaces the old
+ * link (the previous token stops working), so this is only a brake on mailing
+ * the same person over and over.
+ */
+export function inviteResendCooldownMs(): number {
+  const raw = Number(process.env.INVITE_RESEND_COOLDOWN_MS);
+  return Number.isFinite(raw) && raw >= 0 ? raw : 60_000;
+}
+
+export interface ResendInviteActor {
+  membershipId?: string;
+  /** For a platform operator acting outside any organisation (the platform console, later). */
+  userId?: string;
+}
+
+/**
+ * The resend itself, with no permission check, so the Management endpoint
+ * below and the platform console (which has no membership in the customer's
+ * organisation) share one set of rules: only an unaccepted invite can be
+ * resent (expired ones included -- that is the point), the old link dies, the
+ * new one lasts seven days, and sends are at least `inviteResendCooldownMs()`
+ * apart.
+ */
+export async function resendAdminInvite(
+  organizationId: string,
+  membershipId: string,
+  actor: ResendInviteActor,
+  buildAcceptUrl: (token: string) => string,
+) {
+  const membership = await findMembershipById(organizationId, membershipId);
+  if (!membership) {
+    throw new NotFoundError("Membership", membershipId);
+  }
+  if (membership.status !== "PENDING") {
+    throw new ValidationError("Only a pending invite can be resent.");
+  }
+  const lastSent = membership.inviteLastSentAt ?? membership.invitedAt;
+  if (lastSent && Date.now() - lastSent.getTime() < inviteResendCooldownMs()) {
+    throw new RateLimitedError(
+      "An invite was sent a moment ago. Wait a minute before sending another.",
+    );
+  }
+
+  const { plaintext, tokenHash, expiresAt } = generateInviteToken();
+  await setInviteToken(membershipId, tokenHash, expiresAt);
+  await sendMembershipInviteEmail(membership.user.email, buildAcceptUrl(plaintext));
+
+  await recordAuditEvent({
+    organizationId,
+    actorMembershipId: actor.membershipId,
+    actorUserId: actor.userId,
+    action: "membership.reinvited",
+    entityType: "Membership",
+    entityId: membershipId,
+    metadata: { email: membership.user.email },
+  });
+  return { membershipId, expiresAt };
 }
 
 /** Regenerates and resends the invite for a still-pending membership. */
@@ -115,27 +220,12 @@ export async function resendInvite(
   buildAcceptUrl: (token: string) => string,
 ) {
   requirePermission(ctx, MANAGE);
-
-  const membership = await findMembershipById(ctx.organizationId, membershipId);
-  if (!membership) {
-    throw new NotFoundError("Membership", membershipId);
-  }
-  if (membership.status !== "PENDING") {
-    throw new ValidationError("Only a pending invite can be resent.");
-  }
-
-  const { plaintext, tokenHash, expiresAt } = generateInviteToken();
-  await setInviteToken(membershipId, tokenHash, expiresAt);
-  await sendMembershipInviteEmail(membership.user.email, buildAcceptUrl(plaintext));
-
-  await recordAuditEvent({
-    organizationId: ctx.organizationId,
-    actorMembershipId: ctx.membershipId,
-    action: "membership.reinvited",
-    entityType: "Membership",
-    entityId: membershipId,
-    metadata: { email: membership.user.email },
-  });
+  await resendAdminInvite(
+    ctx.organizationId,
+    membershipId,
+    { membershipId: ctx.membershipId },
+    buildAcceptUrl,
+  );
 }
 
 export async function changeMemberRole(
@@ -150,10 +240,11 @@ export async function changeMemberRole(
     throw new NotFoundError("Membership", membershipId);
   }
 
-  const role = await adminDb.role.findUnique({ where: { key: roleKey } });
+  const role = await findAssignableRole(ctx.organizationId, roleKey);
   if (!role) {
     throw new ValidationError(`Unknown role "${roleKey}".`);
   }
+  await assertRoleAssignable(ctx.organizationId, role.key);
 
   const movingLastManagementAway =
     membership.status === "ACTIVE" &&
@@ -179,9 +270,37 @@ export async function changeMemberRole(
     newValue: { roleKey: role.key },
   });
 
+  invalidateMeContext({ organizationId: ctx.organizationId });
   return updated;
 }
 
+/**
+ * Signs a member's sessions out when they lose access to this organisation:
+ * every session signed in under it, and -- when they have no other active
+ * membership left -- every session they hold, since none of them can do
+ * anything any more.
+ */
+async function endSessionsForLostAccess(
+  organizationId: string,
+  userId: string,
+  reason: "DEACTIVATED" | "REMOVED",
+): Promise<number> {
+  const stillActiveElsewhere = await adminDb.membership.count({
+    where: { userId, status: "ACTIVE", organizationId: { not: organizationId } },
+  });
+  return revokeSessionsForUser(userId, {
+    reason,
+    ...(stillActiveElsewhere > 0 ? { organizationId } : {}),
+  });
+}
+
+/**
+ * Deactivate (B1.05): sign-in is blocked (once they have no active membership
+ * anywhere), their sessions end, and everything they own and have done stays
+ * where it is -- greyed in lists. Returns the reassignment checklist so
+ * Management can hand their open work on; deactivation itself is never
+ * blocked by it.
+ */
 export async function deactivateMember(ctx: AuthContext, membershipId: string) {
   requirePermission(ctx, MANAGE);
 
@@ -200,7 +319,13 @@ export async function deactivateMember(ctx: AuthContext, membershipId: string) {
     );
   }
 
-  const updated = await deactivateMembership(membershipId);
+  const updated = await deactivateMembership(membershipId, ctx.membershipId);
+  const sessionsRevoked = await endSessionsForLostAccess(
+    ctx.organizationId,
+    membership.userId,
+    "DEACTIVATED",
+  );
+  const reassignment = await buildReassignmentChecklist(ctx.organizationId, membershipId);
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -208,9 +333,96 @@ export async function deactivateMember(ctx: AuthContext, membershipId: string) {
     action: "membership.deactivated",
     entityType: "Membership",
     entityId: membershipId,
+    metadata: { sessionsRevoked, openRecords: reassignment.total },
   });
 
+  invalidateMeContext({ organizationId: ctx.organizationId });
+  return { ...updated, reassignment };
+}
+
+/**
+ * Remove (B1.05): ends the membership. Blocked while the member still owns
+ * open records -- the 409 carries the checklist -- so nothing is left
+ * belonging to someone who is no longer there. A pending invite can be
+ * removed too (it simply cancels it).
+ */
+export async function removeMember(ctx: AuthContext, membershipId: string) {
+  requirePermission(ctx, MANAGE);
+
+  const membership = await findMembershipById(ctx.organizationId, membershipId);
+  if (!membership) {
+    throw new NotFoundError("Membership", membershipId);
+  }
+  if (membership.status === "REMOVED") {
+    throw new ValidationError("This member has already been removed.");
+  }
+
+  if (membership.status === "ACTIVE" && membership.role.key === MANAGEMENT_ROLE_KEY) {
+    await assertNotLastActiveManagement(
+      ctx.organizationId,
+      "Cannot remove the last active Management member.",
+    );
+  }
+
+  const checklist = await buildReassignmentChecklist(ctx.organizationId, membershipId);
+  if (checklist.total > 0) {
+    throw new ReassignmentRequiredError(checklist);
+  }
+
+  const removedUser = await adminDb.user.findUnique({ where: { id: membership.userId }, select: { name: true } });
+  const removedName = removedUser?.name ?? "a team member";
+  const updated = await removeMembership(membershipId, ctx.membershipId);
+  const sessionsRevoked = await endSessionsForLostAccess(
+    ctx.organizationId,
+    membership.userId,
+    "REMOVED",
+  );
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "membership.removed",
+    entityType: "Membership",
+    entityId: membershipId,
+    previousValue: { status: membership.status, roleKey: membership.role.key },
+    metadata: { sessionsRevoked },
+  });
+  await emitTeamActivity({ organizationId: ctx.organizationId, eventKey: "MEMBER_CHANGE", actorMembershipId: ctx.membershipId, entityType: "Membership", entityId: membershipId, label: removedName, route: settingsPath("members").slice(1), detail: { action: "REMOVED" } });
+
+  invalidateMeContext({ organizationId: ctx.organizationId });
   return updated;
+}
+
+/**
+ * Admin unlock (B1.05): lifts an account lockout straight away instead of
+ * waiting for it to run out, and clears the email's login window so the next
+ * attempt is not turned away by the rate limiter.
+ */
+export async function unlockMember(ctx: AuthContext, membershipId: string) {
+  requirePermission(ctx, "security.manage");
+
+  const membership = await findMembershipById(ctx.organizationId, membershipId);
+  if (!membership) {
+    throw new NotFoundError("Membership", membershipId);
+  }
+  const wasLocked =
+    !!membership.user.lockedUntil && membership.user.lockedUntil.getTime() > Date.now();
+
+  await adminDb.user.update({
+    where: { id: membership.userId },
+    data: { failedSignInCount: 0, lockedUntil: null },
+  });
+  await clearLoginRateLimitForEmail(membership.user.email);
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: "auth.unlocked",
+    entityType: "User",
+    entityId: membership.userId,
+    metadata: { by: "admin", wasLocked },
+  });
+  return { membershipId, unlocked: true, wasLocked };
 }
 
 export async function reactivateMember(ctx: AuthContext, membershipId: string) {
@@ -229,6 +441,7 @@ export async function reactivateMember(ctx: AuthContext, membershipId: string) {
     );
   }
 
+  await assertSeatAvailable(ctx.organizationId); // B7.02: a reactivated member takes a seat again.
   const updated = await reactivateMembership(membershipId);
 
   await recordAuditEvent({
@@ -239,5 +452,6 @@ export async function reactivateMember(ctx: AuthContext, membershipId: string) {
     entityId: membershipId,
   });
 
+  invalidateMeContext({ organizationId: ctx.organizationId });
   return updated;
 }

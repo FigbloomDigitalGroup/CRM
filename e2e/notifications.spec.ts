@@ -3,10 +3,10 @@ import { apiPost, gotoAndSettle, loginAs } from "./helpers";
 
 /**
  * FIG-801: receiving and reading a notification. Management creates a lead
- * owned by Dev Sales (which notifies the new owner); Dev Sales, in a separate
+ * owned by Ruth Kibet (which notifies the new owner); Ruth Kibet, in a separate
  * browser context, sees it in the bell, opens it, and the read state sticks.
  */
-test("a lead assigned to Dev Sales shows up in their bell and can be read", async ({
+test("a lead assigned to Ruth Kibet shows up in their bell and can be read", async ({
   browser,
 }) => {
   const managerContext = await browser.newContext();
@@ -30,12 +30,13 @@ test("a lead assigned to Dev Sales shows up in their bell and can be read", asyn
   await loginAs(salesPage, "dev.sales@figbloom.local");
   await gotoAndSettle(salesPage, "/o/figbloom");
 
-  const bell = salesPage.getByRole("button", { name: "Notifications" });
-  await expect(bell.locator(".notification-badge")).toBeVisible();
+  // The bell is the M7 one (G3): the button's name carries the unread count, the count shows on the icon, and an unread notice in the panel is marked.
+  const bell = salesPage.getByRole("button", { name: /^Notifications/ });
+  await expect(bell.locator(".fb-bell__badge")).toBeVisible();
   await bell.click();
 
-  const item = salesPage.locator(".notification-panel li", { hasText: "New lead assigned to you" }).first();
-  await expect(item).toHaveClass(/notification-unread/);
+  const item = salesPage.locator(".fb-notifpanel li", { hasText: "New lead assigned to you" }).first();
+  await expect(item).toHaveAttribute("data-unread", "true");
 
   const [readResponse] = await Promise.all([
     salesPage.waitForResponse(

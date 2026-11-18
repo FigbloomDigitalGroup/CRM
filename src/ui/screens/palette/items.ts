@@ -1,0 +1,118 @@
+import { canViewTeamPage } from "../../../auth/teamAccess";
+import { SETTINGS_ROOT } from "@/lib/settingsLinks";
+
+/**
+ * What the command palette (X3, FIG-1172) lists. A pure function of the person's permission keys, so "only permitted actions" is a unit test:
+ * a link or action the role cannot use is not in the list at all (hard rule: hiding is a courtesy, every page and route still checks).
+ * The keys mirror `src/ui/shell/navigation.ts`.
+ */
+
+export type PaletteGroupId = "RECORDS" | "ACTIONS" | "GO TO";
+
+export interface PaletteItem {
+  id: string;
+  group: PaletteGroupId;
+  title: string;
+  sub?: string;
+  /** Opens a page. */
+  href?: string;
+  /** Or runs something in the shell. */
+  run?: "assistant" | "help" | "support";
+  /** The key shown beside it. */
+  hint?: string;
+}
+
+export interface PaletteGroup {
+  id: PaletteGroupId;
+  items: PaletteItem[];
+}
+
+const any = (keys: readonly string[], ...want: string[]) => want.some((k) => keys.includes(k));
+
+/** Where each "go to" shortcut and link leads, and who may use it. */
+export const GOTO: { id: string; label: string; path: string; shortcut?: string; allowed: (k: readonly string[]) => boolean }[] = [
+  { id: "dashboard", label: "Home", path: "", shortcut: "H", allowed: () => true },
+  { id: "leads", label: "Leads", path: "/leads", shortcut: "L", allowed: (k) => any(k, "leads.view.own", "leads.view.all", "leads.view.shared") },
+  { id: "deals", label: "Deals", path: "/deals", shortcut: "D", allowed: (k) => any(k, "deals.view.own", "deals.view.all", "deals.view.won") },
+  { id: "tasks", label: "Tasks", path: "/tasks", shortcut: "T", allowed: (k) => any(k, "tasks.view.own", "tasks.view.all") },
+  { id: "calendar", label: "Calendar", path: "/calendar", allowed: (k) => any(k, "tasks.view.own", "tasks.view.all") },
+  { id: "team", label: "Team", path: "/team", allowed: (k) => canViewTeamPage(k) },
+  { id: "companies", label: "Companies", path: "/companies", shortcut: "C", allowed: (k) => any(k, "companies.view") },
+  { id: "contacts", label: "Contacts", path: "/contacts", allowed: (k) => any(k, "contacts.view") },
+  { id: "conversations", label: "Conversations", path: "/conversations", allowed: (k) => any(k, "communications.view") },
+  { id: "renewals", label: "Renewals", path: "/renewals", allowed: (k) => any(k, "company_services.manage") },
+  { id: "payments", label: "Payments", path: "/payments", allowed: (k) => any(k, "finance.view.payments") },
+  { id: "reports", label: "Reports", path: "/reports", shortcut: "R", allowed: (k) => any(k, "reporting.view.own", "reporting.view.all") },
+  { id: "preferences", label: "Preferences", path: "/preferences", allowed: () => true },
+  { id: "settings", label: "Settings", path: SETTINGS_ROOT, allowed: (k) => any(k, "configuration.manage") },
+];
+
+export const ACTIONS: { id: string; label: string; path?: string; run?: PaletteItem["run"]; hint?: string; allowed: (k: readonly string[]) => boolean }[] = [
+  { id: "new-lead", label: "New lead", path: "/leads?new=1", hint: "N", allowed: (k) => any(k, "leads.create") },
+  { id: "log-note", label: "Log a call or note", path: "/leads", allowed: (k) => any(k, "activities.create") },
+  { id: "new-task", label: "New task", path: "/tasks", allowed: (k) => any(k, "tasks.create") },
+  { id: "new-contact", label: "New contact", path: "/contacts", allowed: (k) => any(k, "contacts.create") },
+  { id: "new-company", label: "New company", path: "/companies", allowed: (k) => any(k, "companies.create") },
+  { id: "ask", label: "Ask Figbloom", run: "assistant", allowed: () => true },
+  { id: "help", label: "Help and what’s new", run: "help", hint: "?", allowed: () => true },
+  { id: "support", label: "Contact support", run: "support", allowed: () => true },
+];
+
+/** A command as `GET /commands` returns it (docs/HELP_AND_PALETTE.md): the server already left out what the role may not do. */
+export interface ApiCommand {
+  id: string;
+  kind: "navigate" | "create" | "assistant" | "help";
+  title: string;
+  path: string | null;
+  hint: string | null;
+}
+
+/**
+ * The list for the box. `commands` is the server's index; without it (the call has not answered, or the organisation is not on V1.1) the same
+ * rules from this file's own tables apply, so a role never sees something it cannot use. `records` are search hits for the typed text.
+ */
+export function buildPaletteItems(input: { orgSlug: string; permissionKeys: readonly string[]; query: string; commands?: readonly ApiCommand[] | null; records?: PaletteItem[] }): PaletteGroup[] {
+  const { orgSlug, permissionKeys: keys } = input;
+  const base = `/o/${orgSlug}`;
+  const q = input.query.trim().toLowerCase();
+
+  const records: PaletteItem[] = q ? (input.records ?? []).slice(0, 8) : [];
+
+  let actions: PaletteItem[];
+  let goto: PaletteItem[];
+  if (input.commands) {
+    const mapped = input.commands.map<PaletteItem & { navigate: boolean }>((c) => ({
+      id: c.id,
+      group: c.kind === "navigate" ? "GO TO" : "ACTIONS",
+      navigate: c.kind === "navigate",
+      title: c.title,
+      href: c.path !== null ? `${base}${c.path}` : undefined,
+      run: c.kind === "assistant" ? "assistant" : c.kind === "help" ? "help" : undefined,
+      hint: c.hint ?? undefined,
+    }));
+    const match = (i: PaletteItem) => !q || i.title.toLowerCase().includes(q);
+    // Contact support is a shell action every role has; it is not in the server's index (which holds only what the API itself gates).
+    const support: PaletteItem = { id: "support", group: "ACTIONS", title: "Contact support", run: "support" };
+    actions = [...mapped.filter((i) => !i.navigate), support].filter(match);
+    goto = mapped.filter((i) => i.navigate && match(i));
+  } else {
+    actions = ACTIONS.filter((a) => a.allowed(keys))
+      .filter((a) => !q || a.label.toLowerCase().includes(q) || (a.id === "new-lead" && "new lead".includes(q)))
+      .map((a) => ({ id: a.id, group: "ACTIONS", title: a.label, href: a.path ? `${base}${a.path}` : undefined, run: a.run, hint: a.hint }));
+    goto = GOTO.filter((g) => g.allowed(keys))
+      .filter((g) => !q || `go to ${g.label}`.toLowerCase().includes(q) || g.label.toLowerCase().includes(q))
+      .map((g) => ({ id: `go-${g.id}`, group: "GO TO", title: `Go to ${g.label}`, href: `${base}${g.path}`, hint: g.shortcut ? `G ${g.shortcut}` : undefined }));
+  }
+
+  return ([
+    { id: "RECORDS", items: records },
+    { id: "ACTIONS", items: actions },
+    { id: "GO TO", items: goto },
+  ] as PaletteGroup[]).filter((g) => g.items.length > 0);
+}
+
+/** The target of "G then a letter", or null when the person may not open it. */
+export function gotoShortcut(letter: string, keys: readonly string[], orgSlug: string): string | null {
+  const g = GOTO.find((x) => x.shortcut?.toLowerCase() === letter.toLowerCase());
+  return g && g.allowed(keys) ? `/o/${orgSlug}${g.path}` : null;
+}

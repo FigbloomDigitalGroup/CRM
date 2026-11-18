@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PasswordInput } from "../_shared/PasswordInput";
+import { AuthLinks, AuthNotice, PasswordRules } from "../_shared/AuthLayout";
 
 export function AcceptInviteForm({
   token,
@@ -45,23 +46,39 @@ export function AcceptInviteForm({
   }
 
   return (
-    <form className="stack" onSubmit={handleSubmit}>
-      {requiresPassword && (
-        <label>
-          Set a password
-          <PasswordInput
-            value={password}
-            onChange={setPassword}
-            autoComplete="new-password"
-            minLength={10}
-            required
-          />
-        </label>
+    <>
+      <form className="stack auth-form" onSubmit={handleSubmit}>
+        {requiresPassword && (
+          <>
+            <label>
+              Set a password
+              <PasswordInput
+                value={password}
+                onChange={setPassword}
+                autoComplete="new-password"
+                minLength={10}
+                required
+                describedBy={error ? "invite-rules invite-error" : "invite-rules"}
+                invalid={Boolean(error)}
+              />
+            </label>
+            <PasswordRules id="invite-rules" value={password} />
+          </>
+        )}
+        {error && (
+          <AuthNotice kind="error" id="invite-error">
+            {error}
+          </AuthNotice>
+        )}
+        <button type="submit" disabled={submitting} aria-busy={submitting || undefined}>
+          {submitting ? "Accepting..." : "Accept invite"}
+        </button>
+      </form>
+      {error && (
+        <AuthLinks>
+          <a href="/login">Back to sign in</a>
+        </AuthLinks>
       )}
-      {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={submitting}>
-        {submitting ? "Accepting..." : "Accept invite"}
-      </button>
-    </form>
+    </>
   );
 }

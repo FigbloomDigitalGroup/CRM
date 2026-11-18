@@ -322,7 +322,7 @@ describe("features API", () => {
     expect(FeatureSnapshotSchema.safeParse(await read.json()).success).toBe(true);
     const denied = await patch({ toggles: { "integrations.enabled": false } });
     expect(denied.status).toBe(403);
-    expect((await denied.json()).denial.requiredRoles).toContain("Management");
+    expect((await denied.json()).denial.ownerRoles).toContain("Management");
 
     current.ctx = mgmt;
     const changed = await patch({ toggles: { "integrations.enabled": false } });

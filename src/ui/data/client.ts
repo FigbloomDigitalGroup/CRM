@@ -1,0 +1,146 @@
+import { ApiRequestError, createClient, type ApiClient } from "@/api-client";
+import { connectivity, type Connectivity } from "./connectivity";
+import { currentDataSource, type DataSource } from "./source";
+
+/**
+ * The one place the screens' network calls are made from (F1.06). Every screen uses the typed client built here, through the hooks in
+ * `hooks.tsx`; nothing else in `src/ui` or `src/app` may call `fetch` (a lint rule and `tests/noDirectFetch.test.ts` enforce it).
+ *
+ * This is also where the cross-cutting behaviour is attached: request timing feeds the connectivity service (the slow-connection bar),
+ * a 401 anywhere tells the shell the session has ended, and the data source decides between the real API and the mock server.
+ */
+
+export const SIGNED_OUT_EVENT = "figbloom:signed-out";
+
+export interface AppClientOptions {
+  source?: DataSource;
+  /** Test seam; defaults to the browser's `fetch`. */
+  fetchImpl?: typeof fetch;
+  service?: Connectivity;
+  onSignedOut?: () => void;
+}
+
+export function createAppClient(options: AppClientOptions = {}): ApiClient {
+  const source = options.source ?? currentDataSource();
+  const service = options.service ?? connectivity;
+  const base = options.fetchImpl ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
+
+  const timedFetch: typeof fetch = async (input, init) => {
+    const started = performance.now();
+    try {
+      const response = await base(input, init);
+      service.reportRequest(performance.now() - started);
+      return response;
+    } catch (error) {
+      service.reportRequest(performance.now() - started);
+      throw error;
+    }
+  };
+
+  return createClient({
+    baseUrl: source.baseUrl,
+    fetch: timedFetch,
+    headers: (): Record<string, string> => (source.mockRole ? { "x-mock-role": source.mockRole } : {}),
+    onError: (error) => {
+      if (error.status === 401) {
+        options.onSignedOut?.();
+        if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(SIGNED_OUT_EVENT));
+      }
+    },
+  });
+}
+
+let shared: ApiClient | null = null;
+/** The browser's shared client. */
+export function getApiClient(): ApiClient {
+  shared ??= createAppClient();
+  return shared;
+}
+
+/**
+ * The development-only sign-in (`POST /api/dev-session`, FIG-605, FIG-1196). It is not part of the API contract (it exists only when dev accounts are
+ * allowed, and answers 404 everywhere else), so it is not in the typed client; it lives here with the other network access. Used by the dev sign-in chips.
+ */
+/** The preview build's dev chips (npm run preview): the same call the sign-in form makes, so the real password check and rate limit apply. */
+export async function signInWithDevPassword(email: string, password: string): Promise<{ ok: true; landing: string } | { ok: false; message: string }> {
+  const response = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  return response.ok ? { ok: true, landing: "/o/figbloom" } : { ok: false, message: "Sign-in failed." };
+}
+
+export async function signInAsDevAccount(email: string): Promise<{ ok: true; landing: string } | { ok: false; message: string }> {
+  const response = await fetch("/api/dev-session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { error?: string };
+    return { ok: false, message: body.error ?? "Sign-in failed." };
+  }
+  const body = (await response.json().catch(() => ({}))) as { landing?: string };
+  return { ok: true, landing: body.landing ?? "/o/figbloom" };
+}
+
+/** A fresh idempotency key for one create: the same key on a retry means "answer that request again, do not repeat it" (B0.06). */
+export function newIdempotencyKey(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Sends a file's bytes to the signed link the API handed out for it (B1.07). This is the one non-API network call a screen makes, so it lives
+ * here with the others; the API then checks the bytes when the upload is completed.
+ */
+export async function putSignedUpload(upload: { url: string; method?: string; headers?: Record<string, string> }, body: Blob): Promise<void> {
+  const response = await fetch(upload.url, { method: upload.method ?? "PUT", headers: upload.headers ?? {}, body, credentials: "same-origin" });
+  if (!response.ok) throw new Error(`The upload was refused (${response.status}).`);
+}
+
+/**
+ * Reads a CSV the API answers with as text (the audit log export, a migration's error report and template). The frozen contract marks these three
+ * operations as JSON, so the typed client would try to parse the file and fail; until the contract says `text/csv` for them (`npm run contract:update`),
+ * Settings reads them here. Errors keep the API's envelope so the screens describe them like any other (`ApiRequestError`).
+ */
+export async function getCsvText(path: string, query?: Record<string, string | undefined>): Promise<string> {
+  const search = new URLSearchParams(Object.entries(query ?? {}).filter((e): e is [string, string] => e[1] !== undefined));
+  const response = await fetch(`${path}${search.size ? `?${search}` : ""}`, { headers: { accept: "text/csv" }, credentials: "same-origin" });
+  if (!response.ok) {
+    let envelope: ConstructorParameters<typeof ApiRequestError>[1];
+    try {
+      envelope = (await response.json()) as typeof envelope;
+    } catch {
+      envelope = { error: response.statusText, code: "INTERNAL_ERROR", message: response.statusText, fieldErrors: [], requestId: "" };
+    }
+    throw new ApiRequestError(response.status, envelope, "getCsvText");
+  }
+  return response.text();
+}
+
+/**
+ * A call to an API route that is not in the frozen V1 contract (the V1.1 two-step sign-in and organisation switcher routes, see docs/TWO_STEP_SIGN_IN.md
+ * and docs/MULTI_ORGANISATION.md). Until `npm run contract:update` adds them to the typed client they are called here, with the same error envelope as
+ * every other call (`ApiRequestError`). It is deliberately free of the 401 "signed out" event: a wrong two-step code is an ordinary 401.
+ */
+export async function callUncontracted<T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method,
+    headers: { accept: "application/json", ...(body === undefined ? {} : { "content-type": "application/json" }) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    credentials: "same-origin",
+  });
+  if (!response.ok) {
+    let envelope: ConstructorParameters<typeof ApiRequestError>[1];
+    try {
+      envelope = (await response.json()) as typeof envelope;
+    } catch {
+      envelope = { error: response.statusText, code: "INTERNAL_ERROR", message: response.statusText, fieldErrors: [], requestId: "" };
+    }
+    throw new ApiRequestError(response.status, envelope, `${method} ${path}`);
+  }
+  return (response.status === 204 ? undefined : await response.json()) as T;
+}

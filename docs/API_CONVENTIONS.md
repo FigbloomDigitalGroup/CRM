@@ -22,7 +22,7 @@ Every error from every route has this body (`src/lib/apiErrors.ts`):
   "message": "Missing required permission: organization.manage_settings",
   "fieldErrors": [],
   "requestId": "6f7c...",
-  "denial": { "role": "Sales", "requiredRoles": ["Management"], "whoToAsk": "your organisation's Management users" }
+  "denial": { "yourRole": "Sales", "ownerRoles": ["Management"], "whoToAsk": ["Ada Lovelace", "Grace Hopper"] }
 }
 ```
 
@@ -39,7 +39,25 @@ Every error from every route has this body (`src/lib/apiErrors.ts`):
 | `IDEMPOTENCY_IN_PROGRESS` | 409 | Same key, first request still running |
 | `INTERNAL_ERROR` | 500 | Anything unexpected; the cause is logged, never returned |
 
-- `denial` feeds the explained no-access screen (S4): the caller's role, the roles that could do it, and who to ask. Services throw `ForbiddenError` via `requirePermission`, which attaches the role and permission keys.
+Stage 1 added reason codes. They arrive as `code` on the error itself (status 400/403/409/401 as listed) or, for a single bad field, as `code` inside a `fieldErrors` entry (`{ path, message, code }`), so the UI can show a specific message without parsing text.
+
+| `code` | Status | When |
+|---|---|---|
+| `SESSION_EXPIRED` | 401 | Session ended; `session.reason` is `expired` or `revoked`, `session.email` prefills sign-in (B1.04) |
+| `ACCOUNT_DEACTIVATED` | 403 | The member was deactivated (B1.05) |
+| `AWAITING_ACCESS` | 403 | Signed in, membership not yet active (B1.12); `/me/context` still answers with empty sections |
+| `REASSIGNMENT_REQUIRED` | 409 | Removing/deactivating a member who still owns records; `reassignment` is the checklist (B1.05) |
+| `IMAGE_CORRUPT`, `IMAGE_TOO_SMALL`, `IMAGE_DIMENSIONS_TOO_LARGE`, `CROP_INVALID` | 400 | Avatar/logo upload or crop rejected (B1.06, B1.07) |
+| `DEVICE_ONLY_SETTING` | 400 | Text size, bold, higher contrast and reduce motion live on the device, not the account (B1.08) |
+| `START_PAGE_NOT_AVAILABLE` | 400 | The chosen start page is not in the role's catalogue (B1.08) |
+| `COLOUR_INVALID`, `COLOUR_LOW_CONTRAST` | 400 | Own colours must be valid hex and readable (B1.08) |
+| `UNDO_EXPIRED` | 400 | The reset-undo token is older than ten minutes or already used (B1.08) |
+| `NOTIFICATION_ALWAYS_ON` | 400 | Overdue notifications cannot be switched off (B1.11) |
+| `NOTIFICATION_NOT_FOR_ROLE` | 400 | The notification type does not apply to the member's role (B1.11) |
+| `PUSH_NOT_AVAILABLE` | 400 | Push is stored as off until the mobile app ships (B1.11) |
+| `PLATFORM_PREFERENCE_NOT_AVAILABLE` | 400 | A Platform Super Admin may only change `uiMode` (B1.08) |
+
+- `denial` feeds the explained no-access screen (S4, B1.02): `yourRole` is the caller's role, `ownerRoles` the roles that own the feature area (derived from the role catalogue: a role owns an area when it holds a non-view permission in it), and `whoToAsk` the names of the organisation's active Management members (names only, at most five). Every 403 for a missing permission carries all three; a record the caller cannot see is a plain `404` instead, so existence is never leaked. Services throw `ForbiddenError` via `requirePermission`, which attaches the role and permission keys.
 - `error` (same text as `message`) and `issues` (same data as `fieldErrors`) are the pre-B0.06 fields. They stay so existing code keeps working; new code reads `code`, `message` and `fieldErrors`.
 - `requestId` is also the `x-request-id` response header (on success too). A caller may send its own `x-request-id` (8 to 128 characters of letters, digits and `. _ : -`); anything else is replaced. Quote it when reporting a problem.
 - Throw typed errors from services (`ValidationError`, `NotFoundError`, `ForbiddenError`, ...). Routes never build error bodies by hand: wrap the handler in `handleRoute`.

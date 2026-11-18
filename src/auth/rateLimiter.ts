@@ -54,19 +54,51 @@ export async function enforceRateLimit(
   action: AuthRateLimitAction,
   rules: RateLimitRule[],
 ): Promise<void> {
-  const activeRules = rules.filter(
-    (rule): rule is RateLimitRule & { key: string } => rule.key !== null,
-  );
+  await checkRateLimit(action, rules);
+  await recordRateLimitHits(action, rules);
+}
 
-  for (const rule of activeRules) {
+/**
+ * Throws `RateLimitedError` if any rule with a key is already at or over its
+ * max, and records nothing. Paired with `recordRateLimitHits`, it lets a caller
+ * count only the attempts it chooses (sign-in counts failures only, D-3):
+ * check first, do the work, record when the attempt failed.
+ */
+export async function checkRateLimit(
+  action: AuthRateLimitAction,
+  rules: RateLimitRule[],
+): Promise<void> {
+  for (const rule of rules) {
+    if (rule.key === null) continue;
     const since = new Date(Date.now() - rule.windowMs);
     const count = await countRecentAttempts(action, rule.scope, rule.key, since);
     if (count >= rule.max) {
       throw new RateLimitedError();
     }
   }
+}
 
+/** Records one hit per rule that has a key. Never throws a limit error. */
+export async function recordRateLimitHits(
+  action: AuthRateLimitAction,
+  rules: RateLimitRule[],
+): Promise<void> {
+  const activeRules = rules.filter(
+    (rule): rule is RateLimitRule & { key: string } => rule.key !== null,
+  );
   await Promise.all(
     activeRules.map((rule) => recordAttempt(action, rule.scope, rule.key)),
   );
+}
+
+/** Forgets the recorded attempts for one bucket -- an admin unlock (B1.05) clears the email's login window so the person can try again straight away. */
+export async function clearRateLimit(
+  action: AuthRateLimitAction,
+  scope: string,
+  key: string,
+): Promise<number> {
+  const result = await adminDb.authRateLimitAttempt.deleteMany({
+    where: { action, scope, key },
+  });
+  return result.count;
 }

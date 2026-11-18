@@ -233,6 +233,14 @@ describe("deals paging and the dashboard summary", () => {
     const { org, mgmt } = await twoOrgs();
     await seedDeals(mgmt, 3, 1000);
     const delivery = await createTestContext(org.id, "DELIVERY", "page.delivery");
+    // Delivery sees won deals only (B1.03): open ones are not in its list or its total.
+    const ids = (await dealService.listDeals(mgmt)).map((d) => d.id);
+    expect((await dealService.listDealsPage(delivery, {}, { pageSize: 10 })).total).toBe(0);
+    for (const id of ids) {
+      await dealService.updateDeal(mgmt, id, {
+        pipelineStageId: await getPipelineStageId(org.id, "CLOSED_WON"),
+      });
+    }
 
     const page = await dealService.listDealsPage(delivery, {}, { pageSize: 10 });
     expect(page.total).toBe(3);
@@ -270,17 +278,16 @@ describe("deals paging and the dashboard summary", () => {
       currency: "KES",
       amount: 2000,
     });
-    // Delivery sees every deal but not their values, so no total.
+    // Delivery and Finance see won deals only (B1.03): the open pipeline, and
+    // so its total, is not theirs to see at all.
     const delivery = await createTestContext(org2.id, "DELIVERY", "page.sumdel");
     const masked = await dealService.getDealSummary(delivery);
-    expect(masked.open).toBe(2);
+    expect(masked).toMatchObject({ total: 0, open: 0, won: 0, lost: 0 });
     expect(masked.openValue).toBeNull();
-    // Finance can see values.
     const finance = await createTestContext(org2.id, "FINANCE", "page.sumfin");
-    expect((await dealService.getDealSummary(finance)).openValue).toEqual({
-      currency: "KES",
-      amount: 2000,
-    });
+    expect((await dealService.getDealSummary(finance)).openValue).toBeNull();
+    // With the departure off, Finance falls back to the seeded matrix: every
+    // deal, with values (see tests/permissionsV2.test.ts for the full matrix).
     void org;
   });
 
@@ -428,8 +435,12 @@ describe("CSV export covers the whole filtered set, not one page", () => {
       await dealService.createDeal(mgmt, { companyId: company.id, pipelineStageId, value: 100 });
     }
     const delivery = await createTestContext(org.id, "DELIVERY", "page.exportdel");
-    // Delivery has no export permission, so the export is refused outright.
-    await expect(exportService.exportDealsCsv(delivery)).rejects.toThrow(ForbiddenError);
+    // Delivery may export (P2-26) but sees only won deals, so none of these open deals is in its file, and a role without the key is refused.
+    const tech = await createTestContext(org.id, "RESTRICTED_TECHNICAL", "page.exporttech");
+    await expect(exportService.exportDealsCsv(tech)).rejects.toThrow(ForbiddenError);
+    const deliveryRows: Record<string, unknown>[] = [];
+    for await (const row of (await exportService.exportDealsCsv(delivery)).rows) deliveryRows.push(row);
+    expect(deliveryRows).toHaveLength(0);
 
     const rows: Record<string, unknown>[] = [];
     for await (const row of (await exportService.exportDealsCsv(mgmt)).rows) rows.push(row);

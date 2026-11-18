@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { buildErrorResponse, newRequestId } from "@/lib/apiErrors";
+import { instrumentRequest } from "@/observability/instrument";
 
 /** The caller's `x-request-id` when it sent a usable one, otherwise a fresh id. Outside a request (unit tests) it is always fresh. */
 async function currentRequestId(): Promise<string> {
@@ -36,15 +37,18 @@ async function mapErrorToResponse(err: unknown): Promise<NextResponse> {
 export async function handleRoute(
   fn: () => Promise<unknown>,
 ): Promise<NextResponse> {
-  try {
-    const result = await fn();
-    if (result instanceof NextResponse) return result;
-    return NextResponse.json(result ?? {}, {
-      headers: { "x-request-id": await currentRequestId() },
-    });
-  } catch (err) {
-    return await mapErrorToResponse(err);
-  }
+  // instrumentRequest (FIG-1124) carries the request id on every log line and counts the request for /api/metrics; error mapping stays inside it.
+  return instrumentRequest(async () => {
+    try {
+      const result = await fn();
+      if (result instanceof NextResponse) return result;
+      return NextResponse.json(result ?? {}, {
+        headers: { "x-request-id": await currentRequestId() },
+      });
+    } catch (err) {
+      return await mapErrorToResponse(err);
+    }
+  });
 }
 
 /**
@@ -55,9 +59,11 @@ export async function handleRoute(
 export async function handleCsvRoute(
   fn: () => Promise<Response>,
 ): Promise<Response> {
-  try {
-    return await fn();
-  } catch (err) {
-    return await mapErrorToResponse(err);
-  }
+  return instrumentRequest(async () => {
+    try {
+      return await fn();
+    } catch (err) {
+      return await mapErrorToResponse(err);
+    }
+  });
 }

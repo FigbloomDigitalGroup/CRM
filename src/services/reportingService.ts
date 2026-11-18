@@ -1,9 +1,10 @@
 import type { AuthContext } from "../auth/context";
-import { hasPermission, requirePermission } from "../auth/context";
+import {
+  deny, hasPermission, requirePermission } from "../auth/context";
 import { ForbiddenError } from "../auth/errors";
-import { listDeals } from "./dealService";
-import { listLeads } from "./leadService";
-import { listTasks } from "./taskService";
+import { countDeals, listDeals } from "./dealService";
+import { countLeads, listLeads } from "./leadService";
+import { countTasks, listTasks } from "./taskService";
 import {
   getDealOutcomeSummary,
   getFollowUpStatusBreakdown,
@@ -66,6 +67,18 @@ async function ignoreForbidden<T>(promise: Promise<T[]>): Promise<T[]> {
   }
 }
 
+async function countOrZero(promise: Promise<number>): Promise<number> {
+  try {
+    return await promise;
+  } catch (err) {
+    if (err instanceof ForbiddenError) return 0;
+    throw err;
+  }
+}
+
+/** How many rows of each "actionable work" list are returned; the true totals travel in `counts`. */
+export const MY_WORK_LIST_LIMIT = 50;
+
 /**
  * "Actionable work": due-today follow-ups, overdue tasks, new leads, and
  * stalled deals, reusing the existing service-layer own/all scoping and
@@ -73,31 +86,49 @@ async function ignoreForbidden<T>(promise: Promise<T[]>): Promise<T[]> {
  * no-ops to `[]` if the caller's role lacks that permission (e.g. Finance
  * has no tasks.* or leads.* at all) instead of failing the whole
  * dashboard.
+ *
+ * Each list is capped at `MY_WORK_LIST_LIMIT` rows (the first rows of the
+ * same ordering as before) so a large organisation never loads every
+ * overdue task or new lead; `counts` carries the true totals, computed with
+ * COUNT queries under the same scoping, so a number shown to the person is
+ * never the length of a truncated list.
  */
 export async function getMyActionableWork(ctx: AuthContext) {
   if (
     !hasPermission(ctx, "reporting.view.own") &&
     !hasPermission(ctx, "reporting.view.all")
   ) {
-    throw new ForbiddenError("reporting.view.own (or .all)");
+    throw deny(ctx, "reporting.view.own (or .all)", ["reporting.view.own"]);
   }
 
   const today = startOfDay(new Date());
   const tomorrow = new Date(today.getTime() + DAY_MS);
   const sevenDaysAgo = new Date(Date.now() - 7 * DAY_MS);
+  const take = MY_WORK_LIST_LIMIT;
 
-  const [dueToday, overdue, newLeads, stalledDeals] = await Promise.all([
-    ignoreForbidden(
-      listTasks(ctx, { dueAfter: today, dueBefore: tomorrow }).then((tasks) =>
-        tasks.filter((t) => t.status === "PENDING" || t.status === "IN_PROGRESS"),
-      ),
-    ),
-    ignoreForbidden(listTasks(ctx, { overdueOnly: true })),
-    ignoreForbidden(listLeads(ctx, { createdAfter: sevenDaysAgo })),
-    ignoreForbidden(listDeals(ctx, { stalledOnly: true })),
+  const dueTodayFilters = { dueAfter: today, dueBefore: tomorrow, statuses: ["PENDING", "IN_PROGRESS"] as ("PENDING" | "IN_PROGRESS")[] };
+  const overdueFilters = { overdueOnly: true };
+  const newLeadFilters = { createdAfter: sevenDaysAgo };
+  const stalledFilters = { stalledOnly: true };
+
+  const [dueToday, overdue, newLeads, stalledDeals, dueTodayN, overdueN, newLeadsN, stalledDealsN] = await Promise.all([
+    ignoreForbidden(listTasks(ctx, { ...dueTodayFilters, take })),
+    ignoreForbidden(listTasks(ctx, { ...overdueFilters, take })),
+    ignoreForbidden(listLeads(ctx, { ...newLeadFilters, take })),
+    ignoreForbidden(listDeals(ctx, { ...stalledFilters, take })),
+    countOrZero(countTasks(ctx, dueTodayFilters)),
+    countOrZero(countTasks(ctx, overdueFilters)),
+    countOrZero(countLeads(ctx, newLeadFilters)),
+    countOrZero(countDeals(ctx, stalledFilters)),
   ]);
 
-  return { dueToday, overdue, newLeads, stalledDeals };
+  return {
+    dueToday,
+    overdue,
+    newLeads,
+    stalledDeals,
+    counts: { dueToday: dueTodayN, overdue: overdueN, newLeads: newLeadsN, stalledDeals: stalledDealsN },
+  };
 }
 
 export interface OrganizationMetricsFilters {
@@ -174,7 +205,8 @@ export async function getOrganizationMetrics(
   };
 }
 
-export type ReportScopeLevel = "all" | "own" | null;
+/** `won`: the caller sees won deals only (departure.won_only), so open-pipeline and lost figures are not reported. */
+export type ReportScopeLevel = "all" | "own" | "won" | null;
 
 /**
  * What a caller's reports cover, per area. Management (`reporting.view.all`)
@@ -186,14 +218,20 @@ export type ReportScopeLevel = "all" | "own" | null;
 export function getReportScope(ctx: AuthContext) {
   const organization = hasPermission(ctx, "reporting.view.all");
   if (!organization && !hasPermission(ctx, "reporting.view.own")) {
-    throw new ForbiddenError("reporting.view.own (or .all)");
+    throw deny(ctx, "reporting.view.own (or .all)", ["reporting.view.own"]);
   }
-  const level = (all: string, own: string): ReportScopeLevel =>
-    hasPermission(ctx, all) ? "all" : hasPermission(ctx, own) ? "own" : null;
+  const level = (all: string, own: string, won?: string): ReportScopeLevel =>
+    hasPermission(ctx, all)
+      ? "all"
+      : hasPermission(ctx, own)
+        ? "own"
+        : won && hasPermission(ctx, won)
+          ? "won"
+          : null;
   return {
     mode: organization ? ("organization" as const) : ("personal" as const),
     leads: level("leads.view.all", "leads.view.own"),
-    deals: level("deals.view.all", "deals.view.own"),
+    deals: level("deals.view.all", "deals.view.own", "deals.view.won"),
     tasks: level("tasks.view.all", "tasks.view.own"),
   };
 }
@@ -248,7 +286,10 @@ export async function getMyMetrics(
     scope.leads ? getLeadVolumeBySource(ctx.organizationId, leadFilters) : null,
     scope.leads ? getLeadConversionSummary(ctx.organizationId, leadFilters) : null,
     scope.deals ? getDealOutcomeSummary(ctx.organizationId, dealFilters) : null,
-    scope.deals ? getPipelineValueByStage(ctx.organizationId, dealFilters) : null,
+    // A won-only viewer never sees the open pipeline.
+    scope.deals && scope.deals !== "won"
+      ? getPipelineValueByStage(ctx.organizationId, dealFilters)
+      : null,
     scope.deals ? getSalesByService(ctx.organizationId, dealFilters) : null,
     scope.tasks ? getFollowUpStatusBreakdown(ctx.organizationId, taskFilters) : null,
   ]);
@@ -259,10 +300,15 @@ export async function getMyMetrics(
     dateTo,
     leadVolumeBySource,
     leadConversion,
-    dealOutcomes:
-      dealOutcomes && !canSeeValue
-        ? { ...dealOutcomes, won: { ...dealOutcomes.won, value: null } }
-        : dealOutcomes,
+    dealOutcomes: dealOutcomes
+      ? {
+          ...dealOutcomes,
+          won:
+            canSeeValue ? dealOutcomes.won : { ...dealOutcomes.won, value: null },
+          // Lost deals are not visible to a won-only viewer, so none are reported.
+          lost: scope.deals === "won" ? { count: 0 } : dealOutcomes.lost,
+        }
+      : dealOutcomes,
     pipelineByStage:
       pipelineByStage?.map((row) => ({
         ...row,

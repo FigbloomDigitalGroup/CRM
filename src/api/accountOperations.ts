@@ -1,0 +1,213 @@
+import type { JsonSchema } from "./jsonSchema";
+import { LANE_A_NOT_IN_V1_CONTRACT } from "./v2OperationsA";
+import { LANE_C_NOT_IN_V1_CONTRACT } from "./v2OperationsC";
+
+/**
+ * The routes that are not under an organisation (G1.06): sign-in and account, the person's own sessions, the public website and
+ * inbound-email endpoints, signed file links, the scheduler hooks and the health check. They use different credentials from the
+ * organisation routes (none, an API key, a signed token, a shared secret), so each says which.
+ *
+ * Routes deliberately left out of the V1 contract, with the reason (a test keeps this list honest):
+ *   /api/dev-session, /api/dev-sentry-test   development only; closed unless NODE_ENV=development and ALLOW_DEV_ACCOUNTS=true
+ *   /api/platform/preferences                Platform Super Admin identity, V1.1 (and dev-only until then)
+ *   /api/openapi.json                        serves this document, outside production only
+ *   /api/metrics                             operations endpoint for the metrics scraper (METRICS_TOKEN), not product API
+ */
+export const NOT_IN_V1_CONTRACT: Record<string, string> = {
+  ...LANE_A_NOT_IN_V1_CONTRACT,
+  ...LANE_C_NOT_IN_V1_CONTRACT,
+  "/api/dev-session": "development only (CLAUDE.md rule 10)",
+  "/api/dev-sentry-test": "development only",
+  "/api/platform/preferences": "Platform Super Admin, V1.1",
+  "/api/platform/me": "Platform Super Admin, V1.1 (B6.03)",
+  "/api/platform/organizations": "Platform Super Admin, V1.1 (B6.03); counts only",
+  "/api/auth/two-step/verify": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/auth/two-step/challenge": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/auth/two-step/enrol/start": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/auth/two-step/enrol/confirm": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/me/two-step": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/me/two-step/enrol/start": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/me/two-step/enrol/confirm": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/me/two-step/disable": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/me/two-step/backup-codes": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/me/trusted-devices": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/me/trusted-devices/{deviceId}": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/orgs/{orgSlug}/security/two-step-policy": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/orgs/{orgSlug}/memberships/{membershipId}/two-step-reset": "Two-step sign-in, V1.1 (B6.02)",
+  "/api/platform/home": "Platform Super Admin, V1.1 (B6.07); counts only",
+  "/api/platform/organizations/slug-check": "Platform Super Admin, V1.1 (B6.04)",
+  "/api/platform/organizations/defaults-preview": "Platform Super Admin, V1.1 (B6.04)",
+  "/api/platform/organizations/{organizationId}": "Platform Super Admin, V1.1 (B6.04); counts only",
+  "/api/platform/organizations/{organizationId}/status": "Platform Super Admin, V1.1 (B6.05)",
+  "/api/platform/health": "Platform Super Admin, V1.1 (B6.07)",
+  "/api/platform/health/incidents": "Platform Super Admin, V1.1 (B6.07)",
+  "/api/platform/health/incidents/{incidentId}/resolve": "Platform Super Admin, V1.1 (B6.07)",
+  "/api/platform/audit": "Platform Super Admin, V1.1 (B6.06)",
+  "/api/platform/audit/export": "Platform Super Admin, V1.1 (B6.06)",
+  "/api/platform/audit/verify": "Platform Super Admin, V1.1 (B6.06)",
+  "/api/platform/data-requests": "Platform Super Admin, V1.1 (B6.09)",
+  "/api/platform/data-requests/{requestId}": "Platform Super Admin, V1.1 (B6.09)",
+  "/api/platform/data-requests/{requestId}/decision": "Platform Super Admin, V1.1 (B6.09)",
+  "/api/platform/data-requests/{requestId}/cancel": "Platform Super Admin, V1.1 (B6.09)",
+  "/api/platform/data-requests/{requestId}/retry-export": "Platform Super Admin, V1.1 (B6.09)",
+  "/api/platform/data-requests/{requestId}/delete": "Platform Super Admin, V1.1 (B6.09)",
+  "/api/platform/data-requests/{requestId}/certificate": "Platform Super Admin, V1.1 (B6.09)",
+  "/api/cron/platform-maintenance": "authenticated by CRON_SECRET, not part of the public contract (B6.06, B6.09)",
+  "/api/orgs/{orgSlug}/privacy/organisation-requests/{requestId}/download": "V1.1 (B6.09): signed link to an organisation's own export",
+  "/api/platform/auth/sign-in": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/auth/two-step/verify": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/auth/two-step/enrol/start": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/auth/two-step/enrol/confirm": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/auth/challenge": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/auth/sign-out": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/auth/accept-invite": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/security/verify": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/security/settings": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/admins": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/admins/{adminId}": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/admins/{adminId}/suspend": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/admins/{adminId}/reinstate": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/admins/{adminId}/two-step-reset": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/admins/{adminId}/recovery-link": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/platform/invites/{inviteId}": "Platform admin sign-in, admins and security, V1.1 (B6.02, B6.08)",
+  "/api/me/organizations": "Multi-organisation membership, V1.1 (B6.01)",
+  "/api/me/organizations/switch": "Multi-organisation membership, V1.1 (B6.01)",
+  "/api/orgs/{orgSlug}/catalogue": "Catalogue, V1.1 (B6.10)",
+  "/api/orgs/{orgSlug}/catalogue/{itemId}": "Catalogue, V1.1 (B6.10)",
+  "/api/orgs/{orgSlug}/quotes": "Quotes, V1.1 (B6.11)",
+  "/api/orgs/{orgSlug}/quotes/{quoteId}": "Quotes, V1.1 (B6.11)",
+  "/api/orgs/{orgSlug}/quotes/{quoteId}/versions": "Quotes, V1.1 (B6.11)",
+  "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}": "Quotes, V1.1 (B6.11)",
+  "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/response": "Quotes, V1.1 (B6.11)",
+  "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/apply-to-deal": "Quotes, V1.1 (B6.11)",
+  "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/preview": "Quote document, V1.1 (B6.12)",
+  "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/send": "Quote document, V1.1 (B6.12)",
+  "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/activity": "Quote document, V1.1 (B6.12)",
+  "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/request-approval": "Approvals, V1.1 (B6.13)",
+  "/api/orgs/{orgSlug}/quotes/{quoteId}/shares/{shareId}/revoke": "Quote document, V1.1 (B6.12)",
+  "/api/orgs/{orgSlug}/quote-settings": "Quotes, V1.1 (B6.11)",
+  "/api/orgs/{orgSlug}/deals/{dealId}/quote": "Quotes, V1.1 (B6.11)",
+  "/api/orgs/{orgSlug}/deals/{dealId}/request-approval": "Approvals, V1.1 (B6.13)",
+  "/api/orgs/{orgSlug}/approvals": "Approvals, V1.1 (B6.13)",
+  "/api/orgs/{orgSlug}/approvals/{approvalId}": "Approvals, V1.1 (B6.13)",
+  "/api/orgs/{orgSlug}/approvals/{approvalId}/decision": "Approvals, V1.1 (B6.13)",
+  "/api/orgs/{orgSlug}/approvals/{approvalId}/cancel": "Approvals, V1.1 (B6.13)",
+  "/api/orgs/{orgSlug}/approval-rules": "Approvals, V1.1 (B6.13)",
+  "/api/orgs/{orgSlug}/pipelines": "Pipelines and stage rules, V1.1 (B6.15)",
+  "/api/orgs/{orgSlug}/pipelines/{pipelineId}": "Pipelines and stage rules, V1.1 (B6.15)",
+  "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages": "Pipelines and stage rules, V1.1 (B6.15)",
+  "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/reorder": "Pipelines and stage rules, V1.1 (B6.15)",
+  "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/{stageId}": "Pipelines and stage rules, V1.1 (B6.15)",
+  "/api/orgs/{orgSlug}/pipelines/{pipelineId}/stages/{stageId}/rules": "Pipelines and stage rules, V1.1 (B6.15)",
+  "/api/public/quotes/{token}": "Public quote link (token is the secret), V1.1 (B6.12)",
+  "/api/public/sign/{token}": "Public quote signing (token is the secret), V2 (B7.04, FIG-1186)",
+  "/api/openapi.json": "serves this document, outside production only",
+  "/api/integrations/oauth/callback": "V1.1 OAuth connections (B6.21, FIG-1153): the fixed provider redirect address",
+  "/api/orgs/{orgSlug}/integrations/connections": "V1.1 OAuth connections (B6.21, FIG-1153)",
+  "/api/orgs/{orgSlug}/integrations/connections/start": "V1.1 OAuth connections (B6.21, FIG-1153)",
+  "/api/orgs/{orgSlug}/integrations/connections/organization": "V1.1 OAuth connections (B6.21, FIG-1153)",
+  "/api/orgs/{orgSlug}/integrations/connections/{connectionId}": "V1.1 OAuth connections (B6.21, FIG-1153)",
+  "/api/orgs/{orgSlug}/communications/mail/drafts": "V1.1 mail and calendar sync (FIG-807)",
+  "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}": "V1.1 mail and calendar sync (FIG-807)",
+  "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}/send": "V1.1 mail and calendar sync (FIG-807)",
+  "/api/orgs/{orgSlug}/communications/mail/drafts/{draftId}/schedule": "V1.1 mail and calendar sync (FIG-807)",
+  "/api/orgs/{orgSlug}/communications/mail/send": "V1.1 mail and calendar sync (FIG-807)",
+  "/api/orgs/{orgSlug}/communications/mail/record-card": "V1.1 mail and calendar sync (FIG-807)",
+  "/api/orgs/{orgSlug}/communications/meetings": "V1.1 mail and calendar sync (FIG-808)",
+  "/api/orgs/{orgSlug}/communications/meetings/{activityId}": "V1.1 mail and calendar sync (FIG-808)",
+  "/api/orgs/{orgSlug}/integrations/connections/{connectionId}/sync": "V1.1 mail and calendar sync (FIG-807, FIG-808)",
+  "/api/orgs/{orgSlug}/integrations/connections/{connectionId}/calendars": "V1.1 mail and calendar sync (FIG-808)",
+  "/api/orgs/{orgSlug}/assistant/settings": "V1.1 Ask Figbloom assistant (B6.20, FIG-1152)",
+  "/api/orgs/{orgSlug}/assistant/ask": "V1.1 Ask Figbloom assistant (B6.20, FIG-1152)",
+  "/api/orgs/{orgSlug}/assistant/proposals/{proposalId}/confirm": "V1.1 Ask Figbloom assistant (B6.20, FIG-1152)",
+  "/api/orgs/{orgSlug}/assistant/proposals/{proposalId}/dismiss": "V1.1 Ask Figbloom assistant (B6.20, FIG-1152)",
+  "/api/orgs/{orgSlug}/assistant/requests/{requestId}/feedback": "V1.1 Ask Figbloom assistant (B6.20, FIG-1152)",
+  "/api/orgs/{orgSlug}/assistant/audit": "V1.1 Ask Figbloom assistant (B6.20, FIG-1152)",
+  "/api/orgs/{orgSlug}/quick-capture/cards": "V1.1 business-card capture (B6.22, FIG-1154)",
+  "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}": "V1.1 business-card capture (B6.22, FIG-1154)",
+  "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}/extract": "V1.1 business-card capture (B6.22, FIG-1154)",
+  "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}/confirm": "V1.1 business-card capture (B6.22, FIG-1154)",
+  "/api/orgs/{orgSlug}/forecast": "V1.1 forecast and targets (B6.14, FIG-1146)",
+  "/api/orgs/{orgSlug}/forecast/targets": "V1.1 forecast and targets (B6.14, FIG-1146)",
+  "/api/orgs/{orgSlug}/views": "V1.1 saved views (B6.16, FIG-1148)",
+  "/api/orgs/{orgSlug}/views/{viewId}": "V1.1 saved views (B6.16, FIG-1148)",
+  "/api/orgs/{orgSlug}/views/{viewId}/pin": "V1.1 saved views (B6.16, FIG-1148)",
+  "/api/orgs/{orgSlug}/views/pinned-order": "V1.1 saved views (B6.16, FIG-1148)",
+  "/api/orgs/{orgSlug}/commands": "V1.1 command palette index (B6.17, FIG-1149)",
+  "/api/orgs/{orgSlug}/help": "V1.1 Help index (B6.17, FIG-1149)",
+  "/api/orgs/{orgSlug}/help/{slug}": "V1.1 Help article (B6.17, FIG-1149)",
+  "/api/orgs/{orgSlug}/whats-new": "V1.1 release notes feed (B6.17, FIG-1149)",
+  "/api/orgs/{orgSlug}/sequences": "V1.1 follow-up sequences (B6.18, FIG-1150)",
+  "/api/orgs/{orgSlug}/sequences/{sequenceId}": "V1.1 follow-up sequences (B6.18, FIG-1150)",
+  "/api/orgs/{orgSlug}/sequences/{sequenceId}/enrollments": "V1.1 follow-up sequences (B6.18, FIG-1150)",
+  "/api/orgs/{orgSlug}/sequence-enrollments": "V1.1 follow-up sequences (B6.18, FIG-1150)",
+  "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}": "V1.1 follow-up sequences (B6.18, FIG-1150)",
+  "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}/pause": "V1.1 follow-up sequences (B6.18, FIG-1150)",
+  "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}/resume": "V1.1 follow-up sequences (B6.18, FIG-1150)",
+  "/api/orgs/{orgSlug}/sequence-enrollments/{enrollmentId}/end": "V1.1 follow-up sequences (B6.18, FIG-1150)",
+  "/api/orgs/{orgSlug}/web-forms": "V1.1 web forms builder (B6.19, FIG-1151)",
+  "/api/orgs/{orgSlug}/web-forms/{formId}": "V1.1 web forms builder (B6.19, FIG-1151)",
+  "/api/orgs/{orgSlug}/web-forms/{formId}/rotate-key": "V1.1 web forms builder (B6.19, FIG-1151)",
+  "/api/orgs/{orgSlug}/web-forms/{formId}/submissions": "V1.1 web forms submission log (B6.19, FIG-1151)",
+  "/api/public/orgs/{orgSlug}/forms/{formKey}": "V1.1 public web form definition (B6.19, FIG-1151)",
+  "/api/public/orgs/{orgSlug}/forms/{formKey}/submissions": "V1.1 public web form endpoint (B6.19, FIG-1151)",
+  "/api/metrics": "operations endpoint for the metrics scraper (Prometheus text, METRICS_TOKEN), not part of the product API; docs/OBSERVABILITY.md",
+};
+
+type Security = "none" | "sessionCookie" | "websiteApiKey" | "inboundEmailKey" | "mailgunSignature" | "signedToken" | "cronSecret";
+
+export interface AccountOperation {
+  method: "get" | "post" | "put" | "patch" | "delete";
+  path: string;
+  operationId: string;
+  summary: string;
+  tag: string;
+  security: Security;
+  body?: JsonSchema;
+  /** `null` = no JSON body (a redirect, a file, or nothing). */
+  response?: JsonSchema | null;
+  errors?: number[];
+  rateLimited?: boolean;
+  note?: string;
+}
+
+const str = { type: "string" };
+const obj = (properties: Record<string, JsonSchema>, required: string[] = []): JsonSchema => ({ type: "object", properties, required, additionalProperties: false });
+const loose: JsonSchema = { type: "object", additionalProperties: true };
+const okFlag: JsonSchema = { type: "object", properties: { ok: { type: "boolean" } }, additionalProperties: true };
+const sessionList: JsonSchema = { type: "object", properties: { items: { type: "array", items: loose } }, required: ["items"], additionalProperties: true };
+
+export const ACCOUNT_OPERATIONS: AccountOperation[] = [
+  { method: "post", path: "/api/auth/login", operationId: "login", summary: "Sign in with email and password. Every failure is the same generic 401; repeated attempts are rate limited.", tag: "Auth", security: "none", body: obj({ email: str, password: str }, ["email", "password"]), response: loose, errors: [400, 401, 429], rateLimited: true, note: "Frozen page: this endpoint's behaviour does not change (CLAUDE.md rule 1)." },
+  { method: "post", path: "/api/auth/signup", operationId: "signup", summary: "Create an account and sign in. Grants no organisation access on its own.", tag: "Auth", security: "none", body: obj({ name: str, email: str, password: str }, ["name", "email", "password"]), response: loose, errors: [400, 409, 429], rateLimited: true },
+  { method: "post", path: "/api/auth/accept-invite", operationId: "acceptInvite", summary: "Accept an organisation invite with its token (and choose a password when the person has none yet).", tag: "Auth", security: "none", body: obj({ token: str, password: str }, ["token"]), response: loose, errors: [400, 401, 429] },
+  { method: "post", path: "/api/auth/logout", operationId: "logout", summary: "End the current session and clear the cookie.", tag: "Auth", security: "sessionCookie", response: okFlag, errors: [] },
+  { method: "post", path: "/api/auth/password-reset/request", operationId: "requestPasswordReset", summary: "Ask for a reset email. Always answers the same, whether or not the address has an account; rate limited.", tag: "Auth", security: "none", body: obj({ email: str }, ["email"]), response: okFlag, errors: [400, 429], rateLimited: true },
+  { method: "post", path: "/api/auth/password-reset/confirm", operationId: "confirmPasswordReset", summary: "Set a new password with the emailed token.", tag: "Auth", security: "none", body: obj({ token: str, newPassword: str }, ["token", "newPassword"]), response: okFlag, errors: [400, 401, 429] },
+  { method: "get", path: "/api/session", operationId: "getSession", summary: "The current session: who is signed in and when it expires.", tag: "Session", security: "sessionCookie", response: loose, errors: [401] },
+  { method: "post", path: "/api/session/extend", operationId: "extendSession", summary: "Extend the session's idle expiry (up to the absolute limit).", tag: "Session", security: "sessionCookie", response: loose, errors: [401] },
+  { method: "get", path: "/api/me/sessions", operationId: "listMySessions", summary: "Every device the person is signed in on, current one first.", tag: "Me", security: "sessionCookie", response: sessionList, errors: [401] },
+  { method: "post", path: "/api/me/sessions/sign-out-others", operationId: "signOutOtherSessions", summary: "Sign out every other device.", tag: "Me", security: "sessionCookie", response: loose, errors: [401] },
+  { method: "delete", path: "/api/me/sessions/{sessionId}", operationId: "revokeMySession", summary: "Sign out one device.", tag: "Me", security: "sessionCookie", response: loose, errors: [401, 404] },
+  { method: "get", path: "/api/me/sign-in-events", operationId: "listMySignInEvents", summary: "The person's recent sign-ins and failed attempts.", tag: "Me", security: "sessionCookie", response: loose, errors: [401] },
+  { method: "post", path: "/api/public/orgs/{orgSlug}/leads", operationId: "submitWebsiteLead", summary: "Website lead capture. Authenticated by the organisation's website key in `x-figbloom-api-key`; rate limited per IP and per key; optional origin allow-list, honeypot and captcha.", tag: "Public", security: "websiteApiKey", body: { type: "object", additionalProperties: true, description: "Contact and enquiry fields; see docs/DEPLOYMENT.md for the accepted set." }, response: loose, errors: [400, 401, 403, 413, 429], rateLimited: true },
+  { method: "post", path: "/api/public/inbound/mailgun", operationId: "ingestMailgunInbound", summary: "Mailgun inbound route (BCC-to-CRM). Mailgun forwards the received email as a form; the signature is verified and the organisation is found from the recipient BCC address.", tag: "Public", security: "mailgunSignature", body: obj({ recipient: str, sender: str, from: str, subject: str, "body-plain": str, "stripped-text": str, "Message-Id": str, timestamp: str, token: str, signature: str }, ["recipient", "timestamp", "token", "signature"]), response: loose, errors: [401, 404, 429], rateLimited: true },
+  { method: "post", path: "/api/orgs/{orgSlug}/support-requests", operationId: "createSupportRequest", summary: "Ask Figbloom for help by email (V1.1). Any signed-in member of the organisation; the request is sent through Resend to Figbloom support with the member as Reply-To. Answers a reference to quote. Honours Idempotency-Key; at most 5 requests an hour per member.", tag: "Support", security: "sessionCookie", body: obj({ subject: str, message: str, category: str, urgency: str, pagePath: str }, ["subject", "message"]), response: loose, errors: [400, 401, 403, 429, 503], rateLimited: true },
+  { method: "post", path: "/api/public/orgs/{orgSlug}/communications/inbound", operationId: "ingestInboundEmail", summary: "Inbound email (BCC-to-CRM) webhook. Authenticated by the organisation's inbound token in a header or the `token` query parameter.", tag: "Public", security: "inboundEmailKey", body: obj({ from: str, subject: str, text: str, messageId: str }, ["from"]), response: loose, errors: [400, 401, 429], rateLimited: true },
+  { method: "get", path: "/api/storage/blob", operationId: "downloadSignedBlob", summary: "Download a file with a signed link (local storage driver only; the S3 driver links straight to the bucket).", tag: "Files", security: "signedToken", response: null, errors: [403, 404, 409] },
+  { method: "put", path: "/api/storage/blob", operationId: "uploadSignedBlob", summary: "Upload a file's bytes with a signed upload link (local storage driver only).", tag: "Files", security: "signedToken", response: null, errors: [400, 403, 404] },
+  { method: "get", path: "/api/cron/jobs", operationId: "runJobsGet", summary: "Scheduler entry point: queue the current slot of every scheduled job, recover crashed jobs, run due jobs. Bearer CRON_SECRET.", tag: "Operations", security: "cronSecret", response: loose, errors: [401] },
+  { method: "post", path: "/api/cron/jobs", operationId: "runJobsPost", summary: "Same as the GET form, for schedulers that can only POST.", tag: "Operations", security: "cronSecret", response: loose, errors: [401] },
+  { method: "get", path: "/api/cron/notifications-sweep", operationId: "runNotificationsSweepGet", summary: "Run the notifications sweep now. Bearer CRON_SECRET.", tag: "Operations", security: "cronSecret", response: loose, errors: [401] },
+  { method: "post", path: "/api/cron/notifications-sweep", operationId: "runNotificationsSweepPost", summary: "Same as the GET form, for schedulers that can only POST.", tag: "Operations", security: "cronSecret", response: loose, errors: [401] },
+  { method: "get", path: "/api/health", operationId: "getHealth", summary: "Liveness and database reachability, with the last notifications sweep. No authentication.", tag: "Operations", security: "none", response: loose, errors: [503] },
+];
+
+export const SECURITY_SCHEMES: Record<string, unknown> = {
+  sessionCookie: { type: "apiKey", in: "cookie", name: "figbloom_session" },
+  websiteApiKey: { type: "apiKey", in: "header", name: "x-figbloom-api-key" },
+  inboundEmailKey: { type: "apiKey", in: "header", name: "x-figbloom-inbound-key", description: "Or the `token` query parameter." },
+  mailgunSignature: { type: "apiKey", in: "query", name: "signature", description: "Mailgun webhook signature: HMAC-SHA256 of timestamp+token with MAILGUN_INBOUND_SIGNING_KEY, sent in the form fields `timestamp`, `token`, `signature`." },
+  signedToken: { type: "apiKey", in: "query", name: "token" },
+  cronSecret: { type: "http", scheme: "bearer", description: "The shared CRON_SECRET (or the `x-cron-secret` header)." },
+};

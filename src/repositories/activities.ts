@@ -1,4 +1,4 @@
-import { withOrgContext } from "../db/orgScopedClient";
+import { withOrgContext, type OrgScopedClient } from "../db/orgScopedClient";
 
 export interface CreateActivityInput {
   organizationId: string;
@@ -14,9 +14,13 @@ export interface CreateActivityInput {
   dealId?: string;
 }
 
-export async function createActivity(input: CreateActivityInput) {
-  return withOrgContext(input.organizationId, (tx) =>
-    tx.activity.create({
+export async function createActivity(
+  input: CreateActivityInput,
+  /** Runs in the same transaction as the insert (P2-23: the next step becomes a task together with the logged call). */
+  inTransaction?: (tx: OrgScopedClient, created: { id: string }) => Promise<void>,
+) {
+  return withOrgContext(input.organizationId, async (tx) => {
+    const created = await tx.activity.create({
       data: {
         organizationId: input.organizationId,
         type: input.type,
@@ -30,8 +34,10 @@ export async function createActivity(input: CreateActivityInput) {
         leadId: input.leadId,
         dealId: input.dealId,
       },
-    }),
-  );
+    });
+    if (inTransaction) await inTransaction(tx, created);
+    return created;
+  });
 }
 
 /**
@@ -68,6 +74,33 @@ export async function listActivities(
       skip: filters.skip,
     }),
   );
+}
+
+/**
+ * One page of activities and the total, read inside a single organisation-scoped transaction (one connection, one `set_config`) instead of
+ * two parallel ones. Same `where` as `listActivities` / `countActivities`, so a page and its total cannot disagree.
+ */
+export async function listActivitiesWithCount(
+  organizationId: string,
+  filters: ListActivitiesFilters,
+) {
+  return withOrgContext(organizationId, async (tx) => {
+    const where = {
+      organizationId,
+      companyId: filters.companyId,
+      contactId: filters.contactId,
+      leadId: filters.leadId,
+      dealId: filters.dealId,
+    };
+    const items = await tx.activity.findMany({
+      where,
+      orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+      take: filters.take,
+      skip: filters.skip,
+    });
+    const total = await tx.activity.count({ where });
+    return { items, total };
+  });
 }
 
 /** Activities matching `filters` across all pages (FIG-789). */
@@ -145,10 +178,29 @@ export async function listCalendarActivities(
         type: { in: ["CALL", "MEETING"] },
         occurredAt: { gte: range.from, lt: range.to },
         authorMembershipId: range.authorMembershipId,
+        // P2-22: an activity that has a task is shown through the task, so nothing appears twice.
+        tasks: { none: {} },
       },
       include: { author: { include: { user: true } } },
       orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
       take: range.take,
+    }),
+  );
+}
+
+/** How many calls and meetings fall in [from, to) (FIG-1042): a COUNT, not a fetch. */
+export async function countCalendarActivities(
+  organizationId: string,
+  range: { from: Date; to: Date; authorMembershipId?: string },
+) {
+  return withOrgContext(organizationId, (tx) =>
+    tx.activity.count({
+      where: {
+        organizationId,
+        type: { in: ["CALL", "MEETING"] },
+        occurredAt: { gte: range.from, lt: range.to },
+        authorMembershipId: range.authorMembershipId,
+      },
     }),
   );
 }

@@ -6,11 +6,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * is resolved (src/auth/requestContext.ts) -- this remains only as a local
  * development convenience for exercising permission/ownership logic without
  * setting a password on a seeded user, and is hard-disabled outside
- * development (see src/app/dev-login/page.tsx and
- * src/app/api/dev-session/route.ts).
+ * development (see src/app/api/dev-session/route.ts).
  *
  * A signed cookie holding a userId, picked from the FIG-438 seed's dev users
- * via /dev-login, with no password check.
+ * via the dev sign-in chips on /login (POST /api/dev-session), with no password check.
  */
 
 const COOKIE_NAME = "figbloom_dev_session";
@@ -19,7 +18,7 @@ function getSecret(): string {
   const secret = process.env.DEV_SESSION_SECRET;
   if (!secret) {
     throw new Error(
-      "DEV_SESSION_SECRET must be set (see .env.example) to use the dev-login placeholder.",
+      "DEV_SESSION_SECRET must be set (see .env.example) to use the dev sign-in chips.",
     );
   }
   return secret;

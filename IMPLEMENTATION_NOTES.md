@@ -10,8 +10,8 @@ is not reopened anywhere below — these are the things they left open.
 TypeScript + PostgreSQL + Prisma, Next.js (App Router) + React for the
 API/UI layer, added to the same project rather than a separate app. Postgres
 + RLS was already the pattern in use on other FigBloom projects on this
-machine; Prisma keeps schema and migrations in one place without pulling in
-a full Supabase CLI stack this project doesn't otherwise need.
+machine; Prisma keeps schema and migrations in one place without a separate
+database toolchain this project doesn't otherwise need.
 
 ## Tenant isolation: composite FKs + RLS, both, not either/or
 
@@ -197,7 +197,7 @@ to fix a validation error.
 
 FIG-437 left the exact authentication provider as an open implementation
 decision ("Exact authentication provider," "Exact session/token strategy" —
-section 18). Chosen: in-house email/password, not NextAuth/Clerk/Supabase --
+section 18). Chosen: in-house email/password, not NextAuth/Clerk --
 this project has zero external-service dependencies anywhere else, the
 RBAC/tenant model it has to resolve into is already fully custom, and it's
 currently a single-organization internal tool where a vendor dependency
@@ -1889,3 +1889,363 @@ Described in the README's "Dev accounts and production". Decisions:
   tenant cookies, route 404 matrix, audit, privileges and RLS, holding page)
   and `e2e/dev-accounts-closed.spec.ts` (production build: no `/dev-login`,
   `/platform`, dev sign-in API or chips).
+
+## Stage 1: identity, sessions, preferences, organisation profile (FIG-1017 to FIG-1029, B1.01 to B1.13)
+
+- **Permissions (B1.01 to B1.03):** `src/auth/permissions.ts` is the single
+  scope resolver (own / organisation / read-only / none, with a reason).
+  Roles and permission keys live in `prisma/seedData.ts`; roles and keys for
+  later releases carry `requiredFeature` and are inert until their flag is on.
+  The five signed departures each have a flag (`departure.*`,
+  `src/lib/featureFlags.ts`); off falls back to the seeded matrix. Customer
+  Support is a sixth role behind `customer_support.role`. No route checks a
+  role name; everything goes through permission keys.
+- **Explained no-access (B1.02):** denials carry `denial: { yourRole,
+  ownerRoles, whoToAsk }` in the one error envelope (`src/lib/apiErrors.ts`,
+  `src/auth/areaOwners.ts`). Individual records outside a user's scope answer
+  404, not 403.
+- **Sessions and sign-in events (B1.04, B1.05):** `sessions` and
+  `sign_in_events` tables with RLS. Lifetime policy 4/8/12/24 h (default 8,
+  `src/auth/sessionPolicy.ts`), "Stay signed in" extends within an absolute
+  ceiling, revoked sessions fail on the next request. Lockout, deactivate vs
+  remove (with the reassignment checklist), and the admin sign-in events view
+  are under `/api/orgs/{org}/memberships/*` and `/security/*`.
+- **Files (B1.07):** `src/storage` has a local-disk driver (signed links, dev
+  only) and an S3-compatible driver (SigV4, no SDK), type/size limits, content
+  sniffing, and a malware-scan hook that fails closed. Config in `.env.example`.
+- **Profile, preferences, organisation look (B1.06, B1.08, B1.09):** avatar via
+  the file service (`sharp` re-encodes and strips EXIF), preferences with an
+  account/device split, reset and undo, and the organisation's allow-
+  personalisation lock with shared-look resolution (`/look`).
+- **Identity context (B1.10):** `GET /api/me/context` returns the shell
+  payload for every role in one call (short cache, `ME_CONTEXT_CACHE_MS`).
+- **Notification preferences v2 (B1.11) and invite states (B1.12):** per-role
+  event types, channels, quiet hours, daily email cap, overdue always on; invite
+  and membership states (invited, accepted, awaiting access, deactivated). The
+  frozen login, sign-up, forgot, reset and accept-invite pages are untouched;
+  only their API routes changed.
+- **Exit gate (B1.13):** `tests/stage1ExitGate.test.ts` walks the demo per role
+  and checks cross-organisation isolation; `docs/demo/stage-1.http` is the
+  manual version.
+- **Known gap:** the OpenAPI document does not yet list every Stage 1 route
+  (sessions, sign-in events, security, membership lifecycle, file content,
+  platform preferences). Tracked in CLAUDE.md "Where we are right now".
+
+## Stage 2: sales core and record extras (FIG-1030 to FIG-1046, FIG-1066, FIG-796/797/798/803, B2.01 to B2.18)
+
+- **Jobs (B2.18):** `background_jobs`, lease-based claim, retries, dead letter, schedules, status API. See `docs/JOBS.md`.
+- **Archive semantics (B2.16):** one rule set in `src/lib/archive.ts`. Archived records are hidden by default, read-only (`ARCHIVED_READ_ONLY` with a `restore` hint), restorable by Management or whoever archived them.
+- **Masking (B2.07):** `src/auth/masking.ts`, scanned for a sentinel on every surface. See `docs/MASKING.md`.
+- **Duplicates and merge (B2.04):** `src/lib/matching.ts` normalises phone (last nine digits), email (plus-addressing removed) and company names; SQL expression indexes back the lookups. Merges are undoable for one hour (`merge_records`). Every new table that links to a company or contact must add a line to `LINKS` in `src/repositories/merges.ts` (attachments, tags, comments and follows already did).
+- **Custom fields and qualification (B2.01, FIG-803):** definitions plus a `custom_fields` JSON column; qualification answers live in `qualification_data`, and a required-on-qualify answer blocks the Qualified status.
+- **Tags, attachments, templates (FIG-798, 796, 797):** tags and links with a one-record CHECK; attachments over the file service (deal files hidden from roles without the value unless shared); email templates with merge fields.
+- **Lead pool, scoring (B2.02, B2.03):** pool requests with approval or auto mode; rules-based scores stored and refreshed nightly. See `docs/SCORING.md`.
+- **Deal rules, handoff, tasks, calendar (B2.06 to B2.10):** stalled per stage, validated undoable moves, handoff states (Awaiting owner, Onboarding, Delivered), tasks grouped by due state in the viewer's time zone, My work for Restricted Technical, calendar views.
+- **Notification centre (B2.11):** list with paging and filters, an unread count that equals the unread list, archive, 90-day retention of read notifications. A notification about a record the member can no longer open is not shown or counted.
+- **Search v2 (B2.12):** groups with totals, paged per group, archived on request, `hidden` explains what the role cannot see, phone numbers match across formats, trigram indexes, per-user recents.
+- **Dashboards and signals (B2.13, B2.14):** sections per role, each loaded on its own, absent when the role lacks them, counts and group-bys only. Adoption, stalled and overdue signals are stored in `signal_snapshots` and refreshed nightly, on stale reads and on deal or task changes.
+- **Comments (B2.15):** comments, mentions (only people who can open the record), follow, soft edit and delete. Mentions and followers are told through the MENTION notification type.
+- **Import and export (B2.05):** runs in the background (`data_runs`) with progress, cancel and an error report CSV; duplicate and already-converted rows are reported; `tags` and `cf:<key>` columns are read; exports over 500 rows need `export.bulk` (Management) until the approvals engine arrives.
+- **Exit gate (B2.17):** `tests/stage2ExitGate.test.ts` and `docs/demo/stage-2.http`.
+- **Known gaps:** (the Finance dashboard payments figures arrived with Stage 3); the `q:` qualification columns an export writes are not read back by import; the OpenAPI document lists the main Stage 2 endpoints (`src/api/stage2Operations.ts`), not every route; the 500-row export gate is always on (no per-organisation switch yet).
+
+## Stage 3: customers, delivery, finance and reporting (FIG-1047 to FIG-1057, FIG-795, B3.01 to B3.11)
+
+- **Payments tracker (B3.03, B3.04):** `invoices`, `payment_records`, `deal_payment_notes`; status only. Overdue is derived, the sum of payments cannot exceed the invoice without an explicit flag, a payment is reversed rather than deleted. Visible to Finance and Management only, on every surface. See `docs/PAYMENTS.md`. Management now holds `finance.manage.payments` (the spec says view and manage), which also makes Management an owner of the Finance area in the explained no-access.
+- **Lifecycle engine (B3.02):** one `transitionCompany` for every state change (idempotent, history row, audit event). The handoff, lead conversion and a daily job all go through it. `lifecycle_manual` makes a person's choice stick. See `docs/LIFECYCLE_AND_RENEWALS.md`.
+- **Recurring services (B3.05):** `recurring_services` with a state derived from the dates, an organisation window and grace, an override with a reason, and a renew action that can add a task and a draft invoice. Running company services with an end date were backfilled by the migration.
+- **Reminders (FIG-795):** proposal follow-up, renewal, dormant customer and overdue invoice, each switchable and keyed on its trigger (a partial unique index on four new notification types). They only notify.
+- **Retention lists (B3.06):** five lists, a customer in exactly one with `alsoMatches` for the rest.
+- **Customer 360 (B3.01):** sections that load independently and answer `ok`, `no_access` (with who owns the area) or `not_available`. A fixed number of database calls (`dbCallStats.orgContextCalls` in `src/db/orgScopedClient.ts` exists only so a test can prove it).
+- **Conversations hub and quick-log (B3.07, B3.08):** a row is listed only if the caller may open every record it links to (`src/auth/visibilityWhere.ts`). The inbound-email webhook **now keeps** a message from an unknown sender in a Needs-linking queue instead of dropping it, and stores each message id once. `tests/inboundEmail.test.ts` was changed for that on purpose (the issue asks for it); the matched-sender behaviour is unchanged.
+- **Reports v2 and My metrics (B3.09):** every report is a table plus chart series read from the same rows, with its definition (`docs/REPORTING_METRICS.md`). Rates with no denominator are 0.
+- **Company and contact lists (B3.10):** tabs and quality filters with counts built on the same repositories as the plain lists.
+- **Finance dashboard:** the payments figures (due this week, overdue, collected this month, still owing) are now real.
+- **Exit gate (B3.11):** `tests/stage3ExitGate.test.ts` (demo walk, lifecycle job, role matrix, payments scan on eleven surfaces and every dashboard section, tenant isolation for each new table, every documented operation has a route) and `docs/demo/stage-3.http`.
+- **Decisions taken without being asked, to be confirmed by Given:** (1) a handoff that starts with an owner already named leaves the company at Customer (the existing handoff tests require it); the company becomes Onboarding when the owner takes it. (2) The deal owner is told an invoice is overdue because the issue asks for it, but the notice carries no invoice number and no amount, since payments are Finance and Management only. (3) Renewal outranks Dormant in the lifecycle job. (4) Only "Reached" counts as contact for "last contacted". (5) Renewals and retention is for roles that can manage company services (Management, Sales). (6) Numbers without a country code are taken to be Kenyan (254) for `tel:` and `wa.me` links.
+- **Known gaps:** the audit reader (B4.01, FIG-799) must hide `PAYMENT_ENTITIES` from roles without `finance.view.payments`; a signed quote cannot yet raise an invoice (V1.1 decision); tickets and the survey on Customer 360 are `not_available` until Customer Support; the retention lists are computed in memory from a few bounded queries, which is right for hundreds to low thousands of customers, and should move to SQL if an organisation outgrows that; WhatsApp Business API remains deferred; no UI exists for any of this (the frontend starts after G1.08).
+
+## Stage 4: admin, automation, data and mobile sync (FIG-1058 to FIG-1065, FIG-1067, FIG-799, FIG-800, B4.01 to B4.10)
+
+- **Settings and integrations (B4.01, B4.03):** website key rotation keeps the old key for a grace window (default 24 hours, at most 72; one previous key); the status shows last used, last accepted, last rejected and a rejected list with reasons; inbound email shows last received and last error. The integrations registry derives Connected, Not connected and Planned from real signals. See `docs/SETTINGS_ADMIN.md`. Two older rotation tests now ask for `graceHours: 0` where they test "ends at once".
+- **Audit log (FIG-799):** `GET /audit/events` with filters, links, CSV; the per-record history reader and the new log both refuse payment entities to a reader without `finance.view.payments` (the M3 gap).
+- **Automations (B4.02):** a code-defined catalogue of eight rules with a boundary enforced in code (`assertRuleMay`), a source scan and a before-and-after test. One effect per trigger through a partial unique index. The reminder rules keep their state in the existing reminder settings so the older endpoints stay in step. See `docs/AUTOMATIONS.md`.
+- **Reference data admin (B4.06):** one service over nine lists, hide-not-delete, merge with re-pointing, system values protected, pipeline stages fixed in V1. Tags gained `is_active`.
+- **Data migration (B4.04, FIG-800):** a seven-step session engine for six kinds of record (CSV and .xlsx), per-row validation, a dry run that writes nothing, chunked import with a row-by-row fallback, tagging by session id, rollback within 72 hours that keeps what people did afterwards, error report CSV, saved presets. `POST /imports` also takes deals now. See `docs/DATA_MIGRATION.md`. New dependency: `exceljs` (first sheet only, size and column caps).
+- **Data and privacy (B4.05):** export threshold and approvals, retention with documented defaults and a daily purge, legal hold, data-subject requests (access CSV, rectification, erasure with two Management confirmations), organisation-level requests recorded for the platform queue. `scripts/erase-data-subject.ts` now calls the same service, and the old audit entry that stored the person's name and email is gone: the proof carries hashes and counts. See `docs/PRIVACY.md`.
+- **Offline sync, push, PWA, quick capture (B4.07, B4.08):** `POST /sync/batch` (client-id claims make replay safe; stage and ownership are server-wins), Web Push with an endpoint allow-list (new dependency: `web-push`), the organisation's manifest and a cache version, and `POST /quick-capture` with a duplicate warning. See `docs/SYNC_AND_PUSH.md`.
+- **Exit gate (B4.10):** `tests/stage4ExitGate.test.ts` (demo walk through the real routes, role matrix, tenant isolation for every new table, the new jobs, every documented operation has a route) and `docs/demo/stage-4.http`.
+- **Schema and migrations:** `20261027090000_m4_admin_automation_data_sync` (ten tables with RLS, the key grace columns, six `import_session_id` columns), `20261027100000_sync_pending_status`, `20261027110000_fk_indexes_for_deletes` (eight partial indexes so deleting a company or contact does not scan whole tables). The lead and deal DTOs carry `importSessionId`.
+- **Decisions taken without being asked, to be confirmed by Given:** (1) a 24-hour default grace window for website key rotation. (2) Pipeline editing is never applied from the offline queue, even when current (design M2 says read-only); a stale stage change is a CONFLICT, a current one is REJECTED. (3) Quick capture warns on contact duplicates (email, phone, name) and does not create a company that does not exist. (4) Erasure needs two different Management members, as the issue says, and a contact merged into the subject is erased with it. (5) Retention never purges contacts, companies, deals, invoices or the audit log; archived leads and tasks are purged only if Management sets a period. (6) Anyone who holds an export permission and is not Management needs an approval above the threshold; today only Management holds export permissions. (7) A lost deal in a migration with no reason is recorded as Other, with a warning. (8) Imported open deals count as active from the import date so they are not instantly stalled. (9) Migration duplicates use in-memory indexes with the B2.04 normalisers, not the per-row duplicate search, to make 10,000 rows possible. (10) The rollback window is 72 hours.
+- **Known gaps:** the 300 ms p95 for quick capture and push delivery to real browsers are not measured against a real network (G1.04 and a staging push test); the migration engine runs on the job worker and is tested with 10,000 rows (about 40 seconds to import and 75 seconds to roll back on the Windows and Docker development database); free text elsewhere that names an erased person is counted for review, not rewritten; a migration cannot yet bring in attachments, communications or custom field definitions (only values for existing definitions); organisation-level export and delete requests are recorded but nothing yet reads them (B6.09); no UI exists for any of this (the frontend starts after G1.08).
+
+## Stage 5: backend V1 quality gate (FIG-1068 to FIG-1075, G1.01 to G1.08)
+
+- **Test harness (G1.02, G1.03, G1.06):** `tests/helpers/` holds one shared world (two organisations, a record of every kind, a caller per role), a route discoverer that finds every `route.ts`, and a walker that calls a route with a valid body for the schema it declares. Everything in M5 that "walks every route" uses it, so a new route is covered the day it is added with no list to update.
+- **Permission matrix (G1.02):** `tests/apiWalk.test.ts` calls every route as every role and compares the outcome (allowed, denied with the explained 403, hidden, value-masked, empty, unauthenticated) with the recorded matrix `src/api/contract/accessMatrix.json`, plus human-reviewed invariants per role family (`tests/fixtures/roleFamilies.ts`) and a scan of every response for sentinel values that must never reach a role. `docs/PERMISSION_MATRIX_REPORT.md` is generated from it. Refresh deliberately with `UPDATE_API_SNAPSHOTS=1`.
+- **Tenant attack (G1.03):** `tests/tenantAttack.test.ts`: RLS enabled and guarded on every table with an organisation id (a `FOR ALL ... USING` policy counts for writes, as Postgres treats it), organisation A sees none of B's rows in any table, every route called as A's Management and Sales with B's ids (nothing of B's in a response, nothing of B's changed, no 5xx; a refusal that repeats an id the caller sent is not a leak), plus the session-to-organisation check, signed links, the public keys and a job that names another organisation's row.
+- **Performance (G1.04):** scale database `figbloom_crm_perf` (`scripts/perf-seed.ts`), run with `npx vitest run --config vitest.perf.config.ts` (not part of `npm test`), results in `docs/PERF_BASELINE.md`. Search was the one miss; fixed with `src/repositories/searchMatch.ts` (look the related companies and contacts up first, then filter by id; exact fallback above 500 matches) and migration `20261028100000_search_trgm_coverage`.
+- **Security (G1.05):** `docs/SECURITY_REVIEW_V1.md`. Security headers (`config/securityHeaders.js`), rate limits on invite acceptance, reset confirmation and the inbound-email webhook (`src/auth/publicLimits.ts`, migration `20261028090000_rate_limit_actions`), CSV formula neutralisation in one writer (`src/lib/csv.ts`), constant-time secret comparison, log redaction, a file-access gap closed, four 500s turned into validation errors.
+- **Contract (G1.06):** `src/api/contract/openapi.v1.json` is frozen (version 1.0.0), `docs/API_CHANGELOG.md` carries a hash of it and a note for every change (a test fails when they disagree), `src/api-client/` is the typed client generated from it, `scripts/mock-server.ts` serves examples per role (`x-mock-role`), `docs/API_REFERENCE.md` is the reference. `npm run contract:update` regenerates; `npm run mock:api` starts the mock.
+- **Migration rehearsal (G1.07):** `docs/MIGRATION_REHEARSAL.md`, `scripts/migration-rehearsal.ts` (old schema from the `pre-makeover` tag to the current one on a copy, with backup, restore, a stall probe, row-level comparison, RLS check, app-role read, rollback and the old application's own code on the restored database). Found: the deal-rules backfill locks `deals` for about 9.5 seconds at 3,500 deals / 40,000 activities; and `seedOrganizationDefaults` overwrites an organisation's edits, so the upgrade uses its new `fillOnly` mode through `scripts/backfill-organization-defaults.ts`.
+- **Defects found by the gate and fixed:** a file attached to a record could be downloaded by file id without access to the record; recording a communication against a foreign or unknown activity, website-key settings with no key, a duplicate proposal number, and creating a lead with another organisation's status, source, company or contact each answered 500 (now 4xx with the field named).
+- **Decisions taken without being asked, to be confirmed by Given:** (1) the V1 contract is `1.0.0` and the file in `src/api/contract/` is the freeze; the git tag `api-v1.0` (and `backend-v1`) is not created, tagging needs Given. (2) Vitest 2 (seven dev-only advisories) is not upgraded now; recommended right after the gate (`docs/SECURITY_REVIEW_V1.md`). (3) Request schemas ignore unknown fields (the Zod default) rather than reject them, while response schemas are strict; `tests/massAssignment.test.ts` proves a smuggled organisation id, creator, record id or score never reaches the database. Rejecting unknown fields would be a stricter contract and is Given's call. (4) The CSP script policy stays Report-Only until the frontend can send per-request nonces. (5) The deal-rules migration was left as merged; the rehearsal shows the cost and a no-edit mitigation (two temporary indexes), the cleaner in-migration fix needs Given's say-so because the migration is already on `dev-given`.
+- **Known gaps:** the performance numbers are server time on one laptop with a quarter-scale rehearsal database for the migration; there has been no independent penetration test; the production antivirus needs `CLAMD_HOST`; ten consecutive full-suite runs for the flaky sweep were not done (see `docs/TEST_REPORT_BACKEND_V1.md`).
+
+## Stage 6: frontend foundation, design system and app shell (FIG-1076 to FIG-1082, F1.01 to F1.07)
+
+Full description: `docs/DESIGN_SYSTEM.md`. Built on `dev-given` after the backend gate (tags `backend-v1`, `api-v1.0`).
+
+- **What is there:** the token and theme engine (`src/ui/theme/`), the component library and gallery (`src/ui/`), the states kit and copy deck (`src/ui/components/states.tsx`, `copy.ts`, `errors.ts`), the data layer on the typed client (`src/ui/data/`), the new app shell (`src/ui/shell/`, `src/app/o/[orgSlug]/layout.tsx`), the dev sign-in chips (`src/app/_dev/`), the frozen-page guards (`tests/uiGuards.test.ts`, `e2e/frozen-auth.spec.ts`).
+- **Defects found and fixed on the way:** the mock server's explained 403 named roles by key (`FINANCE`) while the real API names them (`Finance`); the connectivity service could not recover from "slow" while older slow requests were still in its window; and the contrast check showed that colours a member picks themselves could produce unreadable pairs (the palette is now derived from the page colour so it cannot).
+- **Test environment:** Node 25 and later define a `localStorage` global that shadows jsdom's and is unusable without a flag. `tests/components/setupComponentTests.ts` now gives the DOM tests an in-memory one when the real one is missing.
+- **Decisions taken without being asked, to be confirmed by Given:** no Tailwind (CSS variables scoped to `.fb-app`); text size is a CSS zoom; the design's secondary-text and focus-ring colours are darkened to meet AA; status tints are derived from the card colour; the dev gallery is also served by the e2e server (`E2E_UI_GALLERY`); the old `Sidebar`, `ThemeToggle` and `LogoutButton` in `src/app/o/[orgSlug]/` are no longer used by the layout and can be deleted (not deleted: deleting needs Given). The 49 files that still call `fetch` directly are listed in `.eslintrc.json` and migrate with their screens in M7 to M9.
+- **Known gaps:** design system components for V1.1/V2 (see `docs/DESIGN_SYSTEM.md`); the A4 "Session expired" notice on the sign-in page cannot be shown without changing the frozen page (the redirect carries `?reason=expired`, which the page ignores); a form wired to `useDraft` does not exist yet (the first real forms arrive in M7), so "drafts kept" is proven by unit tests of the mechanism, not by a real screen.
+
+## Stage 7 (M7, Frontend 2: sales workspace)
+
+FIG-1083 to FIG-1094 and FIG-790. Four areas, each with its own write-up: `docs/M7_LEADS.md` (L1 to L3), `docs/M7_DEALS.md` (P1 to P4, FIG-790, FIG-795 reminder), `docs/M7_TASKS.md` (T1, T2, D3 My work), `docs/M7_HOME.md` (D1 to D3, R2, G2, G3).
+
+- **Structure:** every route's `page.tsx` is a thin server component; the screen is a client component in `src/ui/screens/<area>/` using `@/ui` only (typed client, no `fetch`). `useMember()` (`src/ui/data/member.tsx`, mounted by the organisation layout) hands a screen the organisation and the permission keys. Each area has its own stylesheet (`src/ui/screens/<area>/<area>.css`, imported by `ui.css`); `tests/uiGuards.test.ts` holds all of them to the "first selector carries `.fb-`" rule.
+- **Masking and access are the API's:** a screen never computes a value; a role the API refuses gets the explained no-access from the 403.
+- **Found and fixed on integration (not by the area tests):** the New lead drawer read the new company's id from the wrong place (the API answers `{ company }`), so a lead saved without its company; search results ignored the API's `unavailableGroups` objects, so the "not part of your workspace" notes never showed; qualification answers were saved concurrently and could overwrite each other (now one at a time); the notification bell icon had zero width; table row headers on the Finance home inherited the header style; the home's quick actions pointed at `?new=` links the target screens did not read; a call or meeting did not ask for its required linked record. Component tests now use the API's real response shapes for these.
+- **Tests:** 148 screen component tests (`tests/components/screens/`), per-area Playwright specs (`e2e/leads.spec.ts`, `deals.spec.ts`, `tasks.spec.ts`, `home.spec.ts`); `e2e/lead-lifecycle.spec.ts`, `notifications.spec.ts`, `restricted-technical.spec.ts` and `ui-shell.spec.ts` were adapted to the new screens with their assertions intact.
+- **Decisions taken without asking** are listed in each area's doc. The ones most worth a look: the lead progress strip follows the API's order (the prototype's differs); no Service filter on leads (the API has none); import needs each company to exist already (the API never creates one from a row, as before); the deal has no title in the API; Customer Support has no home; some KPI wordings differ where the API gives a different window (month, not year).
+- **Known gaps (need a contract change, so Given's call):** large exports cannot be polled and an approved export cannot be redeemed (`data-runs` routes and `approvalId` are not in the frozen contract); no per-row duplicate flag on the leads list.
+- **Dev environment:** several `next dev` servers on one Postgres can exhaust its 100 connections (set `connection_limit=3` in the URLs); `LOG_PLAIN=1` turns off the pino-pretty worker that fails under `next dev` on some machines. `vitest.leads-components.config.ts` and `vitest.deals-components.config.ts` are scratch configs from the build (no database) and can be removed.
+
+## Stage 8 (M8, Frontend 3: customers, delivery, finance, reports)
+
+FIG-1095 to FIG-1102 (F3.01 to F3.08; also the UI halves of FIG-793, FIG-795 and FIG-791). Five areas, each with its own write-up: `docs/M8_CUSTOMERS.md` (C1, C2, C4: companies, Customer 360, merge), `docs/M8_CONTACTS.md` (C3: contacts and the call and WhatsApp log prompt), `docs/M8_EXTRAS.md` (X1: the shared record-extras panel), `docs/M8_ENGAGE.md` (E1, E2: conversations, renewals), `docs/M8_FINANCE_REPORTS.md` (F1, R1: payments tracker, organisation reports).
+
+- **Structure:** as in M7. Screens in `src/ui/screens/{customers,contacts,extras,engage,finance,reports}/`, each with its own stylesheet imported by `ui.css`; thin server `page.tsx` per route; new routes `conversations`, `renewals`, `payments`, `merge`. Sidebar items for Conversations, Renewals and Payments are now built; Renewals needs `company_services.manage` because the retention API does.
+- **Shared pieces other screens reuse:** `RecordExtras` (`kind` lead, contact, company or deal; mounted on all four), `MergeDialog` (company and contact), `useCallLogPrompt` / `ReachButtons` / `QuickLogPrompt` (M9 mobile will reuse them), `putSignedUpload` in `src/ui/data/client.ts` (the one non-API upload call).
+- **Found and fixed on integration (by the Playwright runs, not the component tests):** the merge dialog navigated away before "Merged" and "Merge undone" could show; contact merge search matched nothing because the directory matches the whole text against single fields; the contact import mapping selects all shared one accessible name; specs created invoices as Management, who has no `finance.manage.payments`.
+- **Tests:** 216 screen component tests (`tests/components/screens/`), Playwright specs `e2e/customers`, `merge`, `contacts`, `record-extras`, `conversations`, `renewals`, `payments`, `reports`; `contacts-companies`, `csv-import` and `ui-shell` were adapted with their assertions intact.
+- **Decisions for Given (not taken for you):** Restricted Technical now sees a Conversations link because the matrix gives that role `communications.view`; leads cannot be merged (the frozen contract has company and contact merge only); the old company and contact forms under `src/app/o/[orgSlug]/{companies,contacts}/` and the old report chart components are unused but not deleted.
+- **Known gaps:** see each area's doc. Payments tabs and the contracted sum cover the loaded page only; owner, source, stage and service filters on reports reach the headline figures only.
+- **Dev environment:** `e2e/leads.spec.ts` "cannot be marked Qualified" adds one required question per run to the shared database and now exceeds its 90 s limit locally after about 29 runs (a fresh CI database is unaffected). A running `next dev` shares `.next` with a production build: build the end-to-end bundle with `NEXT_DIST_DIR=.next-e2e`.
+
+## Stage 9 (M9, Frontend 4): Settings (FIG-1106 to FIG-1111, F4.04 to F4.09)
+
+- **What was built:** the redesigned Settings in `src/ui/screens/settings/` (organisation profile and shared look, members, website and inbound email, reference data, customer lifecycle, onboarding template, automations and run log, integrations, message templates, tags, custom fields, the seven-step migration wizard, security and access with the read-only role matrix, data and privacy, audit log), mounted by a thin `src/app/o/[orgSlug]/settings/page.tsx` at `?tab=`. Only Management reaches it; everyone else gets the explained no-access card. Docs: `docs/M9_SETTINGS.md` (sections, wizard, decisions, gaps).
+- **Decisions taken without being asked, to be confirmed by Given:** non-Management members see the explained no-access (their notification choices moved to Preferences); the website key is shown once, then only its prefix (the API stores a hash); abuse protection shows the API's real controls; lockout and password length are stated as fixed V1 rules (the API only has the session lifetime); custom fields have no per-role visibility switch (the API has none; suggest B7.06); reordering is by buttons as well as the grip; Customer Support is not offered as a role; the old settings forms beside the page are unused and left in place (deleting needs Given).
+- **Tests:** `tests/components/screens/settings/` (run with `npx vitest run --config vitest.settings-components.config.ts`), `e2e/settings.spec.ts` (rewritten for the new page), `e2e/settings-admin.spec.ts`, `e2e/settings-migration.spec.ts` (fixture `e2e/fixtures/migration-leads.csv` with bad rows). The e2e server now sets a throwaway `CRON_SECRET` so the migration spec can run the background jobs through `/api/cron/jobs`.
+
+## Stage 10 (M10): Communication group (FIG-1378 to FIG-1381, F6.20 to F6.23)
+
+- **What was built:** a collapsible Communication group in the sidebar (Conversations moved into it, not duplicated), and Chat, Mail and Video Conference screens in `src/ui/screens/communication/`, all on demo data (`demo/`). Details in `docs/M10_COMMUNICATION.md`; scope in `docs/COMMUNICATION_HUB_SCOPE.md`.
+- **Decisions taken without being asked, to be confirmed by Given:** Mail needs `communications.create` and Video Conference the calendar task permission, Chat is for every member (stand-ins until B6.26 defines the keys); Finance gets Chat only; Restricted Technical sees only the channels it was added to; with demo screens off the group holds Conversations only; the sidebar header count comes from link badges, and the Chat unread count waits for the API; the Connect buttons on Mail and Video Conference simulate the provider sign-in and share Settings state.
+- **Tests:** `tests/uiNavigation.test.ts`, `tests/communicationDemo.test.ts` (masking by role), `tests/components/communication/`, `e2e/m10-communication.spec.ts` (demo server only), `e2e/ui-shell.spec.ts`.
+
+## Stage 11 (M11): V1 quality assurance (FIG-1115 to FIG-1122, FIG-1259)
+
+- **What was built:** the QA suites in `e2e/qa/` (`role-journeys`, `a11y-sweep`, `visual`, `core-journeys`, `perf-budget`, with the shared `catalogue.ts`, `looks.ts` and the V1 traceability map `trace.ts`); `tests/e2eTraceability.test.ts` (every V1 checklist ID has a journey file that exists and has tests) and `tests/frozenAuthSource.test.ts` (the frozen sign-in pages differ from the `pre-makeover` tag only by the approved dev chips); `scripts/check-bundle-budget.ts` (`npm run check:bundle-budget`, run by CI after the build); Playwright projects `firefox`, `webkit`, `mobile-safari` (`npm run e2e:install:matrix`). Documents: `docs/A11Y_CHECKLIST.md`, `docs/BROWSER_MATRIX.md`, `docs/FRONTEND_PERFORMANCE.md`, `docs/UAT_V1.md`, `docs/QA_DEFECTS.md`, `docs/V1_QUALITY_GATE.md`.
+- **Fixes the QA found (app code):** a skip link; org block and account button names that contain their visible text (`Popover triggerLabel`); calendar chip names; the phone header title colour (it was near-black on dark green); contrast on the Won column total; 24 px minimum targets in Tasks and the calendar; a duplicate-key warning from repeated recent searches. Each has a test that fails without it (see `docs/QA_DEFECTS.md`).
+- **Vitest 2 to 5 (FIG-1259):** `vitest` and `@vitest/coverage-v8` 5.0.5, `vite` 7 (a peer of Vitest 5 and of `@vitejs/plugin-react`), `@types/node` 24 (Vitest 5 needs 22 or 24 and up). `environmentMatchGlobs` is gone in Vitest 4, so `vitest.config.ts` now has two projects that extend it, `node` and `components` (jsdom, `tests/components/**`). Coverage thresholds are unchanged. The seven Vitest-chain advisories are cleared; 22 other moderate ones remain from a newer `minimatch` advisory (eslint, Sentry), no fix available (D-07).
+- **Decisions taken without being asked, to be confirmed by Given:** the frozen-page comparison allows only the files carrying the approved dev chips; performance budgets are 185 KB shared and 300 KB per route (gzip), set about 10 percent over what was measured, and LCP 2.5 s as the median of five cold loads; WebKit runs the core journeys only, with the `Secure` cookie dropped in the test browser (the app is untouched); the Linux visual baselines are not recorded, so the visual suite skips on Linux until they are (see the gate document).
+- **Left open on purpose (Given decides):** D-01 (React #418 on every organisation page in the production build, cause not found), D-02 (Customer Support has no home), D-05 (phone Tasks LCP), the 50k-lead performance run, Linux visual baselines, UAT sessions, the manual accessibility and device passes, and the sign-offs. `docs/QA_DEFECTS.md` lists each with evidence.
+
+## Stage 13 (M13, Backend V1.1): platform identity foundation (FIG-1135, B6.03)
+
+- **What was built:** a separate platform admin identity with its own session type (`platform_sessions`), `platform.*` permission keys, a dedicated database role `figbloom_platform` with no privilege on any tenant table, and a counts-only view for platform screens. Routes `GET /api/platform/me` and `GET /api/platform/organizations`. Details, walls and set-up: `docs/PLATFORM_IDENTITY.md`. Migration `20261104090000_platform_identity_foundation`.
+- **Decisions taken without being asked, to be confirmed by Given:** every active platform identity holds every `platform.*` key (one role, finer roles are not in V1.1); platform sessions are shorter than tenant ones (4 h idle, 12 h absolute); the role is created NOLOGIN by the migration (so the RLS policies can name it) and given its login and password by `db:bootstrap-role` from `PLATFORM_DB_PASSWORD`; the counts view runs as the schema owner and lists its columns one by one; platform routes answer 404 to anyone who is not a platform identity and 403 (naming the key) to one who lacks the key; the new routes are outside the frozen V1 contract; the test run derives `PLATFORM_DATABASE_URL` from `TEST_DATABASE_URL`, so CI needs no new variable.
+- **Not done here:** real platform sign-in (needs B6.02 two-step sign-in, FIG-1134, still open) and the sign-in route; `createPlatformSession` is the call it will use. Platform audit log (B6.06), organisation provisioning (B6.04), admin lifecycle (B6.08).
+- **Tests:** `tests/platformIdentityFoundation.test.ts` (both directions); `tests/devSuperAdmin.test.ts` still covers the dev guards; one assertion was restated: `platform_identities` used to have no RLS policy, and now has exactly one, for `figbloom_platform` only (the tenant role still sees nothing).
+
+## Stage 13 (M13): FIG-1146 B6.14 Forecast and targets
+
+- **Built:** `GET /forecast`, `GET`/`PUT /forecast/targets`, table `sales_targets` (RLS, partial unique indexes, migration `20261108134100`), pure maths in `src/lib/forecast.ts`. Rules and masking: `docs/FORECAST.md`.
+- **Decisions taken without being asked:** forecast is gated by release V1.1 (`requireFeature(org, "release.v11")`), as the permission keys already are; "mine" needs `deals.view.own`/`deals.edit.own` (Sales), not `reporting.view.own`, so Delivery and Finance get the explained no-access (the demo screen was looser); stages without a saved probability use 25/50/75 defaults and say so; no per-deal probability override (the demo had one; it would touch every deal DTO); targets are monthly, per person or team, and the team row falls back to the sum of people.
+- **Known gaps:** screen still on demo data (wire in M14); targets are not in the audit-log filters beyond `SalesTarget` events.
+- **Tests:** `tests/forecast.test.ts` (13).
+
+## Stage 13 (M13): FIG-1148 B6.16 Saved views
+
+- **Built:** routes under `/api/orgs/{org}/views` (list, create, get, update, delete, pin, pinned order), tables `saved_views` and `saved_view_pins` (RLS, migration `20261108134200`), rules in `src/lib/savedViews.ts`. Details: `docs/SAVED_VIEWS.md`.
+- **Decisions taken without being asked:** pins are per person (the demo had one pin flag the owner set for everybody); a view for a list the viewer may not open answers 404; filters, sorts and columns that need `deals.view.value`, `deals.margin` or `finance.view.payments` are matched by field name and removed for viewers without the key (and cannot be saved by them); lists supported are leads, deals, companies, contacts and tasks; 50 views per person; the whole feature is gated by release V1.1.
+- **Known gaps:** the filter vocabulary is opaque to the API (the screens own it), so a new money-like field needs a name the matcher recognises; `src/ui/screens/views/store.ts` is still the browser-storage demo (wire in M14).
+- **Tests:** `tests/savedViews.test.ts`.
+
+## Stage 13 (M13): FIG-1149 B6.17 Command palette index, Help and What's new
+
+- **Built:** `GET /commands`, `/help`, `/help/{slug}`, `/whats-new` under `/api/orgs/{org}`; the content is code (`src/lib/helpContent.ts`), the index a pure function (`src/lib/commandIndex.ts`). No table, so no RLS. Details: `docs/HELP_AND_PALETTE.md`.
+- **Decisions taken without being asked:** Ask Figbloom is listed only with `ai.use` and the organisation's `assistant.enabled` switch (the screen's demo list offered it to everyone); Go to Forecast is V1.1 only; Help and release notes are written copy in code, not database rows (an editor is not in scope); all four routes are gated by release V1.1; a Help article for another role answers 404.
+- **Known gaps:** no "recent records" in the index (the screen's demo had them; they would come from the per-person search history `recentSearches`, wire in M14); the copy is English only.
+- **Tests:** `tests/commandPaletteAndHelp.test.ts` (14).
+
+## Stage 13 (M13): FIG-1151 B6.19 Web forms builder and public form endpoint
+
+- **Built:** builder routes under `/api/orgs/{org}/web-forms` and the public `GET`/`POST /api/public/orgs/{slug}/forms/{publicKey}[/submissions]`; tables `web_forms` and `web_form_submissions` (RLS); rate-limit action `WEB_FORM`; pure rules in `src/lib/webForms.ts`. `ingestWebsiteLead` gained an optional `webForm` input that stamps the form id and a duplicate warning on the lead. Details and the order of protections: `docs/WEB_FORMS.md`. Migrations `20261108134250` and `20261108134300`.
+- **Decisions taken without being asked:** each form has its own public key in the address (an address, not a secret, because it sits in a web page) instead of the organisation's website API key; permission is `configuration.manage` like the website key; the duplicate warning goes to staff (on the lead and in the log) and never to the caller; a link-spam rule (more than 2 links) was added; form attempts are mirrored into the existing website request log so Settings shows them; the owner comes from the existing assignment rules, not per form; CORS is open on the public routes (the allowed-websites rule is enforced from Origin on the server); the public response carries no ids; the whole feature needs release V1.1. `SPAM_CONTENT` was added to the website request log outcomes and its explanations.
+- **Known gaps:** no per-form owner or assignment override; no file upload fields; the Settings screen is still demo data (wire in M14); the Turnstile site key is not stored (the page owns it).
+- **Tests:** `tests/webForms.test.ts` (21); `websiteLeadCapture`, `websiteAbuseProtection`, `websiteLeadAssignmentRuleService`, `databaseSmoke` and `publicRateLimits` re-run green (65).
+
+## Stage 13 (M13): FIG-1136 B6.04 Platform organisations API
+
+- **Built:** `GET/POST /api/platform/organizations` (filter, sort, page; provision with Idempotency-Key), `slug-check`, `defaults-preview`, `{organizationId}` detail. Service `platformOrganizationService.ts`; defaults preview reads the seed's own constants (`describeOrganizationDefaults`). Reads use the platform role and two counts-only views (`platform_organization_counts`, `platform_organization_profile`).
+- **Decisions taken without being asked:** provisioning runs through the schema-owner client after the `platform.organizations.provision` check (the platform role has no tenant privilege), and the invite link is emailed, never returned. The list response changed shape from B6.03 (paged `items`, nested `counts`); the one B6.03 test that read it was updated. Slugs: 3 to 40 characters, a reserved list, never reused (offboarded organisations stay as tombstones).
+- **Known gaps:** if the audit write fails after the organisation is created, the organisation exists unaudited (the error is returned). Screens PL2 to PL4 still read demo data.
+- **Tests:** `tests/platformOrganizations.test.ts` (14).
+
+## Stage 13 (M13): FIG-1137 B6.05 Suspend, reactivate, offboard with enforcement
+
+- **Built:** enum values SUSPENDED, OFFBOARDING, OFFBOARDED; `organizationLifecycleService.ts` (state machine, reason required, status row + `organization_lifecycle_events` + platform audit in one transaction); `POST /api/platform/organizations/{id}/status`. Enforced in `resolveActiveMembership` (every request context, job-side lookups, /me), in `claimJob` (suspended and offboarded run nothing; offboarding runs only `platform.org_export`), and in the organisation layout, which shows the suspended screen (OS1).
+- **Decisions taken without being asked:** the error keeps the code `FORBIDDEN` and adds an `organization: { state, name }` block, because the V1 contract's error-code list is frozen; a dedicated code needs a contract update (Given). Offboarding blocks the app like suspension except the data-request routes. A deletion that has been approved blocks reactivation until that request is cancelled.
+- **Known gaps:** the "notify the organisation" switch on PL5 is not built (no email on suspend). SuspendedScreen wording says "suspended" for offboarding too.
+- **Tests:** `tests/organizationLifecycle.test.ts` (18), including every `/api/orgs/{orgSlug}` route answering the suspended notice.
+
+## Stage 13 (M13): FIG-1139 B6.07 System health aggregator and platform home
+
+- **Built:** `platformHealthService.ts`: five real probes (API, database on both roles, jobs and email through counts-only views `platform_jobs_health` and `platform_email_health`, storage write/read/delete), each with a time limit and failing alone; incident markers (`platform_incidents`, audited); platform home counts. Routes `/api/platform/home`, `/health`, `/health/incidents`, `/health/incidents/{id}/resolve`. New keys `platform.health.manage` and `platform.data_requests.manage`.
+- **Decisions taken without being asked:** thresholds are 15 minutes late (degraded) and 60 minutes (down) for due jobs, any dead-letter job degrades, no email provider degrades. "Requests" on the home are open data requests; support requests join with B6.12.
+- **Known gaps:** no history or uptime graph (current state only); screens PL1 and PL9 still demo.
+- **Tests:** `tests/platformHealth.test.ts` (13), with injected failing, hanging and wrong-answer probes.
+
+## Stage 13 (M13): FIG-1138 B6.06 Platform audit log
+
+- **Built:** `platform_audit_events`: a trigger gives each row a gap-free `seq` and chains it by SHA-256; platform role has SELECT and INSERT only, triggers refuse UPDATE, DELETE and TRUNCATE for every role; `verifyAuditChain` recomputes the chain and checks the head the last passing run recorded (tail cuts); stored in append-only `platform_audit_verifications`. Routes `/api/platform/audit`, `/export` (CSV, itself audited), `/verify`; scheduled by `/api/cron/platform-maintenance` (CRON_SECRET).
+- **Decisions taken without being asked:** the scheduled check is a cron route, not a framework job, because the job framework is per organisation. Metadata keys that look like values, payments or secrets are refused. The schema owner can still switch a trigger off; the verification exists to notice what that changes.
+- **Known gaps:** no external anchoring of the head hash (would defeat a full rewrite by the database owner); alerting on a failed run is a logged error only.
+- **Tests:** `tests/platformAuditLog.test.ts` (19): edit, re-hash, middle delete, forged insert, tail cut, concurrency.
+
+## Stage 13 (M13): FIG-1141 B6.09 Data requests and offboarding workflow
+
+- **Built:** `platform_data_requests` (+ approvals, deletion certificates, append-only); the organisation's intake (`/privacy/organisation-requests`, same shape as before) now lands there; platform queue, decision, cancel, retry-export, delete, certificate routes; job `platform.org_export` writes one gzip JSON of the organisation's rows (sign-in material and secrets left out) under its own storage prefix; the organisation's Management fetches it by a short signed link for 14 days, then it is purged. Deletion re-checks everything (two distinct approvers read from the approvals table, 30-day wait never under 7, export packaged, organisation offboarding, slug typed back), then deletes files and rows in one transaction, keeps a tombstone organisation, deletes accounts that belonged only to it, and stores a certificate with a content hash.
+- **Decisions taken without being asked:** EXPORT needs 1 approver, DELETE 2; anyone may reject, with a reason; approving a DELETE starts offboarding; platform staff never download the export (DECISIONS 4.7); the waiting period can be changed only through `PLATFORM_DELETION_WAIT_DAYS` (7 or more); a cancelled approved deletion returns the organisation to its earlier state. Requests held in the old settings JSON are not migrated (V1.1 is not live).
+- **Known gaps:** export is JSON, not CSV or ZIP, and excludes file contents (records only); very large organisations are refused over 200 MB; deletion is not resumable if it fails midway after files are removed (transaction rolls back rows, files are already gone).
+- **Tests:** `tests/platformDataRequests.test.ts` (22). `tests/platformIdentityFoundation.test.ts` changed: privilege lists now include the console tables and views, and the list route reads the new paged shape.
+
+## Stage 13 (M13): B6.10 catalogue of products and services (FIG-1142)
+
+Built: `catalogue_items` (migration `20261107090000`), `catalogueService`, routes under `/catalogue`. Cost and margin are `null` with `costMasked` without `deals.margin` in every response and audit snapshot; writing a cost needs `deals.margin`. Decisions taken: hidden items are offered only to `catalogue.manage`; reading is open to quote builders and `deals.view.value`; no export or search entry. Known gaps: none. Tests: `tests/catalogue.test.ts`. Docs: `docs/QUOTES_AND_APPROVALS.md`.
+
+## Stage 13 (M13): B6.11 quotes (FIG-1143)
+
+Built: `quotes`, `quote_versions`, `quote_lines` (migration `20261107100000`) with database triggers that make a locked version immutable; `quoteService`; routes under `/quotes`, `/deals/{id}/quote`, `/quote-settings`. Decisions taken: one quote per deal; catalogue lines cannot take another price (discount only, 0 to 30 percent); a rejected version stays REJECTED and a new version is made (immutable history); expired is derived; the Proposal Sent gate is the stage rule of B6.15 and `quote-settings.requireForProposalSent` writes through to it. Known gaps: see the doc. Tests: `tests/quotes.test.ts`. Existing change: `src/lib/dealRules.ts` blocker codes, `dealRuleService.evaluateMove`.
+
+## Stage 13 (M13): B6.12 quote document, send, tracking (FIG-1144)
+
+Built: `quote_shares`, `quote_events` and the `QUOTE_VIEW` rate-limit action (migration `20261107110000`); `renderQuoteHtml`; `quoteDocumentService`; public route `/api/public/quotes/{token}`. Decisions taken: HTML print-ready instead of server PDF; email first, then lock and link; the sent HTML is stored and is what the client sees; link ends with the quote validity (max 90 days); view timeline entries at most hourly. Known gaps: no PDF library; link is an API URL until a viewer page exists. Tests: `tests/quoteDocument.test.ts` (snapshot in `tests/__snapshots__`).
+
+## Stage 13 (M13): B6.13 approvals engine and inbox API (FIG-1145)
+
+Built: `approval_requests` (migration `20261107120000`, decision guard trigger); `approvalService`, `approvalGateService`, `approvalRuleService`; inbox, decision, cancel, rules and request routes. Export approvals and erasure confirmations (B4.05) appear in the same inbox through their own services. Approval resumes the blocked action (send quote, move deal, start export, run erasure). Decisions taken: nobody approves their own request; deletion rule cannot be switched off; no new notification type (frozen contract), email plus inbox count instead. Known gaps: sole Management organisations need a second approver. Tests: `tests/approvals.test.ts`.
+
+## Stage 13 (M13): B6.15 pipelines and stage rules (FIG-1147)
+
+Built: `pipelines`, `pipeline_services`, `stage_rules`, `pipeline_stages.pipeline_id` (migration `20261107130000`, with a default-pipeline trigger so V1 stage creation is unchanged); `pipelineService`; `/pipelines` routes; board `pipelineId`; move `changePipeline`. Blocked moves return every reason with a code. Decisions taken: cross-pipeline moves need an explicit flag; stage rules apply on release V1.1 only; won and lost stages fixed at creation. Known gaps: deals do not pick a pipeline from their service automatically. Tests: `tests/pipelines.test.ts`.
+
+## Stage 13 (M13): B6.24 to B6.27 Chat backend (FIG-1382 to FIG-1385)
+
+Built: eight chat tables with RLS and composite tenant keys (`20261106090000_chat_data_model`); `chatService`, `chatRealtimeService`, `chatPrivacyService`; 17 routes under `/api/orgs/{org}/chat/`; keys `chat.view`, `chat.post`, `chat.channels.manage`, `mail.use`, `meetings.schedule` and the `communication.group` toggle; the `chat.notify` job; a `messages` group in global search; chat retention type, export and erasure; dev demo channels (`prisma/devSeedChat.ts`). Details: `docs/COMMUNICATION.md`, `docs/PRIVACY.md`.
+
+Decisions taken without being asked: polling with a cursor plus long poll as the transport; mentions and direct messages reuse the MENTION notification type; record channels are readable only by members who can open the record, re-checked on each call; Restricted Technical gets chat but no mail or meetings key; chat text is redacted only in deal channels and with deal or invoice cards; member erasure anonymises by default; retention default is "kept"; channel delete requires archive first; conflicts use `VALIDATION_FAILED` (409) because the error code list is frozen.
+
+Known gaps: Chat screen not wired (demo store); no mail or meeting routes; no deal margin on cards; `apiWalk` golden snapshots to regenerate; B6.09 should call `eraseMemberChat`.
+
+Tests: `tests/chat.test.ts`, `tests/chatRoutes.test.ts`, `tests/chatPrivacy.test.ts`.
+
+## Stage 13 (M13): FIG-1150 B6.18 Follow-up sequences and enrolment engine
+
+- **Built:** sequences (lead or deal, 1 to 12 timed steps: task, draft email, send an approved template), enrolment, pause on reply, exit rules, run log; routes under `/api/orgs/{org}/sequences` and `/sequence-enrollments`; the `sequences.run` job (every 15 minutes, job framework) calling `runDueSequences({organizationId, now})` in `src/sequences/engine.ts`; tables `follow_up_sequences`, `follow_up_steps`, `follow_up_enrollments`, `follow_up_runs` (RLS, migration `20261108134400`). Details: `docs/SEQUENCES.md`.
+- **Decisions taken without being asked (for Given):** a step can SEND an email automatically only when Management chose `SEND` for an active template (the issue says "or send approved templates"); the default is DRAFT (a task holding the text), and a send with no address or an empty merge field becomes a draft; sends go out as the record's owner through the normal send path so they land on the timeline; sequences are switched off when created (`cadences.manage`, Management only); anyone with `tasks.create` and access to the record may enrol, pause, resume or end; a reply is any inbound message on the lead or deal or from its contact after the enrolment, and resuming is manual (the next step keeps its gap); exit rules are CLOSED and ARCHIVED, on by default; a switched-off sequence simply waits; I did not add a sequence rule to the automations catalogue (`src/automations/`), so Settings > Automations is unchanged; sequences have their own rule 9 test instead.
+- **Edits to existing code:** `createCommunication` in `src/repositories/communications.ts` pauses enrolments after an inbound message (best effort); `submitWebsiteLead` and `submitWebForm` call `autoEnrolLead` after a lead is saved; `src/jobs/definitions.ts` registers the job.
+- **Known gaps:** no per-step business hours or time zones (steps are due at the enrolment's time of day, UTC); no bulk enrol; editing steps keeps running enrolments on their position; the Settings screen is still demo data (wire in M14); no WhatsApp step (the demo's "WhatsApp intro" is a TASK).
+- **Tests:** `tests/followUpSequences.test.ts`.
+
+## Stage 13 (M13): FIG-1134 B6.02 Two-step sign-in
+
+- **Built:** TOTP (RFC 6238, no dependency), encrypted seeds, hashed backup codes, trusted devices (organisation users, 30 days), organisation policy (enrol before any session exists), unusual-activity alerts, administrator reset, the same engine for platform admins (always required). The frozen login page is unchanged: the login API answers in the same shape without a session cookie and the /o layout sends the person to /two-step. Doc: `docs/TWO_STEP_SIGN_IN.md`.
+- **Decisions taken without being asked (for Given):** no trusted devices for platform admins; two-step mandatory for platform admins; `organizationSlug: "account"` in the pending response for a person with no organisation; administrator reset refused for members of other organisations; not gated by the release flag; `src/app/api/auth/login/route.ts` (an API route, not a frozen page) changed.
+- **Edits to existing code:** `src/services/authService.ts` (`login` split into `startSignIn` and `completeSignIn`; `login` fails closed for a two-step account), `src/app/o/[orgSlug]/layout.tsx` (redirect target), `src/auth/session.ts` and `authAudit.ts` (new reasons and actions), `scripts/db-admin.ts` (revoke and grant lists), `tests/platformIdentityFoundation.test.ts` (platform-owned table list).
+- **Known gaps:** no frontend wiring (A5, S7 #2); no in-app notification for alerts (email and audit only); `TWO_STEP_ENCRYPTION_KEY` must be set in production; the frozen e2e pixel snapshots were not run here.
+- **Tests:** `tests/twoStepSignIn.test.ts`.
+
+## Stage 13 (M13): FIG-1140 B6.08 Platform admins, minimum-two rule, security settings, recovery
+
+- **Built:** real platform sign-in (password, second step, session), roster (invite, suspend, reinstate, remove), minimum two active admins under an advisory lock, verify-it's-you with a window, recovery (two-step reset, recovery link, operator bootstrap script), platform security settings, all in the platform audit log. Doc: `docs/PLATFORM_ADMINS.md`.
+- **Decisions taken without being asked (for Given):** see the doc (self-actions refused, hard delete on removal, link also returned to the inviting admin, 12-character minimum password).
+- **Edits to existing code:** `src/auth/platformSession.ts` (limits from settings, `verifiedAt`, context carries `sessionId`), `package.json` (`platform:bootstrap-admin`).
+- **Known gaps:** no frontend wiring (PL10, PL11, PL14, platform sign-in page); a dedicated error code for "verify it's you" waits for the next contract version.
+- **Tests:** `tests/platformAdmins.test.ts`.
+
+## Stage 13 (M13): FIG-1133 B6.01 Multi-organisation membership and organisation switcher API
+
+- **Built:** `GET /api/me/organizations`, `POST /api/me/organizations/switch`, both-sided audit, no new table. Doc: `docs/MULTI_ORGANISATION.md`.
+- **Decisions taken without being asked (for Given):** a non-member slug is indistinguishable from an unknown one (404); two-step policy applies across all of a person's organisations; not release-gated.
+- **Known gaps:** the switcher component (`OrgSwitcher.tsx`) is not wired; FIG-1132 (P1.10) still open.
+- **Tests:** `tests/organizationSwitcher.test.ts`.
+
+## Stage 13 (M13): FIG-1155 B6.23 Customer Support tickets and satisfaction surveys (SUPERSEDED, see the end of this section)
+
+> **Superseded 5 Nov 2026 (decision 12).** Michael decided there is no Customer Support role: tickets go to the Figbloom platform console and tenants raise them by email through Resend. Everything below was removed (role, `tickets.manage`, the flag, the dev account, three tables, routes, screens). Replacement: `docs/SUPPORT_BY_EMAIL.md`, `POST /api/orgs/{org}/support-requests`, migrations `20261120090000_remove_customer_support` and `20261120100000_support_request_rate_limit`. Kept below as the record of what was built.
+
+- **Built:** tickets with thread, owner, status and priority; satisfaction surveys by emailed token link with a public answer route; a role-limited customer view; three RLS tables; gate on `customer_support.role` and `tickets.manage` (now V1.1). Doc: `docs/SUPPORT_TICKETS.md`.
+- **Decisions taken without being asked (for Given):** `tickets.manage` release minimum lowered from V2 to V1.1; shared support queue; survey only for resolved tickets; staff-recorded replies only. If Michael does not approve the role, leave the toggle off (the issue says to cancel it then).
+- **Known gaps:** support workspace not wired; no SLA clocks; no outbound email of replies; the public survey page is not built.
+- **Tests:** `tests/supportTickets.test.ts`.
+
+## Stage 13 (M13): FIG-1153 B6.21 OAuth connection framework
+
+Built: `oauth_connections` and `oauth_states` (RLS), AES-256-GCM `secretBox` (`INTEGRATION_ENCRYPTION_KEY`), Google and Microsoft OAuth clients (code + PKCE, refresh, revoke) behind an injectable provider seam, `oauthConnectionService` (start, callback, status, disconnect, settings, token lifecycle), job `oauth.refresh`, routes under `/integrations/connections` and the fixed `/api/integrations/oauth/callback`. Docs: `docs/OAUTH_CONNECTIONS.md`.
+Decisions without being asked: connection kinds EMAIL and CALENDAR are separate rows with separate least-privilege scopes; permissions reuse `communications.create` (mail), `activities.create` (calendar), `configuration.manage` (shared mailbox, revoking others'); gated by the existing `integrations.enabled` toggle (not by release, so the access-matrix walk is not forced into feature refusals); one fixed callback address and the organisation is found from the one-time state. Shared organisation mailbox is supported (Given may switch it off by removing `shared`).
+Known gaps: the Settings "Email & calendar" screen is still on demo data; no provider push notifications; refresh is not row-locked (two refreshes at once are harmless, the later write wins).
+Tests: `tests/oauthConnections.test.ts` (25).
+
+## Stage 13 (M13): FIG-807 two-way mail sync and FIG-808 calendar and meeting links
+
+Built: `mail_drafts`, `calendar_event_links` (RLS), `mailService` (sync, drafts, send, reply, scheduled send, masked record card, attachments with access checks), `meetingService` (schedule with Meet/Teams link, reschedule, cancel, calendar sync, two-way tasks), Gmail, Graph and Google Calendar clients behind injectable seams, jobs `mail.sync`, `calendar.sync`, `mail.send_scheduled`. Docs: `docs/MAIL_AND_CALENDAR_SYNC.md`.
+Decisions without being asked: unmatched mail of a personal mailbox is ignored, of the shared mailbox goes to Needs linking; a message is logged once, deduped by Message-ID, provider id and (Outlook) subject/recipients/time; excluded addresses keep the whole message out; sending requires a connected mailbox (no silent SMTP fallback, the old `send-email` route is unchanged); `communications.view/create` and `activities.create` used until the B6.26 keys (FIG-1384, another lane) exist; tasks reach the calendar only with `syncTasks`.
+Known gaps: polling only; Gmail replies thread by headers only; no tasks created from calendar events; mail and video screens not yet wired.
+Tests: `tests/mailSync.test.ts` (22), `tests/meetings.test.ts` (17).
+
+## Stage 13 (M13): FIG-1152 B6.20 Ask Figbloom assistant backend
+
+Built: `assistant_requests` and `assistant_proposals` (RLS), pluggable provider (`src/assistant/provider.ts`, Anthropic adapter, fake in tests), role-masked context and injection defences (`src/assistant/context.ts`), `assistantService` (ask, settings, limits, confirm/dismiss, feedback, audit), routes under `/assistant`. Docs: `docs/ASSISTANT.md`.
+Decisions without being asked: switch is the existing `assistant.enabled` toggle; one action kind (create a task); limits count every attempt that reached the provider (defaults 15 per person, 500 per organisation per UTC day); default model `claude-opus-5-5` via env `ASSISTANT_MODEL`; `@anthropic-ai/sdk` is loaded dynamically and is NOT added to package.json (run `npm install @anthropic-ai/sdk` where the assistant is enabled); margins, costs and payments are never read into context.
+Known gaps: summaries, scoring and churn options have no backend; no conversation history or streaming; `assistant_requests` not yet in the retention job; the panel and Settings screens are on demo data.
+Tests: `tests/assistant.test.ts` (25).
+
+## Stage 13 (M13): FIG-1154 B6.22 business-card capture and camera attachments
+
+Built: `card_captures` (RLS), reader seam with a card text parser and a vision extractor (`src/capture/cardExtractor.ts`), `cardCaptureService` (start, extract, confirm, discard) on top of the file pipeline and quick capture, routes under `/quick-capture/cards`. Docs: `docs/CARD_CAPTURE.md`.
+Decisions without being asked: the reading is suggestion only and a lead exists only after `confirmed: true` with the person's fields; requires `leads.create`, `contacts.create` and `attachments.manage`; HEIC is refused (phone converts); opening the existing record drops the photo; no reader configured means typing.
+Known gaps: no OCR engine bundled (vision model when `ANTHROPIC_API_KEY` is set, else typing); offline queue entry for photos not added; screens on demo data.
+Tests: `tests/cardCapture.test.ts` (18).
+
+New routes are listed in NOT_IN_V1_CONTRACT. `tests/apiWalk.test.ts` and its matrix snapshot will need regenerating once all M13 lanes are in (`UPDATE_API_SNAPSHOTS=1`); the assistant routes answer FEATURE_UNAVAILABLE while the toggle is off.
+
+## Stage 13 close-out (M13, 4 Nov 2026)
+
+- **State:** the V1.1 backend is built on `makeover/m13-backend-v11` (migrations `20261104090000` to `20261110120000`, 28 new test files, new docs listed in CLAUDE.md). Nothing is wired to the demo screens yet (M14).
+- **Checks done by reading code:** `docs/M13_CLOSEOUT.md` (scheduling check and integration check). Gaps found: no configured scheduler call for `/api/cron/jobs` and `/api/cron/platform-maintenance`; the quote send uses the organisation SMTP, not the connected mailbox; `mail.use` and `meetings.schedule` are seeded but not read; the assistant default model is still Opus; several new environment variables are missing from `docs/DEPLOYMENT.md`.
+- **Decisions:** ten decisions taken on Given's behalf are in `docs/DECISIONS.md` section 5 (all reversible), with a table of the lane decisions above (5.1).
+- **Not run:** the full suite, because the database was down. The `apiWalk` snapshots still need regenerating (`UPDATE_API_SNAPSHOTS=1`) once all lanes are in.
+
+## Stage 13 (M13): FIG-806 inbound email provider (Mailgun)
+
+- **Decision (Given, reversible):** Mailgun routes. Mailgun signs every webhook (`HMAC-SHA256(key, timestamp + token)`, hex); Postmark and SendGrid inbound have no native signature.
+- **Built:** `POST /api/public/inbound/mailgun` (new, public, no session). Adapter and signature check are isolated in `src/integrations/inbound/mailgun.ts`; another provider is a sibling file plus a sibling route. Signature compare is constant time, timestamps older (or newer) than 15 minutes are refused, a token is accepted once (recorded in `auth_rate_limit_attempts` with action `INBOUND_EMAIL`, scope `mailgun-token`, only after a successful ingest so Mailgun's retry of a failed delivery works; no migration). All signature failures are one 401 with the standard envelope. Unset `MAILGUN_INBOUND_SIGNING_KEY` refuses everything in every environment.
+- **Address:** `<slug>+<token>@INBOUND_EMAIL_DOMAIN` (`src/auth/inboundBccAddress.ts`). Token = HMAC-SHA256 of the organisation id with `INBOUND_EMAIL_ADDRESS_SECRET`, 24 hex characters. No new column; changing the secret changes every address. An unknown slug, wrong token, other domain or inactive organisation all give the same 404. Shown read-only (with Copy) to Management in Settings, Inbound email, from the existing `GET /integrations/inbound-email-key` response (new field `bccAddress`).
+- **Ingestion** reuses FIG-598/FIG-1053 logic (`ingestInboundEmailForOrganization`): known sender goes on the contact's timeline, unknown goes to Needs linking, same Message-Id stored once. Attachments are not stored; the summary notes how many there were.
+- **Not done (needs Given):** the real provider account, DNS/MX and the production test email: runbook in `docs/DEPLOYMENT.md`, "Inbound email provider". Tests: `tests/inboundMailgun.test.ts`.
+
+## Stage 15 (M15): V1.1 backend quality gate, G2.01 and G2.02 (FIG-1156, FIG-1157)
+
+- **Built:** a V1.1 test organisation with one record of every V1.1 kind (`tests/helpers/worldV11.ts`); the generated role matrix on it (`tests/apiWalkV11.test.ts`, `src/api/contract/accessMatrixV11.json`, `docs/PERMISSION_MATRIX_REPORT_V1_1.md`); reviewed role rules (`tests/fixtures/roleFamiliesV11.ts`, `tests/accessMatrixV11Rules.test.ts`); valid-request denial tests; V1.1 cross-tenant and platform/tenant denial suites. Report: `docs/TEST_REPORT_V1_1.md`. Security review and break-glass threat model: `docs/SECURITY_REVIEW_PLATFORM_CONSOLE.md`.
+- **Decisions taken without being asked:** only an answered route (A) counts as proof a role may use it; `V` and `H` cells are covered by service-level tests with valid input. A recovery link lives 24 hours (an invitation stays 7 days). A deletion approval stops counting when its approver is suspended or removed. Platform sign-in pays for one decoy password comparison on every refusal.
+- **Open for Given and Michael:** money text typed in a deal's chat channel (N-01); the audit chain is not anchored outside the database (F-03); migration `20261120090000` fails on a dev database with tasks assigned to the Customer Support dev user (N-03).
+- **Local note:** the local `.env` sets `ACTIVE_RELEASE="v2"` for the preview build, which makes the V1 matrix, catalogue, pipelines and deal-gate-bypass tests fail; run the suite with `ACTIVE_RELEASE=v1`. CI is not affected.
+
+## Stage 17 (M17): Backend V2 (FIG-1183 to FIG-1190, FIG-804, FIG-805; gate G3.01 FIG-1191)
+
+Built in four lanes on `makeover/m17-backend-v2`; one doc per lane: `docs/M17_LANE_A_SUPPORT_FLAGS_ANNOUNCEMENTS.md`, `M17_LANE_B_ESIGN_SWAHILI.md`, `M17_LANE_C_PUBLIC_API_WEBHOOKS.md`, `M17_LANE_D_ROLES_AND_CHURN.md`. Gate report: `docs/M17_GATE_G3_01.md`. Migrations `20261121090000` to `20261124100000` (9). Everything V2 is behind `release.v2` and answers 403 `FEATURE_UNAVAILABLE` below it.
+
+- **B7.01 to B7.03 (lane A):** support access is request, approve, open, end or expire, with each move enforced by a database trigger. The platform role has no privilege on the grants table or the page-view log and reads tenant records only through `support_access_read` (no money, masked contact details). Flags and limits (seats, storage, API calls) refuse with friendly messages and are audited; usage counts are numbers only. Announcements are targeted, scheduled and dismissible per member. Job `support_access.expire`.
+- **B7.04 and B7.07 (lane B):** a signed quote is one append-only record with a seal hash over signer, consent, document hash, time, IP and device; triggers make the record and the sent document immutable. Language is per document with a visible English fallback. **The Swahili text is a machine draft pending native review** (`TRANSLATION_REVIEW.sw`).
+- **B7.05 (FIG-1187):** not built. Payments through the CRM need a business decision (decisions 2.5 and 13); it is not cancelled.
+- **FIG-805 and FIG-804 (lane C):** `fbk_` API tokens (SHA-256 only, shown once, 1 to 365 days) run as the owning membership; `/api/v1/*` calls the same services as the app, so masking and RLS are the owner's. Public OpenAPI at `/api/v1/openapi.json`. Nine webhook events, HMAC-SHA256 over `timestamp.body`, retries 1, 3, 9, 27 minutes up to 6 hours, dead after 8 attempts, SSRF guard (https, public addresses only, checked again at connect).
+- **B7.06 and B7.08 (lane D):** custom roles are rows of `roles` with an organisation id and forced RLS; organisation-running keys, payments and margin can never be granted to a custom role. Field rule `deal.value` (all / own / hidden) reaches the masking layer. Churn hints are rules-based from dates and counts only, each with its reasons, built per viewer; they change nothing (hard rule 9 test).
+- **Integration:** the V2 operations are in the OpenAPI contract (`openapi.v1.json`, regenerated with `contract:update`, hash in `docs/API_CHANGELOG.md`); access matrices regenerated; the four new lane tables are classified in `organisationExportTables.ts` and covered by `tests/tenantAttackV11.test.ts`. In a V1.1-release world the V2 route families are expected to answer `FEATURE_UNAVAILABLE` (see `tests/apiWalkV11.test.ts`).
+- **Open for Given and Michael:** the payments decision (FIG-1187); native Swahili review; AWS owner role must bypass RLS as local Postgres does (forced tables now include `roles`); custom roles can never hold audit, bulk export, payments or margin; R10 (declared-outage support access) not built; V2 screens (PL7, PL12, PL13, OS2 to OS5, roles, developers) are still on demo data and are wired in M18.

@@ -97,10 +97,11 @@ describe("guards", () => {
 });
 
 describe("accounts and organizations", () => {
-  it("creates the six dev accounts with the right roles and the shared dev password", async () => {
+  it("creates the seven dev accounts (six tenant users and the Dev Super Admin) with the right roles and the shared dev password", async () => {
     expect(DEV_USERS.map((u) => u.roleKey).sort()).toEqual(
       ["DELIVERY", "FINANCE", "MANAGEMENT", "RESTRICTED_TECHNICAL", "SALES", "SALES"],
     );
+    expect(await adminDb.platformIdentity.count({ where: { isDev: true } })).toBe(1);
     for (const dev of DEV_USERS) {
       const user = await adminDb.user.findUniqueOrThrow({
         where: { email: dev.email },
@@ -220,7 +221,12 @@ describe("sample data", () => {
 
     const s1Leads = await leadService.listLeads(s1, { includeArchived: true });
     expect(s1Leads.length).toBeGreaterThan(0);
-    expect(s1Leads.every((l) => l.ownerMembershipId === s1.membershipId)).toBe(true);
+    // Own leads plus the shared pool of unassigned ones (B1.03), never a colleague's.
+    expect(
+      s1Leads.every(
+        (l) => l.ownerMembershipId === s1.membershipId || l.ownerMembershipId === null,
+      ),
+    ).toBe(true);
     const s2Deals = await dealService.listDeals(s2);
     expect(s2Deals.length).toBeGreaterThan(0);
     expect(s2Deals.every((d) => d.ownerMembershipId === s2.membershipId)).toBe(true);

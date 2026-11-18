@@ -20,7 +20,7 @@ function csvStream(content: string): Readable {
 describe("importService: companies", () => {
   it("rejects import for a role without companies.import", async () => {
     const org = await createTestOrganization();
-    const ctx = await createTestContext(org.id, "SALES");
+    const ctx = await createTestContext(org.id, "RESTRICTED_TECHNICAL");
 
     await expect(
       importService.importCompanies(ctx, {
@@ -136,7 +136,7 @@ describe("importService: contacts", () => {
 });
 
 describe("importService: leads", () => {
-  it("requires a resolvable lead status and validates temperature", async () => {
+  it("keeps a row whose status or temperature is not recognised, with a note to fix it, instead of losing the row", async () => {
     const org = await createTestOrganization();
     const ctx = await createTestContext(org.id, "MANAGEMENT");
     const statusId = await getLeadStatusId(org.id);
@@ -150,11 +150,15 @@ describe("importService: leads", () => {
       duplicateStrategy: "skip",
     });
 
-    expect(summary.created).toBe(1);
-    expect(summary.failed).toBe(2);
+    // All three rows come in: an unknown status falls back to the default and an unknown temperature to the default, each reported as a note.
+    expect(summary.created).toBe(3);
+    expect(summary.failed).toBe(0);
+    const notes = summary.errors.filter((e) => e.outcome === "warning").map((e) => e.reason);
+    expect(notes.some((n) => /status "UnknownStatus"/.test(n))).toBe(true);
+    expect(notes.some((n) => /"SPICY" is not a temperature/.test(n))).toBe(true);
 
     const leads = await listLeads(ctx);
-    expect(leads).toHaveLength(1);
-    expect(leads[0]!.temperature).toBe("HOT");
+    expect(leads).toHaveLength(3);
+    expect(leads.filter((l) => l.temperature === "HOT")).toHaveLength(2);
   });
 });

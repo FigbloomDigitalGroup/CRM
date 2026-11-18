@@ -14,10 +14,10 @@ import {
   getServiceId,
 } from "./helpers/fixtures";
 
-async function generateAndSetKey(organizationId: string) {
+async function generateAndSetKey(organizationId: string, options: { graceHours?: number } = {}) {
   const { regenerateWebsiteApiKey } = integrationService;
   const ctx = await createTestContext(organizationId, "MANAGEMENT");
-  const { apiKey } = await regenerateWebsiteApiKey(ctx);
+  const { apiKey } = await regenerateWebsiteApiKey(ctx, options);
   return { ctx, apiKey };
 }
 
@@ -402,12 +402,12 @@ describe("website lead capture: API key authentication", () => {
     ).rejects.toThrow(UnauthorizedError);
   });
 
-  it("stops authenticating with the previous key once regenerated", async () => {
+  it("stops authenticating with the previous key once regenerated with no grace window", async () => {
     const org = await createTestOrganization();
     const { apiKey: firstKey } = await generateAndSetKey(org.id);
     await resolveWebsitePublicContext(org.slug, firstKey);
 
-    const { apiKey: secondKey } = await generateAndSetKey(org.id);
+    const { apiKey: secondKey } = await generateAndSetKey(org.id, { graceHours: 0 });
     await expect(
       resolveWebsitePublicContext(org.slug, firstKey),
     ).rejects.toThrow(UnauthorizedError);

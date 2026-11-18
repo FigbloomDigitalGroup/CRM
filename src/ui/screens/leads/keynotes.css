@@ -1,0 +1,20 @@
+/* Key notes in the lead preview (FIG-1678). */
+.fb-app .fb-kn-list{ list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.fb-app .fb-kn-note{ padding: 10px 12px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--border); }
+.fb-app .fb-kn-note[data-pending]{ opacity: .7; }
+.fb-app .fb-kn-note__meta{ display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--text-2); }
+.fb-app .fb-kn-note__meta b{ color: var(--text); font-weight: 500; }
+.fb-app .fb-kn-note p{ margin: 6px 0 0; font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; white-space: pre-wrap; }
+.fb-app .fb-kn-empty, .fb-app .fb-kn-noadd{ display: flex; flex-direction: column; gap: 4px; padding: 14px; border-radius: 10px; border: 1px dashed var(--border); font-size: 13px; color: var(--text-2); }
+.fb-app .fb-kn-empty b, .fb-app .fb-kn-noadd b{ color: var(--text); font-weight: 500; }
+.fb-app .fb-kn-viewall{ font-size: 13px; align-self: flex-start; }
+.fb-app .fb-kn-error{ font-size: 13px; color: var(--red); }
+.fb-app .fb-kn-muted{ margin: 0; font-size: 13px; color: var(--text-2); }
+.fb-app .fb-kn-open{ display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); cursor: pointer; flex: none; }
+.fb-app .fb-kn-open:hover{ background: var(--surface-3); color: var(--text); }
+.fb-app .fb-kn-open:focus-visible{ outline: 2px solid var(--primary); outline-offset: 1px; }
+.fb-app .fb-hrow-wrap{ display: flex; align-items: center; gap: 4px; }
+.fb-app .fb-hrow-wrap > .fb-hrow{ flex: 1; min-width: 0; }
+.fb-app .fb-kn-sep{ border: 0; border-top: 1px solid var(--border); margin: 16px 0 12px; width: 100%; }
+.fb-app .fb-kn-log{ display: flex; flex-direction: column; gap: 8px; }
+.fb-app .fb-kn-log__actions{ display: flex; gap: 8px; }

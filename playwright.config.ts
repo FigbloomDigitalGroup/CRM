@@ -14,6 +14,8 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./e2e",
+  // Removes the records the specs create (before, and after the run); see docs/E2E_DATA_CLEANUP.md. Skipped on any database but dev/test.
+  globalSetup: "./e2e/support/global-setup.ts",
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,
@@ -28,7 +30,16 @@ export default defineConfig({
     trace: "on-first-retry",
   },
 
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", testIgnore: /mobile-.*\.spec\.ts/, use: { ...devices["Desktop Chrome"] } },
+    // M9 (F4.10 to F4.12, FIG-791): the phone journeys run on a mid-range Android profile at 375 px wide with touch.
+    { name: "mobile-chrome", testMatch: /(mobile-.*|qa[/\\]core-journeys)\.spec\.ts/, use: { ...devices["Pixel 5"], viewport: { width: 375, height: 812 } } },
+    // Q1.04 (FIG-1118): the cross-browser matrix. Chrome (the `chromium` project above), Firefox, Safari and iOS Safari run the core journeys only
+    // (`e2e/qa/core-journeys.spec.ts`); Android Chrome is `mobile-chrome`. Install the engines with `npm run e2e:install:matrix`.
+    { name: "firefox", testMatch: /qa[/\\]core-journeys\.spec\.ts/, use: { ...devices["Desktop Firefox"] } },
+    { name: "webkit", testMatch: /qa[/\\]core-journeys\.spec\.ts/, use: { ...devices["Desktop Safari"] } },
+    { name: "mobile-safari", testMatch: /qa[/\\]core-journeys\.spec\.ts/, use: { ...devices["iPhone 13"] } },
+  ],
 
   // Reuses an already-running server locally (start one with `npm run
   // dev` or `npm start` on port 3100 yourself) so repeated local runs
@@ -44,7 +55,11 @@ export default defineConfig({
     // together with ALLOW_DEV_ACCOUNTS=true; nothing else sets it.
     env: {
       E2E_ALLOW_DEV_ACCOUNTS: "true",
+      // The component gallery (src/app/o/[orgSlug]/dev/gallery) is a 404 everywhere except development and this suite (F1.02).
+      E2E_UI_GALLERY: "true",
       ALLOW_DEV_ACCOUNTS: "true",
+      // The Customer Support role (and the other V1.1 features the specs open) is off below this release; a developer's .env sets it, CI has no .env.
+      ACTIVE_RELEASE: "v2",
       // Every spec signs in through the real /login, and the suite as a whole
       // signs in far more often than the production limit (5 per email per 15
       // minutes) allows. Raised for this server only; the limiter itself is
@@ -54,6 +69,16 @@ export default defineConfig({
       // Notification emails and bell links are built from this; without it
       // they point at the default dev port and a clicked notification dead-ends.
       APP_BASE_URL: process.env.E2E_BASE_URL ?? "http://localhost:3100",
+      // `npm start` runs with NODE_ENV=production, where the storage driver
+      // must be chosen explicitly (src/storage/index.ts, FIG-1023); without it
+      // every page or API that shows an avatar fails. The suite uses the
+      // local-disk driver (files under .data/files) with a throwaway signing
+      // secret; nothing here is a real secret.
+      STORAGE_DRIVER: "local",
+      STORAGE_SIGNING_SECRET: "figbloom_e2e_only_storage_signing_secret",
+      // The migration wizard runs its phases as background jobs; the Settings migration spec asks /api/cron/jobs to run them (e2e/settings-migration.spec.ts).
+      // A throwaway value for this server only.
+      CRON_SECRET: "figbloom_e2e_only_cron_secret",
     },
   },
 });

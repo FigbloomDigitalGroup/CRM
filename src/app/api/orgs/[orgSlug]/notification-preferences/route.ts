@@ -9,7 +9,7 @@ import {
 import { NOTIFICATION_TYPES, type NotificationTypeKey } from "@/repositories/notificationPreferences";
 
 const UpdateNotificationPreferenceSchema = z.object({
-  type: z.enum(NOTIFICATION_TYPES as [NotificationTypeKey, ...NotificationTypeKey[]], {
+  type: z.enum([...NOTIFICATION_TYPES] as [NotificationTypeKey, ...NotificationTypeKey[]], {
     message: `type is required and must be one of: ${NOTIFICATION_TYPES.join(", ")}.`,
   }),
   emailEnabled: z.boolean().optional(),

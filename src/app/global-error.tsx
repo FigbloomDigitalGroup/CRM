@@ -22,9 +22,29 @@ export default function GlobalError({
 
   return (
     <html lang="en">
-      <body style={{ fontFamily: "system-ui, sans-serif", padding: 40 }}>
-        <h1 style={{ fontSize: 20 }}>Something went wrong</h1>
-        <p>An unexpected error occurred. Please reload the page.</p>
+      <body style={{ margin: 0, fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif", background: "#1c4e6e", color: "#17181a" }}>
+        <main
+          aria-labelledby="ge-title"
+          style={{ boxSizing: "border-box", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        >
+          <div style={{ width: "100%", maxWidth: 440, background: "#ffffff", borderRadius: 16, padding: "32px 28px", boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
+            <p style={{ margin: "0 0 16px", fontWeight: 800, fontSize: 18 }}>
+              Figbloom<span style={{ color: "#a85d00" }}> CRM</span>
+            </p>
+            <h1 id="ge-title" style={{ fontSize: 22, lineHeight: 1.25, margin: "0 0 8px" }}>
+              Something went wrong
+            </h1>
+            <p style={{ margin: "0 0 20px", fontSize: 14, lineHeight: 1.55, color: "#4a4d47" }}>
+              An unexpected error occurred. Please reload the page. If it keeps happening, tell your administrator.
+            </p>
+            <a
+              href="/"
+              style={{ display: "inline-flex", alignItems: "center", minHeight: 44, padding: "0 18px", borderRadius: 8, background: "#1d5f8f", color: "#ffffff", fontWeight: 600, fontSize: 14, textDecoration: "none" }}
+            >
+              Reload FigBloom CRM
+            </a>
+          </div>
+        </main>
       </body>
     </html>
   );

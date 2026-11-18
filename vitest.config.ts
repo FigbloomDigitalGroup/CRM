@@ -20,7 +20,11 @@ export default defineConfig({
     // rest of tests/**) talks to a real database instead of mocking it
     // (see that suite's own files for why) and has no use for one -- kept
     // on the lighter "node" environment by not matching this glob.
-    environmentMatchGlobs: [["tests/components/**", "jsdom"]],
+    // (Vitest 3 deprecated and Vitest 4 removed `environmentMatchGlobs`; two projects that extend this config do the same job.)
+    projects: [
+      { extends: true, test: { name: "node", environment: "node", exclude: ["e2e/**", "node_modules/**", "tests/components/**"] } },
+      { extends: true, test: { name: "components", environment: "jsdom", include: ["tests/components/**/*.test.{ts,tsx}"], exclude: ["e2e/**", "node_modules/**"] } },
+    ],
     globalSetup: "./tests/globalSetup.ts",
     setupFiles: ["./tests/setup.ts", "./tests/components/setupComponentTests.ts"],
     testTimeout: 20000,
@@ -54,7 +58,10 @@ export default defineConfig({
         lines: 42,
         statements: 42,
         functions: 69,
-        branches: 80,
+        // Was 80 under Vitest 2. Vitest 4 and later count branches from the source (AST-aware remapping) and no longer from V8's raw ranges, which
+        // counted many branches that are not in the code; the same suite now reads 71.4 percent (statements 79.8, lines 81.7). The line, statement and
+        // function floors were not touched. Re-baselined 2 Nov 2026 (FIG-1259); raise it as tests are added.
+        branches: 70,
       },
     },
   },

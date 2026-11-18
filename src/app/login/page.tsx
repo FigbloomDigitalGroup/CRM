@@ -1,4 +1,5 @@
 import { AuthHero } from "@/app/_shared/AuthHero";
+import { devAccountsAllowed } from "@/auth/devAccounts";
 import { adminDb } from "@/db/adminClient";
 import { LoginForm } from "./LoginForm";
 
@@ -24,11 +25,19 @@ async function getDevAccounts() {
     orderBy: { email: "asc" },
   });
 
-  return devUsers.map((u) => ({
-    email: u.email,
-    name: u.name,
-    roleName: u.memberships[0]?.role.name ?? "No membership",
-  }));
+  // The dev Super Admin is a platform identity, not a tenant user, so it signs in through the dev route (needs devAccountsAllowed too).
+  const platformIdentities = devAccountsAllowed()
+    ? await adminDb.platformIdentity.findMany({ where: { isDev: true }, orderBy: { email: "asc" } })
+    : [];
+
+  return [
+    ...devUsers.map((u) => ({
+      email: u.email,
+      name: u.name,
+      roleName: u.memberships[0]?.role.name ?? "No membership",
+    })),
+    ...platformIdentities.map((p) => ({ email: p.email, name: p.name, roleName: "Platform Super Admin", devSignInPath: "/api/dev-session" })),
+  ];
 }
 
 export default async function LoginPage() {

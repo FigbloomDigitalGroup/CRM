@@ -1,7 +1,12 @@
+import { archivedWhere, type ArchiveMeta } from "../lib/archive";
+import type { JsonClause } from "../lib/customFields";
 import { Prisma } from "@prisma/client";
-import { withOrgContext } from "../db/orgScopedClient";
+import { withOrgContext, type OrgScopedClient } from "../db/orgScopedClient";
+import { TAG_LINKS_INCLUDE, tagFilter } from "./tags";
+import { companyIdsNamed, contactIdsNamed } from "./searchMatch";
 
 export interface CreateLeadInput {
+  customFields?: Prisma.InputJsonValue;
   organizationId: string;
   leadStatusId: string;
   companyId?: string;
@@ -12,6 +17,8 @@ export interface CreateLeadInput {
   ownerMembershipId?: string;
   createdByMembershipId?: string;
   qualificationData?: Prisma.InputJsonValue;
+  /** Free text kept on the lead (an import's notes column). */
+  notes?: string;
 }
 
 export async function createLead(input: CreateLeadInput) {
@@ -28,6 +35,8 @@ export async function createLead(input: CreateLeadInput) {
         ownerMembershipId: input.ownerMembershipId,
         createdByMembershipId: input.createdByMembershipId,
         qualificationData: input.qualificationData,
+        customFields: input.customFields,
+        notes: input.notes,
       },
     }),
   );
@@ -39,6 +48,7 @@ export async function createLead(input: CreateLeadInput) {
  */
 
 export interface UpdateLeadInput {
+  customFields?: Prisma.InputJsonValue;
   leadStatusId?: string;
   companyId?: string | null;
   contactId?: string | null;
@@ -55,13 +65,17 @@ export async function updateLead(
   organizationId: string,
   leadId: string,
   input: UpdateLeadInput,
+  /** Runs in the same transaction as the update (P2-23: the follow-up task moves with the lead's follow-up). */
+  inTransaction?: (tx: OrgScopedClient, updated: Awaited<ReturnType<OrgScopedClient["lead"]["update"]>>) => Promise<void>,
 ) {
-  return withOrgContext(organizationId, (tx) =>
-    tx.lead.update({
+  return withOrgContext(organizationId, async (tx) => {
+    const updated = await tx.lead.update({
       where: { id: leadId, organizationId },
       data: input,
-    }),
-  );
+    });
+    if (inTransaction) await inTransaction(tx, updated);
+    return updated;
+  });
 }
 
 /**
@@ -92,6 +106,7 @@ export async function getLeadById(organizationId: string, leadId: string) {
         leadStatus: true,
         leadSource: true,
         lostReason: true,
+        ...TAG_LINKS_INCLUDE,
       },
     }),
   );
@@ -125,14 +140,36 @@ export async function findActiveLeadIdsOwnedBy(
 
 export interface ListLeadsFilters {
   query?: string;
+  /** Also match leads whose contact or company phone matched the query in another format (FIG-1041). */
+  matchContactIds?: string[];
+  matchCompanyIds?: string[];
+  /** Set by `listLeads` / `countLeads` once the company and contact text matches are looked up by id (see searchMatch.ts); not for callers. */
+  textMatchedByCompanyId?: boolean;
+  textMatchedByContactId?: boolean;
   ownerMembershipId?: string;
   leadStatusId?: string;
   leadSourceId?: string;
   temperature?: "HOT" | "WARM" | "COLD";
   createdAfter?: Date;
   createdBefore?: Date;
+  /**
+   * Set by the service for a caller with `leads.view.own` plus the shared
+   * pool (B1.03): only leads they own or leads nobody owns, ANDed with every
+   * other filter.
+   */
+  ownedByOrUnassigned?: string;
   /** Archived leads are hidden from the default list (FIG-601) -- pass true to include them alongside active ones. */
   includeArchived?: boolean;
+  /** The archived tab: only archived records (B2.16). */
+  archivedOnly?: boolean;
+  /** The shared pool (B2.02): leads with no owner, still open. */
+  unassignedOnly?: boolean;
+  /** Leads not yet converted to a deal (convertedAt is null). */
+  openOnly?: boolean;
+  /** `customField[key]=value` filters (FIG-803), built by `buildCustomFieldWhere`. */
+  customFieldClauses?: JsonClause[];
+  /** Records carrying any of these tags (FIG-798). */
+  tagIds?: string[];
   /** Standard `sort` (B0.06); the default order is newest first. `id` always breaks ties. */
   sort?: { field: LeadSortField; direction: "asc" | "desc" };
   /** Caps the number of rows returned (e.g. global search's per-group limit, FIG-787) -- omit for the unbounded list views. */
@@ -145,7 +182,15 @@ export const LEAD_SORT_FIELDS = ["createdAt", "updatedAt", "temperature", "nextF
 export type LeadSortField = (typeof LEAD_SORT_FIELDS)[number];
 
 /** Shared by the list and count queries so a page and its total can never disagree (FIG-789). */
-function leadsWhere(
+/** Adds the custom field filters on top of the plain filters. */
+function leadsWhere(...args: Parameters<typeof baseLeadsWhere>): Prisma.LeadWhereInput {
+  const base = baseLeadsWhere(...args);
+  const clauses = args[1].customFieldClauses;
+  if (!clauses || clauses.length === 0) return base;
+  return { AND: [base, ...clauses.map((c) => ({ customFields: c as Prisma.JsonFilter<"Lead"> }))] };
+}
+
+function baseLeadsWhere(
   organizationId: string,
   filters: ListLeadsFilters,
 ): Prisma.LeadWhereInput {
@@ -155,7 +200,22 @@ function leadsWhere(
     leadStatusId: filters.leadStatusId,
     leadSourceId: filters.leadSourceId,
     temperature: filters.temperature,
-    ...(filters.includeArchived ? {} : { archivedAt: null }),
+    ...(filters.ownedByOrUnassigned
+      ? {
+          AND: [
+            {
+              OR: [
+                { ownerMembershipId: filters.ownedByOrUnassigned },
+                { ownerMembershipId: null },
+              ],
+            },
+          ],
+        }
+      : {}),
+    ...archivedWhere(filters),
+    ...tagFilter(filters.tagIds),
+    ...(filters.unassignedOnly ? { ownerMembershipId: null, convertedAt: null } : {}),
+    ...(filters.openOnly ? { convertedAt: null } : {}),
     ...(filters.createdAfter || filters.createdBefore
       ? {
           createdAt: {
@@ -168,29 +228,32 @@ function leadsWhere(
       ? {
           OR: [
             { notes: { contains: filters.query, mode: "insensitive" } },
-            {
-              company: {
-                name: { contains: filters.query, mode: "insensitive" },
-              },
-            },
-            {
-              contact: {
-                firstName: { contains: filters.query, mode: "insensitive" },
-              },
-            },
-            {
-              contact: {
-                lastName: { contains: filters.query, mode: "insensitive" },
-              },
-            },
-            {
-              contact: {
-                email: { contains: filters.query, mode: "insensitive" },
-              },
-            },
+            ...(filters.matchContactIds?.length ? [{ contactId: { in: filters.matchContactIds } }] : []),
+            ...(filters.matchCompanyIds?.length ? [{ companyId: { in: filters.matchCompanyIds } }] : []),
+            ...(filters.textMatchedByCompanyId ? [] : [{ company: { name: { contains: filters.query, mode: "insensitive" as const } } }]),
+            ...(filters.textMatchedByContactId
+              ? []
+              : [
+                  { contact: { firstName: { contains: filters.query, mode: "insensitive" as const } } },
+                  { contact: { lastName: { contains: filters.query, mode: "insensitive" as const } } },
+                  { contact: { email: { contains: filters.query, mode: "insensitive" as const } } },
+                ]),
           ],
         }
       : {}),
+  };
+}
+
+/** Turns the search text into the ids of the companies and contacts it names, so the list filters by id instead of joining (searchMatch.ts). */
+async function withTextMatches(tx: Prisma.TransactionClient, organizationId: string, filters: ListLeadsFilters): Promise<ListLeadsFilters> {
+  if (!filters.query) return filters;
+  const [companyIds, contactIds] = await Promise.all([companyIdsNamed(tx, organizationId, filters.query), contactIdsNamed(tx, organizationId, filters.query)]);
+  return {
+    ...filters,
+    matchCompanyIds: companyIds ? [...(filters.matchCompanyIds ?? []), ...companyIds] : filters.matchCompanyIds,
+    matchContactIds: contactIds ? [...(filters.matchContactIds ?? []), ...contactIds] : filters.matchContactIds,
+    textMatchedByCompanyId: companyIds !== null,
+    textMatchedByContactId: contactIds !== null,
   };
 }
 
@@ -198,14 +261,15 @@ export async function listLeads(
   organizationId: string,
   filters: ListLeadsFilters = {},
 ) {
-  return withOrgContext(organizationId, (tx) =>
+  return withOrgContext(organizationId, async (tx) =>
     tx.lead.findMany({
-      where: leadsWhere(organizationId, filters),
+      where: leadsWhere(organizationId, await withTextMatches(tx, organizationId, filters)),
       include: {
         company: true,
         contact: true,
         leadStatus: true,
         leadSource: true,
+        ...TAG_LINKS_INCLUDE,
       },
       orderBy: filters.sort
         ? [{ [filters.sort.field]: filters.sort.direction }, { id: "asc" }]
@@ -221,8 +285,8 @@ export async function countLeads(
   organizationId: string,
   filters: ListLeadsFilters = {},
 ) {
-  return withOrgContext(organizationId, (tx) =>
-    tx.lead.count({ where: leadsWhere(organizationId, filters) }),
+  return withOrgContext(organizationId, async (tx) =>
+    tx.lead.count({ where: leadsWhere(organizationId, await withTextMatches(tx, organizationId, filters)) }),
   );
 }
 
@@ -252,12 +316,35 @@ export async function findPossibleDuplicateLeads(
   );
 }
 
+/** Leads already converted to a deal that match this contact or company (FIG-1034: an import row for one is "already converted"). */
+export async function findConvertedLeadMatches(
+  organizationId: string,
+  candidate: { contactEmail?: string; contactPhone?: string; companyId?: string },
+) {
+  const clauses: Prisma.LeadWhereInput[] = [];
+  if (candidate.companyId) clauses.push({ companyId: candidate.companyId });
+  if (candidate.contactEmail) clauses.push({ contact: { email: candidate.contactEmail } });
+  if (candidate.contactPhone) clauses.push({ contact: { phone: candidate.contactPhone } });
+  if (clauses.length === 0) return [];
+  return withOrgContext(organizationId, (tx) =>
+    tx.lead.findMany({
+      where: { organizationId, convertedAt: { not: null }, OR: clauses },
+      select: { id: true },
+      take: 3,
+    }),
+  );
+}
+
 /** Sets `archivedAt` (FIG-601) -- never a hard delete; see the model's doc comment. */
-export async function archiveLead(organizationId: string, leadId: string) {
+export async function archiveLead(organizationId: string, leadId: string, meta: ArchiveMeta = {}) {
   return withOrgContext(organizationId, (tx) =>
     tx.lead.update({
       where: { id: leadId, organizationId },
-      data: { archivedAt: new Date() },
+      data: {
+        archivedAt: new Date(),
+        archivedByMembershipId: meta.membershipId ?? null,
+        archiveReason: meta.reason ?? null,
+      },
     }),
   );
 }
@@ -266,7 +353,22 @@ export async function restoreLead(organizationId: string, leadId: string) {
   return withOrgContext(organizationId, (tx) =>
     tx.lead.update({
       where: { id: leadId, organizationId },
-      data: { archivedAt: null },
+      data: { archivedAt: null, archivedByMembershipId: null, archiveReason: null },
     }),
   );
+}
+
+/**
+ * Gives an unowned lead to someone, in one conditional statement: it matches
+ * only while the lead still has no owner, so of two people taking the same lead
+ * at once exactly one gets it. Returns whether this call got it.
+ */
+export async function takeUnassignedLead(organizationId: string, leadId: string, membershipId: string): Promise<boolean> {
+  return withOrgContext(organizationId, async (tx) => {
+    const { count } = await tx.lead.updateMany({
+      where: { id: leadId, organizationId, ownerMembershipId: null, convertedAt: null, archivedAt: null },
+      data: { ownerMembershipId: membershipId },
+    });
+    return count === 1;
+  });
 }

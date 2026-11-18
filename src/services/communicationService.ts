@@ -1,6 +1,8 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission } from "../auth/context";
 import { ValidationError } from "../auth/errors";
+import { adminDb } from "../db/adminClient";
+import { emailProvider } from "../auth/email";
 import { sendComposedEmail } from "../notifications/email";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import {
@@ -8,6 +10,9 @@ import {
   listCommunications as listCommunicationsRecord,
   type CreateCommunicationInput,
 } from "../repositories/communications";
+import { assertTemplateUsable } from "./emailTemplateService";
+import { touchDealActivity } from "../repositories/deals";
+import { rescoreCompanyQuietly, rescoreLeadQuietly } from "./scoreEngine";
 import { assertCanAccessLinkedRecords, type LinkedRecordIds } from "./recordAccess";
 
 export type CreateCommunicationServiceInput = Omit<
@@ -26,8 +31,17 @@ export async function createCommunication(
   ctx: AuthContext,
   input: CreateCommunicationServiceInput,
 ) {
-  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true });
+  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true, requireWritable: true });
   requirePermission(ctx, "communications.create");
+
+  // The activity this entry sits under must be this organisation's. Without the check an unknown id (or another organisation's)
+  // reached the foreign key and came back as a 500.
+  if (input.activityId) {
+    const activity = await adminDb.activity.findFirst({ where: { id: input.activityId, organizationId: ctx.organizationId }, select: { id: true } });
+    if (!activity) {
+      throw new ValidationError("That activity was not found in this organisation.", [{ path: "activityId", message: "Pick an activity from this organisation." }]);
+    }
+  }
 
   const communication = await createCommunicationRecord({
     ...input,
@@ -52,6 +66,9 @@ export async function createCommunication(
     },
   });
 
+  await rescoreLeadQuietly(ctx.organizationId, communication.leadId);
+  if (communication.dealId) await touchDealActivity(ctx.organizationId, communication.dealId);
+  await rescoreCompanyQuietly(ctx.organizationId, communication.companyId);
   return communication;
 }
 
@@ -85,6 +102,8 @@ export interface SendEmailServiceInput {
   contactId?: string;
   leadId?: string;
   dealId?: string;
+  /** The template the subject and body started from (FIG-797). The text may have been edited since; it is recorded on the communication. */
+  templateId?: string;
 }
 
 /**
@@ -97,7 +116,7 @@ export interface SendEmailServiceInput {
  * email that was never sent would be a false record, worse than no record.
  */
 export async function sendAndLogEmail(ctx: AuthContext, input: SendEmailServiceInput) {
-  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true });
+  await assertCanAccessLinkedRecords(ctx, input, { requireAtLeastOne: true, requireWritable: true });
   requirePermission(ctx, "communications.create");
 
   if (!input.to.trim()) {
@@ -105,6 +124,13 @@ export async function sendAndLogEmail(ctx: AuthContext, input: SendEmailServiceI
   }
   if (!input.subject.trim()) {
     throw new ValidationError("A subject is required.");
+  }
+
+  if (input.templateId) await assertTemplateUsable(ctx, input.templateId, input.subject, input.body);
+
+  // In production with no provider the transport would drop the message; never record (or lock a quote) for mail nobody got.
+  if (process.env.NODE_ENV === "production" && emailProvider() === "none") {
+    throw new ValidationError("Email is not set up on this deployment, so nothing was sent. Ask whoever runs Figbloom to configure it.");
   }
 
   try {
@@ -126,6 +152,7 @@ export async function sendAndLogEmail(ctx: AuthContext, input: SendEmailServiceI
     contactId: input.contactId,
     leadId: input.leadId,
     dealId: input.dealId,
+    emailTemplateId: input.templateId,
   });
 
   await recordAuditEvent({
@@ -135,6 +162,7 @@ export async function sendAndLogEmail(ctx: AuthContext, input: SendEmailServiceI
     entityType: "Communication",
     entityId: communication.id,
     newValue: {
+      templateId: input.templateId,
       channel: "EMAIL",
       direction: "OUTBOUND",
       subject: input.subject,
@@ -146,5 +174,8 @@ export async function sendAndLogEmail(ctx: AuthContext, input: SendEmailServiceI
     },
   });
 
+  await rescoreLeadQuietly(ctx.organizationId, input.leadId);
+  if (input.dealId) await touchDealActivity(ctx.organizationId, input.dealId);
+  await rescoreCompanyQuietly(ctx.organizationId, input.companyId);
   return communication;
 }

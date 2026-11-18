@@ -1,15 +1,30 @@
+import "@/ui/ui.css";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { hasPermission } from "@/auth/context";
-import { UnauthorizedError } from "@/auth/errors";
-import { resolveRequestContext } from "@/auth/requestContext";
-import { adminDb } from "@/db/adminClient";
-import { LogoutButton } from "./LogoutButton";
-import { Sidebar } from "./_shared/Sidebar";
-import { ThemeToggle } from "./_shared/ThemeToggle";
-import { NotificationBell } from "./_shared/NotificationBell";
-import { GlobalSearch } from "./_shared/GlobalSearch";
-import { IconChevronDown } from "./_shared/icons";
+import { OrganizationUnavailableError, UnauthorizedError } from "@/auth/errors";
+import { resolveRequestContext, resolveUserContext } from "@/auth/requestContext";
+import { unauthenticatedLanding } from "@/auth/twoStep/pending";
+import { getMemberContext } from "@/services/meContextService";
+import { MemberProvider } from "@/ui/data/member";
+import { AppShell } from "@/ui/shell/AppShell";
+import { buildNav, buildQuickCreate } from "@/ui/shell/navigation";
+import { NoFlashScript } from "@/ui/theme/NoFlashScript";
+import { ThemeProvider } from "@/ui/theme/ThemeProvider";
+import { defaultLook, type LookInput } from "@/ui/theme/resolve";
+import { NotificationBell } from "@/ui/screens/home/Notifications";
+import { GlobalSearch } from "@/ui/screens/home/Search";
+import { ApiProvider } from "@/ui/data/hooks";
+import { OrgSwitcher } from "@/ui/screens/orgside/OrgSwitcher";
+import { SuspendedScreen } from "@/ui/screens/orgside/SuspendedScreen";
 
+/** `cover` lets the phone layout's bottom bar and sheets sit above the home indicator (env(safe-area-inset-bottom)). The sign-in pages are unaffected. */
+export const viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" } as const;
+
+/**
+ * The authenticated frame (F1.01 to F1.04): one call for everything the shell draws (`getMemberContext`, the same data as `GET /api/me/context`),
+ * the member's look applied before first paint, a role-aware sidebar, and the top bar with the identity block. Hiding a link a role cannot use is
+ * a courtesy; every page and every route still enforces its own permission.
+ */
 export default async function OrgLayout({
   children,
   params,
@@ -20,107 +35,118 @@ export default async function OrgLayout({
   const { orgSlug } = await params;
 
   let ctx;
+  let me;
   try {
     ctx = await resolveRequestContext(orgSlug);
+    const identity = await resolveUserContext();
+    me = await getMemberContext({ userId: identity.userId, session: identity.session, orgSlug });
   } catch (err) {
     if (err instanceof UnauthorizedError) {
-      redirect("/login");
+      // A password-verified sign-in waiting for its second step goes to /two-step (FIG-1134); everyone else to sign-in.
+      redirect(unauthenticatedLanding(await cookies()));
+    }
+    // B6.05: the platform has suspended or is offboarding this organisation. Nothing of the app is served, whatever page was asked for.
+    if (err instanceof OrganizationUnavailableError) {
+      return (
+        <ThemeProvider initialLook={defaultLook()} initialDensity={null}>
+          <NoFlashScript />
+          <ApiProvider>
+            <SuspendedScreen organisation={err.organizationName} />
+          </ApiProvider>
+        </ThemeProvider>
+      );
     }
     return (
       <div className="auth-shell">
         <div className="auth-card">
-          <p className="error">
-            {err instanceof Error ? err.message : "Access denied."}
-          </p>
+          <p className="error">{err instanceof Error ? err.message : "Access denied."}</p>
         </div>
       </div>
     );
   }
 
-  const user = await adminDb.user.findUniqueOrThrow({
-    where: { id: ctx.userId },
-  });
+  // The switcher is real (FIG-1133): shown to anyone who belongs to more than one organisation.
+  const multiOrg = me.organisations.length > 1;
 
-  // Hiding a link the role can't use is a usability nicety, not a security
-  // boundary -- every page still enforces its own permission check
-  // server-side regardless of what the nav shows.
-  const canViewLeads =
-    hasPermission(ctx, "leads.view.own") ||
-    hasPermission(ctx, "leads.view.all");
-  const canViewDeals =
-    hasPermission(ctx, "deals.view.own") ||
-    hasPermission(ctx, "deals.view.all");
-  const canViewTasks =
-    hasPermission(ctx, "tasks.view.own") ||
-    hasPermission(ctx, "tasks.view.all");
-  const canViewReports =
-    hasPermission(ctx, "reporting.view.own") ||
-    hasPermission(ctx, "reporting.view.all");
-  const canViewCompanies = hasPermission(ctx, "companies.view");
-  const canViewContacts = hasPermission(ctx, "contacts.view");
+  const navInput = { permissionKeys: ctx.permissionKeys, membershipId: ctx.membershipId, hidden: me.preferences?.sidebar.hidden ?? [] };
+  const look: LookInput = me.look
+    ? { locked: me.look.locked, toggle: me.look.toggle, colours: me.look.colours }
+    : defaultLook();
 
-  const roleName = ctx.roleKey
-    .split("_")
-    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
-    .join(" ");
+  // Written in the person's own time zone and hour format (the top bar shows only the sign-in time, never a clock that would go stale).
+  const zone = me.timeZone.effective ?? undefined;
+  const hour12 = me.preferences?.hourFormat === "H12";
+  const clock = (d: Date) => d.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12, timeZone: zone });
+  const signedInTime = me.signedIn?.at ? clock(new Date(me.signedIn.at)) : null;
+  const secondsLeft = me.session?.secondsLeft ?? null;
+  const sessionLeft =
+    secondsLeft === null
+      ? null
+      : secondsLeft >= 3600
+        ? `${Math.floor(secondsLeft / 3600)} h ${Math.floor((secondsLeft % 3600) / 60)} min left`
+        : `${Math.max(1, Math.floor(secondsLeft / 60))} min left`;
 
-  const now = new Date();
-  // Intl doesn't reliably insert the weekday/date comma across runtimes --
-  // built explicitly so it always reads "Thursday, 8 October · 10:04".
-  const weekday = now.toLocaleDateString("en-GB", { weekday: "long" });
-  const dayMonth = now.toLocaleDateString("en-GB", { day: "numeric", month: "long" });
-  const time = now.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  const datetime = `${weekday}, ${dayMonth} · ${time}`;
+  // Reserved for V2 (support view): the service returns null until a support session is active.
+  const support = me.supportView as { by: string; expiresAt: string } | null;
+
+  const session = me.session
+    ? {
+        expiresAt: me.session.expiresAt,
+        warnAt: new Date(Date.parse(me.generatedAt) + me.session.warnInSeconds * 1000).toISOString(),
+        canExtend: me.session.canExtend,
+      }
+    : null;
 
   return (
-    <div className="app-shell">
-      <Sidebar
+    <ThemeProvider initialLook={look} initialDensity={me.preferences?.density}>
+      <NoFlashScript />
+      {/* The installable app (FIG-791, F4.12): this organisation's own manifest (its name and colours), read with the session cookie. */}
+      <link rel="manifest" href={`/api/orgs/${orgSlug}/pwa/manifest`} crossOrigin="use-credentials" />
+      <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+      <meta name="mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <MemberProvider
+        value={{
+          orgSlug,
+          membershipId: ctx.membershipId,
+          userName: me.user.name,
+          roleName: me.role?.name ?? "No role",
+          permissionKeys: ctx.permissionKeys,
+          timeZone: me.timeZone.effective,
+          hour12: me.preferences?.hourFormat === "H12",
+        }}
+      >
+      <AppShell
         orgSlug={orgSlug}
-        userName={user.name}
-        roleName={roleName}
-        canViewLeads={canViewLeads}
-        canViewDeals={canViewDeals}
-        canViewTasks={canViewTasks}
-        canViewReports={canViewReports}
-        canViewCompanies={canViewCompanies}
-        canViewContacts={canViewContacts}
-        logoutButton={<LogoutButton />}
-      />
-      <div className="main">
-        <header className="topbar">
-          <div>
-            <p className="topbar-datetime">{datetime}</p>
-          </div>
-          <div className="topbar-search">
-            <GlobalSearch orgSlug={orgSlug} />
-          </div>
-          <div className="topbar-right">
-            <NotificationBell orgSlug={orgSlug} />
-            <ThemeToggle />
-            <details className="account-menu">
-              <summary>
-                <span className="pill">
-                  <span className="avatar">
-                    {user.name.trim().charAt(0).toUpperCase() || "?"}
-                  </span>
-                  {user.name}
-                  <IconChevronDown />
-                </span>
-              </summary>
-              <div className="account-menu-panel">
-                <div className="account-menu-name">{user.name}</div>
-                <div className="account-menu-role">{roleName}</div>
-                <LogoutButton withLabel />
-              </div>
-            </details>
-          </div>
-        </header>
-        <div className="page">{children}</div>
-      </div>
-    </div>
+        sections={buildNav(navInput)}
+        quickCreate={buildQuickCreate(navInput)}
+        initialSidebarCollapsed={me.preferences?.sidebar.collapsed ?? false}
+        session={session}
+        search={<GlobalSearch />}
+        bell={<NotificationBell />}
+        organisationSwitcher={multiOrg ? <OrgSwitcher /> : undefined}
+        identity={{
+          name: me.user.name,
+          email: me.user.email,
+          roleName: me.role?.name ?? "No role",
+          workspaceLabel: me.role?.workspaceLabel ?? null,
+          logoUrl: me.organisation?.logoUrl ?? null,
+          organisation: me.organisation?.shownName ?? me.organisation?.name ?? "",
+          avatarUrl: me.membership?.avatar.url ?? null,
+          signedInLocal: me.signedIn?.local ?? null,
+          signedInTime,
+          sessionLeft,
+          device: me.signedIn?.device ?? null,
+          place: me.signedIn?.place ?? null,
+          timeZone: me.timeZone.effective,
+          organisationTimeZone: me.timeZone.differsFromOrganisation ? me.timeZone.organisation : null,
+          supportNotice: support ? `${support.by} is viewing this organisation (read-only) until ${new Date(support.expiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: zone })}.` : null,
+          preferencesHref: `/o/${orgSlug}/preferences`,
+        }}
+      >
+        {children}
+      </AppShell>
+      </MemberProvider>
+    </ThemeProvider>
   );
 }

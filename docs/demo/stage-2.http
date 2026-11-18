@@ -1,0 +1,73 @@
+### Stage 2 demo (B2.17). Run the dev server (`npm run dev`), seed the dev accounts
+### (`npm run seed:dev`), then sign in as each dev account and send these with that session cookie.
+### The same walk-through runs automatically in tests/stage2ExitGate.test.ts.
+
+@base = http://localhost:3000
+@org = figbloom
+
+### 1. As Sales: capture a lead, comment with a mention
+POST {{base}}/api/orgs/{{org}}/leads
+Content-Type: application/json
+Idempotency-Key: demo-lead-0001
+
+{ "leadStatusId": "<NEW status id>", "companyId": "<company id>", "temperature": "HOT" }
+
+###
+POST {{base}}/api/orgs/{{org}}/leads/<leadId>/comments
+Content-Type: application/json
+
+{ "body": "Called, wants a quote for 8 cameras", "mentions": ["<management membership id>"] }
+
+### 2. Qualify: answer the questions, then move the lead to Qualified
+PATCH {{base}}/api/orgs/{{org}}/leads/<leadId>/qualification
+Content-Type: application/json
+
+{ "answers": { "cctv_cameras": 8 } }
+
+### 3. Convert, then win the deal with the Delivery owner left for later
+POST {{base}}/api/orgs/{{org}}/leads/<leadId>/convert
+Content-Type: application/json
+
+{ "value": 250000 }
+
+###
+POST {{base}}/api/orgs/{{org}}/deals/<dealId>/move
+Content-Type: application/json
+
+{ "pipelineStageId": "<Closed Won stage id>", "handoff": { "ownerLater": true } }
+
+### 4. As Delivery: see handoffs awaiting an owner, take one
+GET {{base}}/api/orgs/{{org}}/handoffs?status=AWAITING_OWNER
+
+###
+POST {{base}}/api/orgs/{{org}}/deals/<dealId>/handoff/take
+
+### 5. As Technical: My work (their own tasks, requirements and files only)
+GET {{base}}/api/orgs/{{org}}/my-work
+
+### 6. As Finance: the won deal with its value
+GET {{base}}/api/orgs/{{org}}/deals?outcome=WON
+
+### 7. As Management: dashboard, signals, search, notification centre
+GET {{base}}/api/orgs/{{org}}/dashboard
+
+###
+GET {{base}}/api/orgs/{{org}}/signals
+
+###
+GET {{base}}/api/orgs/{{org}}/search?q=0712345678
+
+###
+GET {{base}}/api/orgs/{{org}}/notifications?unreadOnly=true
+
+### 8. A background export, then its progress and the file
+POST {{base}}/api/orgs/{{org}}/exports
+Content-Type: application/json
+
+{ "entity": "LEAD", "filters": {} }
+
+###
+GET {{base}}/api/orgs/{{org}}/data-runs/<runId>
+
+###
+GET {{base}}/api/orgs/{{org}}/data-runs/<runId>/download?which=result

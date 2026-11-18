@@ -20,6 +20,15 @@ const CreateActivitySchema = z.object({
   contactId: z.string().optional(),
   leadId: z.string().optional(),
   dealId: z.string().optional(),
+  /** P2-23: log what happened and what comes next in one request. The next step becomes the lead's follow-up task (only for an activity on a lead). */
+  nextStep: z
+    .strictObject({
+      type: z.enum(["TASK", "CALL", "MEETING", "EMAIL", "QUOTE", "VISIT"]),
+      dueAt: z.string(),
+      title: z.string().max(200).optional(),
+      assigneeMembershipId: z.string().optional(),
+    })
+    .optional(),
 });
 
 /**

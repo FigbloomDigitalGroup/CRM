@@ -1,6 +1,6 @@
-import { stringify } from "csv-stringify/sync";
+import { stringifyCsv as stringify } from "../lib/csv";
 import type { AuthContext } from "../auth/context";
-import { requirePermission } from "../auth/context";
+import { deny, hasPermission, requirePermission } from "../auth/context";
 import { adminDb } from "../db/adminClient";
 import { listOrganizationMemberships } from "../repositories/memberships";
 import type { ListCompaniesFilters } from "../repositories/companies";
@@ -8,7 +8,11 @@ import type { ListContactsFilters } from "../repositories/contacts";
 import type { ListLeadsFilters } from "../repositories/leads";
 import type { ListDealsFilters } from "../repositories/deals";
 import { recordAuditEvent } from "../repositories/auditEvents";
+import { RateLimitedError, ValidationError } from "../auth/errors";
+import { withOrgContext } from "../db/orgScopedClient";
+import { emitTeamActivity } from "./teamActivityNotifier";
 import { iterateInBatches } from "../lib/pagination";
+import { consumeExportApproval, loadExportRights } from "./privacySettings";
 import { countCompanies, listCompanies } from "./companyService";
 import { countContacts, listContacts } from "./contactService";
 import { countLeads, listLeads } from "./leadService";
@@ -18,12 +22,97 @@ import {
   getSalesBySalesperson,
   getUpcomingRenewals,
 } from "./customerReportService";
+import { loadActiveDefinitions } from "./customFieldService";
 import { getFormReferenceData } from "./referenceDataService";
 import { buildReportNameResolvers } from "./reportingNames";
 import {
   getOrganizationMetrics,
   type OrganizationMetricsFilters,
 } from "./reportingService";
+
+/**
+ * Exports above the organisation's row threshold (default 500, FIG-1062, B4.05) need the bulk-export permission or a role the organisation
+ * allows, or an approval from Management for this person and this kind of export (`approvalId`, spent once).
+ */
+export const BULK_EXPORT_ROW_LIMIT = 500;
+
+export async function assertBulkExportAllowed(
+  ctx: AuthContext,
+  rowCount: number,
+  options: { approvalId?: string; entity?: string } = {},
+): Promise<void> {
+  const rights = await loadExportRights(ctx.organizationId);
+  if (rowCount <= rights.approvalThreshold) return;
+  if (hasPermission(ctx, "export.bulk") || rights.allowedRoleKeys.includes(ctx.roleKey)) return;
+  if (options.approvalId && options.entity && (await consumeExportApproval(ctx.organizationId, ctx.membershipId, options.approvalId, options.entity, rowCount))) return;
+  throw deny(ctx, `export.bulk, or an approved export request (more than ${rights.approvalThreshold} rows)`, ["export.bulk"]);
+}
+
+
+/**
+ * Safeguards on every record export (P2-26, FIG-1680), applied after the permission check and the scoped count:
+ * a hard row cap with a clear message, a per-person and per-organisation hourly rate limit (counted from the audit
+ * trail, so it holds across instances and needs no extra table), then one audit event (who, when, how many rows,
+ * filters, never row data). A large export by someone who is not a bulk exporter also tells Management through the
+ * team activity alerts (the existing DATA_RUN event).
+ */
+const EXPORT_ACTIONS = ["leads.exported", "contacts.exported", "companies.exported", "deals.exported"];
+const HOUR_MS = 60 * 60_000;
+const LARGE_EXPORT_ROWS = 100;
+
+function envNumber(name: string, fallback: number): number {
+  const parsed = Number(process.env[name]);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+export const exportMaxRows = () => envNumber("EXPORT_MAX_ROWS", 20_000);
+export const exportPerUserPerHour = () => envNumber("EXPORT_MAX_PER_USER_PER_HOUR", 20);
+export const exportPerOrgPerHour = () => envNumber("EXPORT_MAX_PER_ORG_PER_HOUR", 100);
+
+async function guardRecordExport(
+  ctx: AuthContext,
+  entity: { action: string; entityType: string; label: string; route: string },
+  total: number,
+  filters: object,
+): Promise<void> {
+  const cap = exportMaxRows();
+  if (total > cap) {
+    throw new ValidationError(
+      `This export has ${total} rows, and one file holds at most ${cap}. Narrow the filters (status, owner, search) and export again in parts.`,
+      [{ path: "filters", message: `More than ${cap} rows.` }],
+    );
+  }
+  const since = new Date(Date.now() - HOUR_MS);
+  const [mine, org] = await withOrgContext(ctx.organizationId, (tx) =>
+    Promise.all([
+      tx.auditEvent.count({ where: { organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: { in: EXPORT_ACTIONS }, createdAt: { gte: since } } }),
+      tx.auditEvent.count({ where: { organizationId: ctx.organizationId, action: { in: EXPORT_ACTIONS }, createdAt: { gte: since } } }),
+    ]),
+  );
+  if (mine >= exportPerUserPerHour()) throw new RateLimitedError(`You have reached the limit of ${exportPerUserPerHour()} exports an hour. Try again later.`);
+  if (org >= exportPerOrgPerHour()) throw new RateLimitedError(`Your organisation has reached the limit of ${exportPerOrgPerHour()} exports an hour. Try again later.`);
+
+  await recordAuditEvent({
+    organizationId: ctx.organizationId,
+    actorMembershipId: ctx.membershipId,
+    action: entity.action,
+    entityType: entity.entityType,
+    metadata: { count: total, filters: JSON.parse(JSON.stringify(filters)) },
+  });
+
+  if (total >= LARGE_EXPORT_ROWS) {
+    await emitTeamActivity({
+      organizationId: ctx.organizationId,
+      eventKey: "DATA_RUN",
+      actorMembershipId: ctx.membershipId,
+      entityType: "DataRun",
+      entityId: ctx.membershipId,
+      label: entity.label,
+      route: entity.route,
+      detail: { summary: `${total} rows exported` },
+    }).catch(() => undefined);
+  }
+}
 
 export interface CsvExport {
   columns: string[];
@@ -52,6 +141,36 @@ async function membershipLookup(organizationId: string) {
 
 const dateOrEmpty = (d: Date | null | undefined) => (d ? d.toISOString() : "");
 
+/**
+ * Extra columns every record export carries: `tags`, and one column per active
+ * custom field (`cf:<key>`; for leads also `q:<key>` per qualification question)
+ * (FIG-798, FIG-803). Values are written the way the importer reads them back:
+ * choices by option value, several choices joined with ";".
+ */
+async function exportExtras(ctx: AuthContext, entityType: "LEAD" | "CONTACT" | "COMPANY" | "DEAL") {
+  const defs = await loadActiveDefinitions(ctx.organizationId, entityType);
+  const general = defs.filter((d) => d.section === "GENERAL");
+  const qualification = defs.filter((d) => d.section === "QUALIFICATION");
+  const columns = [
+    "tags",
+    ...general.map((d) => `cf:${d.key}`),
+    ...qualification.map((d) => `q:${d.key}`),
+  ];
+  const cell = (value: unknown) => (Array.isArray(value) ? value.join(";") : value === null || value === undefined ? "" : String(value));
+  return {
+    columns,
+    cells: (row: { tagLinks?: { tag: { name: string } }[]; customFields?: unknown; qualificationData?: unknown }) => {
+      const custom = (row.customFields ?? {}) as Record<string, unknown>;
+      const answers = (row.qualificationData ?? {}) as Record<string, unknown>;
+      return {
+        tags: (row.tagLinks ?? []).map((l) => l.tag.name).join("; "),
+        ...Object.fromEntries(general.map((d) => [`cf:${d.key}`, cell(custom[d.key])])),
+        ...Object.fromEntries(qualification.map((d) => [`q:${d.key}`, cell(answers[d.key])])),
+      };
+    },
+  };
+}
+
 export async function exportCompaniesCsv(
   ctx: AuthContext,
   filters: ListCompaniesFilters = {},
@@ -68,13 +187,8 @@ export async function exportCompaniesCsv(
   ]);
   const lifecycleName = new Map(lifecycleStates.map((s) => [s.id, s.name]));
 
-  await recordAuditEvent({
-    organizationId: ctx.organizationId,
-    actorMembershipId: ctx.membershipId,
-    action: "companies.exported",
-    entityType: "Company",
-    metadata: { count: total },
-  });
+  await assertBulkExportAllowed(ctx, total);
+  await guardRecordExport(ctx, { action: "companies.exported", entityType: "Company", label: "a company export", route: "companies" }, total, filters);
 
   const columns = [
     "id",
@@ -89,6 +203,8 @@ export async function exportCompaniesCsv(
     "notes",
     "createdAt",
   ];
+  const extra = await exportExtras(ctx, "COMPANY");
+  columns.push(...extra.columns);
   return {
     columns,
     rows: mapRows(
@@ -96,6 +212,7 @@ export async function exportCompaniesCsv(
         listCompanies(ctx, { ...filters, skip, take }),
       ),
       (c) => ({
+        ...extra.cells(c),
         id: c.id,
         name: c.name,
         industry: c.industry ?? "",
@@ -125,13 +242,8 @@ export async function exportContactsCsv(
     membershipLookup(ctx.organizationId),
   ]);
 
-  await recordAuditEvent({
-    organizationId: ctx.organizationId,
-    actorMembershipId: ctx.membershipId,
-    action: "contacts.exported",
-    entityType: "Contact",
-    metadata: { count: total },
-  });
+  await assertBulkExportAllowed(ctx, total);
+  await guardRecordExport(ctx, { action: "contacts.exported", entityType: "Contact", label: "a contact export", route: "contacts" }, total, filters);
 
   const columns = [
     "id",
@@ -146,6 +258,8 @@ export async function exportContactsCsv(
     "notes",
     "createdAt",
   ];
+  const extra = await exportExtras(ctx, "CONTACT");
+  columns.push(...extra.columns);
   return {
     columns,
     rows: mapRows(
@@ -153,6 +267,7 @@ export async function exportContactsCsv(
         listContacts(ctx, { ...filters, skip, take }),
       ),
       (c) => ({
+        ...extra.cells(c),
         id: c.id,
         firstName: c.firstName,
         lastName: c.lastName ?? "",
@@ -185,13 +300,8 @@ export async function exportLeadsCsv(
   ]);
   const serviceName = new Map(services.map((s) => [s.id, s.name]));
 
-  await recordAuditEvent({
-    organizationId: ctx.organizationId,
-    actorMembershipId: ctx.membershipId,
-    action: "leads.exported",
-    entityType: "Lead",
-    metadata: { count: total },
-  });
+  await assertBulkExportAllowed(ctx, total);
+  await guardRecordExport(ctx, { action: "leads.exported", entityType: "Lead", label: "a lead export", route: "leads" }, total, filters);
 
   const columns = [
     "id",
@@ -209,6 +319,8 @@ export async function exportLeadsCsv(
     "notes",
     "createdAt",
   ];
+  const extra = await exportExtras(ctx, "LEAD");
+  columns.push(...extra.columns);
   return {
     columns,
     rows: mapRows(
@@ -216,6 +328,7 @@ export async function exportLeadsCsv(
         listLeads(ctx, { ...filters, skip, take }),
       ),
       (l) => ({
+        ...extra.cells(l),
         id: l.id,
         company: l.company?.name ?? "",
         contact: l.contact
@@ -250,13 +363,8 @@ export async function exportDealsCsv(
     membershipLookup(ctx.organizationId),
   ]);
 
-  await recordAuditEvent({
-    organizationId: ctx.organizationId,
-    actorMembershipId: ctx.membershipId,
-    action: "deals.exported",
-    entityType: "Deal",
-    metadata: { count: total },
-  });
+  await assertBulkExportAllowed(ctx, total);
+  await guardRecordExport(ctx, { action: "deals.exported", entityType: "Deal", label: "a deal export", route: "deals" }, total, filters);
 
   const columns = [
     "id",
@@ -273,6 +381,8 @@ export async function exportDealsCsv(
     "owner",
     "createdAt",
   ];
+  const extra = await exportExtras(ctx, "DEAL");
+  columns.push(...extra.columns);
   return {
     columns,
     rows: mapRows(
@@ -280,6 +390,7 @@ export async function exportDealsCsv(
         listDeals(ctx, { ...filters, skip, take }),
       ),
       (d) => ({
+        ...extra.cells(d),
         id: d.id,
         company: d.company?.name ?? "",
         primaryContact: d.primaryContact

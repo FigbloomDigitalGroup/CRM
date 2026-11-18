@@ -1,0 +1,11 @@
+name: Set up Node and install dependencies
+description: Node 22 with the npm cache, then npm ci. Shared by every CI job so the steps live in one place.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+    - run: npm ci --no-audit --no-fund --prefer-offline
+      shell: bash

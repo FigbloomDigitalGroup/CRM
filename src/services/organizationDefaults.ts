@@ -1,4 +1,5 @@
 import { adminDb } from "../db/adminClient";
+import { GENERAL_QUESTIONS, SERVICE_QUESTIONS, type QualificationQuestion } from "../lib/qualificationDefaults";
 import { WEBSITE_LEAD_ASSIGNMENT_CURSOR_KEY } from "../repositories/leadIngestion";
 
 /**
@@ -117,18 +118,26 @@ function toTitle(key: string): string {
 }
 
 /**
- * Idempotent: safe to call repeatedly (every deploy, or whenever a new
- * organization is provisioned) -- every row is an upsert keyed on
+ * Idempotent: safe to call repeatedly -- every row is an upsert keyed on
  * (organizationId, key).
+ *
+ * By default an existing row is brought back to the catalogue (its name and
+ * order), which is right when an organization is provisioned. For an
+ * organization that already exists and may have renamed or reordered its own
+ * statuses, stages and sources, pass `fillOnly`: rows that are missing are
+ * created and nothing that is already there is changed (the upgrade backfill,
+ * scripts/backfill-organization-defaults.ts).
  */
 export async function seedOrganizationDefaults(
   organizationId: string,
+  options: { fillOnly?: boolean } = {},
 ): Promise<void> {
+  const fillOnly = options.fillOnly === true;
   await Promise.all(
     LEAD_SOURCES.map((s) =>
       adminDb.leadSource.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: { name: s.name, sequence: s.sequence },
+        update: fillOnly ? {} : { name: s.name, sequence: s.sequence },
         create: { organizationId, ...s },
       }),
     ),
@@ -138,7 +147,7 @@ export async function seedOrganizationDefaults(
     LEAD_STATUSES.map((s) =>
       adminDb.leadStatus.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: { name: s.name, sequence: s.sequence },
+        update: fillOnly ? {} : { name: s.name, sequence: s.sequence },
         create: { organizationId, ...s },
       }),
     ),
@@ -148,12 +157,14 @@ export async function seedOrganizationDefaults(
     PIPELINE_STAGES.map((s) =>
       adminDb.pipelineStage.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: {
-          name: s.name,
-          sequence: s.sequence,
-          isWon: s.isWon ?? false,
-          isLost: s.isLost ?? false,
-        },
+        update: fillOnly
+          ? {}
+          : {
+              name: s.name,
+              sequence: s.sequence,
+              isWon: s.isWon ?? false,
+              isLost: s.isLost ?? false,
+            },
         create: {
           organizationId,
           key: s.key,
@@ -170,7 +181,7 @@ export async function seedOrganizationDefaults(
     CUSTOMER_LIFECYCLE_STATES.map((s) =>
       adminDb.customerLifecycleState.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: { name: s.name, sequence: s.sequence },
+        update: fillOnly ? {} : { name: s.name, sequence: s.sequence },
         create: { organizationId, ...s },
       }),
     ),
@@ -180,7 +191,7 @@ export async function seedOrganizationDefaults(
     LOST_REASONS.map((s) =>
       adminDb.lostReason.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: { name: s.name, sequence: s.sequence },
+        update: fillOnly ? {} : { name: s.name, sequence: s.sequence },
         create: { organizationId, ...s },
       }),
     ),
@@ -190,7 +201,7 @@ export async function seedOrganizationDefaults(
     SERVICES.map((s) =>
       adminDb.service.upsert({
         where: { organizationId_key: { organizationId, key: s.key } },
-        update: { name: s.name, category: s.category, sequence: s.sequence },
+        update: fillOnly ? {} : { name: s.name, category: s.category, sequence: s.sequence },
         create: { organizationId, ...s },
       }),
     ),
@@ -210,4 +221,63 @@ export async function seedOrganizationDefaults(
       value: { lastMembershipId: null },
     },
   });
+
+  await seedQualificationQuestions(organizationId);
+}
+
+/**
+ * Starting qualification questions (FIG-1030, B2.01). Create-only: a question
+ * Management has edited, hidden or made required is never put back.
+ */
+async function seedQualificationQuestions(organizationId: string): Promise<void> {
+  const services = await adminDb.service.findMany({ where: { organizationId }, select: { id: true, key: true } });
+  const serviceIdByKey = new Map(services.map((s) => [s.key, s.id]));
+
+  const rows: { question: QualificationQuestion; serviceId: string | null; sortOrder: number }[] = [];
+  GENERAL_QUESTIONS.forEach((question, i) => rows.push({ question, serviceId: null, sortOrder: 10 + i }));
+  for (const [serviceKey, questions] of Object.entries(SERVICE_QUESTIONS)) {
+    const serviceId = serviceIdByKey.get(serviceKey);
+    if (!serviceId) continue;
+    questions.forEach((question, i) => rows.push({ question, serviceId, sortOrder: 100 + i }));
+  }
+
+  await Promise.all(
+    rows.map(({ question, serviceId, sortOrder }) =>
+      adminDb.customFieldDefinition.upsert({
+        where: { organizationId_entityType_key: { organizationId, entityType: "LEAD", key: question.key } },
+        update: {},
+        create: {
+          organizationId,
+          entityType: "LEAD",
+          section: "QUALIFICATION",
+          key: question.key,
+          label: question.label,
+          fieldType: question.fieldType,
+          options: question.options,
+          helpText: question.helpText,
+          requiredOnQualify: question.requiredOnQualify ?? false,
+          serviceId,
+          sortOrder,
+        },
+      }),
+    ),
+  );
+}
+
+/**
+ * What `seedOrganizationDefaults` will create, for the platform provisioning
+ * wizard's "defaults preview" (FIG-1136, PL3). Read from the same constants the
+ * seed uses, so the preview can never drift from what a new organisation gets.
+ */
+export function describeOrganizationDefaults() {
+  const names = (rows: { name: string }[]) => rows.map((r) => r.name);
+  return {
+    leadSources: names(LEAD_SOURCES),
+    leadStatuses: names(LEAD_STATUSES),
+    pipelineStages: names(PIPELINE_STAGES),
+    customerLifecycleStates: names(CUSTOMER_LIFECYCLE_STATES),
+    lostReasons: names(LOST_REASONS),
+    services: names(SERVICES),
+    qualificationQuestions: GENERAL_QUESTIONS.length + Object.values(SERVICE_QUESTIONS).reduce((n, q) => n + q.length, 0),
+  };
 }

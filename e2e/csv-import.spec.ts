@@ -20,39 +20,37 @@ test("contact CSV import reports created rows and an error report for the bad ro
     `,NoFirstName${suffix},nofirst.${suffix}@example.com`,
   ].join("\n");
 
-  const importCard = page.locator(".card", { has: page.getByText("CSV file") });
-  await importCard.locator('input[type="file"]').setInputFiles({
+  await page.getByRole("button", { name: "Import CSV" }).click();
+  const dialog = page.getByRole("dialog", { name: "Import contacts from CSV" });
+  await dialog.getByLabel("Contacts CSV file").setInputFiles({
     name: "contacts.csv",
     mimeType: "text/csv",
     buffer: Buffer.from(csv),
   });
 
-  // The mapping table appears once the header line is read, pre-filled by name.
-  await expect(importCard.getByRole("heading", { name: "Column mapping" })).toBeVisible();
-  await expect(
-    importCard.getByRole("row", { name: /First name/ }).locator("select"),
-  ).toHaveValue("First name");
+  // The mapping appears once the header line is read, pre-filled by name.
+  await expect(dialog.getByText(/3 rows/)).toBeVisible();
+  await expect(dialog.getByLabel(/First name/)).toHaveValue("First name");
 
   const [response] = await Promise.all([
     page.waitForResponse(
       (r) => r.url().endsWith("/contacts/import") && r.request().method() === "POST",
     ),
-    importCard.getByRole("button", { name: "Import", exact: true }).click(),
+    dialog.getByRole("button", { name: /^Import \d+ contacts?$/ }).click(),
   ]);
   expect(response.ok()).toBe(true);
 
-  await expect(importCard.getByText("Import complete")).toBeVisible();
-  await expect(importCard).toContainText("3 row(s) read");
-  await expect(importCard).toContainText("2 created");
-  await expect(importCard).toContainText("1 failed");
+  const tiles = dialog.locator(".fb-ct-result__tiles > div");
+  await expect(tiles.filter({ hasText: "created" })).toContainText("2");
+  await expect(tiles.filter({ hasText: "need attention" })).toContainText("1");
 
   // The error report lists the failing row and downloads as a CSV.
-  await expect(importCard.getByRole("table").getByRole("row").nth(1)).toBeVisible();
+  await expect(dialog.getByText(/^Row \d+:/).first()).toBeVisible();
   const [download] = await Promise.all([
     page.waitForEvent("download"),
-    importCard.getByRole("button", { name: "Download error report (CSV)" }).click(),
+    dialog.getByRole("button", { name: "Download the error report" }).click(),
   ]);
-  expect(download.suggestedFilename()).toBe("import-errors.csv");
+  expect(download.suggestedFilename()).toBe("contacts-import-errors.csv");
 });
 
 test("the import button stays disabled until the required columns are mapped", async ({
@@ -60,11 +58,12 @@ test("the import button stays disabled until the required columns are mapped", a
 }) => {
   await loginAs(page, "dev.management@figbloom.local");
   await gotoAndSettle(page, "/o/figbloom/contacts");
-  const importCard = page.locator(".card", { has: page.getByText("CSV file") });
-  await importCard.locator('input[type="file"]').setInputFiles({
+  await page.getByRole("button", { name: "Import CSV" }).click();
+  const dialog = page.getByRole("dialog", { name: "Import contacts from CSV" });
+  await dialog.getByLabel("Contacts CSV file").setInputFiles({
     name: "unmappable.csv",
     mimeType: "text/csv",
     buffer: Buffer.from("Foo,Bar\n1,2\n"),
   });
-  await expect(importCard.getByRole("button", { name: "Import", exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: /^Import \d+ contacts?$/ })).toBeDisabled();
 });

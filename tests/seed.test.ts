@@ -6,7 +6,8 @@ import { createTestOrganization } from "./helpers/fixtures";
 
 describe("seed data", () => {
   it("has exactly the five required V1 roles", async () => {
-    const roles = await adminDb.role.findMany();
+    // The five platform roles; custom roles (M17, FIG-1188) belong to an organisation and are not seed data.
+    const roles = await adminDb.role.findMany({ where: { organizationId: null } });
     expect(roles.map((r) => r.key).sort()).toEqual(
       [...ROLES.map((r) => r.key)].sort(),
     );

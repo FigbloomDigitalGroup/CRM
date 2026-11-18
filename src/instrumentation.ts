@@ -31,6 +31,21 @@ export async function register() {
     );
     await enforceNoDevAccountsInProduction();
 
+    // FIG-1257: a production deployment must have the real antivirus (CLAMD_HOST); same exit-on-failure reasoning.
+    const { enforceAntivirusInProduction } = await import("./storage/antivirusGuard");
+    enforceAntivirusInProduction();
+
+    // The app must connect as the least-privilege application role, never fall back to the owner login.
+    const { enforceAppDatabaseUrl } = await import("./db/appRoleGuard");
+    enforceAppDatabaseUrl();
+
+    // MVP-11: a production deployment with no way to send email would drop invites and resets without a sign. Loud, not fatal.
+    if (process.env.NODE_ENV === "production") {
+      const { emailConfigProblem } = await import("./auth/email");
+      const problem = emailConfigProblem();
+      if (problem) console.error(`[email] ERROR: ${problem}`);
+    }
+
     const { scrubSentryEvent } = await import("./lib/sentryScrub");
     Sentry.init({
       ...sharedOptions,

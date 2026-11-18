@@ -318,12 +318,13 @@ describe("websiteLeadService: captcha", () => {
 });
 
 describe("integrationService: key rotation and revocation", () => {
-  it("rotating invalidates the previous key immediately", async () => {
+  it("rotating with no grace window invalidates the previous key immediately", async () => {
     const org = await createTestOrganization();
     const { apiKey: firstKey } = await generateAndSetKey(org.id);
     await resolveWebsitePublicContext(org.slug, firstKey);
 
-    const { apiKey: secondKey } = await generateAndSetKey(org.id);
+    const { ctx } = await generateAndSetKey(org.id);
+    const { apiKey: secondKey } = await integrationService.regenerateWebsiteApiKey(ctx, { graceHours: 0 });
     await expect(
       resolveWebsitePublicContext(org.slug, firstKey),
     ).rejects.toThrow(UnauthorizedError);

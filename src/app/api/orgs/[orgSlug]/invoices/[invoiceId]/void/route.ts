@@ -1,0 +1,20 @@
+import { z } from "zod";
+import { handleRoute } from "@/app/api/_lib/handleRoute";
+import { parseJsonBody } from "@/app/api/_lib/validation";
+import { resolveRequestContext } from "@/auth/requestContext";
+import { voidInvoice } from "@/services/paymentService";
+
+const VoidSchema = z.strictObject({ reason: z.string({ error: "reason is required." }) });
+
+// Void keeps the invoice and its history; refused while payments are recorded against it (FIG-1049).
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ orgSlug: string; invoiceId: string }> },
+) {
+  return handleRoute(async () => {
+    const { orgSlug, invoiceId } = await params;
+    const ctx = await resolveRequestContext(orgSlug);
+    const body = await parseJsonBody(request, VoidSchema);
+    return voidInvoice(ctx, invoiceId, body);
+  });
+}

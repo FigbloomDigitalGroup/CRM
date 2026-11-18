@@ -1,6 +1,9 @@
 import type { AuthContext } from "../auth/context";
 import { requirePermission, requireOwnedRecordPermission } from "../auth/context";
-import { NotFoundError } from "../auth/errors";
+import { NotFoundError, ValidationError } from "../auth/errors";
+import { Prisma } from "@prisma/client";
+import { maskAmount } from "../auth/masking";
+import { assertRecordVisible } from "../auth/visibility";
 import { getDealById } from "../repositories/deals";
 import {
   createProposalReference as createProposalReferenceRecord,
@@ -23,19 +26,16 @@ async function loadOwnedDealForProposals(ctx: AuthContext, dealId: string) {
   if (!deal) {
     throw new NotFoundError("Deal", dealId);
   }
+  assertRecordVisible(ctx, "deals", "Deal", dealId, deal);
   return deal;
 }
 
 export async function listProposalReferences(ctx: AuthContext, dealId: string) {
   const deal = await loadOwnedDealForProposals(ctx, dealId);
   requirePermission(ctx, "proposals.view");
-  requireOwnedRecordPermission(
-    ctx,
-    "deals.view.own",
-    "deals.view.all",
-    deal.ownerMembershipId,
-  );
-  return listProposalReferencesByDeal(ctx.organizationId, dealId);
+  const proposals = await listProposalReferencesByDeal(ctx.organizationId, dealId);
+  // A proposal amount is the deal's value under another name (B2.07).
+  return proposals.map((p) => maskAmount(ctx, deal, p));
 }
 
 export interface CreateProposalReferenceServiceInput {
@@ -60,16 +60,28 @@ export async function createProposalReference(
     deal.ownerMembershipId,
   );
 
-  return createProposalReferenceRecord({
-    organizationId: ctx.organizationId,
-    dealId,
-    proposalNumber: input.proposalNumber,
-    amount: input.amount,
-    currency: input.currency,
-    documentReference: input.documentReference,
-    notes: input.notes,
-    ownerMembershipId: ctx.membershipId,
-  });
+  let created;
+  try {
+    created = await createProposalReferenceRecord({
+      organizationId: ctx.organizationId,
+      dealId,
+      proposalNumber: input.proposalNumber,
+      amount: input.amount,
+      currency: input.currency,
+      documentReference: input.documentReference,
+      notes: input.notes,
+      ownerMembershipId: ctx.membershipId,
+    });
+  } catch (err) {
+    // A deal's proposal numbers are unique; a repeat is the caller's mistake, not a server fault.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new ValidationError("This deal already has a proposal with that number.", [
+        { path: "proposalNumber", message: "Use a different proposal number.", code: "DUPLICATE_PROPOSAL_NUMBER" },
+      ]);
+    }
+    throw err;
+  }
+  return maskAmount(ctx, deal, created);
 }
 
 const STATUS_TIMESTAMP_FIELDS: Record<
@@ -107,8 +119,9 @@ export async function updateProposalReferenceStatus(
     throw new NotFoundError("ProposalReference", proposalReferenceId);
   }
 
-  return updateProposalReferenceRecord(ctx.organizationId, proposalReferenceId, {
+  const updated = await updateProposalReferenceRecord(ctx.organizationId, proposalReferenceId, {
     status,
     ...STATUS_TIMESTAMP_FIELDS[status],
   });
+  return maskAmount(ctx, deal, updated);
 }

@@ -1,0 +1,121 @@
+### Stage 3 demo (B3.11). Run the dev server (`npm run dev`), seed the dev accounts
+### (`npm run seed:dev`), run `npm run migrate:deploy`, then sign in as each dev account and send these with that session cookie.
+### The same walk-through runs automatically in tests/stage3ExitGate.test.ts.
+
+@base = http://localhost:3000
+@org = figbloom
+
+### 1. As Sales: win a deal for a customer (leads, convert and the deal move are in docs/demo/stage-2.http)
+### The company becomes a Prospect when the lead converts, then a Customer when the deal is won.
+GET {{base}}/api/orgs/{{org}}/companies/<companyId>/lifecycle
+
+### 2. As Finance: invoice the won deal, mark it sent, record a part payment
+POST {{base}}/api/orgs/{{org}}/invoices
+Content-Type: application/json
+Idempotency-Key: demo-invoice-0001
+
+{ "number": "INV-2026-001", "amount": 250000, "issuedOn": "2026-10-01", "dueOn": "2026-10-20", "dealId": "<dealId>" }
+
+###
+POST {{base}}/api/orgs/{{org}}/invoices/<invoiceId>/send
+
+###
+POST {{base}}/api/orgs/{{org}}/invoices/<invoiceId>/payments
+Content-Type: application/json
+Idempotency-Key: demo-payment-0001
+
+{ "amount": 100000, "methodLabel": "M-Pesa", "reference": "QWE123" }
+
+### 3. The due date has passed: the invoice is overdue (derived, never stored)
+GET {{base}}/api/orgs/{{org}}/invoices?overdue=true
+
+###
+GET {{base}}/api/orgs/{{org}}/payments/summary
+
+###
+PUT {{base}}/api/orgs/{{org}}/deals/<dealId>/payment-note
+Content-Type: application/json
+
+{ "note": "Chase the balance on Friday", "nextOn": "2026-10-30" }
+
+### 4. As Sales: payments are not for Sales. Expect 403 with the explained denial (Finance and Management own them)
+GET {{base}}/api/orgs/{{org}}/invoices
+
+### 5. As Delivery: take the handoff (company becomes Onboarding), then mark it Delivered (Active Customer)
+POST {{base}}/api/orgs/{{org}}/deals/<dealId>/handoff/take
+
+###
+PATCH {{base}}/api/orgs/{{org}}/deals/<dealId>/handoff
+Content-Type: application/json
+
+{ "status": "DELIVERED" }
+
+### 6. As Management: add a recurring service, then renew it with a task and a draft invoice
+POST {{base}}/api/orgs/{{org}}/recurring-services
+Content-Type: application/json
+
+{ "companyId": "<companyId>", "serviceId": "<service id>", "billingCycle": "YEARLY", "value": 90000, "startsOn": "2026-01-01", "renewsOn": "2026-11-20" }
+
+###
+POST {{base}}/api/orgs/{{org}}/recurring-services/<serviceId>/renew
+Content-Type: application/json
+
+{ "task": { "title": "Confirm next year's plan" }, "invoice": { "number": "REN-2026-001" } }
+
+### 7. An email from an unknown sender arrives by the BCC webhook and waits to be linked
+POST {{base}}/api/public/orgs/{{org}}/communications/inbound
+Content-Type: application/json
+x-figbloom-inbound-key: <inbound email key>
+
+{ "from": "Buyer <buyer@example.test>", "subject": "Camera warranty", "text": "Is the warranty two years?", "messageId": "<demo-1@mail.test>" }
+
+###
+### As Sales or Management: the queue, then link it (Delivery can read the queue but not act)
+GET {{base}}/api/orgs/{{org}}/conversations/needs-linking
+
+###
+POST {{base}}/api/orgs/{{org}}/conversations/<conversationId>/link
+Content-Type: application/json
+
+{ "companyId": "<companyId>" }
+
+### 8. As Sales: tap call, then log it in one request (a double tap with the same key logs once)
+GET {{base}}/api/orgs/{{org}}/quick-log/prompt?contactId=<contactId>
+
+###
+POST {{base}}/api/orgs/{{org}}/quick-log
+Content-Type: application/json
+Idempotency-Key: demo-quicklog-0001
+
+{ "contactId": "<contactId>", "channel": "CALL", "outcome": "REACHED", "note": "Warranty confirmed", "durationSeconds": 60, "followUp": { "title": "Send the quote", "dueOn": "2026-11-05" } }
+
+### 9. The whole customer in one call; Sales sees payments as no_access, Finance sees them
+GET {{base}}/api/orgs/{{org}}/companies/<companyId>/360
+
+###
+GET {{base}}/api/orgs/{{org}}/companies/<companyId>/360?sections=payments,timeline&limit=10
+
+### 10. As Management: reports (every report is a table plus chart series from the same rows) and retention
+GET {{base}}/api/orgs/{{org}}/reports/v2?dateFrom=2026-10-01&dateTo=2026-10-31
+
+###
+GET {{base}}/api/orgs/{{org}}/reports/v2/PER_PERSON/export?dateFrom=2026-10-01&dateTo=2026-10-31
+
+###
+GET {{base}}/api/orgs/{{org}}/retention
+
+### 11. As Sales, Delivery or Finance: My metrics, the caller's own figures only
+GET {{base}}/api/orgs/{{org}}/reports/v2/my-metrics?dateFrom=2026-10-01&dateTo=2026-10-31
+
+### 12. Company and contact lists with tabs, quality filters and counts
+GET {{base}}/api/orgs/{{org}}/companies/directory?tab=DORMANT
+
+###
+GET {{base}}/api/orgs/{{org}}/contacts/directory?standalone=true&missingEmail=true
+
+### 13. The lifecycle job (and the reminders) as a worker runs them: dormant, renewal, back to active, all audited
+### From a shell:  npm run jobs:worker      Then read the history of a company:
+GET {{base}}/api/orgs/{{org}}/companies/<companyId>/lifecycle
+
+###
+GET {{base}}/api/orgs/{{org}}/jobs

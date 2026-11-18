@@ -12,6 +12,8 @@ const SendEmailSchema = z.object({
   contactId: z.string().optional(),
   leadId: z.string().optional(),
   dealId: z.string().optional(),
+  /** The template the subject and body started from (FIG-797). */
+  templateId: z.string().optional(),
 });
 
 export async function POST(

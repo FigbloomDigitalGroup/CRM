@@ -10,6 +10,8 @@ export interface SetWebsiteApiKeyInput {
   keyHash: string;
   keyPrefix: string;
   createdByMembershipId?: string;
+  /** B4.01: how long the key being replaced keeps working. 0 (the default) ends it at once. */
+  graceMs?: number;
 }
 
 /**
@@ -23,8 +25,20 @@ export async function setWebsiteApiKey(
   organizationId: string,
   input: SetWebsiteApiKeyInput,
 ) {
-  return withOrgContext(organizationId, (tx) =>
-    tx.websiteApiKey.upsert({
+  return withOrgContext(organizationId, async (tx) => {
+    const now = new Date();
+    const existing = await tx.websiteApiKey.findUnique({ where: { organizationId } });
+    // The key being replaced is kept as the "previous" key for the grace window, unless it was already revoked.
+    const keepPrevious = existing !== null && existing.revokedAt === null && (input.graceMs ?? 0) > 0;
+    const previous = keepPrevious
+      ? {
+          previousKeyHash: existing.keyHash,
+          previousKeyPrefix: existing.keyPrefix,
+          previousKeyExpiresAt: new Date(now.getTime() + (input.graceMs ?? 0)),
+        }
+      : { previousKeyHash: null, previousKeyPrefix: null, previousKeyExpiresAt: null };
+
+    return tx.websiteApiKey.upsert({
       where: { organizationId },
       update: {
         keyHash: input.keyHash,
@@ -32,6 +46,8 @@ export async function setWebsiteApiKey(
         createdByMembershipId: input.createdByMembershipId,
         lastUsedAt: null,
         revokedAt: null,
+        rotatedAt: now,
+        ...previous,
       },
       create: {
         organizationId,
@@ -39,8 +55,8 @@ export async function setWebsiteApiKey(
         keyPrefix: input.keyPrefix,
         createdByMembershipId: input.createdByMembershipId,
       },
-    }),
-  );
+    });
+  });
 }
 
 /**
@@ -53,7 +69,8 @@ export async function revokeWebsiteApiKey(organizationId: string) {
   return withOrgContext(organizationId, (tx) =>
     tx.websiteApiKey.update({
       where: { organizationId },
-      data: { revokedAt: new Date() },
+      // Revoking switches the integration off outright, so a key still inside its grace window stops too.
+      data: { revokedAt: new Date(), previousKeyHash: null, previousKeyPrefix: null, previousKeyExpiresAt: null },
     }),
   );
 }

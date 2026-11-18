@@ -7,3 +7,10 @@ node_modules
 coverage
 .claude
 documents
+.next*
+Claude outputs
+*.zip
+.m1-work
+test-results
+playwright-report
+.git

@@ -133,7 +133,7 @@ describe("authService.acceptMembershipInvite", () => {
       "a-strong-password-1",
     );
     expect(result.userId).toBeTruthy();
-    expect(await resolveSessionUserId(result.token)).toBe(result.userId);
+    expect(await resolveSessionUserId((result as { token: string }).token)).toBe(result.userId);
     // Regression (FIG-604): the post-accept redirect used to be hardcoded
     // to the dev-seeded "figbloom" org regardless of which organization
     // the invite actually belonged to.

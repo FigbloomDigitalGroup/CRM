@@ -1,0 +1,26 @@
+# Alertmanager (FIG-1124). Staging delivers to the Mailpit mail sandbox; production uses the real mail relay or a paging service
+# (change the receiver, nothing else). Addresses here are placeholders until the real on-call list exists (docs/RUNBOOKS.md).
+global:
+  smtp_smarthost: "mailpit:1025"
+  smtp_from: "alerts@staging.example.com"
+  smtp_require_tls: false
+
+route:
+  receiver: oncall
+  group_by: [alertname]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="warn"]
+      receiver: team
+
+receivers:
+  - name: oncall
+    email_configs:
+      - to: "oncall@staging.example.com"
+        send_resolved: true
+  - name: team
+    email_configs:
+      - to: "team@staging.example.com"
+        send_resolved: true
