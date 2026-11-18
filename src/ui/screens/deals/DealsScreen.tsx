@@ -64,7 +64,10 @@ export function DealsScreen() {
   const [pipelineId, setPipelineId] = useState<string | null>(null);
   const chosenPipe = activePipes.length > 1 ? (activePipes.find((p) => p.id === pipelineId) ?? activePipes.find((p) => p.isDefault) ?? activePipes[0]!) : null;
   const pipeStageIds = chosenPipe ? new Set(chosenPipe.stages.map((s) => s.id)) : null;
-  const items = (deals.data?.items ?? []).filter((d) => !pipeStageIds || pipeStageIds.has(d.pipelineStageId));
+  // Management can look at one person's deals (the list already holds the whole organisation's; this only narrows what is shown).
+  const [ownerFilter, setOwnerFilter] = useState("");
+  const ownerChoices = mgmt ? [...new Map((deals.data?.items ?? []).filter((d) => d.ownerMembershipId).map((d) => [d.ownerMembershipId as string, nameOf(d.ownerMembershipId)] as const)).entries()].sort((a, b) => a[1].localeCompare(b[1])) : [];
+  const items = (deals.data?.items ?? []).filter((d) => (!pipeStageIds || pipeStageIds.has(d.pipelineStageId)) && (!ownerFilter || d.ownerMembershipId === ownerFilter));
   const lostName = (d: DealItem) => (d.lostReasonId ? ref.data?.lostReasons.find((r) => r.id === d.lostReasonId)?.name : undefined);
 
   const canMove = (d: DealItem) => !d.archivedAt && (can("deals.edit.all") || (can("deals.edit.own") && d.ownerMembershipId === member.membershipId));
@@ -162,6 +165,17 @@ export function DealsScreen() {
               <select aria-label="Pipeline" value={chosenPipe.id} onChange={(e) => setPipelineId(e.target.value)}>
                 {activePipes.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {mgmt && ownerChoices.length > 0 ? (
+            <label className="fb-dtool">
+              <span className="fb-sr-only">Owner</span>
+              <select aria-label="Owner" value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
+                <option value="">Any owner</option>
+                {ownerChoices.map(([id, name]) => (
+                  <option key={id} value={id}>{name}</option>
                 ))}
               </select>
             </label>
