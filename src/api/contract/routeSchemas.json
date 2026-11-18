@@ -3041,6 +3041,10 @@
             "null"
           ]
         },
+        "serviceInterestName": {
+          "type": "string",
+          "maxLength": 80
+        },
         "qualificationData": {},
         "lostReasonId": {
           "type": [
@@ -5787,6 +5791,10 @@
         },
         "serviceInterestId": {
           "type": "string"
+        },
+        "serviceInterestName": {
+          "type": "string",
+          "maxLength": 80
         },
         "ownerMembershipId": {
           "type": "string"
