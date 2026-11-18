@@ -2800,7 +2800,7 @@ List leads (paged; own or organisation scope by role)
 Create a lead
 
 - **Credential:** sessionCookie; **access:** management, sales
-- **Body:** `leadStatusId`: string, `companyId`?: string, `contactId`?: string, `leadSourceId`?: string, `temperature`?: "HOT" | "WARM" | "COLD", `serviceInterestId`?: string, `ownerMembershipId`?: string, `qualificationData`?: any, `customFields`?: object, `newCompanyName`?: string, `contact`?: object
+- **Body:** `leadStatusId`: string, `companyId`?: string, `contactId`?: string, `leadSourceId`?: string, `temperature`?: "HOT" | "WARM" | "COLD", `serviceInterestId`?: string, `serviceInterestName`?: string, `ownerMembershipId`?: string, `qualificationData`?: any, `customFields`?: object, `newCompanyName`?: string, `contact`?: object
 - **Returns:** `lead`: object, `possibleDuplicates`: object[], `duplicates`: object[], `hiddenDuplicates`: number, `contactReused`?: boolean, `companyReused`?: boolean
 - **Errors:** 400, 401, 403, 409, 422
 

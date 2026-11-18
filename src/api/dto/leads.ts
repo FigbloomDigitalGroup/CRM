@@ -41,6 +41,8 @@ export const CreateLeadBodySchema = z.object({
   leadSourceId: z.string().optional(),
   temperature: TemperatureSchema.optional(),
   serviceInterestId: z.string().optional(),
+  /** A service typed by the person: the one with that name is used, or it is added to the organisation's list. Used when serviceInterestId is not sent. */
+  serviceInterestName: z.string().max(80).optional(),
   ownerMembershipId: z.string().optional(),
   // Arbitrary per-status qualification answers -- no fixed shape to
   // validate against (z.any, not z.unknown, so this stays assignable to

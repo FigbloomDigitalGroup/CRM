@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { describeError } from "../../errors";
 import { useToast } from "../../components/toast";
@@ -9,7 +8,7 @@ import { DateTimeField } from "../../components/forms";
 import { defaultFollowUp } from "../../components/dateTimeZone";
 import { useApi, useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
-import { callUncontracted, newIdempotencyKey } from "../../data/client";
+import { newIdempotencyKey } from "../../data/client";
 import { contactOf, ownerLabel, useDebounced, useFormatters, useReference, useRefreshLeads, type LeadDetail } from "./data";
 import { TEMPERATURES, TEMPERATURE_LABEL, tempTone, type Temperature } from "./format";
 import { Icon } from "./icons";
@@ -45,7 +44,6 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
   const api = useApi();
   const toast = useToast();
   const ref = useReference();
-  const qc = useQueryClient();
   const fmt = useFormatters();
   const refresh = useRefreshLeads();
   const editing = Boolean(leadId);
@@ -120,16 +118,14 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
     setErrors({});
     setFormError(null);
     try {
+      // Typed text: a service the organisation has is used; a new one is added by the server when the lead is saved.
       let serviceId = f.serviceId;
+      let serviceName = "";
       if (f.serviceText !== null) {
-        const typed = f.serviceText.trim().replace(/s+/g, " ");
+        const typed = f.serviceText.trim().replace(/\s+/g, " ");
         const known = ref.services.find((s) => s.name.toLowerCase() === typed.toLowerCase());
-        if (!typed) serviceId = "";
-        else if (known) serviceId = known.id;
-        else {
-          serviceId = (await callUncontracted<{ id: string }>("POST", `/api/orgs/${orgSlug}/reference-admin/services`, { name: typed })).id;
-          await qc.invalidateQueries({ queryKey: ["getReferenceData"] });
-        }
+        serviceId = known?.id ?? "";
+        serviceName = known ? "" : typed;
       }
       const newStatus = ref.statusByKey("NEW") ?? ref.statuses[0];
       if (editing && leadId) {
@@ -137,7 +133,8 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
           params: { orgSlug, leadId },
           body: {
             leadSourceId: f.sourceId || null,
-            serviceInterestId: serviceId || null,
+            serviceInterestId: serviceName ? undefined : serviceId || null,
+            ...(serviceName ? { serviceInterestName: serviceName } : {}),
             temperature: f.temp,
             nextFollowUpAt: f.nextStr || null,
             notes: f.notes.trim() || null,
@@ -182,6 +179,7 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
           ...intake,
           ...(f.sourceId ? { leadSourceId: f.sourceId } : {}),
           ...(serviceId ? { serviceInterestId: serviceId } : {}),
+          ...(serviceName ? { serviceInterestName: serviceName } : {}),
           temperature: f.temp,
           ...(canAssign && f.ownerId && f.ownerId !== membershipId ? { ownerMembershipId: f.ownerId } : {}),
         }) as never,
