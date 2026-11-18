@@ -16,6 +16,7 @@ import { csvToPdf, downloadPdf, pdfSubtitle, PdfExportError } from "../leads/pdf
 import { Icon } from "../leads/icons";
 import { ArchiveDialog } from "./ArchiveDialog";
 import { ImportCsvDialog } from "./ImportCsvDialog";
+import { CompaniesToLeadsDialog, MAX_COMPANIES_TO_LEADS } from "./CompaniesToLeadsDialog";
 import { CompanyDrawer } from "./CompanyDrawer";
 import { MergeDialog } from "./merge/MergeDialog";
 import { lifecycleTone, initialsFrom, useCustomerReference, useDebounced, type CompanyRow } from "./data";
@@ -59,12 +60,18 @@ export function CompaniesScreen() {
   const [archiving, setArchiving] = useState<CompanyRow | null>(null);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [ownerFilter, setOwnerFilter] = useState("");
+  const [picked, setPicked] = useState<Map<string, CompanyRow>>(new Map());
+  const [toLeads, setToLeads] = useState(false);
   const search = useDebounced(q.trim(), 300);
 
   const canEdit = can("companies.edit");
   const canReassign = canEdit && can("membership.manage");
   const canMerge = can("companies.merge");
   const canArchive = can("companies.archive");
+  const canMakeLeads = can("leads.create");
+  // Anyone who can reassign companies sees the whole organisation's, so they can narrow the list to one person's.
+  const canFilterOwner = canReassign;
 
   // A link from the home ("New company") arrives as ?new=1: open the drawer once and clear the parameter.
   const wantsNew = params?.get("new") === "1";
@@ -80,8 +87,9 @@ export function CompaniesScreen() {
     if (search) base.q = search;
     if (lifecycle && tab !== "dormant") base.lifecycle = lifecycle;
     if (tab === "mine") base.ownerMembershipId = membershipId;
+    else if (ownerFilter) base.ownerMembershipId = ownerFilter;
     return base;
-  }, [tab, page, perPage, search, lifecycle, membershipId]);
+  }, [tab, page, perPage, search, lifecycle, membershipId, ownerFilter]);
   const listQ = useApiQuery("listCompanyDirectory", { params: { orgSlug }, query: query as never }, { placeholderData: (prev) => prev });
   const data = listQ.data;
   const rows = (data?.items ?? []) as unknown as CompanyRow[];
@@ -99,7 +107,25 @@ export function CompaniesScreen() {
   const loading = listQ.isLoading;
   const total = data?.total ?? 0;
   const pageCount = data?.pageCount ?? 1;
-  const filtered = Boolean(search || lifecycle);
+  const filtered = Boolean(search || lifecycle || ownerFilter);
+  const pageAllPicked = rows.length > 0 && rows.every((r) => picked.has(r.id));
+  function togglePick(c: CompanyRow) {
+    setPicked((m) => {
+      const n = new Map(m);
+      if (n.has(c.id)) n.delete(c.id);
+      else if (n.size < MAX_COMPANIES_TO_LEADS) n.set(c.id, c);
+      else toast.show({ tone: "danger", message: `Pick up to ${MAX_COMPANIES_TO_LEADS} companies at a time.` });
+      return n;
+    });
+  }
+  function togglePage() {
+    setPicked((m) => {
+      const n = new Map(m);
+      if (rows.every((r) => n.has(r.id))) rows.forEach((r) => n.delete(r.id));
+      else for (const r of rows) if (n.size < MAX_COMPANIES_TO_LEADS) n.set(r.id, r);
+      return n;
+    });
+  }
   const noResults = !loading && !error && rows.length === 0 && (filtered || tab !== "all");
   const empty = !loading && !error && rows.length === 0 && !filtered && tab === "all";
 
@@ -247,6 +273,16 @@ export function CompaniesScreen() {
           ))}
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          {canFilterOwner && tab !== "mine" ? (
+            <select className="fb-cu-select" aria-label="Owner" value={ownerFilter} onChange={(e) => (setOwnerFilter(e.target.value), setPage(1))}>
+              <option value="">Any owner</option>
+              {ref.members.map((m) => (
+                <option key={m.membershipId} value={m.membershipId}>
+                  {m.userName}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <select className="fb-cu-select" aria-label="Lifecycle" value={lifecycle} disabled={tab === "dormant"} onChange={(e) => (setLifecycle(e.target.value), setPage(1))}>
             <option value="">Any lifecycle</option>
             {ref.states.map((s) => (
@@ -264,12 +300,32 @@ export function CompaniesScreen() {
         </div>
       </div>
 
+      {canMakeLeads && picked.size > 0 ? (
+        <div className="fb-cu-selbar" role="region" aria-label="Selected companies" aria-live="polite">
+          <span>
+            <strong>{picked.size}</strong> {picked.size === 1 ? "company" : "companies"} selected
+          </span>
+          <button type="button" className="fb-ld-btn fb-ld-btn--primary" onClick={() => setToLeads(true)}>
+            <Icon name="plus" size={16} stroke={2.2} />
+            Create leads
+          </button>
+          <button type="button" className="fb-ld-btn" onClick={() => setPicked(new Map())}>
+            Clear
+          </button>
+        </div>
+      ) : null}
+
       <section className="fb-cu-card" aria-label="Companies">
         <div className="fb-cu-scroll">
           <table className="fb-cu-table" aria-busy={loading || undefined}>
             <caption className="fb-sr-only">Companies</caption>
             <thead>
               <tr>
+                {canMakeLeads && tab !== "archived" ? (
+                  <th scope="col" className="fb-cu-check">
+                    <input type="checkbox" aria-label="Select all companies on this page" checked={pageAllPicked} onChange={togglePage} />
+                  </th>
+                ) : null}
                 <th scope="col">Company</th>
                 <th scope="col">Industry</th>
                 <th scope="col">Lifecycle</th>
@@ -288,7 +344,12 @@ export function CompaniesScreen() {
                     const archived = Boolean(c.archivedAt);
                     const ownerName = c.owner?.user.name ?? ref.ownerName(c.ownerMembershipId);
                     return (
-                      <tr key={c.id}>
+                      <tr key={c.id} data-picked={picked.has(c.id) || undefined}>
+                        {canMakeLeads && tab !== "archived" ? (
+                          <td className="fb-cu-check">
+                            <input type="checkbox" aria-label={`Select ${c.name}`} checked={picked.has(c.id)} onChange={() => togglePick(c)} />
+                          </td>
+                        ) : null}
                         <td>
                           <Link href={`/o/${orgSlug}/companies/${c.id}`} className="fb-cu-name">
                             {c.name}
@@ -430,6 +491,16 @@ export function CompaniesScreen() {
         />
       ) : null}
       {importing ? <ImportCsvDialog kind="companies" onClose={() => setImporting(false)} onDone={() => void qc.invalidateQueries({ queryKey: ["listCompanyDirectory"] })} /> : null}
+      {toLeads ? (
+        <CompaniesToLeadsDialog
+          companies={[...picked.values()]}
+          onClose={() => setToLeads(false)}
+          onDone={() => {
+            setPicked(new Map());
+            void qc.invalidateQueries({ queryKey: ["listLeads"] });
+          }}
+        />
+      ) : null}
       {merging ? <MergeDialog kind="company" id={merging} onClose={() => setMerging(null)} /> : null}
       {archiving ? (
         <ArchiveDialog title={`Archive ${archiving.name}?`} onCancel={() => setArchiving(null)} onConfirm={() => archive(archiving)} />

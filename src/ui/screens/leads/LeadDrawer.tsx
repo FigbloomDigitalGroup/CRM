@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { describeError } from "../../errors";
 import { useToast } from "../../components/toast";
+import { Combobox } from "../../components/combobox";
 import { DateTimeField } from "../../components/forms";
 import { defaultFollowUp } from "../../components/dateTimeZone";
 import { useApi, useApiQuery } from "../../data/hooks";
@@ -228,26 +229,18 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
         <span>
           Company or person <span className="fb-ld-req" aria-hidden="true">*</span>
         </span>
-        <input
-          className="fb-ld-input"
-          data-autofocus
+        <Combobox
+          ariaLabel="Company or person"
+          autoFocus
           value={f.name}
-          onChange={(e) => set("name", e.target.value)}
+          onChange={(v) => set("name", v)}
           placeholder="e.g. Sarova Hotels or Amara Osei"
           required
-          aria-required="true"
-          aria-invalid={errors.name ? true : undefined}
+          invalid={Boolean(errors.name)}
           disabled={editing}
-          list={editing ? undefined : "fb-ld-company-suggestions"}
-          autoComplete="off"
+          options={editing ? [] : companies.map((c) => c.name)}
         />
-        {!editing ? (
-          <datalist id="fb-ld-company-suggestions">
-            {companies.map((c) => (
-              <option key={c.id} value={c.name} />
-            ))}
-          </datalist>
-        ) : (
+        {!editing ? null : (
           <span className="fb-ld-help">
             <Icon name="lock" size={12} />
             Rename the company on its own page.
@@ -295,38 +288,27 @@ export function LeadDrawer({ leadId, onClose, onSaved }: { leadId?: string; onCl
           </label>
           <label className="fb-ld-field">
             <span>Company</span>
-            <input className="fb-ld-input" value={f.company} onChange={(e) => set("company", e.target.value)} placeholder="Pick an existing company or type a new one" autoComplete="off" list="fb-ld-company-suggestions" />
+            <Combobox ariaLabel="Company" value={f.company} onChange={(v) => set("company", v)} placeholder="Pick an existing company or type a new one" options={companies.map((c) => c.name)} />
             <span className="fb-ld-help">Leave empty if the name above is the company.</span>
           </label>
           {showRole ? (
             <label className="fb-ld-field">
               <span>Role in the company</span>
-              <input className="fb-ld-input" value={f.role} onChange={(e) => set("role", e.target.value)} placeholder="e.g. Procurement manager" maxLength={80} autoComplete="off" list="fb-ld-role-suggestions" />
-              <datalist id="fb-ld-role-suggestions">
-                {ROLE_SUGGESTIONS.map((r) => (
-                  <option key={r} value={r} />
-                ))}
-              </datalist>
+              <Combobox ariaLabel="Role in the company" value={f.role} onChange={(v) => set("role", v)} placeholder="e.g. Procurement manager" maxLength={80} options={ROLE_SUGGESTIONS} />
             </label>
           ) : null}
         </>
       ) : null}
       <label className="fb-ld-field">
         <span>Service interest</span>
-        <input
-          className="fb-ld-input"
+        <Combobox
+          ariaLabel="Service interest"
           value={f.serviceText ?? ref.service(f.serviceId)?.name ?? ""}
-          onChange={(e) => set("serviceText", e.target.value)}
+          onChange={(v) => set("serviceText", v)}
           placeholder="Not decided yet: pick one or type your own"
           maxLength={80}
-          autoComplete="off"
-          list="fb-ld-service-options"
+          options={[...ref.services.map((s) => s.name), ...EXTRA_SERVICES.filter((n) => !ref.services.some((s) => s.name.toLowerCase() === n.toLowerCase()))]}
         />
-        <datalist id="fb-ld-service-options">
-          {[...ref.services.map((s) => s.name), ...EXTRA_SERVICES.filter((n) => !ref.services.some((s) => s.name.toLowerCase() === n.toLowerCase()))].map((n) => (
-            <option key={n} value={n} />
-          ))}
-        </datalist>
       </label>
       <div className="fb-ld-field">
         <span id="fb-ld-temp-label" className="fb-ld-label">

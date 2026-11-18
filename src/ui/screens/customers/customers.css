@@ -161,3 +161,11 @@
 .fb-app .fb-cu-pick:hover { background: var(--surface-2); }
 .fb-app .fb-cu-pick__name { font-weight: 500; }
 .fb-app .fb-cu-pick__meta { font-size: 12px; color: var(--text-3); }
+
+/* Companies picked for "Create leads" */
+.fb-app .fb-cu-selbar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin: 0 0 10px; padding: 10px 14px; border:1px solid var(--primary); background: var(--primary-soft); color: var(--primary-text); border-radius: 12px; }
+.fb-app .fb-cu-selbar span{ margin-right:auto; }
+.fb-app .fb-cu-check{ width: 40px; padding-left: 14px; padding-right: 0; }
+.fb-app .fb-cu-check input{ width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+.fb-app .fb-cu-table tr[data-picked] > td{ background: var(--primary-soft); }
+.fb-app .fb-cu-result ul{ margin: 8px 0 0; padding-left: 18px; color: var(--text-2); }
