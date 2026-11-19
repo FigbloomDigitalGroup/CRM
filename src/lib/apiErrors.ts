@@ -4,6 +4,7 @@ import {
   AwaitingAccessError,
   ForbiddenError,
   NoActiveMembershipError,
+  OrganizationSuspendedError,
   NotFoundError,
   RateLimitedError,
   ReassignmentRequiredError,
@@ -32,6 +33,8 @@ export type ApiErrorCode =
   | "FORBIDDEN"
   | "CSRF_REJECTED"
   | "NO_ACTIVE_MEMBERSHIP"
+  | "ORGANIZATION_SUSPENDED"
+  | "SLUG_TAKEN"
   | "SESSION_EXPIRED"
   | "ACCOUNT_DEACTIVATED"
   | "AWAITING_ACCESS"
@@ -196,6 +199,9 @@ export async function buildErrorResponse(
       logger.error({ err: lookupErr, requestId }, "Could not build denial detail");
     }
     return make(403, "FORBIDDEN", err.message, denial ? { denial } : {});
+  }
+  if (err instanceof OrganizationSuspendedError) {
+    return make(403, "ORGANIZATION_SUSPENDED", err.message);
   }
   if (err instanceof NoActiveMembershipError) {
     return make(403, "NO_ACTIVE_MEMBERSHIP", err.message, {

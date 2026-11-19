@@ -79,7 +79,8 @@ export async function resolveWebsitePublicContext(
 
   if (
     !organization ||
-    organization.status !== "ACTIVE" ||
+    // a suspended organisation keeps collecting (Mike, 2026-11-19): only an inactive (offboarded) one stops
+    organization.status === "INACTIVE" ||
     !organization.websiteApiKey ||
     organization.websiteApiKey.revokedAt
   ) {

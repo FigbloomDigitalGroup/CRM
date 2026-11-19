@@ -6,6 +6,7 @@ import { recordAuditEvent } from "../repositories/auditEvents";
 import { upsertPendingInvite } from "../repositories/memberships";
 import { createOrganization, getOrganizationBySlug } from "../repositories/organizations";
 import { seedOrganizationDefaults } from "./organizationDefaults";
+import { organizationChanged } from "./platformLinkService";
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const DEFAULT_ADMIN_ROLE_KEY = "MANAGEMENT";
@@ -21,6 +22,8 @@ export interface ProvisionOrganizationInput {
   adminName: string;
   /** One of the 5 fixed roles (FIG-444 §7: "no new roles are invented per subscriber"). Defaults to MANAGEMENT. */
   adminRoleKey?: string;
+  /** Who asked, added to the `organization.provisioned` audit entry (e.g. `{ via: "figbloom-console", by: <staff email> }`). */
+  requestedBy?: { via: string; by: string };
 }
 
 export interface ProvisionOrganizationResult {
@@ -116,8 +119,11 @@ export async function provisionOrganization(
     action: "organization.provisioned",
     entityType: "Organization",
     entityId: organization.id,
-    metadata: { name, slug, adminEmail, adminRoleKey },
+    metadata: { name, slug, adminEmail, adminRoleKey, ...(input.requestedBy ?? {}) },
   });
+
+  // registered with the Figbloom platform when the link is on (ERP/CRM_PLATFORM_CONTRACT.md); never fails provisioning
+  await organizationChanged(organization.id);
 
   return {
     organizationId: organization.id,

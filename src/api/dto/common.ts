@@ -27,6 +27,8 @@ export const ErrorEnvelopeSchema = z.strictObject({
     "UNAUTHORIZED",
     "FORBIDDEN",
     "NO_ACTIVE_MEMBERSHIP",
+    "ORGANIZATION_SUSPENDED",
+    "SLUG_TAKEN",
     "SESSION_EXPIRED",
     "ACCOUNT_DEACTIVATED",
     "AWAITING_ACCESS",

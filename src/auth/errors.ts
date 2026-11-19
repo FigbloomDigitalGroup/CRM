@@ -97,6 +97,17 @@ export class NoActiveMembershipError extends Error {
   }
 }
 
+/**
+ * The organisation is paused by Figbloom (ERP/CRM_PLATFORM_CONTRACT.md): its members are refused with this explained
+ * no-access until Figbloom reactivates it. Nothing in it is lost meanwhile.
+ */
+export class OrganizationSuspendedError extends Error {
+  constructor(readonly organizationName: string) {
+    super(`${organizationName}'s access to Figbloom CRM is paused. Contact Figbloom to restore it.`);
+    this.name = "OrganizationSuspendedError";
+  }
+}
+
 export class NotFoundError extends Error {
   constructor(entityType: string, id: string) {
     super(`${entityType} ${id} not found.`);

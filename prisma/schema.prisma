@@ -27,6 +27,9 @@ datasource db {
 enum OrganizationStatus {
   ACTIVE
   INACTIVE
+  /// Paused by Figbloom from the console (ERP/CRM_PLATFORM_CONTRACT.md): members can't use it, data and memberships
+  /// are kept, website leads and inbound email keep arriving; reactivating restores everything.
+  SUSPENDED
 }
 
 model Organization {
@@ -1550,4 +1553,41 @@ model AuthRateLimitAttempt {
 
   @@index([action, scope, key, createdAt])
   @@map("auth_rate_limit_attempts")
+}
+
+/// Figbloom platform (ERP/CRM_PLATFORM_CONTRACT.md): what still has to be sent to the platform. One row per entity;
+/// sent right away when it changes, retried with backoff by `npm run platform:sync` while it fails. Only the
+/// schema-owner connection touches these three tables (the app role is revoked; RLS on with no policy).
+model PlatformSyncQueue {
+  id            String   @id @default(uuid())
+  entityKind    String   @map("entity_kind")
+  localId       String   @map("local_id")
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at")
+  lastError     String?  @map("last_error")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([entityKind, localId])
+  @@index([nextAttemptAt])
+  @@map("platform_sync_queue")
+}
+
+/// The platform's ID for something CRM registered (kind "organization": the platform organisation).
+model PlatformLink {
+  entityKind String   @map("entity_kind")
+  localId    String   @map("local_id")
+  platformId String   @map("platform_id")
+  linkedAt   DateTime @default(now()) @map("linked_at")
+
+  @@id([entityKind, localId])
+  @@map("platform_links")
+}
+
+/// Decision deliveries already applied (x-figbloom-delivery), so a repeated delivery changes nothing.
+model PlatformDelivery {
+  deliveryId String   @id @map("delivery_id")
+  receivedAt DateTime @default(now()) @map("received_at")
+
+  @@map("platform_deliveries")
 }

@@ -588,6 +588,23 @@ everything above works exactly as described. With it on:
 Settings: see `.env.example` ("Figbloom sign-in"). Code: `src/auth/figbloom/`,
 `src/services/figbloomSignInService.ts`, `src/app/auth/figbloom/`. Tests: `tests/figbloomSignIn.test.ts`.
 
+### Figbloom platform and console (production on AWS)
+
+With `PLATFORM_LINK_ENABLED=true` (Figbloom's AWS production; `ERP/CRM_PLATFORM_CONTRACT.md`), Figbloom staff run
+CRM's organisations from the Figbloom console:
+
+- Every organisation is registered with the platform when it's created or renamed
+  (`src/services/platformLinkService.ts`). If the platform is away the change waits in `platform_sync_queue`;
+  `npm run platform:sync` retries it (every 15 minutes, with the notifications sweep). Existing organisations:
+  `npx tsx scripts/platform-backfill.ts` (dry run first, then `--apply`).
+- The console reads summaries and creates organisations through `GET/POST /api/platform/organizations`
+  (server to server, header `x-platform-secret`). A summary carries counts and the first admin, never deal values or
+  customer data. Creating runs the normal provisioning (defaults, the admin invited as Management).
+- The console suspends and reactivates through the platform, which posts a signed decision to
+  `/api/platform/decisions` (`scripts/register-platform-webhook.ts` registers that address once). A `SUSPENDED`
+  organisation keeps everything, but its members get an explained "access is paused" and their sessions in it end;
+  website leads and inbound email keep arriving.
+
 ## Member administration
 
 `/o/[orgSlug]/settings` (Members section, `membership.view`/`.manage` +

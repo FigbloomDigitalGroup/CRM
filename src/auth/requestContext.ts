@@ -10,6 +10,7 @@ import {
 import {
   AwaitingAccessError,
   NoActiveMembershipError,
+  OrganizationSuspendedError,
   NotFoundError,
   SessionExpiredError,
   UnauthorizedError,
@@ -135,6 +136,10 @@ export async function resolveRequestContext(
   const membership = await resolveActiveMembership(userId, organization.id);
   if (!membership) {
     throw new NoActiveMembershipError(orgSlug);
+  }
+  // paused by Figbloom from the console (ERP/CRM_PLATFORM_CONTRACT.md): only its own members learn why
+  if (organization.status === "SUSPENDED") {
+    throw new OrganizationSuspendedError(organization.name);
   }
 
   return membership;
