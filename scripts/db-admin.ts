@@ -124,11 +124,16 @@ async function grantRole(): Promise<void> {
     await client.query(
       `REVOKE SELECT, INSERT, UPDATE, DELETE ON "platform_identities" FROM ${ident(APP_ROLE)}`,
     );
+    // ERP/CRM_PLATFORM_CONTRACT.md: the Figbloom platform link (queue, links, received decisions) is run by the
+    // schema-owner connection only; the tenant-facing role never sees it.
+    for (const table of ["platform_sync_queue", "platform_links", "platform_deliveries"]) {
+      await client.query(`REVOKE SELECT, INSERT, UPDATE, DELETE ON ${ident(table)} FROM ${ident(APP_ROLE)}`);
+    }
     await client.query(
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${ident(APP_ROLE)}`,
     );
     console.log(
-      `Granted table privileges to "${APP_ROLE}" (audit_events remains append-only; website_lead_request_log, auth_rate_limit_attempts and platform_identities are restricted).`,
+      `Granted table privileges to "${APP_ROLE}" (audit_events remains append-only; website_lead_request_log, auth_rate_limit_attempts, platform_identities and the platform link tables are restricted).`,
     );
   } finally {
     await client.end();

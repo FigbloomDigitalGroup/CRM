@@ -5,6 +5,7 @@ import { ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { diffAuditedFields } from "./auditDiff";
+import { organizationChanged } from "./platformLinkService";
 
 /** Closed set -- a working-day value outside this list is rejected rather than stored as free text. */
 export const WORKING_DAY_KEYS = [
@@ -196,5 +197,7 @@ export async function updateOrganizationProfile(
   }
 
   invalidateMeContext({ organizationId: ctx.organizationId });
+  // the console shows the name too (ERP/CRM_PLATFORM_CONTRACT.md); sent only when it changed, never fails the update
+  if (updated.name !== before.name) await organizationChanged(ctx.organizationId);
   return toProfile(updated);
 }

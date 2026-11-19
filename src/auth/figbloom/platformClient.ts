@@ -72,6 +72,27 @@ export class PlatformClient {
     return this.call("POST", `/users/${encodeURIComponent(sub)}/email-verified`, {});
   }
 
+  /**
+   * Registers (or renames) a CRM organisation (ERP/CRM_PLATFORM_CONTRACT.md). After the first registration the status
+   * is the platform's: CRM sends one only with `backfill: true`, to copy its state once.
+   */
+  putOrganization(
+    localId: string,
+    body: { name: string; owner_email?: string | null; created_at?: string; status?: string; backfill?: boolean },
+  ): Promise<{ organization_id: string; status: string; status_reason: string | null }> {
+    return this.call("PUT", `/products/crm/organizations/${encodeURIComponent(localId)}`, body);
+  }
+
+  /** Registers the organisation's tenant (same local ID), under the organisation registered first. */
+  putTenant(localId: string, body: { name: string; slug: string; organization_local_id: string; created_at?: string }): Promise<unknown> {
+    return this.call("PUT", `/products/crm/tenants/${encodeURIComponent(localId)}`, body);
+  }
+
+  /** Where the platform sends CRM the console's decisions (suspend, reactivate). */
+  putDecisionWebhook(url: string | null): Promise<unknown> {
+    return this.call("PUT", "/products/crm/decision-webhook", { url });
+  }
+
   private async send(url: string, init: RequestInit): Promise<Response> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);

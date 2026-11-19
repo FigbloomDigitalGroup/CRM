@@ -18,8 +18,16 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 /** Path prefixes whose non-GET requests carry the session cookie. `/api/public/**` (API-key) and `/api/cron/**` (secret header) are deliberately absent. */
 const PROTECTED_PREFIXES = ["/api/orgs/", "/api/auth/", "/api/me/", "/api/session/", "/api/platform/"];
 
+/**
+ * Server-to-server endpoints under a protected prefix that carry no session cookie: Figbloom's console (shared
+ * secret) and the platform's decision webhook (HMAC signature), ERP/CRM_PLATFORM_CONTRACT.md. A browser's cookie
+ * gets nothing there, so there is nothing to forge.
+ */
+const SERVER_TO_SERVER = ["/api/platform/organizations", "/api/platform/decisions"];
+
 export function isCsrfProtectedRequest(method: string, pathname: string): boolean {
   if (SAFE_METHODS.has(method.toUpperCase())) return false;
+  if (SERVER_TO_SERVER.some((path) => pathname === path || pathname.startsWith(`${path}/`))) return false;
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
