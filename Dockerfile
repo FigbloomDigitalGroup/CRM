@@ -33,6 +33,10 @@ COPY public ./public
 COPY package.json next.config.js ./
 COPY prisma ./prisma
 COPY scripts ./scripts
+# The admin scripts (provision-organization, notifications-sweep, export, offboard...) run with tsx and import the app's
+# own code, so the image carries the source and the path aliases too (the server itself runs the built .next).
+COPY src ./src
+COPY tsconfig.json ./
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
 RUN chmod +x docker/entrypoint.sh
 
