@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { instanceRoleCredentials } from "./instanceCredentials";
 import { LocalDriver } from "./localDriver";
 import { S3Driver } from "./s3Driver";
 import type { StorageDriver } from "./types";
@@ -14,7 +15,12 @@ import type { StorageDriver } from "./types";
  *                             DEV_SESSION_SECRET so development needs no setup.
  *   S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY,
  *   S3_FORCE_PATH_STYLE       S3-compatible driver. Keys come from a secret
- *                             manager, never from a committed file.
+ *                             manager, never from a committed file. With
+ *                             neither key set, it signs with the AWS server's
+ *                             own role (instanceCredentials.ts; Figbloom's
+ *                             AWS production, where IAM users are forbidden).
+ *                             Setting only one of the two is a mistake and
+ *                             refuses to start.
  */
 let cached: StorageDriver | null = null;
 
@@ -28,12 +34,16 @@ export function resolveStorageDriver(env: NodeJS.ProcessEnv = process.env): Stor
       if (!value) throw new Error(`${name} is required when STORAGE_DRIVER=s3.`);
       return value;
     };
+    const keyId = env.S3_ACCESS_KEY_ID;
+    const secret = env.S3_SECRET_ACCESS_KEY;
+    if (Boolean(keyId) !== Boolean(secret)) {
+      throw new Error("Set both S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY, or neither (to use the server's AWS role).");
+    }
     return new S3Driver({
       endpoint: need("S3_ENDPOINT"),
       region: need("S3_REGION"),
       bucket: need("S3_BUCKET"),
-      accessKeyId: need("S3_ACCESS_KEY_ID"),
-      secretAccessKey: need("S3_SECRET_ACCESS_KEY"),
+      ...(keyId && secret ? { accessKeyId: keyId, secretAccessKey: secret } : { credentialsProvider: instanceRoleCredentials() }),
       forcePathStyle: env.S3_FORCE_PATH_STYLE !== "false",
     });
   }

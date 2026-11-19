@@ -10,6 +10,7 @@ import { signLocalToken, verifyLocalToken } from "../src/storage/localToken";
 import { buildStorageKey, keyBelongsToOrganization } from "../src/storage/keys";
 import { FILE_POLICIES, checkFileName, extensionOf, findAllowedType } from "../src/storage/policy";
 import { S3Driver } from "../src/storage/s3Driver";
+import { instanceRoleCredentials } from "../src/storage/instanceCredentials";
 import { clamavScanner, eicarScanner } from "../src/storage/scan";
 import { presignUrl, signRequestHeaders, uriEncode } from "../src/storage/sigv4";
 import { contentMatchesMime, sniffKind } from "../src/storage/sniff";
@@ -432,5 +433,89 @@ describe("malware scan hook", () => {
       const hook = clamavScanner({ host: "127.0.0.1", port: 1, timeoutMs: 500 });
       expect((await hook.scan(Buffer.from("x"), { fileName: "a", mimeType: "text/plain" })).status).toBe("error");
     });
+  });
+});
+
+describe("signing with the AWS server's role (temporary credentials)", () => {
+  const temp = { accessKeyId: "ASIATEMP", secretAccessKey: "tempsecret", sessionToken: "session-token-value", region: "eu-west-1" };
+
+  it("signs the session token into presigned links and into request headers", () => {
+    const link = new URL(presignUrl({ method: "GET", url: "https://b.s3.eu-west-1.amazonaws.com/k", credentials: temp, expiresInSeconds: 60 }));
+    expect(link.searchParams.get("X-Amz-Security-Token")).toBe("session-token-value");
+    expect(link.searchParams.get("X-Amz-Credential")).toMatch(/^ASIATEMP\//);
+
+    const headers = signRequestHeaders({ method: "GET", url: "https://b.s3.eu-west-1.amazonaws.com/k", credentials: temp });
+    expect(headers["x-amz-security-token"]).toBe("session-token-value");
+    expect(headers.authorization).toMatch(/SignedHeaders=[^,]*x-amz-security-token/);
+
+    // a fixed key signs exactly as before: no token anywhere
+    const fixed = new URL(presignUrl({ method: "GET", url: "https://b.s3.eu-west-1.amazonaws.com/k", credentials: { ...temp, sessionToken: undefined }, expiresInSeconds: 60 }));
+    expect(fixed.searchParams.has("X-Amz-Security-Token")).toBe(false);
+  });
+
+  it("reads the role's credentials from the instance metadata service (IMDSv2), caches them, and refreshes an hour before expiry", async () => {
+    let clock = Date.parse("2026-11-19T10:00:00Z");
+    const calls: string[] = [];
+    let n = 0;
+    const fetchImpl = (async (url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? "GET"} ${url}`);
+      if (url.endsWith("/latest/api/token")) {
+        expect((init?.headers as Record<string, string>)["X-aws-ec2-metadata-token-ttl-seconds"]).toBeTruthy();
+        return new Response("imds-token");
+      }
+      expect((init?.headers as Record<string, string>)["X-aws-ec2-metadata-token"]).toBe("imds-token");
+      if (url.endsWith("/security-credentials/")) return new Response("CrmRole\n");
+      n += 1;
+      return new Response(
+        JSON.stringify({ AccessKeyId: `ASIA${n}`, SecretAccessKey: "s", Token: `t${n}`, Expiration: new Date(clock + 6 * 3600_000).toISOString() }),
+      );
+    }) as unknown as typeof fetch;
+    const provider = instanceRoleCredentials(fetchImpl, () => clock);
+
+    expect(await provider()).toEqual({ accessKeyId: "ASIA1", secretAccessKey: "s", sessionToken: "t1" });
+    expect(calls.slice(0, 3)).toEqual([
+      "PUT http://169.254.169.254/latest/api/token",
+      "GET http://169.254.169.254/latest/meta-data/iam/security-credentials/",
+      "GET http://169.254.169.254/latest/meta-data/iam/security-credentials/CrmRole",
+    ]);
+    clock += 4 * 3600_000; // 2 hours left: still cached
+    expect((await provider()).accessKeyId).toBe("ASIA1");
+    clock += 90 * 60_000; // 30 minutes left: fetched again
+    expect((await provider()).accessKeyId).toBe("ASIA2");
+  });
+
+  it("says plainly when the server has no credentials, without leaking any", async () => {
+    const fetchImpl = (async () => new Response("", { status: 404 })) as unknown as typeof fetch;
+    await expect(instanceRoleCredentials(fetchImpl)()).rejects.toThrow(/AWS credentials could not be read \(instance metadata answered 404\)/);
+  });
+
+  it("the driver signs every request with the provider's current credentials", async () => {
+    const seenAuth: string[] = [];
+    const fetchImpl = (async (_url: string, init?: RequestInit) => {
+      seenAuth.push(String((init?.headers as Record<string, string>)["x-amz-security-token"]));
+      return new Response(null, { status: 404 });
+    }) as unknown as typeof fetch;
+    let token = "first";
+    const driver = new S3Driver({
+      endpoint: "https://s3.eu-west-1.amazonaws.com",
+      region: "eu-west-1",
+      bucket: "b",
+      credentialsProvider: async () => ({ accessKeyId: "ASIA", secretAccessKey: "s", sessionToken: token }),
+      forcePathStyle: false,
+      fetchImpl,
+    });
+    await driver.headObject("k");
+    token = "second";
+    await driver.headObject("k");
+    expect(seenAuth).toEqual(["first", "second"]);
+    const link = await driver.signDownload("k", { expiresInSeconds: 60, fileName: "a.pdf", contentType: "application/pdf", disposition: "attachment" });
+    expect(new URL(link.url).searchParams.get("X-Amz-Security-Token")).toBe("second");
+  });
+
+  it("uses the server's role when neither key is set, and refuses half a key", () => {
+    const base = { NODE_ENV: "production", STORAGE_DRIVER: "s3", S3_ENDPOINT: "https://s3.eu-west-1.amazonaws.com", S3_REGION: "eu-west-1", S3_BUCKET: "b" };
+    expect(resolveStorageDriver(base as NodeJS.ProcessEnv).name).toBe("s3");
+    expect(() => resolveStorageDriver({ ...base, S3_SECRET_ACCESS_KEY: "s" } as NodeJS.ProcessEnv)).toThrow(/both S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY, or neither/);
+    expect(() => new S3Driver({ endpoint: "https://x", region: "r", bucket: "b" })).toThrow(/key .* or a credentials provider/);
   });
 });

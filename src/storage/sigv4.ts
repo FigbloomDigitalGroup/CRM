@@ -25,6 +25,8 @@ export function uriEncode(value: string, encodeSlash = true): string {
 export interface Credentials {
   accessKeyId: string;
   secretAccessKey: string;
+  /** Temporary credentials (a server role's) come with one; it is signed into every request. */
+  sessionToken?: string;
   region: string;
   service?: string;
 }
@@ -81,6 +83,7 @@ export function presignUrl(input: PresignInput): string {
     "X-Amz-Date": amzDate,
     "X-Amz-Expires": String(input.expiresInSeconds),
     "X-Amz-SignedHeaders": headerNames.join(";"),
+    ...(credentials.sessionToken ? { "X-Amz-Security-Token": credentials.sessionToken } : {}),
   };
 
   const canonicalRequest = [
@@ -120,6 +123,7 @@ export function signRequestHeaders(input: HeaderSignInput): Record<string, strin
     host: url.host,
     "x-amz-content-sha256": payloadHash,
     "x-amz-date": amzDate,
+    ...(credentials.sessionToken ? { "x-amz-security-token": credentials.sessionToken } : {}),
   };
   const headerNames = Object.keys(headers).sort();
   const query: Record<string, string> = {};
