@@ -7,7 +7,13 @@ export function LogoutButton({ withLabel = false }: { withLabel?: boolean }) {
   const router = useRouter();
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    const res = await fetch("/api/auth/logout", { method: "POST" });
+    // with Figbloom sign-in, the sign-in page ends its own session too, then shows "You're signed out"
+    const body = (await res.json().catch(() => null)) as { logoutUrl?: unknown } | null;
+    if (typeof body?.logoutUrl === "string") {
+      window.location.assign(body.logoutUrl);
+      return;
+    }
     router.push("/login");
     router.refresh();
   }

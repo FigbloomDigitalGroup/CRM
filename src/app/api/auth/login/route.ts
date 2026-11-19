@@ -5,6 +5,7 @@ import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody, requiredString } from "@/app/api/_lib/validation";
 import { setSessionCookie } from "@/app/api/_lib/sessionCookie";
 import { login } from "@/services/authService";
+import { figbloomSignInEnabled } from "@/auth/figbloom/settings";
 
 const LoginSchema = z.object({
   email: requiredString("Email and password are required."),
@@ -19,6 +20,11 @@ const LoginSchema = z.object({
  * resistant standard used elsewhere only for public internet-facing surfaces.
  */
 export async function POST(request: Request) {
+  // Figbloom sign-in (ERP/CRM_COGNITO_CONTRACT.md): passwords are checked on Figbloom's sign-in page, not here
+  if (figbloomSignInEnabled()) {
+    const message = "Sign in with your Figbloom account.";
+    return NextResponse.json({ error: message, code: "use_figbloom_sign_in", message, fieldErrors: [] }, { status: 410 });
+  }
   return handleRoute(async () => {
     const body = await parseJsonBody(request, LoginSchema);
     const client = getClientInfo(request);
