@@ -77,14 +77,26 @@ describe("CSRF middleware (FIG-802)", () => {
     }
   });
 
-  it("only runs on the cookie-authenticated API prefixes", () => {
+  it("runs on the cookie-authenticated API prefixes, and on the three sign-in pages Figbloom sign-in redirects", () => {
     expect(config.matcher).toEqual([
       "/api/orgs/:path*",
       "/api/auth/:path*",
       "/api/me/:path*",
       "/api/session/:path*",
       "/api/platform/:path*",
+      // ERP/CRM_COGNITO_CONTRACT.md: redirected only with COGNITO_SIGN_IN=on; CSRF never applies to them (GET pages)
+      "/login",
+      "/forgot-password",
+      "/reset-password",
     ]);
+  });
+
+  it("leaves the sign-in pages alone while Figbloom sign-in is off (the default)", () => {
+    for (const path of ["/login", "/forgot-password", "/reset-password"]) {
+      const res = middleware(req(path, { method: "GET" }));
+      expect(res.headers.get("location")).toBeNull();
+      expect(res.status).toBe(200);
+    }
   });
 
   it("protects the personal session endpoints (B1.04): sign-out-others, revoke, extend", () => {

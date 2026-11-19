@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   return handleRoute(async () => {
     const body = await parseJsonBody(request, AcceptInviteSchema);
     const client = getClientInfo(request);
-    const { token, expiresAt, userId, organizationSlug } = await acceptMembershipInvite(
+    const { token, expiresAt, userId, organizationSlug, notice } = await acceptMembershipInvite(
       body.token,
       body.password,
       client.userAgent,
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       client.place,
     );
 
-    const response = NextResponse.json({ userId, organizationSlug });
+    const response = NextResponse.json({ userId, organizationSlug, ...(notice ? { notice } : {}) });
     setSessionCookie(response, token, expiresAt);
     return response;
   });

@@ -30,6 +30,8 @@ import { recordAuditEvent } from "../repositories/auditEvents";
 import { getAccessState, type AccessState } from "./accessStateService";
 import { recordAuthAuditEvent } from "./authAudit";
 import { recordSignInEvent } from "./signInEventService";
+import { figbloomSignInEnabled } from "../auth/figbloom/settings";
+import { ensureFigbloomAccount, sendFigbloomConfirmEmail } from "./figbloomSignInService";
 import {
   activateMembershipByInviteToken,
   inspectInviteToken,
@@ -190,6 +192,22 @@ export async function signup(
   }
   if (!name.trim()) {
     throw new ValidationError("Name is required.");
+  }
+
+  // Figbloom sign-in (ERP/CRM_COGNITO_CONTRACT.md): the form's password becomes the person's Figbloom account
+  // password; CRM keeps none. The rest (no organisation, signed straight in) is as below.
+  if (figbloomSignInEnabled()) {
+    if (await adminDb.user.findFirst({ where: { email: { equals: email.trim(), mode: "insensitive" } } })) {
+      throw new ValidationError("An account with this email already exists.");
+    }
+    const account = await ensureFigbloomAccount({ email, name: name.trim(), password, emailProven: false });
+    if (!account.created) {
+      throw new ValidationError("You already have a Figbloom account. Sign in with it.");
+    }
+    const created = await adminDb.user.create({ data: { email, name: name.trim(), identitySub: account.sub } });
+    await sendFigbloomConfirmEmail({ id: created.id, email: created.email, identitySub: account.sub });
+    const session = await createSession(created.id, { client: clientOf(userAgent, ipAddress, place) });
+    return { token: session.token, expiresAt: session.expiresAt, userId: created.id, access: await getAccessState(created.id) };
   }
 
   const passwordHash = await hashPassword(password);
@@ -454,7 +472,8 @@ export async function getInviteInfo(
   const membership = await requireUsableInvite(hashInviteToken(token));
   return {
     email: membership.user.email,
-    requiresPassword: !membership.user.passwordHash,
+    // with Figbloom sign-in, the password is for a Figbloom account the person doesn't have linked yet
+    requiresPassword: figbloomSignInEnabled() ? !membership.user.identitySub : !membership.user.passwordHash,
   };
 }
 
@@ -475,6 +494,7 @@ export async function acceptMembershipInvite(
   expiresAt: Date;
   userId: string;
   organizationSlug: string;
+  notice?: string;
 }> {
   const tokenHash = hashInviteToken(token);
 
@@ -483,12 +503,27 @@ export async function acceptMembershipInvite(
   // permanently unreachable (no password, and the now-burned link can't be
   // retried) if validation failed.
   const preview = await requireUsableInvite(tokenHash);
-  if (!preview.user.passwordHash) {
+  const figbloom = figbloomSignInEnabled();
+  const needsPassword = figbloom ? !preview.user.identitySub : !preview.user.passwordHash;
+  if (needsPassword) {
     if (!password || !isPasswordStrongEnough(password)) {
       throw new ValidationError(
         `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
       );
     }
+  }
+  // Figbloom sign-in: link (or create) the invitee's Figbloom account before spending the token, so a password the
+  // pool refuses leaves the invite usable. The invite link reached this inbox, which proves the email.
+  let usedExistingFigbloomAccount = false;
+  if (figbloom && needsPassword) {
+    const account = await ensureFigbloomAccount({
+      email: preview.user.email,
+      name: preview.user.name,
+      password: password as string,
+      emailProven: true,
+    });
+    usedExistingFigbloomAccount = !account.created;
+    await adminDb.user.update({ where: { id: preview.user.id }, data: { identitySub: account.sub } });
   }
 
   const activated = await activateMembershipByInviteToken(tokenHash);
@@ -497,7 +532,7 @@ export async function acceptMembershipInvite(
   }
   const { membership, user } = activated;
 
-  if (!user.passwordHash) {
+  if (!figbloom && !user.passwordHash) {
     // `password` was already validated above against this same branch.
     const passwordHash = await hashPassword(password as string);
     await adminDb.user.update({ where: { id: user.id }, data: { passwordHash } });
@@ -538,5 +573,8 @@ export async function acceptMembershipInvite(
     expiresAt,
     userId: user.id,
     organizationSlug: organization.slug,
+    ...(usedExistingFigbloomAccount
+      ? { notice: "You already had a Figbloom account: sign in with its password next time." }
+      : {}),
   };
 }

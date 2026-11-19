@@ -568,6 +568,26 @@ against today. See `IMPLEMENTATION_NOTES.md` — "Real authentication
 > else explicitly (`production`, or anything other than `development`) to
 > keep this disabled.
 
+### Figbloom sign-in (production on AWS)
+
+On Figbloom's AWS production (`crm.figbloom.org`), `COGNITO_SIGN_IN=on` moves sign-in to Figbloom's own sign-in
+page, shared by every Figbloom product (`ERP/CRM_COGNITO_CONTRACT.md`). Everywhere else the switch is off and
+everything above works exactly as described. With it on:
+
+- `src/middleware.ts` sends `/login` to `/auth/figbloom/start`, and `/forgot-password` and `/reset-password` to
+  the sign-in page's "Forgot password". The frozen pages' files are unchanged.
+- `/auth/figbloom/callback` exchanges the code (CRM's client secret, PKCE), verifies the ID token, finds the
+  `User` by `identitySub` (or links one by verified email, or creates one with no organisation), and sets the
+  usual `figbloom_session` cookie: sessions, lifetimes and revocation are CRM's own, as before.
+- `/signup` and `/accept-invite` keep their forms: the password creates the person's Figbloom account through
+  the Platform API (`src/auth/figbloom/platformClient.ts`). CRM stores no password. A sign-up gets a "Confirm
+  your email" link, so Figbloom's "Forgot password" can reach them.
+- `POST /api/auth/login` answers `410 use_figbloom_sign_in`; sign-out also ends the sign-in page's session.
+- Lockout and failed-attempt events are Figbloom's (Cognito's); CRM records the successful sign-ins.
+
+Settings: see `.env.example` ("Figbloom sign-in"). Code: `src/auth/figbloom/`,
+`src/services/figbloomSignInService.ts`, `src/app/auth/figbloom/`. Tests: `tests/figbloomSignIn.test.ts`.
+
 ## Member administration
 
 `/o/[orgSlug]/settings` (Members section, `membership.view`/`.manage` +

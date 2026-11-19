@@ -33,6 +33,7 @@
     "@prisma/client": "^5.20.0",
     "@sentry/core": "^11.7.0",
     "@sentry/nextjs": "^11.7.0",
+    "aws-jwt-verify": "^5.2.1",
     "bcryptjs": "^3.0.3",
     "csv-parse": "^7.0.3",
     "csv-stringify": "^6.9.0",
