@@ -6,14 +6,17 @@ import {
   type UploadSigningOptions,
 } from "./types";
 import { presignUrl, signRequestHeaders, uriEncode, type Credentials } from "./sigv4";
+import type { CredentialsProvider } from "./instanceCredentials";
 
 export interface S3DriverOptions {
   /** Endpoint origin, for example `https://s3.eu-west-1.amazonaws.com` or a MinIO/R2 URL. */
   endpoint: string;
   region: string;
   bucket: string;
-  accessKeyId: string;
-  secretAccessKey: string;
+  /** A fixed key; or leave both out and give `credentialsProvider` (e.g. the server's role). */
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  credentialsProvider?: CredentialsProvider;
   /** Path-style (`endpoint/bucket/key`) is the default; virtual-hosted style puts the bucket in the host. */
   forcePathStyle?: boolean;
   now?: () => Date;
@@ -23,19 +26,27 @@ export interface S3DriverOptions {
 /** Production driver for any S3-compatible object store. */
 export class S3Driver implements StorageDriver {
   readonly name = "s3" as const;
-  private readonly credentials: Credentials;
+  private readonly fixed: Credentials | null;
   private readonly now: () => Date;
   private readonly doFetch: typeof fetch;
 
   constructor(private readonly options: S3DriverOptions) {
-    this.credentials = {
-      accessKeyId: options.accessKeyId,
-      secretAccessKey: options.secretAccessKey,
-      region: options.region,
-      service: "s3",
-    };
+    if (options.accessKeyId && options.secretAccessKey) {
+      this.fixed = { accessKeyId: options.accessKeyId, secretAccessKey: options.secretAccessKey, region: options.region, service: "s3" };
+    } else if (options.credentialsProvider) {
+      this.fixed = null;
+    } else {
+      throw new Error("The S3 driver needs a key (accessKeyId and secretAccessKey) or a credentials provider.");
+    }
     this.now = options.now ?? (() => new Date());
     this.doFetch = options.fetchImpl ?? fetch;
+  }
+
+  /** The credentials to sign with now: the fixed key, or fresh ones from the provider. */
+  private async credentials(): Promise<Credentials> {
+    if (this.fixed) return this.fixed;
+    const c = await this.options.credentialsProvider!();
+    return { ...c, region: this.options.region, service: "s3" };
   }
 
   private objectUrl(key: string): string {
@@ -52,7 +63,7 @@ export class S3Driver implements StorageDriver {
     const headers = signRequestHeaders({
       method: "PUT",
       url,
-      credentials: this.credentials,
+      credentials: await this.credentials(),
       body,
       headers: { "content-type": options.contentType },
       now: this.now(),
@@ -63,7 +74,7 @@ export class S3Driver implements StorageDriver {
 
   async getObject(key: string, maxBytes: number): Promise<Buffer> {
     const url = this.objectUrl(key);
-    const headers = signRequestHeaders({ method: "GET", url, credentials: this.credentials, now: this.now() });
+    const headers = signRequestHeaders({ method: "GET", url, credentials: await this.credentials(), now: this.now() });
     const res = await this.doFetch(url, { method: "GET", headers });
     if (!res.ok) throw new Error(`S3 GET failed with ${res.status}.`);
     const declared = Number(res.headers.get("content-length") ?? "0");
@@ -75,7 +86,7 @@ export class S3Driver implements StorageDriver {
 
   async headObject(key: string): Promise<{ size: number } | null> {
     const url = this.objectUrl(key);
-    const headers = signRequestHeaders({ method: "HEAD", url, credentials: this.credentials, now: this.now() });
+    const headers = signRequestHeaders({ method: "HEAD", url, credentials: await this.credentials(), now: this.now() });
     const res = await this.doFetch(url, { method: "HEAD", headers });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`S3 HEAD failed with ${res.status}.`);
@@ -84,7 +95,7 @@ export class S3Driver implements StorageDriver {
 
   async deleteObject(key: string): Promise<void> {
     const url = this.objectUrl(key);
-    const headers = signRequestHeaders({ method: "DELETE", url, credentials: this.credentials, now: this.now() });
+    const headers = signRequestHeaders({ method: "DELETE", url, credentials: await this.credentials(), now: this.now() });
     const res = await this.doFetch(url, { method: "DELETE", headers });
     if (!res.ok && res.status !== 404) throw new Error(`S3 DELETE failed with ${res.status}.`);
   }
@@ -94,7 +105,7 @@ export class S3Driver implements StorageDriver {
     const url = presignUrl({
       method: "PUT",
       url: this.objectUrl(key),
-      credentials: this.credentials,
+      credentials: await this.credentials(),
       expiresInSeconds: options.expiresInSeconds,
       now,
       signedHeaders: { "content-type": options.contentType },
@@ -113,7 +124,7 @@ export class S3Driver implements StorageDriver {
     const url = presignUrl({
       method: "GET",
       url: this.objectUrl(key),
-      credentials: this.credentials,
+      credentials: await this.credentials(),
       expiresInSeconds: options.expiresInSeconds,
       now,
       query: {
