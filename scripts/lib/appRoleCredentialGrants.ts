@@ -14,8 +14,8 @@
 /** Columns of `users` the app role may SELECT. */
 export const APP_ROLE_USER_READABLE_COLUMNS = ["id", "email", "name", "phone", "status", "created_at", "updated_at", "time_zone"] as const;
 
-/** Columns of `users` the app role may never read: the password hash and the sign-in lockout state. */
-export const USER_CREDENTIAL_COLUMNS = ["password_hash", "failed_sign_in_count", "last_failed_sign_in_at", "locked_until"] as const;
+/** Columns of `users` the app role may never read: the password hash, the sign-in lockout state and the email-verification state (UC-F2; read only by sign-in and invite acceptance on the owner connection). */
+export const USER_CREDENTIAL_COLUMNS = ["password_hash", "failed_sign_in_count", "last_failed_sign_in_at", "locked_until", "email_verified_at"] as const;
 
 /** Tables the app role has no privilege on at all (reset-token hashes). */
 export const APP_ROLE_NO_ACCESS_CREDENTIAL_TABLES = ["password_reset_tokens"] as const;
