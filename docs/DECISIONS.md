@@ -14,7 +14,7 @@ row; change the row and date it.
 
 | # | Decision | Status |
 |---|---|---|
-| 1.1 | The permission matrix in `design-brief/03-SCREEN-INVENTORY-AND-ROLE-MATRIX.md` §1 is confirmed for the five fixed roles, with departures 1.2 to 1.6 applied. This closes the "unsigned" status in FIG-444 and FIG-437 §18. | Decided |
+| 1.1 | The permission matrix in `design-brief/03-SCREEN-INVENTORY-AND-ROLE-MATRIX.md` §1 is confirmed for the five fixed roles, with departures 1.2 to 1.6 applied. This closes the "unsigned" status in FIG-444 and FIG-437 §18. | Decided. "Five fixed roles" changed by 11.2 (Marketing role approved, 18 Nov 2026) |
 | 1.2 | **Delivery and Finance see won deals only.** They no longer see open pipeline. Needs a backend change: replace `deals.view.all` for these two roles with a won-only scope (proposed key `deals.view.won`). | Decided |
 | 1.3 | **Sales shared pool.** Sales sees its own records plus a shared/unassigned pool: view, and claim (take ownership), not edit others' records. Proposed keys `leads.view.shared` and `leads.claim`. | Decided |
 | 1.4 | **Technical "My work".** Restricted Technical gets a minimal assigned-work surface: their tasks plus the client requirements relevant to that work. No project model in V1. | Decided |
@@ -60,7 +60,7 @@ duplicates of decisions above). Numbering follows the checklist.
 | 9 | Sales Lead role (team-scoped visibility)? | **Not in V1.** Revisit when the team passes two or three people; keep team scope possible in the data model. | Deferred |
 | 10 | Read-only Viewer or Auditor role? | **Not in V1.** Audit log stays Management-only. Revisit in V1.1. | Deferred |
 | 11 | Website forms, API tokens and automations as named service actors in audit logs? | **Yes.** Shown as named actors, for example "Website form", "API token: <name>", "Automation: <rule>", never as a person. | Decided |
-| 12 | Will Marketing or Business Development need their own role? | **No new role** until they are distinct people. | Deferred |
+| 12 | Will Marketing or Business Development need their own role? | **No new role** until they are distinct people. | Deferred. **Marketing part superseded by 11.2** (Marketing role approved by Given, 18 Nov 2026; Michael's line open); Business Development is unchanged |
 | 13 | M-Pesa deposit request on signed quotes? | **V2, decision-gated; status-only until then.** See 2.5. | Decided |
 | 14 | Swahili for the client-facing quote, signing page and web form? | **Not in V1.** English only; keep strings externalised so it can be added in V1.1. | Deferred |
 | 15 | Automation boundary: any exceptions? | **No exceptions.** Automations, sequences and the assistant may assign, remind and draft; they never move a stage, set a discount or approve. A test enforces it (CLAUDE.md rule 9). | Decided |
@@ -214,3 +214,41 @@ Given asked for the Sky theme (sidebar `#1C4E6E`, accent `#2A7BB0`, highlight `#
 | 10.4 | **D-V11-05 (sequence SEND steps) is accepted as built, not a rule 9 breach.** A SEND step is chosen per step by Management, uses an approved active template only, runs as the record owner, skips do-not-contact people and drafts instead when a field is empty. It never moves a stage, sets a discount or approves anything (`SEQUENCE_EFFECTS` is pinned by a test). | Accepted. Reversible: to make sequences draft-only, make `emailMode` always DRAFT |
 | 10.5 | **D-V11-06 (cron cadence) is resolved for the MVP:** cron-job.org calls `/api/cron/jobs` every 5 minutes. `vercel.json` keeps the daily entry as a backstop. | Resolved |
 | 10.6 | **The platform console journeys keep running on a dev server only.** No CI job is added; the console is a 404 on a production build by design. | Accepted |
+
+## 11. Universal CRM programme: scope decisions (18 Nov 2026, decided by Given)
+
+Given made these decisions in the 18 Nov 2026 design review of the Universal CRM programme (`docs/UNIVERSAL_CRM_ARCHITECTURE.md`, with the factual baseline in `docs/UNIVERSAL_CRM_EXISTING_STATE_AUDIT.md`; Linear milestone "Universal CRM", issue UC-D2, FIG-1762). They are recorded here in the programme's own words so nothing depends on chat history. Rows 11.1 to 11.4, 11.6 and 11.7 are **decided**. Row 11.5 is a recommendation that Given has **not yet confirmed**. Section 11.9 records the UC-D3 answers (20 Nov 2026). Section 11.8 lists what is still **open**. Given may change any row (change it and date it).
+
+| # | Decision | Status |
+|---|---|---|
+| 11.1 | **Customer Support and Customer Success are not part of the system.** Tenant-side customer service and ticketing are out; this closes architecture decision D-6 and conflict C-2. It is consistent with decision 12 in section 5.0 (no Customer Support role; tenants email support to Figbloom, `docs/SUPPORT_BY_EMAIL.md`). The removed tables, role and screens are not revived. | Decided by Given, 18 Nov 2026 |
+| 11.2 | **A Marketing system role is approved.** This **changes two earlier decisions**: row 1.1 (the matrix is confirmed "for the five fixed roles") and row 12 of section 4 ("No new role until Marketing or Business Development are distinct people"). The architecture's own recommendation (conflict C-1: no new system role; Marketing as a department plus custom roles) was **not** followed; Given decided otherwise. Both earlier rows keep their text and now point here. The role itself, its permission keys, the seeded matrix, the dev account and the walk tests are built by UC-C7; the five-role matrix tests and fixtures are updated by that issue, not before. Existing roles keep exactly the access they have today (the snapshot test required by the programme). | Decided by Given, 18 Nov 2026. **Michael's line is open:** it needs Michael's sign-off, or a note here that Given decided on Michael's behalf. Not recorded yet, and not assumed |
+| 11.3 | **HR and Inventory/Procurement are not core modules.** If they are ever offered they are integrations with external systems only, not CRM tables, screens or roles. | Decided by Given, 18 Nov 2026 |
+| 11.4 | **Sky blue is the default theme, and the sign-in pages follow it.** This was decided on 10 Nov 2026 and is recorded in full in section 8 (default `SKY`, the approved colour-only exception for the frozen sign-in pages). Given confirmed it again on 18 Nov. No change, and nothing is duplicated here. | Decided (section 8); confirmed by Given, 18 Nov 2026 |
+| 11.5 | **Accounts (departments) sit on top of roles; one role per membership, plus department participation grants.** This is architecture decisions D-3 (departments as structure, not roles; Head of Sales becomes a department-head feature) and D-4 (keep one role per membership; revisit multi-role only on a proven need). The issue asks Given to "confirm or change the recommendation". **Given has not confirmed it.** Until he does, the design records it and nothing is built that depends on it. UC-C1 (departments), UC-C3 (participation keys) and UC-C4 (Sales access screen) are Backlog and unscheduled. | **RECOMMENDATION AWAITING CONFIRMATION.** Not decided |
+| 11.6 | **Quotes and Invoices become sidebar pages that reuse the existing implementation** (the quote engine, the invoice API and the existing screens), gated by permission, with no change to the existing roles' effective access. **Payments stay records only**: no payment processing, which confirms 2.5 and 9.1. Payments remain visible only to Finance and Management (CLAUDE.md rule 7). Each new screen still needs a design-spec TRACEABILITY row (UC-D5) because `design-spec/README.md` fixes the approved screen list at 92 (architecture conflict C-4). | Decided by Given, 18 Nov 2026 |
+| 11.7 | **The existing database and its data must be preserved.** Every change is additive: expand, switch, contract. No `DROP`, `TRUNCATE`, `DELETE` without `WHERE`, `ALTER COLUMN TYPE` or `RENAME` without an explicit, approved `-- migration-guard: approved-by=... reason=...` line, enforced by the migration guard. Existing organisations are never re-seeded (`seedOrganizationDefaults` is not re-run on an existing organisation). This confirms 5.2 (plain PostgreSQL, standard migrations) and the expand-contract rule in architecture section 18.5. | Decided by Given, 18 Nov 2026 |
+
+### 11.8 Open decisions (not answered; nothing below is decided)
+
+These are **unanswered**. The design records them and does not guess. The recommendations are the ones written in the Linear issues, shown here so the question is clear; they are **not** decisions.
+
+| Issue | Question | Recommendation in the issue (not adopted) | Blocks |
+|---|---|---|---|
+| UC-D1, FIG-1761 (architecture D-1) | Which database holds real data today: the Neon MVP, another instance, spreadsheets, or none yet? The repository shows no real data (`docs/MVP_HANDOVER.md` says the MVP is a test with fake data and is not ready for real customers; `docs/LATER_VERSIONS.md` section A lists what must be done before real data), but Given has said the live database holds data that must not be lost. (The architecture doc and the Linear issue also cite `docs/REAL_DATA_READINESS.md`; that file does not exist in this repository or its history.) | Confirm. The design assumes real data may exist. Update section 6.2 ("Path A, no real data") when answered. | UC-F8 (rehearsal on real data); scheduling of all F and R work |
+| UC-D1, FIG-1761 (architecture D-2) | Approve scope growth beyond the 92 approved screens and the 22 Nov plan, and record a new schedule (architecture conflict C-6; this conflicts with 3.1 and 6.1). | Approve. Only phases D, F and R are committed; the rest is unscheduled backlog. | A recorded schedule |
+
+### 11.9 Release 1 decisions (UC-D3, FIG-1763), decided by Given on 20 Nov 2026
+
+Given accepted all four recommendations written in the Linear issue (reply: "accept all recommendations"). These unblock UC-R1, UC-R6, UC-R10, UC-B2 and UC-B5.
+
+| No. | Decision | Status |
+|---|---|---|
+| 11.9.1 (D-9) | **Consumers are a company of one** (`Company.kind = INDIVIDUAL`), and an **invoice may be created from an accepted quote as a record only** (no payment is taken or requested). | Decided by Given, 20 Nov 2026. Feeds UC-B2. |
+| 11.9.2 (D-10) | **Sales access to invoices is draft-only, off by default, and enabled by Management.** Payments and balances stay hidden from Sales (CLAUDE.md rule 7). | Decided by Given, 20 Nov 2026. Feeds UC-R10. |
+| 11.9.3 (D-12) | **Only `departments.manage` is a reserved (non-delegable) key.** `finance.export` and `integrations.manage` stay delegable. | Decided by Given, 20 Nov 2026. Feeds the UC-R1 key list. |
+| 11.9.4 (D-13) | **Quote and invoice PDF is browser print in Release 1.** A server renderer is decided later in UC-B5. | Decided by Given, 20 Nov 2026. Feeds UC-R6 and UC-B5. |
+
+The other architecture decisions (D-5 to D-8, D-11, D-14 to D-20) belong to UC-D4 (FIG-1774, Backlog) and are also open.
+
+**Naming note.** In this section "UC-D1" and "UC-D3" are Linear issue codes. They are not the same thing as architecture decisions D-1 and D-3 (D-3 is the departments question, row 11.5 above).

@@ -11,6 +11,8 @@ A full makeover of the CRM to the approved "Figbloom CRM – Final Design" (92 s
 
 The plan lives in Linear: project "CRM Project", team Figbloom, issues FIG-xxxx. Read the project's pathway document first when Linear is connected. Linear is the source of truth for scope; this file is the source of truth for how we work.
 
+**Universal CRM programme (from 18 Nov 2026):** the design is in `docs/UNIVERSAL_CRM_ARCHITECTURE.md` and the factual baseline in `docs/UNIVERSAL_CRM_EXISTING_STATE_AUDIT.md`; the scope decisions Given made are in `docs/DECISIONS.md` section 11 (open ones are listed there, do not guess them).
+
 ### Order of work (demo-first since 29 Oct 2026)
 
 | Milestone | What | Due |
