@@ -190,7 +190,7 @@ export async function listTasks(
       // Pulls the assignee's display name along so every role that can see a
       // task can see who it is assigned to (the member list itself is
       // Management-only). Nested relations are stripped in the service.
-      include: { assignee: { include: { user: true } } },
+      include: { assignee: { include: { user: { select: { name: true } } } } },
       orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }, { id: "asc" }],
       take: filters.take,
       skip: filters.skip,
@@ -319,7 +319,7 @@ export async function listTaskGroup(
         : [{ dueAt: { sort: "asc", nulls: "last" } }, { priority: "desc" }, { createdAt: "desc" }, { id: "asc" }];
     const items = await tx.task.findMany({
       where,
-      include: { assignee: { include: { user: true } } },
+      include: { assignee: { include: { user: { select: { name: true } } } } },
       orderBy,
       skip: paging.skip,
       take: paging.take,

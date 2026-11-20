@@ -10,8 +10,24 @@ export interface TableState {
   appCanSelect: boolean;
 }
 
+/** UC-F3 (S-4): what the app role can do with the credential tables, read from the owner connection. Names only. */
+export interface CredentialGrantState {
+  /** Credential columns of users the app role can SELECT (must be none). */
+  credentialColumnsReadable: string[];
+  /** Non-secret columns of users the app role cannot SELECT (must be none: the app reads them). */
+  safeColumnsMissing: string[];
+  /** Write privileges the app role holds on users (must be none). */
+  usersWritePrivileges: string[];
+  /** Privileges the app role holds on the closed credential tables, as "table: PRIVILEGE" (must be none). */
+  closedTablePrivileges: string[];
+  /** Columns of users that are in neither list: a new column has to be classified (must be none). */
+  unclassifiedColumns: string[];
+}
+
 export interface VerifyInput {
   tables: TableState[];
+  /** undefined when the app role does not exist. */
+  credentialGrants?: CredentialGrantState;
   /** Row counts taken before the migration (table name to rows), when a snapshot was given. */
   before?: Record<string, number>;
   appRoleExists: boolean;
@@ -62,6 +78,22 @@ export function evaluate(input: VerifyInput): VerifyReport {
     ok: input.appRoleExists && noGrant.length === 0,
     detail: noGrant.length ? `no SELECT on: ${list(noGrant)} (run npm run db:grant-role)` : "SELECT granted on all tables",
   });
+
+  if (input.credentialGrants) {
+    const g = input.credentialGrants;
+    const problems = [
+      ...g.credentialColumnsReadable.map((c) => `app role can read users.${c}`),
+      ...g.usersWritePrivileges.map((p) => `app role has ${p} on users`),
+      ...g.closedTablePrivileges.map((p) => `app role has ${p}`),
+      ...g.safeColumnsMissing.map((c) => `app role cannot read users.${c}`),
+      ...g.unclassifiedColumns.map((c) => `users.${c} is not classified in scripts/lib/appRoleCredentialGrants.ts`),
+    ];
+    checks.push({
+      name: "App role cannot read credentials (UC-F3)",
+      ok: problems.length === 0,
+      detail: problems.length ? `${list(problems)} (run npm run db:grant-role)` : "no password hash, lockout field or reset token readable; users is column-limited and read-only",
+    });
+  }
 
   if (input.before) {
     const now = new Map(input.tables.map((t) => [t.name, t.rows]));

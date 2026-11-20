@@ -13,7 +13,8 @@
 import "dotenv/config";
 import { readFileSync, writeFileSync } from "node:fs";
 import { Client } from "pg";
-import { evaluate, formatReport, type TableState } from "./lib/migrationVerify";
+import { APP_ROLE_NO_ACCESS_CREDENTIAL_TABLES, APP_ROLE_USER_READABLE_COLUMNS, USER_CREDENTIAL_COLUMNS } from "./lib/appRoleCredentialGrants";
+import { evaluate, formatReport, type CredentialGrantState, type TableState } from "./lib/migrationVerify";
 
 const arg = (name: string) => {
   const i = process.argv.indexOf(name);
@@ -99,7 +100,39 @@ async function main() {
       }
     }
 
-    const report = evaluate({ tables, before, appRoleExists, appRead });
+    // UC-F3 (S-4): the app role must not see credentials. Read from the owner connection with has_*_privilege: no row is read.
+    let credentialGrants: CredentialGrantState | undefined;
+    if (appRoleExists) {
+      const cols = (await owner.query(`SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users'`)).rows.map(
+        (r) => r.column_name as string,
+      );
+      const canSelect = async (col: string) =>
+        (await owner.query(`SELECT has_column_privilege('figbloom_app', 'public.users', $1, 'SELECT') AS ok`, [col])).rows[0].ok as boolean;
+      const credentialColumnsReadable: string[] = [];
+      for (const c of USER_CREDENTIAL_COLUMNS) if (cols.includes(c) && (await canSelect(c))) credentialColumnsReadable.push(c);
+      const safeColumnsMissing: string[] = [];
+      for (const c of APP_ROLE_USER_READABLE_COLUMNS) if (cols.includes(c) && !(await canSelect(c))) safeColumnsMissing.push(c);
+      const usersWritePrivileges: string[] = [];
+      for (const p of ["INSERT", "UPDATE", "DELETE"]) {
+        if ((await owner.query(`SELECT has_table_privilege('figbloom_app', 'public.users', $1) AS ok`, [p])).rows[0].ok) usersWritePrivileges.push(p);
+      }
+      const closedTablePrivileges: string[] = [];
+      for (const t of APP_ROLE_NO_ACCESS_CREDENTIAL_TABLES) {
+        for (const p of ["SELECT", "INSERT", "UPDATE", "DELETE"]) {
+          if ((await owner.query(`SELECT has_table_privilege('figbloom_app', $1, $2) AS ok`, [`public.${t}`, p])).rows[0].ok) closedTablePrivileges.push(`${t}: ${p}`);
+        }
+      }
+      const known = new Set<string>([...APP_ROLE_USER_READABLE_COLUMNS, ...USER_CREDENTIAL_COLUMNS]);
+      credentialGrants = {
+        credentialColumnsReadable,
+        safeColumnsMissing,
+        usersWritePrivileges,
+        closedTablePrivileges,
+        unclassifiedColumns: cols.filter((c) => !known.has(c)),
+      };
+    }
+
+    const report = evaluate({ tables, before, appRoleExists, appRead, credentialGrants });
     console.log(formatReport(report));
     process.exitCode = report.ok ? 0 : 1;
   } finally {
