@@ -410,6 +410,59 @@ export const PERMISSIONS: { key: string; area: string; description: string }[] =
       area: "Quotes",
       description: "Approve quotes and discounts.",
     },
+    // UC-R1 (FIG-1775): the quote and invoice distinctions the Quotes and Invoices pages need. A role that holds quotes.create,
+    // quotes.approve, finance.view.payments or finance.manage.payments already carries the matching keys below through
+    // PERMISSION_IMPLICATIONS, so no role's effective access changes. Nothing enforces these keys yet (UC-R2 onward).
+    {
+      key: "quotes.view",
+      area: "Quotes",
+      description: "See the quotes list and open a quote.",
+    },
+    {
+      key: "quotes.edit",
+      area: "Quotes",
+      description: "Edit a quote that has not been sent.",
+    },
+    {
+      key: "quotes.send",
+      area: "Quotes",
+      description: "Send a quote to the customer by email or share link.",
+    },
+    {
+      key: "invoices.view",
+      area: "Finance",
+      description: "See the invoices list and open an invoice.",
+    },
+    {
+      key: "invoices.create",
+      area: "Finance",
+      description: "Create an invoice.",
+    },
+    {
+      key: "invoices.edit",
+      area: "Finance",
+      description: "Edit or void an invoice.",
+    },
+    {
+      key: "invoices.send",
+      area: "Finance",
+      description: "Send an invoice to the customer.",
+    },
+    {
+      key: "payments.record",
+      area: "Finance",
+      description: "Record or reverse a payment against an invoice. Nothing is processed.",
+    },
+    {
+      key: "finance.reports.view",
+      area: "Finance",
+      description: "See the finance reports.",
+    },
+    {
+      key: "finance.export",
+      area: "Finance",
+      description: "Export invoices and payments. More than 500 rows still needs export.bulk.",
+    },
     {
       key: "catalogue.manage",
       area: "Quotes",
@@ -520,6 +573,10 @@ export const PERMISSION_MIN_RELEASE: Record<string, "v1" | "v1.1" | "v2"> = {
   "views.share": "v1.1",
   "quotes.create": "v1.1",
   "quotes.approve": "v1.1",
+  // UC-R1: the quote distinctions follow quotes.create (V1.1); the invoice and finance keys follow the V1 payment keys.
+  "quotes.view": "v1.1",
+  "quotes.edit": "v1.1",
+  "quotes.send": "v1.1",
   "catalogue.manage": "v1.1",
   "forecast.view.all": "v1.1",
   "targets.manage": "v1.1",
@@ -536,6 +593,43 @@ export const PERMISSION_MIN_RELEASE: Record<string, "v1" | "v1.1" | "v2"> = {
   "webhooks.manage": "v2",
   "roles.manage": "v2",
 };
+
+/**
+ * UC-R1 (FIG-1775), the compatibility rule: a role that holds the key on the left also carries the keys on the right, in the
+ * effective permission set (`effectivePermissionKeys`), for platform roles AND custom roles. This is how every role keeps exactly
+ * the access it has today when a coarse key is split into finer ones: nothing is rewritten in any organisation's data, a custom
+ * role keeps its stored keys, and the finer keys are derived at read time. One level only (a key listed on the right does not
+ * itself imply anything).
+ *
+ *  - quotes.create implies view, edit and send (it built and sent quotes).
+ *  - quotes.approve implies quotes.view: today the quote read routes accept quotes.create OR quotes.approve (`READ_KEYS` in
+ *    quoteService), so an approver who cannot build quotes must still be able to read them when quotes.view is enforced.
+ *  - finance.manage.payments implies invoices create, edit and send, payments.record and finance.export.
+ *  - finance.view.payments implies invoices.view and finance.reports.view.
+ *
+ * Payments stay visible to Finance and Management only (CLAUDE.md rule 7): the payment keys are reserved from custom roles
+ * (`SENSITIVE_RESERVED_KEYS`), so nothing implied by them reaches a custom role through this table.
+ */
+export const PERMISSION_IMPLICATIONS: Record<string, readonly string[]> = {
+  "quotes.create": ["quotes.view", "quotes.edit", "quotes.send"],
+  "quotes.approve": ["quotes.view"],
+  "finance.manage.payments": ["invoices.create", "invoices.edit", "invoices.send", "payments.record", "finance.export"],
+  "finance.view.payments": ["invoices.view", "finance.reports.view"],
+};
+
+/** The ten keys UC-R1 adds to the catalogue. */
+export const UC_R1_NEW_KEYS: readonly string[] = [
+  "quotes.view",
+  "quotes.edit",
+  "quotes.send",
+  "invoices.view",
+  "invoices.create",
+  "invoices.edit",
+  "invoices.send",
+  "payments.record",
+  "finance.reports.view",
+  "finance.export",
+];
 
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
   MANAGEMENT: [
@@ -596,6 +690,16 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "views.share",
     "quotes.create",
     "quotes.approve",
+    "quotes.view",
+    "quotes.edit",
+    "quotes.send",
+    "invoices.view",
+    "invoices.create",
+    "invoices.edit",
+    "invoices.send",
+    "payments.record",
+    "finance.reports.view",
+    "finance.export",
     "catalogue.manage",
     "forecast.view.all",
     "targets.manage",
@@ -656,6 +760,9 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "attachments.manage",
     "views.share",
     "quotes.create",
+    "quotes.view",
+    "quotes.edit",
+    "quotes.send",
     "ai.use",
     "leads.view.shared",
     "leads.claim",
@@ -705,6 +812,16 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "ai.use",
     "payments.manage",
     "finance.followup.note",
+    // UC-R1: the invoice and finance keys mirror what finance.view.payments and finance.manage.payments already allowed, and
+    // Finance also gets quotes.view (it cannot read quotes today; an intended addition, enforced from UC-R2).
+    "invoices.view",
+    "invoices.create",
+    "invoices.edit",
+    "invoices.send",
+    "payments.record",
+    "finance.reports.view",
+    "finance.export",
+    "quotes.view",
     "chat.view",
     "chat.post",
   ],
