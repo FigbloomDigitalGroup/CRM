@@ -135,6 +135,59 @@ jobs:
           path: openapi/
           retention-days: 30
 
+  # UC-F7 (FIG-1771, building on P2-20 section C): the data-preservation gate. A migration that drops or retypes something, or that changes what the
+  # data adds up to, fails here. Counts, sums and hashes only: no step prints a row.
+  migration-safety:
+    name: Migration safety (guard, apply twice, verify)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: figbloom
+          POSTGRES_PASSWORD: figbloom
+          POSTGRES_DB: figbloom_crm_dev
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U figbloom"
+          --health-interval 3s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: No migration holds an unapproved destructive statement
+        run: npm run check:migrations
+      # The guard must be able to fail: a probe migration that drops a column has to be refused.
+      - name: The guard refuses a probe migration that drops a column
+        run: |
+          d=prisma/migrations/20991231000000_ci_guard_probe
+          mkdir "$d"
+          echo 'ALTER TABLE "leads" DROP COLUMN "notes";' > "$d/migration.sql"
+          if npm run check:migrations; then echo "The guard let a DROP COLUMN through"; rm -rf "$d"; exit 1; fi
+          rm -rf "$d"
+      - name: Apply every migration to a fresh database and provision the app role
+        run: npm run migrate:deploy && npm run db:bootstrap-role && npm run db:grant-role
+      - name: Seed, then take the before snapshot and fingerprints
+        run: |
+          npm run seed:dev
+          npm run verify:migration -- --snapshot-out before-counts.json
+          npm run verify:financials -- --out before-money.json
+          npm run verify:custom-fields -- --out before-cf.json
+      - name: Apply the migrations a second time (must change nothing)
+        run: |
+          npm run migrate:deploy 2>&1 | tee second-deploy.log
+          grep -q "No pending migrations" second-deploy.log
+      - name: Verify nothing was lost or changed
+        run: |
+          npm run verify:migration -- --snapshot before-counts.json --exact
+          npm run verify:relations
+          npm run verify:financials -- --compare before-money.json
+          npm run verify:duplicates
+          npm run verify:custom-fields -- --compare before-cf.json
+
   unit:
     name: Unit and integration tests (shard ${{ matrix.shard }} of 6)
     runs-on: ubuntu-latest
@@ -277,7 +330,7 @@ jobs:
   ci:
     name: Lint, typecheck, migrate, test, e2e
     if: ${{ always() }}
-    needs: [static, build, migrate, unit, coverage, e2e]
+    needs: [static, build, migrate, migration-safety, unit, coverage, e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

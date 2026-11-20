@@ -7,6 +7,16 @@
  *   # after migrate:deploy:direct and db:grant-role:
  *   DATABASE_URL=... APP_DATABASE_URL=... npm run verify:migration -- --snapshot before.json
  *
+ * Flags (UC-F7):
+ *   --snapshot-out <file>  write the table counts and stop (the "before" snapshot).
+ *   --snapshot <file>      compare with a snapshot: no table disappeared and none lost rows ("<", so extra rows pass).
+ *   --exact                with --snapshot, require EVERY count to be equal (a like-for-like restore or copy); new tables fail too.
+ *   --no-snapshot          a plain health check, not a migration gate: the snapshot check is printed as SKIP instead of failing.
+ *
+ * Without --snapshot or --no-snapshot the run fails on purpose: a migration must never be judged without a "before" to compare with.
+ * The closed tables (platform, two-step, rate-limit, reset-token tables) are listed in scripts/lib/appRoleRestrictedTables.ts and are
+ * checked in both directions: they must be closed, and nothing else may be.
+ *
  * DATABASE_URL is the schema owner (so row-level security does not hide rows). APP_DATABASE_URL (optional) is the figbloom_app login; with it the
  * script also reads as the app does: inside one organisation, and with none set.
  */
@@ -132,7 +142,24 @@ async function main() {
       };
     }
 
-    const report = evaluate({ tables, before, appRoleExists, appRead, credentialGrants });
+    const report = evaluate({
+      tables,
+      before,
+      appRoleExists,
+      appRead,
+      credentialGrants,
+      exact: process.argv.includes("--exact"),
+      noSnapshot: process.argv.includes("--no-snapshot"),
+    });
+    // UC-F7: the counts above are only true if the owner connection is not itself held back by row-level security (forced RLS binds an owner
+    // that is neither a superuser nor BYPASSRLS). Say so, instead of letting a partial count pass as a full one.
+    const bypass = (await owner.query(`SELECT (rolsuper OR rolbypassrls) AS ok FROM pg_roles WHERE rolname = current_user`)).rows[0]?.ok === true;
+    report.checks.unshift({
+      name: "Owner connection sees every row",
+      ok: bypass,
+      detail: bypass ? "the connecting role bypasses row-level security" : "the connecting role does NOT bypass row-level security: every count here may be partial (see UC-F6)",
+    });
+    report.ok = report.checks.every((c) => c.ok);
     console.log(formatReport(report));
     process.exitCode = report.ok ? 0 : 1;
   } finally {

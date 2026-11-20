@@ -1,4 +1,5 @@
 /** Pure part of the post-migration verification (FIG-1603, P2-20 section C.5). The CLI is scripts/verify-migration.ts. */
+import { APP_ROLE_CLOSED_TABLES, APP_ROLE_COLUMN_LIMITED_TABLES } from "./appRoleRestrictedTables";
 
 export interface TableState {
   name: string;
@@ -31,6 +32,12 @@ export interface VerifyInput {
   /** Row counts taken before the migration (table name to rows), when a snapshot was given. */
   before?: Record<string, number>;
   appRoleExists: boolean;
+  /** UC-F7: tables the app role is deliberately kept out of (default: the list in appRoleRestrictedTables.ts). */
+  closedTables?: readonly string[];
+  /** UC-F7: with a snapshot, require every count to be EQUAL (a like-for-like restore), not just "not fewer". */
+  exact?: boolean;
+  /** UC-F7: the caller states that no snapshot applies (a plain health check, not a migration gate); the snapshot check is skipped, not passed. */
+  noSnapshot?: boolean;
   /** undefined when no app connection was given. */
   appRead?: { connected: boolean; ownOrgVisible: boolean; noOrgSeesRows: number; detail?: string };
 }
@@ -39,6 +46,8 @@ export interface Check {
   name: string;
   ok: boolean;
   detail: string;
+  /** The check was not applicable and was left out on purpose (it counts as ok but is printed as SKIP). */
+  skipped?: boolean;
 }
 
 export interface VerifyReport {
@@ -72,11 +81,24 @@ export function evaluate(input: VerifyInput): VerifyReport {
     ok: input.appRoleExists,
     detail: input.appRoleExists ? "figbloom_app found" : "figbloom_app is missing: run npm run db:bootstrap-role and npm run db:grant-role",
   });
-  const noGrant = input.tables.filter((t) => !t.appCanSelect).map((t) => t.name);
+  // UC-F7: the closed set is explicit. Every other table must be readable; every closed table that exists must NOT be.
+  const closed = new Set<string>(input.closedTables ?? APP_ROLE_CLOSED_TABLES);
+  const columnLimited = new Set<string>(APP_ROLE_COLUMN_LIMITED_TABLES);
+  const noGrant = input.tables.filter((t) => !t.appCanSelect && !closed.has(t.name) && !columnLimited.has(t.name)).map((t) => t.name);
   checks.push({
-    name: "App role can read every table",
+    name: "App role can read every table it should",
     ok: input.appRoleExists && noGrant.length === 0,
-    detail: noGrant.length ? `no SELECT on: ${list(noGrant)} (run npm run db:grant-role)` : "SELECT granted on all tables",
+    detail: noGrant.length
+      ? `no SELECT on: ${list(noGrant)} (run npm run db:grant-role)`
+      : `SELECT granted on every table except the ${input.tables.filter((t) => closed.has(t.name) || columnLimited.has(t.name)).length} deliberately closed or column-limited`,
+  });
+  const openButClosed = input.tables.filter((t) => closed.has(t.name) && t.appCanSelect).map((t) => t.name);
+  checks.push({
+    name: "App role cannot read the closed tables",
+    ok: input.appRoleExists && openButClosed.length === 0,
+    detail: openButClosed.length
+      ? `readable but must be closed: ${list(openButClosed)} (run npm run db:grant-role)`
+      : `${input.tables.filter((t) => closed.has(t.name)).length} closed tables are closed`,
   });
 
   if (input.credentialGrants) {
@@ -111,11 +133,32 @@ export function evaluate(input: VerifyInput): VerifyReport {
       ok: shrunk.length === 0,
       detail: shrunk.length ? `fewer rows: ${list(shrunk)}` : "no count went down",
     });
+    if (input.exact) {
+      const different = Object.entries(input.before)
+        .filter(([n, c]) => now.has(n) && (now.get(n) as number) !== c)
+        .map(([n, c]) => `${n} ${c} to ${now.get(n)}`);
+      const added = input.tables.filter((t) => !(t.name in (input.before as Record<string, number>))).map((t) => t.name);
+      checks.push({
+        name: "Counts equal the snapshot (--exact)",
+        ok: different.length === 0 && added.length === 0,
+        detail:
+          different.length || added.length
+            ? `different: ${list(different)}${added.length ? `; new tables: ${list(added)}` : ""}`
+            : `${Object.keys(input.before).length} tables, every count equal`,
+      });
+    }
+  } else if (input.noSnapshot) {
+    checks.push({
+      name: "Row counts compared with a snapshot",
+      ok: true,
+      skipped: true,
+      detail: "skipped on purpose (--no-snapshot): this run is a health check, not a migration gate",
+    });
   } else {
     checks.push({
       name: "Row counts compared with a snapshot",
       ok: false,
-      detail: "no snapshot given: take one before the migration with --snapshot-out and pass it with --snapshot",
+      detail: "no snapshot given: take one before the migration with --snapshot-out and pass it with --snapshot (or pass --no-snapshot for a plain health check)",
     });
   }
 
@@ -138,7 +181,8 @@ export function evaluate(input: VerifyInput): VerifyReport {
 }
 
 export function formatReport(r: VerifyReport): string {
-  const lines = r.checks.map((c) => `${c.ok ? "PASS" : "FAIL"}  ${c.name}: ${c.detail}`);
-  lines.push("", `${r.ok ? "PASS" : "FAIL"}  ${r.checks.filter((c) => c.ok).length} of ${r.checks.length} checks, ${r.totalRows} rows in total`);
+  const lines = r.checks.map((c) => `${c.skipped ? "SKIP" : c.ok ? "PASS" : "FAIL"}  ${c.name}: ${c.detail}`);
+  const run = r.checks.filter((c) => !c.skipped);
+  lines.push("", `${r.ok ? "PASS" : "FAIL"}  ${run.filter((c) => c.ok).length} of ${run.length} checks, ${r.totalRows} rows in total`);
   return lines.join("\n");
 }

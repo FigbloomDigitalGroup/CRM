@@ -25,7 +25,7 @@ for (const name of names) {
   }
 }
 if (failed > 0) {
-  console.error(`\n${failed} migration(s) need attention. See docs/RUNBOOKS.md, "Migration deploy".`);
+  console.error(`\n${failed} migration(s) need attention. See docs/MIGRATION_VERIFICATION.md ("The guard").`);
   process.exit(1);
 }
 console.log(`OK: ${names.length} migrations scanned, no unapproved destructive statement.`);
