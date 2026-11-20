@@ -20,7 +20,8 @@ export async function createTestOrganization(namePrefix = "Test Org") {
 export async function createTestUser(emailPrefix = "test.user") {
   const suffix = randomUUID().slice(0, 8);
   return adminDb.user.create({
-    data: { email: `${emailPrefix}.${suffix}@example.test`, name: "Test User" },
+    // An ordinary, proved account (UC-F2): tests that need a pre-registered, unproved one go through authService.signup.
+    data: { email: `${emailPrefix}.${suffix}@example.test`, name: "Test User", emailVerifiedAt: new Date() },
   });
 }
 

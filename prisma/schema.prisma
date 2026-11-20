@@ -164,6 +164,9 @@ model User {
   lockedUntil        DateTime?  @map("locked_until")
   /// B1.06: the person's own time zone (IANA name); null = use the organisation's.
   timeZone           String?    @map("time_zone")
+  /// UC-F2 (audit S-3): when the person proved they control this mailbox -- by accepting an invite sent to it or by finishing a
+  /// password reset sent to it. Null for an account made by public signup, which nobody has proved yet.
+  emailVerifiedAt    DateTime?  @map("email_verified_at")
 
   memberships         Membership[]
   auditEvents         AuditEvent[]         @relation("AuditActorUser")

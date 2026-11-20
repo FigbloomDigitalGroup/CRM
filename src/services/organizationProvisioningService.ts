@@ -1,4 +1,5 @@
 import { sendMembershipInviteEmail } from "../auth/email";
+import { inviteUrlFor } from "../auth/inviteLinks";
 import { ValidationError } from "../auth/errors";
 import { generateInviteToken } from "../auth/membershipInvite";
 import { adminDb } from "../db/adminClient";
@@ -104,7 +105,7 @@ export async function provisionOrganization(
     expiresAt,
   });
 
-  const acceptUrl = `${appBaseUrl()}/accept-invite?token=${plaintext}`;
+  const acceptUrl = inviteUrlFor(user, `${appBaseUrl()}/accept-invite?token=${plaintext}`);
   await sendMembershipInviteEmail(user.email, acceptUrl);
 
   // No actorMembershipId/actorUserId -- like `erase-data-subject.ts`'s

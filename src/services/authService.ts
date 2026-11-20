@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { sendPasswordResetEmail } from "../auth/email";
+import { hasUnprovedPassword, inviteVerifyUrl } from "../auth/inviteLinks";
 import { hashInviteToken } from "../auth/membershipInvite";
 import {
   hashPassword,
@@ -560,6 +561,8 @@ export async function resetPassword(
 
   const passwordHash = await hashPassword(newPassword);
   await adminDb.user.update({ where: { id: userId }, data: { passwordHash } });
+  // UC-F2: the reset link went to the mailbox, so finishing it proves the person controls it.
+  await adminDb.user.updateMany({ where: { id: userId, emailVerifiedAt: null }, data: { emailVerifiedAt: new Date() } });
   await revokeAllSessionsForUser(userId, "PASSWORD_RESET");
   // A trusted device skips the second step: a reset must not leave one valid.
   await revokeAllTrustedDevices(userId);
@@ -585,6 +588,37 @@ async function requireUsableInvite(tokenHash: string) {
 }
 
 /**
+ * UC-F2 (audit S-3): an invitee must choose a password at accept time when they have none yet, or when the account's
+ * mailbox was never proved (it was made by public signup, possibly by someone other than the mailbox owner). The link in
+ * the invite email is what proves the mailbox.
+ */
+function needsFreshPassword(user: { passwordHash: string | null; emailVerifiedAt: Date | null }): boolean {
+  return !user.passwordHash || !user.emailVerifiedAt;
+}
+
+/**
+ * The refusal an unproved account gets when it tries to accept without choosing a new password (UC-F2). A coded
+ * validation error (`EMAIL_NOT_VERIFIED` in `fieldErrors`) whose message carries the address of the verify route, so any
+ * client, including the frozen accept-invite page that shows `error` as text, can tell the person where to go.
+ */
+export class InviteEmailNotVerifiedError extends ValidationError {
+  constructor(token: string) {
+    const message = `For your security, finish joining from this link, where you choose a new password: ${inviteVerifyUrl(token)}`;
+    super(message, [{ path: "token", message, code: "EMAIL_NOT_VERIFIED" }]);
+    this.name = "InviteEmailNotVerifiedError";
+  }
+}
+
+/**
+ * Read-only lookup for the NEW verify route (UC-F2): who the invite is for, and whether they must choose a fresh
+ * password to prove they own the mailbox. Does not consume the token.
+ */
+export async function getInviteVerification(token: string): Promise<{ email: string; needsPassword: boolean }> {
+  const membership = await requireUsableInvite(hashInviteToken(token));
+  return { email: membership.user.email, needsPassword: needsFreshPassword(membership.user) };
+}
+
+/**
  * Read-only lookup for the /accept-invite page (FIG-593) -- does not
  * consume the token, so the page can decide whether to show a password
  * field (a brand-new invitee has no password yet) without spending the
@@ -594,6 +628,8 @@ export async function getInviteInfo(
   token: string,
 ): Promise<{ email: string; requiresPassword: boolean }> {
   const membership = await requireUsableInvite(hashInviteToken(token));
+  // The frozen accept-invite page reads this and must behave exactly as before for every account (hard rule 1), so it is
+  // unchanged. An account whose mailbox nobody has proved is handled by `getInviteVerification` and the new verify route.
   return {
     email: membership.user.email,
     requiresPassword: !membership.user.passwordHash,
@@ -636,7 +672,9 @@ export async function acceptMembershipInvite(
   // permanently unreachable (no password, and the now-burned link can't be
   // retried) if validation failed.
   const preview = await requireUsableInvite(tokenHash);
-  if (!preview.user.passwordHash) {
+  if (needsFreshPassword(preview.user)) {
+    // An account with a password nobody proved must go through the verify route; it is never accepted on the old password.
+    if (hasUnprovedPassword(preview.user) && !password) throw new InviteEmailNotVerifiedError(token);
     if (!password || !isPasswordStrongEnough(password)) {
       throw new ValidationError(
         `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
@@ -650,10 +688,24 @@ export async function acceptMembershipInvite(
   }
   const { membership, user } = activated;
 
-  if (!user.passwordHash) {
+  if (needsFreshPassword(user)) {
     // `password` was already validated above against this same branch.
+    const hadUnprovedPassword = Boolean(user.passwordHash);
     const passwordHash = await hashPassword(password as string);
-    await adminDb.user.update({ where: { id: user.id }, data: { passwordHash } });
+    await adminDb.user.update({
+      where: { id: user.id },
+      data: { passwordHash, emailVerifiedAt: new Date(), failedSignInCount: 0, lockedUntil: null },
+    });
+    if (hadUnprovedPassword) {
+      // The account existed before this invite with a password nobody proved (public signup). Whoever chose that password
+      // may not be the mailbox owner, so everything they set up on it stops working: sessions, trusted devices, second step.
+      await revokeAllSessionsForUser(user.id, "EMAIL_NOT_VERIFIED");
+      await revokeAllTrustedDevices(user.id);
+      await tenantTwoStep.disable(user.id);
+      await recordAuthAuditEvent(user.id, "auth.email_verified_by_invite_replaced_password");
+    } else {
+      await recordAuthAuditEvent(user.id, "auth.email_verified_by_invite");
+    }
   }
 
   await recordAuditEvent({

@@ -36,7 +36,8 @@ export type RevokedReason =
   | "PASSWORD_RESET"
   | "LOCKED"
   | "TWO_STEP_REQUIRED"
-  | "TWO_STEP_RESET";
+  | "TWO_STEP_RESET"
+  | "EMAIL_NOT_VERIFIED";
 
 export function hashSessionToken(plaintext: string): string {
   return createHash("sha256").update(plaintext).digest("hex");
