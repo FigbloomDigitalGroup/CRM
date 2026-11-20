@@ -158,7 +158,10 @@ function Builder({ deal, quoteId, number, current }: { deal: DealView; quoteId: 
   const dirty = draft !== null;
   const discountNum = Number(draft?.discount ?? v.discountPercent);
   const catItems = catalogue.data?.items ?? [];
-  const estimate = dirty && !v.amountMasked ? estimateTotals(rows, Number.isFinite(discountNum) ? discountNum : 0) : null;
+  // UC-R5: a quote made with a tax setting shows its saved figures while it is edited (the live estimate below has no tax in it), and says so.
+  const hasTax = v.taxRateBp !== undefined;
+  const taxLabel = `${v.taxLabel ?? "VAT"} ${(v.taxRateBp ?? 0) / 100}%`;
+  const estimate = dirty && !v.amountMasked && !hasTax ? estimateTotals(rows, Number.isFinite(discountNum) ? discountNum : 0) : null;
   const subtotal = estimate ? estimate.subtotal : v.subtotal;
   const discountAmt = estimate ? estimate.discount : v.discountAmount;
   const total = estimate ? estimate.total : v.total;
@@ -378,12 +381,15 @@ function Builder({ deal, quoteId, number, current }: { deal: DealView; quoteId: 
             <dl className="fb-com-sum">
               <div><dt>Subtotal</dt><dd>{kes(subtotal, v.currency)}</dd></div>
               <div><dt>Discount {Number.isFinite(discountNum) ? discountNum : v.discountPercent}%</dt><dd>{discountAmt === null ? "Hidden" : `−${kes(discountAmt, v.currency)}`}</dd></div>
+              {hasTax && v.taxMode === "EXCLUSIVE" ? <div><dt>{taxLabel}</dt><dd>{kes(v.taxAmount ?? null, v.currency)}</dd></div> : null}
               <div className="fb-com-sum__total"><dt>Total</dt><dd>{kes(total, v.currency)}</dd></div>
+              {hasTax && v.taxMode === "INCLUSIVE" ? <div><dt>Includes {taxLabel}</dt><dd>{kes(v.taxAmount ?? null, v.currency)}</dd></div> : null}
               {showMargin && v.marginPct !== null ? (
                 <div><dt>Margin (Management only)</dt><dd className={v.marginPct < 25 ? "fb-com-bad" : undefined}>{v.marginPct}%</dd></div>
               ) : null}
             </dl>
             {v.amountMasked ? <p className="fb-com-note">Amounts are hidden for your role.</p> : null}
+            {hasTax && dirty ? <p className="fb-com-note">Tax and totals are recalculated when you save.</p> : null}
             {differs ? (
               <p className="fb-com-note">
                 Deal value is {kes(Number(deal.value), deal.currency)}.{" "}

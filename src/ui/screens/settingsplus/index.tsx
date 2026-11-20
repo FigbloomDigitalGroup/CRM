@@ -3,6 +3,7 @@
 import { ApprovalRulesEditor } from "./ApprovalRules";
 import { CatalogueEditor } from "./Catalogue";
 import { PipelinesEditor } from "./Pipelines";
+import { QuoteTaxEditor } from "./QuoteTax";
 import { SequencesEditor } from "./Sequences";
 import { WebFormsEditor } from "./WebForms";
 
@@ -12,3 +13,4 @@ export const PipelinesSection = () => <PipelinesEditor />;
 export const SequencesSection = () => <SequencesEditor />;
 export const WebFormsSection = () => <WebFormsEditor />;
 export const ApprovalRulesSection = () => <ApprovalRulesEditor />;
+export const QuoteTaxSection = () => <QuoteTaxEditor />;

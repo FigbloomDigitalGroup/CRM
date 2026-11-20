@@ -22,6 +22,10 @@ export interface VersionContent {
   discountAmount: number;
   total: number;
   costTotal: number | null;
+  /** UC-R5: the tax terms to store. Left out (undefined) on an edit of a draft, which keeps the terms the version already has; set when a version is made. */
+  taxMode?: string;
+  taxRateBp?: number | null;
+  taxLabel?: string | null;
 }
 
 const withLines = { lines: { orderBy: { position: "asc" as const } } };
@@ -134,6 +138,9 @@ function contentData(c: VersionContent) {
     discountAmount: c.discountAmount,
     total: c.total,
     costTotal: c.costTotal,
+    ...(c.taxMode !== undefined ? { taxMode: c.taxMode } : {}),
+    ...(c.taxRateBp !== undefined ? { taxRateBp: c.taxRateBp } : {}),
+    ...(c.taxLabel !== undefined ? { taxLabel: c.taxLabel } : {}),
   };
 }
 

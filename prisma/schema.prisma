@@ -3133,6 +3133,11 @@ model QuoteVersion {
   /// Null when a line has no cost, so no margin can be worked out.
   costTotal             Decimal?  @map("cost_total") @db.Decimal(14, 2)
   currency              String    @default("KES")
+  /// UC-R5: the tax terms copied from the organisation tax setting when the quote was first made, frozen with the prices.
+  /// A null rate means a quote made before tax existed (or with tax switched off): no tax lines, worked out as always.
+  taxMode               String?   @default("INCLUSIVE") @map("tax_mode")
+  taxRateBp             Int?      @map("tax_rate_bp")
+  taxLabel              String?   @map("tax_label")
   lockedAt              DateTime? @map("locked_at")
   submittedAt           DateTime? @map("submitted_at")
   approvedAt            DateTime? @map("approved_at")
