@@ -8,7 +8,7 @@ import { assertWritable } from "../lib/archive";
 import { discountNeedsApproval } from "../lib/approvalRules";
 import { createTranslator, isClientLocale, type ClientLocale } from "../lib/clientText";
 import { LOGO_PLACEHOLDER, escapeHtml, renderQuoteHtml, type QuoteDocumentInput } from "../lib/quoteDocument";
-import { isExpiredOn, todayIso } from "../lib/quotes";
+import { isExpiredOn, quoteTaxAmount, quoteTaxOf, todayIso } from "../lib/quotes";
 import { lookColours } from "../preferences/catalogue";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { createActivity } from "../repositories/activities";
@@ -82,6 +82,8 @@ export async function buildQuoteDocument(organizationId: string, quote: { number
   const creator = version.createdByMembershipId
     ? await adminDb.membership.findFirst({ where: { id: version.createdByMembershipId, organizationId }, select: { user: { select: { name: true } } } })
     : null;
+  const taxTerms = quoteTaxOf(version);
+  const taxAmount = quoteTaxAmount(version.lines.map((l) => ({ lineTotal: Number(l.lineTotal), taxable: l.taxable })), Number(version.discountPercent), taxTerms);
   const input: QuoteDocumentInput = {
     organization: {
       name: org.displayName?.trim() ? org.displayName : org.name,
@@ -102,6 +104,8 @@ export async function buildQuoteDocument(organizationId: string, quote: { number
       subtotal: Number(version.subtotal),
       discountAmount: Number(version.discountAmount),
       total: Number(version.total),
+      // UC-R5: tax lines only for a version made with a tax setting; a version made before tax has no `tax` key and the document is what it always was.
+      ...(taxTerms === null ? {} : { tax: { mode: taxTerms.mode, rateBp: taxTerms.rateBp, label: taxTerms.label, amount: taxAmount ?? 0 } }),
       lines: version.lines.map((l) => ({ description: l.description, unit: l.unit, quantity: Number(l.quantity), unitPrice: Number(l.unitPrice), lineTotal: Number(l.lineTotal), taxable: l.taxable })),
     },
     preparedFor: { company: deal.company.name, contact: deal.primaryContact ? [deal.primaryContact.firstName, deal.primaryContact.lastName].filter(Boolean).join(" ") : null },

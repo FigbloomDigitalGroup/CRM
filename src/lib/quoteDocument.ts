@@ -41,6 +41,11 @@ export interface QuoteDocumentInput {
     subtotal: number;
     discountAmount: number;
     total: number;
+    /**
+     * UC-R5: the tax lines of a quote made with a tax setting. Left out for every quote made before tax (and with tax off): the document is
+     * then exactly what it always was. `amount` is the tax in money; `mode` decides whether it is part of the total or added to it.
+     */
+    tax?: { mode: "INCLUSIVE" | "EXCLUSIVE"; rateBp: number; label: string; amount: number };
     lines: QuoteDocumentLine[];
   };
   preparedFor: { company: string; contact: string | null };
@@ -80,6 +85,16 @@ export function renderQuoteHtml(input: QuoteDocumentInput, translator?: Translat
     q.discountAmount > 0
       ? `<tr><td colspan="4" class="num">${escapeHtml(t("doc.discount", { pct: q.discountPercent }))}</td><td class="num">-${escapeHtml(money(q.discountAmount))}</td></tr>`
       : "";
+  // UC-R5: tax rows and the tax note, only when the quote carries tax. Without it these stay empty and the output is unchanged.
+  const tax = q.tax;
+  const taxRate = tax ? String(tax.rateBp / 100) : "";
+  const taxRows = !tax
+    ? ""
+    : tax.mode === "EXCLUSIVE"
+      ? `<tr><td colspan="4" class="num">${escapeHtml(t("doc.netTotal", { label: tax.label }))}</td><td class="num">${escapeHtml(money(q.subtotal - q.discountAmount))}</td></tr><tr><td colspan="4" class="num">${escapeHtml(t("doc.taxLine", { label: tax.label, rate: taxRate }))}</td><td class="num">${escapeHtml(money(tax.amount))}</td></tr>`
+      : "";
+  const taxIncludedRow = tax && tax.mode === "INCLUSIVE" ? `<tr><td colspan="4" class="num note">${escapeHtml(t("doc.taxIncluded", { label: tax.label, rate: taxRate }))}</td><td class="num note">${escapeHtml(money(tax.amount))}</td></tr>` : "";
+  const vatNoteText = tax ? t(tax.mode === "EXCLUSIVE" ? "doc.taxNoteExclusive" : "doc.taxNoteInclusive", { label: tax.label }) : t("doc.vatNote");
   const labels = {
     title: t("doc.title", { number: q.number }),
     version: t("doc.version", { n: q.version }),
@@ -94,7 +109,7 @@ export function renderQuoteHtml(input: QuoteDocumentInput, translator?: Translat
     amount: t("doc.amount"),
     subtotal: t("doc.subtotal"),
     total: t("doc.total"),
-    vatNote: t("doc.vatNote"),
+    vatNote: vatNoteText,
     terms: t("doc.terms"),
   };
   // Asked for in a language that has no text for some key: say so on the page, once, in the language itself (which falls back too when needed).
@@ -120,7 +135,7 @@ table{width:100%;border-collapse:collapse}th,td{padding:8px 6px;border-bottom:1p
 <header><div><h1>${escapeHtml(labels.title)}</h1><div class="muted">${escapeHtml(labels.version)}</div></div><div>${org.showLogo ? `<img src="${LOGO_PLACEHOLDER}" alt="${escapeHtml(org.name)}">` : `<strong>${escapeHtml(org.name)}</strong>`}</div></header>
 <section class="meta"><div><strong>${escapeHtml(labels.preparedFor)}</strong>${escapeHtml(input.preparedFor.company)}${input.preparedFor.contact ? `<br>${escapeHtml(input.preparedFor.contact)}` : ""}</div><div><strong>${escapeHtml(labels.issued)}</strong>${escapeHtml(formatDateFor(locale, q.issuedOn))}</div><div><strong>${escapeHtml(labels.validUntil)}</strong>${escapeHtml(formatDateFor(locale, q.validUntil))}</div>${input.preparedBy ? `<div><strong>${escapeHtml(labels.preparedBy)}</strong>${escapeHtml(input.preparedBy)}</div>` : ""}</section>
 <table><thead><tr><th>${escapeHtml(labels.description)}</th><th class="num">${escapeHtml(labels.qty)}</th><th>${escapeHtml(labels.unit)}</th><th class="num">${escapeHtml(labels.unitPrice)}</th><th class="num">${escapeHtml(labels.amount)}</th></tr></thead><tbody>${rows}</tbody>
-<tfoot>${q.discountAmount > 0 ? `<tr><td colspan="4" class="num">${escapeHtml(labels.subtotal)}</td><td class="num">${escapeHtml(money(q.subtotal))}</td></tr>` : ""}${discountRow}<tr class="total"><td colspan="4" class="num">${escapeHtml(labels.total)}</td><td class="num">${escapeHtml(money(q.total))}</td></tr></tfoot></table>
+<tfoot>${q.discountAmount > 0 ? `<tr><td colspan="4" class="num">${escapeHtml(labels.subtotal)}</td><td class="num">${escapeHtml(money(q.subtotal))}</td></tr>` : ""}${discountRow}${taxRows}<tr class="total"><td colspan="4" class="num">${escapeHtml(labels.total)}</td><td class="num">${escapeHtml(money(q.total))}</td></tr>${taxIncludedRow}</tfoot></table>
 <p class="note">${escapeHtml(labels.vatNote)}</p>
 ${fallbackNote}${q.terms ? `<section class="terms"><strong>${escapeHtml(labels.terms)}</strong><br>${escapeHtml(q.terms)}</section>` : ""}
 <footer><strong>${escapeHtml(org.name)}</strong>${contact ? `<br>${contact}` : ""}</footer>

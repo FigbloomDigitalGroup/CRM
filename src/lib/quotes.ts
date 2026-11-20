@@ -24,6 +24,55 @@ export interface TotalsLine {
   quantity: number;
   unitPrice: number;
   unitCost: number | null;
+  /** Whether tax applies to this line (the per-line flag that has always existed). Left out means taxable. Only used when the quote carries tax. */
+  taxable?: boolean;
+}
+
+/**
+ * Tax on a quote (UC-R5). A quote has tax lines only when it carries a rate: an organisation that switched the tax setting on
+ * gives its NEW quotes a copy of it (`mode`, `rateBp`, `label`), frozen on the version like the prices. Every quote made before
+ * that has no rate and is worked out exactly as before (VAT-inclusive, no tax line).
+ *  - INCLUSIVE: prices already contain the tax, so the total does not change; the tax shown is the part of it that is tax.
+ *  - EXCLUSIVE: prices are before tax, so the tax is added to the total.
+ * `rateBp` is in basis points (1600 = 16%).
+ */
+export const TAX_MODES = ["INCLUSIVE", "EXCLUSIVE"] as const;
+export type TaxMode = (typeof TAX_MODES)[number];
+export const MAX_TAX_RATE_BP = 10_000;
+export const MAX_TAX_LABEL_LENGTH = 20;
+export const DEFAULT_TAX_LABEL = "VAT";
+
+export interface QuoteTax {
+  mode: TaxMode;
+  rateBp: number;
+  label: string;
+}
+
+export function isTaxMode(value: unknown): value is TaxMode {
+  return typeof value === "string" && (TAX_MODES as readonly string[]).includes(value);
+}
+
+/** The tax terms stored on a version, or null for a quote made before tax existed (and for any version without a rate). */
+export function quoteTaxOf(v: { taxMode?: string | null; taxRateBp?: number | null; taxLabel?: string | null }): QuoteTax | null {
+  if (v.taxRateBp === null || v.taxRateBp === undefined) return null;
+  return { mode: isTaxMode(v.taxMode) ? v.taxMode : "INCLUSIVE", rateBp: v.taxRateBp, label: v.taxLabel && v.taxLabel.trim() !== "" ? v.taxLabel : DEFAULT_TAX_LABEL };
+}
+
+/**
+ * The tax of a quote in whole cents. `taxableLineCents` is the sum of the taxable lines before discount. The discount is
+ * shared across the lines in proportion, so the tax is worked out on the taxable lines' share of the discounted price.
+ */
+export function taxCents(taxableLineCents: number, discountPercent: number, tax: QuoteTax): number {
+  const baseCents = taxableLineCents - Math.round((taxableLineCents * discountPercent) / 100);
+  return tax.mode === "EXCLUSIVE" ? Math.round((baseCents * tax.rateBp) / 10_000) : Math.round((baseCents * tax.rateBp) / (10_000 + tax.rateBp));
+}
+
+/** The tax amount of a stored version: worked out again from its frozen lines, so it can never disagree with them. Null without tax. */
+export function quoteTaxAmount(lines: readonly { lineTotal: number; taxable: boolean }[], discountPercent: number, tax: QuoteTax | null): number | null {
+  if (tax === null) return null;
+  let taxableCents = 0;
+  for (const l of lines) if (l.taxable) taxableCents += toCents(l.lineTotal);
+  return fromCents(taxCents(taxableCents, discountPercent, tax));
 }
 
 export interface QuoteTotalsResult {
@@ -38,20 +87,25 @@ export function lineTotal(quantity: number, unitPrice: number): number {
   return fromCents(Math.round(quantity * toCents(unitPrice)));
 }
 
-export function computeTotals(lines: readonly TotalsLine[], discountPercent: number): QuoteTotalsResult {
+export function computeTotals(lines: readonly TotalsLine[], discountPercent: number, tax: QuoteTax | null = null): QuoteTotalsResult {
   let subtotalCents = 0;
+  let taxableCents = 0;
   let costCents = 0;
   let costKnown = true;
   for (const l of lines) {
-    subtotalCents += Math.round(l.quantity * toCents(l.unitPrice));
+    const lineCents = Math.round(l.quantity * toCents(l.unitPrice));
+    subtotalCents += lineCents;
+    if (l.taxable !== false) taxableCents += lineCents;
     if (l.unitCost === null) costKnown = false;
     else costCents += Math.round(l.quantity * toCents(l.unitCost));
   }
   const discountCents = Math.round((subtotalCents * discountPercent) / 100);
+  // Only an EXCLUSIVE quote adds tax to the total. Without tax (every quote made before UC-R5) the total is the subtotal less the discount, as always.
+  const addedTaxCents = tax !== null && tax.mode === "EXCLUSIVE" ? taxCents(taxableCents, discountPercent, tax) : 0;
   return {
     subtotal: fromCents(subtotalCents),
     discountAmount: fromCents(discountCents),
-    total: fromCents(subtotalCents - discountCents),
+    total: fromCents(subtotalCents - discountCents + addedTaxCents),
     costTotal: lines.length > 0 && costKnown ? fromCents(costCents) : null,
   };
 }

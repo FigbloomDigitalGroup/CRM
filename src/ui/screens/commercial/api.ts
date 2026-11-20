@@ -57,6 +57,14 @@ export interface QuoteVersionSummary {
   sentAt: string | null;
   respondedAt: string | null;
   createdAt: string;
+  /**
+   * UC-R5: present only on a quote made with the organisation tax setting. A quote made before tax has none of these keys and is shown as
+   * it always was. `taxAmount` is money: null when the viewer may not see amounts (and in the list summary, which has no lines).
+   */
+  taxMode?: "INCLUSIVE" | "EXCLUSIVE";
+  taxRateBp?: number;
+  taxLabel?: string;
+  taxAmount?: number | null;
 }
 
 export interface QuoteVersionView extends QuoteVersionSummary {
@@ -186,6 +194,8 @@ export interface QuoteSettingsView {
   requireForProposalSent: boolean;
   validityDays: number;
   defaultTerms: string;
+  /** UC-R5: the tax setting new quotes copy. Absent means tax is off. */
+  tax?: { mode: "INCLUSIVE" | "EXCLUSIVE"; rateBp: number; label: string };
 }
 
 export interface QuoteActivity {
@@ -281,6 +291,7 @@ export const useCancelApproval = () => useWrite<ApprovalItem>("postApprovalsByAp
 export const useCreateCatalogueItem = () => useWrite<CatalogueItemView>("postCatalogue", ["getCatalogue"]);
 export const useUpdateCatalogueItem = () => useWrite<CatalogueItemView>("patchCatalogueByItemId", ["getCatalogue", "getCatalogueByItemId"]);
 export const useSaveApprovalRules = () => useWrite<ApprovalRulesView>("patchApprovalRules", ["getApprovalRules"]);
+export const useSaveQuoteSettings = () => useWrite<QuoteSettingsView>("patchQuoteSettings", ["getQuoteSettings"]);
 export const useCreatePipeline = () => useWrite<PipelineView>("postPipelines", ["getPipelines", "getReferenceData", "getDealsBoard"]);
 export const useSaveStageRules = () => useWrite<{ stageId: string; rules: StageRuleView[]; impact: string }>("putPipelinesByPipelineIdStagesByStageIdRules", ["getPipelines"]);
 

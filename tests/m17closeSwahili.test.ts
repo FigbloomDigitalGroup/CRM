@@ -27,6 +27,7 @@ const ALL_KEYS: Record<ClientTextKey, true> = {
   "doc.title": true, "doc.version": true, "doc.preparedFor": true, "doc.issued": true, "doc.validUntil": true, "doc.preparedBy": true,
   "doc.description": true, "doc.qty": true, "doc.unit": true, "doc.unitPrice": true, "doc.amount": true, "doc.subtotal": true,
   "doc.discount": true, "doc.total": true, "doc.noVat": true, "doc.vatNote": true, "doc.terms": true, "doc.fallbackNote": true,
+  "doc.netTotal": true, "doc.taxLine": true, "doc.taxIncluded": true, "doc.taxNoteInclusive": true, "doc.taxNoteExclusive": true,
   "mail.subject": true, "mail.body": true, "mail.viewLink": true, "mail.validUntil": true, "mail.signLink": true,
   "sign.title": true, "sign.for": true, "sign.valid": true, "sign.item": true, "sign.qty": true, "sign.amount": true, "sign.subtotal": true,
   "sign.discount": true, "sign.total": true, "sign.name": true, "sign.email": true, "sign.consent": true, "sign.button": true,
