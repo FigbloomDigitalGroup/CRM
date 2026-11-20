@@ -165,6 +165,9 @@ variable — **never** from a value committed to source control. See
    explicitly. Layers 1–2 are the backstop for when this is missing, not a
    replacement for it.
 
+Layer 2 does not apply to `adminDb` (the schema-owner client, `src/db/adminClient.ts`), so new code never touches tenant data through
+it: see [docs/ADMINDB_RULE.md](docs/ADMINDB_RULE.md) and the allow-list test that enforces it.
+
 ## Application layers
 
 `src/repositories/*` -> `src/services/*` -> `src/app/api/**/route.ts` /

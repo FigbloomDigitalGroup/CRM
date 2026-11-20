@@ -41,6 +41,8 @@ get green; fix the cause or raise it. New UI needs component tests, because
   not change. New auth steps are new routes.
 - Every tenant table has row-level security and a cross-organisation test.
   `tests/databaseSmoke.test.ts` fails if one does not.
+- New code reads and writes tenant data through `withOrgContext`, never through `adminDb` (the schema-owner client, which bypasses
+  row-level security). `tests/adminDbAllowList.test.ts` and a lint rule fail on a new use; see `docs/ADMINDB_RULE.md`.
 - No secrets, tokens or real customer data in code, tests, logs or commits.
 
 ## Running the checks locally
