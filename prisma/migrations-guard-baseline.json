@@ -1,0 +1,4 @@
+{
+  "note": "Migrations applied everywhere before the migration guard existed (FIG-1603, 13 Nov 2026). Do not add new migrations here: a new destructive migration carries an approval line instead.",
+  "migrations": ["20261120090000_remove_customer_support"]
+}
