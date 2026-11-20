@@ -11,6 +11,7 @@
  */
 import "dotenv/config";
 import { Client } from "pg";
+import { APP_ROLE_NO_ACCESS_CREDENTIAL_TABLES, APP_ROLE_USER_READABLE_COLUMNS } from "./lib/appRoleCredentialGrants";
 
 const APP_ROLE = process.env.APP_DB_ROLE ?? "figbloom_app";
 const PLATFORM_ROLE = process.env.PLATFORM_DB_ROLE ?? "figbloom_platform";
@@ -215,6 +216,17 @@ async function grantRole(): Promise<void> {
     // FIG-1183: the tenant side approves or ends a grant; it never creates or deletes one, and never writes the page-view log.
     await client.query(`REVOKE INSERT, DELETE ON "${SUPPORT_ACCESS_GRANTS}" FROM ${ident(APP_ROLE)}`);
     await client.query(`REVOKE INSERT, UPDATE, DELETE ON "${SUPPORT_ACCESS_PAGE_VIEWS}" FROM ${ident(APP_ROLE)}`);
+    // UC-F3 (Security S-4): the credential tables. The blanket grant above gave the tenant role the whole `users` row (password hash,
+    // lockout state) and every password-reset token. Authentication runs on the owner connection, so the role keeps only a column-level
+    // SELECT on the non-secret columns of `users` and nothing at all on `password_reset_tokens`. This must stay AFTER the blanket grant:
+    // the grant runs again on every `db:grant-role`. The lists are in scripts/lib/appRoleCredentialGrants.ts.
+    await client.query(`REVOKE ALL ON "users" FROM ${ident(APP_ROLE)}`);
+    await client.query(
+      `GRANT SELECT (${APP_ROLE_USER_READABLE_COLUMNS.map(ident).join(", ")}) ON "users" TO ${ident(APP_ROLE)}`,
+    );
+    for (const table of APP_ROLE_NO_ACCESS_CREDENTIAL_TABLES) {
+      await client.query(`REVOKE ALL ON ${ident(table)} FROM ${ident(APP_ROLE)}`);
+    }
     await client.query(
       `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${ident(APP_ROLE)}`,
     );
@@ -260,7 +272,7 @@ async function grantRole(): Promise<void> {
       console.log(`Granted "${PLATFORM_ROLE}" its platform tables and the counts view only.`);
     }
     console.log(
-      `Granted table privileges to "${APP_ROLE}" (audit_events remains append-only; website_lead_request_log, auth_rate_limit_attempts and platform_identities are restricted).`,
+      `Granted table privileges to "${APP_ROLE}" (audit_events remains append-only; website_lead_request_log, auth_rate_limit_attempts and platform_identities are restricted; users is column-limited and password_reset_tokens is closed).`,
     );
   } finally {
     await client.end();

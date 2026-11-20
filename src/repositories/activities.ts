@@ -181,7 +181,7 @@ export async function listCalendarActivities(
         // P2-22: an activity that has a task is shown through the task, so nothing appears twice.
         tasks: { none: {} },
       },
-      include: { author: { include: { user: true } } },
+      include: { author: { include: { user: { select: { name: true } } } } },
       orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
       take: range.take,
     }),
