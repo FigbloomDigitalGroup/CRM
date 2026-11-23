@@ -17,10 +17,10 @@ describe("sidebar navigation per role", () => {
   it("Management sees the whole workspace and the organisation reports", () => {
     expect(menu("MANAGEMENT")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Leads, Deals, Tasks, Calendar, Team",
+      "Sales workspace: Leads, Deals, Quotes, Tasks, Calendar, Team",
       "Customers: Companies, Contacts",
       "Communication: Conversations, Mail, Chat, Video Conference",
-      "After the sale: Handoffs, Renewals, Payments",
+      "After the sale: Handoffs, Renewals, Invoices, Payments",
       "Insights & settings: Forecast & targets, Approvals, Reports, Preferences, Settings",
     ]);
   });
@@ -28,7 +28,7 @@ describe("sidebar navigation per role", () => {
   it("Sales sees the pipeline and its own metrics, not the organisation's reports", () => {
     expect(menu("SALES")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Leads, Deals, Tasks, Calendar",
+      "Sales workspace: Leads, Deals, Quotes, Tasks, Calendar",
       "Customers: Companies, Contacts",
       "Communication: Conversations, Mail, Chat, Video Conference",
       "After the sale: Handoffs, Renewals",
@@ -50,10 +50,10 @@ describe("sidebar navigation per role", () => {
   it("Finance sees won deals only, and no Leads or Tasks", () => {
     expect(menu("FINANCE")).toEqual([
       "Overview: Dashboard",
-      "Pipeline: Won deals",
+      "Pipeline: Won deals, Quotes",
       "Customers: Companies, Contacts",
       "Communication: Chat",
-      "After the sale: Payments",
+      "After the sale: Invoices, Payments",
       "Insights & settings: Forecast & targets, My metrics, Preferences",
     ]);
   });
@@ -151,11 +151,72 @@ describe("no Customer Support role (decision 12, FIG-1525)", () => {
 describe("quick create", () => {
   const kinds = (role: string) => buildQuickCreate({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1" }).map((q) => q.key);
   it("offers only what the role may create", () => {
-    expect(kinds("MANAGEMENT")).toEqual(["lead", "contact", "company", "task", "note"]);
-    expect(kinds("SALES")).toEqual(["lead", "contact", "company", "task", "note"]);
+    expect(kinds("MANAGEMENT")).toEqual(["lead", "contact", "company", "task", "quote", "invoice", "note"]);
+    expect(kinds("SALES")).toEqual(["lead", "contact", "company", "task", "quote", "note"]);
     expect(kinds("DELIVERY")).toEqual(["task", "note"]);
-    expect(kinds("FINANCE")).toEqual([]);
+    expect(kinds("FINANCE")).toEqual(["invoice"]);
     expect(kinds("RESTRICTED_TECHNICAL")).toEqual(["task"]);
+  });
+});
+
+describe("Quotes and Invoices in the sidebar (UC-R2)", () => {
+  const nav = (keys: readonly string[], extra: { quotesEnabled?: boolean } = {}) => buildNav({ permissionKeys: keys, membershipId: "m1", ...extra }).flatMap((s) => s.items.map((i) => `${s.key}/${i.key}`));
+  const quoteKeys = (keys: readonly string[], extra: { quotesEnabled?: boolean } = {}) => nav(keys, extra).filter((k) => /quotes|invoices/.test(k));
+
+  it("Quotes follows quotes.view and sits right after Deals; Invoices follows invoices.view and sits right above Payments", () => {
+    const m = buildNav({ permissionKeys: ROLE_PERMISSIONS.MANAGEMENT!, membershipId: "m1" });
+    const ws = m.find((s) => s.key === "workspace")!.items.map((i) => i.key);
+    expect(ws.indexOf("quotes")).toBe(ws.indexOf("deals") + 1);
+    const after = m.find((s) => s.key === "after-sale")!.items.map((i) => i.key);
+    expect(after.indexOf("invoices")).toBe(after.indexOf("payments") - 1);
+    const all = m.flatMap((s) => s.items);
+    expect(all.find((i) => i.key === "quotes")).toMatchObject({ label: "Quotes", path: "/quotes", icon: "quotes" });
+    expect(all.find((i) => i.key === "invoices")).toMatchObject({ label: "Invoices", path: "/invoices", icon: "invoices" });
+  });
+
+  it("each role: the two links appear exactly for the holders of the keys, and nobody else's menu changes", () => {
+    expect(quoteKeys(ROLE_PERMISSIONS.MANAGEMENT!)).toEqual(["workspace/quotes", "after-sale/invoices"]);
+    expect(quoteKeys(ROLE_PERMISSIONS.SALES!)).toEqual(["workspace/quotes"]);
+    expect(quoteKeys(ROLE_PERMISSIONS.FINANCE!)).toEqual(["workspace/quotes", "after-sale/invoices"]);
+    expect(quoteKeys(ROLE_PERMISSIONS.DELIVERY!)).toEqual([]);
+    expect(quoteKeys(ROLE_PERMISSIONS.RESTRICTED_TECHNICAL!)).toEqual([]);
+  });
+
+  it("with the keys removed, the links disappear and the rest of the menu is untouched", () => {
+    const keys = ROLE_PERMISSIONS.MANAGEMENT!;
+    const without = keys.filter((k) => k !== "quotes.view" && k !== "invoices.view");
+    expect(nav(without)).toEqual(nav(keys).filter((k) => !/quotes|invoices/.test(k)));
+    expect(quoteKeys(keys.filter((k) => k !== "quotes.view"))).toEqual(["after-sale/invoices"]);
+    expect(quoteKeys(keys.filter((k) => k !== "invoices.view"))).toEqual(["workspace/quotes"]);
+  });
+
+  it("quotes.create or quotes.approve alone do not show Quotes: only quotes.view does (the roles carry it by implication)", () => {
+    expect(quoteKeys(["quotes.create", "quotes.approve"])).toEqual([]);
+  });
+
+  it("the organisation's quotes.enabled toggle hides Quotes (and New quote) but not Invoices", () => {
+    const keys = ROLE_PERMISSIONS.MANAGEMENT!;
+    expect(quoteKeys(keys, { quotesEnabled: false })).toEqual(["after-sale/invoices"]);
+    expect(quoteKeys(keys, { quotesEnabled: true })).toEqual(["workspace/quotes", "after-sale/invoices"]);
+    const kinds = (quotesEnabled?: boolean) => buildQuickCreate({ permissionKeys: keys, membershipId: "m1", quotesEnabled }).map((q) => q.key);
+    expect(kinds(false)).not.toContain("quote");
+    expect(kinds(false)).toContain("invoice");
+    expect(kinds(true)).toContain("quote");
+  });
+
+  it("the member's own hidden-pages preference can hide both", () => {
+    expect(quoteKeys(ROLE_PERMISSIONS.MANAGEMENT!).length).toBe(2);
+    const hidden = buildNav({ permissionKeys: ROLE_PERMISSIONS.MANAGEMENT!, membershipId: "m1", hidden: ["quotes", "invoices"] }).flatMap((s) => s.items.map((i) => i.key));
+    expect(hidden).not.toContain("quotes");
+    expect(hidden).not.toContain("invoices");
+  });
+
+  it("quick create: New quote needs quotes.create, New invoice needs invoices.create, and both point at the page that owns the flow", () => {
+    const q = (keys: readonly string[]) => buildQuickCreate({ permissionKeys: keys, membershipId: "m1" });
+    expect(q(["quotes.view"])).toEqual([]);
+    expect(q(["quotes.create"])).toEqual([{ key: "quote", label: "New quote", path: "/quotes" }]);
+    expect(q(["invoices.create"])).toEqual([{ key: "invoice", label: "New invoice", path: "/invoices" }]);
+    expect(q(["invoices.view"])).toEqual([]);
   });
 });
 
