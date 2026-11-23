@@ -68,3 +68,15 @@
   .fb-inv__buckets { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fb-inv__facts { grid-template-columns: 1fr; }
 }
+
+/* Create invoice (UC-R8) */
+.fb-newinv { display: flex; flex-direction: column; gap: 14px; min-width: min(480px, 100%); }
+.fb-newinv__two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fb-newinv__muted { font-size: 13px; color: var(--text-2); }
+.fb-newinv__fail { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); color: var(--text); font-size: 13.5px; }
+.fb-newinv__who { font-size: 14px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.fb-newinv__change { background: none; border: 0; padding: 0; color: var(--primary); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; }
+.fb-newinv__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow: auto; }
+.fb-newinv__row { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.fb-newinv__row:hover { background: var(--surface-2); }
+@media (max-width: 520px) { .fb-newinv__two { grid-template-columns: 1fr; } }

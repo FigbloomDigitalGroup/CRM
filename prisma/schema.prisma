@@ -2256,6 +2256,10 @@ model Invoice {
   voidedByMembershipId  String?       @map("voided_by_membership_id")
   recurringServiceId    String?       @map("recurring_service_id")
   notes                 String?
+  /// UC-R8: days from the issue date the customer has to pay. Nullable: invoices made before this existed have none. `dueOn` stays the truth.
+  paymentTermsDays      Int?          @map("payment_terms_days")
+  /// UC-R8: payment terms in words, shown on the invoice.
+  terms                 String?
   createdByMembershipId String?       @map("created_by_membership_id")
   createdAt             DateTime      @default(now()) @map("created_at")
   updatedAt             DateTime      @updatedAt @map("updated_at")

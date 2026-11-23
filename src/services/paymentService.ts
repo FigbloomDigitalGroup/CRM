@@ -29,6 +29,7 @@ import {
   getInvoiceRow,
   getPaymentNote,
   insertInvoice,
+  insertInvoiceAutoNumbered,
   listAllInvoiceRows,
   listInvoiceRows,
   listWonDealRows,
@@ -39,6 +40,7 @@ import {
   withLockedInvoice,
   type InvoiceWithPayments,
 } from "../repositories/invoices";
+import { effectiveInvoiceNumbering } from "./invoiceSettingsService";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { assertBulkExportAllowed } from "./exportService";
 import { notifyEvent } from "./notificationService";
@@ -55,6 +57,7 @@ import { notifyEvent } from "./notificationService";
  */
 
 const MAX_NOTES = 1000;
+const MAX_TERMS = 2000;
 
 /** A stored amount as a string with two decimals, however Prisma prints the Decimal. */
 function money(value: { toString(): string }): string {
@@ -120,6 +123,8 @@ export function toInvoiceView(row: InvoiceListRow, today: Date) {
     dueOn: row.dueOn,
     allowOverpayment: row.allowOverpayment,
     notes: row.notes,
+    paymentTermsDays: row.paymentTermsDays,
+    terms: row.terms,
     voidedAt: row.voidedAt,
     voidReason: row.voidReason,
     createdAt: row.createdAt,
@@ -158,7 +163,8 @@ const snapshot = (v: InvoiceView) => ({ number: v.number, status: v.storedStatus
 // ---------------------------------------------------------------------------
 
 export interface InvoiceInput {
-  number: string;
+  /** Left out (or blank) asks for the next automatic number; that needs auto-numbering switched on in Settings (UC-R8). */
+  number?: string;
   amount: number | string;
   currency?: string;
   issuedOn: string;
@@ -167,6 +173,10 @@ export interface InvoiceInput {
   dealId?: string;
   recurringServiceId?: string;
   notes?: string;
+  /** UC-R8: days from the issue date to pay. Informational: `dueOn` is still required and is the truth. */
+  paymentTermsDays?: number;
+  /** UC-R8: the payment terms in words. */
+  terms?: string;
   /** Start as already sent. Default: draft. */
   sent?: boolean;
 }
@@ -180,6 +190,14 @@ function cleanCurrency(value: unknown): string {
   const text = typeof value === "string" ? value.trim().toUpperCase() : "KES";
   if (!/^[A-Z]{3}$/.test(text)) throw new ValidationError("currency is not valid.", [{ path: "currency", message: "Use a three-letter code such as KES." }]);
   return text;
+}
+
+function cleanTermsDays(value: unknown): number | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 365) {
+    throw new ValidationError("paymentTermsDays is not valid.", [{ path: "paymentTermsDays", message: "Use a whole number of days from 0 to 365." }]);
+  }
+  return value;
 }
 
 async function resolveInvoiceTarget(ctx: AuthContext, input: { companyId?: string; dealId?: string }) {
@@ -209,30 +227,48 @@ async function resolveInvoiceTarget(ctx: AuthContext, input: { companyId?: strin
 
 export async function createInvoice(ctx: AuthContext, input: InvoiceInput, now = new Date()) {
   requireManage(ctx);
-  const number = cleanNumber(input.number);
+  requireKey(ctx, "invoices.create");
+  const typed = typeof input.number === "string" && input.number.trim() !== "" ? cleanNumber(input.number) : null;
+  const numbering = typed === null ? await effectiveInvoiceNumbering(ctx.organizationId) : null;
+  if (numbering && !numbering.auto) {
+    throw new ValidationError("A number is required.", [{ path: "number", message: "Type a number, or switch on automatic numbering in Settings.", code: "NUMBER_REQUIRED" }]);
+  }
   const amountCents = parseMoneyCents(input.amount, "amount");
   const issuedOn = parseDateOnly(input.issuedOn, "issuedOn");
   const dueOn = parseDateOnly(input.dueOn, "dueOn");
   if (dueOn < issuedOn) throw new ValidationError("The due date is before the issue date.", [{ path: "dueOn", message: "Due on or after the issue date." }]);
   const notes = cleanText(input.notes, "notes", MAX_NOTES);
+  const terms = cleanText(input.terms, "terms", MAX_TERMS);
+  const paymentTermsDays = cleanTermsDays(input.paymentTermsDays);
   const target = await resolveInvoiceTarget(ctx, input);
-  if (await findInvoiceByNumber(ctx.organizationId, number)) {
+  if (typed !== null && (await findInvoiceByNumber(ctx.organizationId, typed))) {
     throw new ValidationError("An invoice with this number already exists.", [{ path: "number", message: "Pick a different number.", code: "DUPLICATE_INVOICE_NUMBER" }]);
   }
-  const row = await insertInvoice({
+  const base = {
     organizationId: ctx.organizationId,
-    number,
     amount: fromCents(amountCents),
     currency: cleanCurrency(input.currency),
     issuedOn,
     dueOn,
-    status: input.sent ? "SENT" : "DRAFT",
+    status: (input.sent ? "SENT" : "DRAFT") as "SENT" | "DRAFT",
     dealId: target.dealId,
     companyId: target.companyId,
     recurringServiceId: input.recurringServiceId ?? null,
     notes,
+    paymentTermsDays,
+    terms,
     createdByMembershipId: ctx.membershipId,
-  });
+  };
+  let row;
+  try {
+    row = typed !== null ? await insertInvoice({ ...base, number: typed }) : await insertInvoiceAutoNumbered(base, numbering!.prefix);
+  } catch (err) {
+    // Two people typing the same number at once: the case-insensitive unique index decides, and the loser gets the same answer as above.
+    if (typed !== null && err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new ValidationError("An invoice with this number already exists.", [{ path: "number", message: "Pick a different number.", code: "DUPLICATE_INVOICE_NUMBER" }]);
+    }
+    throw err;
+  }
   const detail = await invoiceDetail(ctx.organizationId, row.id, now);
   await recordAuditEvent({
     organizationId: ctx.organizationId,

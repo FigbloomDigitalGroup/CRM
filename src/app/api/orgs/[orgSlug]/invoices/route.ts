@@ -23,7 +23,8 @@ const ListInvoicesQuerySchema = z.object({
 });
 
 const CreateInvoiceSchema = z.strictObject({
-  number: z.string({ error: "number is required." }),
+  /** Optional since UC-R8: left out, the next automatic number is used when the organisation has switched auto-numbering on. */
+  number: z.string().optional(),
   amount: z.union([z.number(), z.string()], { error: "amount is required." }),
   currency: z.string().optional(),
   issuedOn: z.string({ error: "issuedOn is required." }),
@@ -32,6 +33,10 @@ const CreateInvoiceSchema = z.strictObject({
   dealId: z.string().optional(),
   recurringServiceId: z.string().optional(),
   notes: z.string().optional(),
+  /** UC-R8: days from the issue date to pay (0 to 365). dueOn stays required. */
+  paymentTermsDays: z.number().int().optional(),
+  /** UC-R8: payment terms in words. */
+  terms: z.string().optional(),
   sent: z.boolean().optional(),
 });
 

@@ -13,7 +13,7 @@ import { Connections } from "../assistant/settings/Connections";
 import { FileDown as DataRequestsIcon, KeyRound as TwoStepIcon } from "lucide-react";
 import { DataRequests, TwoStepSettings } from "../orgside/SettingsTabs";
 import { BookOpen as CatalogueIcon, GitBranch as PipelineIcon, ListOrdered as SequenceIcon, FormInput as WebFormIcon, ShieldCheck as RulesIcon } from "lucide-react";
-import { ApprovalRulesSection, CatalogueSection, PipelinesSection, QuoteTaxSection, SequencesSection, WebFormsSection } from "../settingsplus";
+import { ApprovalRulesSection, CatalogueSection, PipelinesSection, InvoiceNumberingSection, QuoteTaxSection, SequencesSection, WebFormsSection } from "../settingsplus";
 import { Automations } from "./Automations";
 import { Integrations } from "./Integrations";
 import { InboundEmail, WebsiteIntegration } from "./Website";
@@ -68,6 +68,8 @@ export const SETTINGS_TABS: TabDef[] = [
   { id: "approvalrules", label: "Approval rules", icon: <RulesIcon size={ICON} aria-hidden="true" />, render: () => <ApprovalRulesSection /> },
   // UC-R5: the organisation tax setting new quotes copy (same editor frame as the sections above; layout to be reviewed against the CrmBilling frames).
   { id: "quotetax", label: "Quote tax", icon: <CatalogueIcon size={ICON} aria-hidden="true" />, render: () => <QuoteTaxSection /> },
+  // UC-R8: automatic invoice numbers and their prefix (same editor frame).
+  { id: "invoicenumbering", label: "Invoice numbering", icon: <CatalogueIcon size={ICON} aria-hidden="true" />, render: () => <InvoiceNumberingSection /> },
 ];
 
 /**

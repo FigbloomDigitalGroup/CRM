@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { withOrgContext, type OrgScopedClient } from "../db/orgScopedClient";
+import { formatInvoiceNumber } from "../lib/invoiceNumbering";
 
 /**
  * Data access for `invoices`, `payment_records` and `deal_payment_notes` (FIG-1049, B3.03). Every call runs inside the
@@ -261,5 +262,23 @@ export function listWonDealRows(organizationId: string, skip: number, take: numb
       tx.deal.count({ where }),
     ]);
     return { rows, total };
+  });
+}
+
+/**
+ * UC-R8: inserts an invoice and gives it the next automatic number in the same transaction. One number at a time per organisation (the same
+ * advisory-lock method quotes use for quote numbers); the case-insensitive unique index is the backstop for a number typed by hand at the same time.
+ */
+export function insertInvoiceAutoNumbered(data: Omit<Prisma.InvoiceUncheckedCreateInput, "number">, prefix: string) {
+  return withOrgContext(data.organizationId, async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`invoice-number:${data.organizationId}`}))`;
+    const rows = await tx.$queryRaw<{ n: number | null }[]>`
+      SELECT MAX(substring("number" FROM char_length(${prefix}) + 1)::bigint)::int AS n
+      FROM invoices
+      WHERE organization_id = ${data.organizationId}
+        AND lower(left("number", char_length(${prefix}))) = lower(${prefix})
+        AND substring("number" FROM char_length(${prefix}) + 1) ~ '^[0-9]{1,9}$'`;
+    const number = formatInvoiceNumber(prefix, (rows[0]?.n ?? 0) + 1);
+    return tx.invoice.create({ data: { ...data, number } });
   });
 }

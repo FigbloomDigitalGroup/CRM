@@ -32,6 +32,7 @@ export const SETTINGS_TAB_IDS = [
   "webforms",
   "approvalrules",
   "quotetax",
+  "invoicenumbering",
 ] as const;
 
 export type SettingsTabId = (typeof SETTINGS_TAB_IDS)[number];

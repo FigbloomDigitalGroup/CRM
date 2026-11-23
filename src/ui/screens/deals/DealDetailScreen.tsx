@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowLeft, ArrowLeftRight, Archive, CheckCircle2, Clock, Mail, MessageCircle, Package, Phone, StickyNote, Users, Zap, BellRing, type LucideIcon } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, Archive, CheckCircle2, Clock, FileText, Mail, MessageCircle, Package, Phone, StickyNote, Users, Zap, BellRing, type LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useApi, useApiQuery } from "../../data/hooks";
 import { newIdempotencyKey } from "../../data/client";
@@ -13,6 +14,7 @@ import { AddProposalDialog, AddTaskDrawer, LogActivityDrawer } from "./DealDrawe
 import { useMemberName, useRefData, useRefreshDeals } from "./data";
 import { ago, dateLong, dateShort, initials, kes, stageTone, when, type DealDetail, type HandoffView, type Stage } from "./model";
 import { useDealMover } from "./useDealMover";
+import { NewInvoiceDialog } from "../invoices/NewInvoiceDialog";
 import { RecordExtras } from "../extras/RecordExtras";
 import { LoaderBlock } from "../../components/loader";
 
@@ -70,6 +72,8 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
   const nameOf = useMemberName();
   const mover = useDealMover(ref.data);
   const [drawer, setDrawer] = useState<Drawer>(null);
+  const [invoicing, setInvoicing] = useState(false);
+  const router = useRouter();
   const [tab, setTab] = useState<"all" | "comms" | "audit">("all");
   const [now] = useState(() => new Date());
 
@@ -122,6 +126,7 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
   const snoozedUntil = tasks.find((t) => /^Follow up on proposal/i.test(t.title) && t.dueAt && new Date(t.dueAt) > now);
   const reminderOn = (reminderDays?.enabled ?? true) && open && !archived && lastProposal?.status === "SENT" && sentDays !== null && sentDays >= followDays;
 
+  const canInvoice = d.outcome === "WON" && !archived && can("invoices.create");
   const target = { id: d.id, company: company.name, stageId: d.pipelineStageId, outcome: d.outcome, title, valueLabel: valueText };
 
   async function archiveDeal() {
@@ -306,8 +311,16 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
             </span>
           </div>
         </div>
-        {editable ? (
+        {editable || canInvoice ? (
           <div className="fb-deals__tools">
+            {canInvoice ? (
+              <button type="button" className="fb-dtool" onClick={() => setInvoicing(true)}>
+                <FileText size={16} aria-hidden="true" />
+                Create invoice
+              </button>
+            ) : null}
+            {editable ? (
+              <>
             {can("activities.create") ? (
               <button type="button" className="fb-dtool" onClick={() => setDrawer("log")}>
                 <Phone size={16} aria-hidden="true" />
@@ -329,7 +342,16 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
                 Mark won
               </button>
             ) : null}
+              </>
+            ) : null}
           </div>
+        ) : null}
+        {invoicing ? (
+          <NewInvoiceDialog
+            from={{ companyId: company.id, companyName: company.name, dealId: d.id, amount: value !== null && value > 0 ? String(value) : undefined }}
+            onClose={() => setInvoicing(false)}
+            onCreated={(id) => router.push(`/o/${orgSlug}/invoices?invoice=${id}`)}
+          />
         ) : null}
       </div>
 

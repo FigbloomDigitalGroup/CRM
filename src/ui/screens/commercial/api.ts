@@ -207,6 +207,8 @@ export interface QuoteSettingsView {
   defaultTerms: string;
   /** UC-R5: the tax setting new quotes copy. Absent means tax is off. */
   tax?: { mode: "INCLUSIVE" | "EXCLUSIVE"; rateBp: number; label: string };
+  /** UC-R8: invoice auto-numbering. Absent until the organisation sets it (then off, prefix INV-). */
+  invoiceNumbering?: { auto: boolean; prefix: string };
 }
 
 export interface QuoteActivity {
