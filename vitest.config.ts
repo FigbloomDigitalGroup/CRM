@@ -22,8 +22,8 @@ export default defineConfig({
     // on the lighter "node" environment by not matching this glob.
     // (Vitest 3 deprecated and Vitest 4 removed `environmentMatchGlobs`; two projects that extend this config do the same job.)
     projects: [
-      { extends: true, test: { name: "node", environment: "node", exclude: ["e2e/**", "node_modules/**", "tests/components/**"] } },
-      { extends: true, test: { name: "components", environment: "jsdom", include: ["tests/components/**/*.test.{ts,tsx}"], exclude: ["e2e/**", "node_modules/**"] } },
+      { extends: true, test: { name: "node", environment: "node", exclude: ["e2e/**", "node_modules/**", "**/.claude/**", "tests/components/**"] } },
+      { extends: true, test: { name: "components", environment: "jsdom", include: ["tests/components/**/*.test.{ts,tsx}"], exclude: ["e2e/**", "node_modules/**", "**/.claude/**"] } },
     ],
     globalSetup: "./tests/globalSetup.ts",
     setupFiles: ["./tests/setup.ts", "./tests/components/setupComponentTests.ts"],
