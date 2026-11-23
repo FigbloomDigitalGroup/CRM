@@ -12,6 +12,7 @@ import { useToast } from "../../components/toast";
 import { explainRollback } from "../../data/hooks";
 import { AddProposalDialog, AddTaskDrawer, LogActivityDrawer } from "./DealDrawers";
 import { useMemberName, useRefData, useRefreshDeals } from "./data";
+import { useSalesDraftInvoices } from "../commercial/api";
 import { ago, dateLong, dateShort, initials, kes, stageTone, when, type DealDetail, type HandoffView, type Stage } from "./model";
 import { useDealMover } from "./useDealMover";
 import { NewInvoiceDialog } from "../invoices/NewInvoiceDialog";
@@ -70,6 +71,7 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
   const refresh = useRefreshDeals();
   const ref = useRefData();
   const nameOf = useMemberName();
+  const salesDraftSetting = useSalesDraftInvoices(orgSlug, !can("invoices.create") && can("deals.edit.own"));
   const mover = useDealMover(ref.data);
   const [drawer, setDrawer] = useState<Drawer>(null);
   const [invoicing, setInvoicing] = useState(false);
@@ -126,7 +128,9 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
   const snoozedUntil = tasks.find((t) => /^Follow up on proposal/i.test(t.title) && t.dueAt && new Date(t.dueAt) > now);
   const reminderOn = (reminderDays?.enabled ?? true) && open && !archived && lastProposal?.status === "SENT" && sentDays !== null && sentDays >= followDays;
 
-  const canInvoice = d.outcome === "WON" && !archived && can("invoices.create");
+  // UC-R10: a Sales person with no invoice keys may start a draft from their own won deal when Management switched it on (the API checks again).
+  const salesDraftOn = !can("invoices.create") && can("deals.edit.own") && owns && salesDraftSetting.data?.salesDraftInvoices === true;
+  const canInvoice = d.outcome === "WON" && !archived && (can("invoices.create") || salesDraftOn);
   const target = { id: d.id, company: company.name, stageId: d.pipelineStageId, outcome: d.outcome, title, valueLabel: valueText };
 
   async function archiveDeal() {
@@ -350,7 +354,7 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
           <NewInvoiceDialog
             from={{ companyId: company.id, companyName: company.name, dealId: d.id, amount: value !== null && value > 0 ? String(value) : undefined }}
             onClose={() => setInvoicing(false)}
-            onCreated={(id) => router.push(`/o/${orgSlug}/invoices?invoice=${id}`)}
+            onCreated={(id) => (can("invoices.view") ? router.push(`/o/${orgSlug}/invoices?invoice=${id}`) : undefined)}
           />
         ) : null}
       </div>

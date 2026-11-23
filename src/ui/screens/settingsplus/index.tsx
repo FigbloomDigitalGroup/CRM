@@ -4,6 +4,7 @@ import { ApprovalRulesEditor } from "./ApprovalRules";
 import { CatalogueEditor } from "./Catalogue";
 import { InvoiceNumberingEditor } from "./InvoiceNumbering";
 import { PipelinesEditor } from "./Pipelines";
+import { SalesDraftInvoicesEditor } from "./SalesDraftInvoices";
 import { QuoteTaxEditor } from "./QuoteTax";
 import { SequencesEditor } from "./Sequences";
 import { WebFormsEditor } from "./WebForms";
@@ -15,4 +16,9 @@ export const SequencesSection = () => <SequencesEditor />;
 export const WebFormsSection = () => <WebFormsEditor />;
 export const ApprovalRulesSection = () => <ApprovalRulesEditor />;
 export const QuoteTaxSection = () => <QuoteTaxEditor />;
-export const InvoiceNumberingSection = () => <InvoiceNumberingEditor />;
+export const InvoiceNumberingSection = () => (
+  <>
+    <InvoiceNumberingEditor />
+    <SalesDraftInvoicesEditor />
+  </>
+);
