@@ -24,6 +24,8 @@ import {
   Wallet,
   ChartColumn,
   LifeBuoy,
+  FileText,
+  ClipboardList,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -49,6 +51,8 @@ const ICONS: Record<NavIcon, ReactNode> = {
   handoffs: <Package size={18} />,
   renewals: <RefreshCw size={18} />,
   payments: <Wallet size={18} />,
+  quotes: <FileText size={18} />,
+  invoices: <ClipboardList size={18} />,
   reports: <ChartColumn size={18} />,
   forecast: <Target size={18} />,
   preferences: <Settings2 size={18} />,

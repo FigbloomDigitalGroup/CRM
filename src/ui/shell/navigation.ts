@@ -23,6 +23,11 @@ export interface NavInput {
   demoScreens?: boolean;
   /** Pages the member chose to hide from their own sidebar (Preferences, B1.08). The dashboard can never be hidden. */
   hidden?: readonly string[];
+  /**
+   * UC-R2: whether the organisation's `quotes.enabled` toggle is on (the layout resolves it). Left out means on, so the permission keys alone decide;
+   * `false` hides the Quotes link and the New quote entry. Invoices do not depend on it (their keys are V1 keys).
+   */
+  quotesEnabled?: boolean;
 }
 
 interface Def {
@@ -41,6 +46,7 @@ interface Def {
 }
 
 const has = (c: NavInput, key: string) => c.permissionKeys.includes(key);
+const quotesOn = (c: NavInput) => c.quotesEnabled !== false;
 const any = (c: NavInput, ...keys: string[]) => keys.some((k) => has(c, k));
 
 const SECTIONS: { key: string; label: (c: NavInput) => string; bottom?: boolean; collapsible?: boolean; icon?: NavIcon }[] = [
@@ -68,6 +74,8 @@ const DEFS: Def[] = [
     allowed: (c) => canUseResource(c, "deals"),
     built: true,
   },
+  // UC-R2: Quotes sits under Deals (the design's order) for holders of quotes.view. The page checks the same permission and the API repeats it.
+  { section: "workspace", key: "quotes", label: () => "Quotes", path: "/quotes", icon: "quotes", tint: "g", allowed: (c) => has(c, "quotes.view") && quotesOn(c), built: true },
   { section: "workspace", key: "tasks", label: () => "Tasks", path: "/tasks", icon: "tasks", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
   { section: "workspace", key: "calendar", label: () => "Calendar", path: "/calendar", icon: "calendar", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
   // Team (P2-15): Management only today; `canViewTeamPage` is the one place the rule lives (a Head of Sales joins it later).
@@ -83,6 +91,8 @@ const DEFS: Def[] = [
   { section: "communication", key: "video", label: () => "Video Conference", path: "/video", icon: "video", tint: "o", allowed: (c) => has(c, "meetings.schedule"), built: true },
   { section: "after-sale", key: "handoffs", label: () => "Handoffs", path: "/handoffs", icon: "handoffs", tint: "o", allowed: (c) => any(c, "handoff.manage", "deals.handoff"), built: true },
   { section: "after-sale", key: "renewals", label: () => "Renewals", path: "/renewals", icon: "renewals", tint: "o", allowed: (c) => has(c, "company_services.manage"), built: true },
+  // UC-R2: Invoices above Payments, for holders of invoices.view. The page (UC-R7) lives at /o/{org}/invoices.
+  { section: "after-sale", key: "invoices", label: () => "Invoices", path: "/invoices", icon: "invoices", tint: "o", allowed: (c) => has(c, "invoices.view"), built: true },
   { section: "after-sale", key: "payments", label: () => "Payments", path: "/payments", icon: "payments", tint: "o", allowed: (c) => has(c, "finance.view.payments"), built: true },
   { section: "insights", key: "forecast", label: () => "Forecast & targets", path: "/forecast", icon: "forecast", tint: "o", allowed: (c) => any(c, "forecast.view.all", "quotes.create", "reporting.view.own", "reporting.view.all"), built: true },
   // The design lists Approvals for people who approve quotes only; quotes themselves are reached from a deal, so they have no sidebar link.
@@ -128,6 +138,9 @@ export function buildQuickCreate(input: NavInput): QuickCreateItem[] {
   if (has(input, "contacts.create")) out.push({ key: "contact", label: "New contact", path: "/contacts" });
   if (has(input, "companies.create")) out.push({ key: "company", label: "New company", path: "/companies" });
   if (has(input, "tasks.create")) out.push({ key: "task", label: "New task", path: "/tasks" });
+  // UC-R2: New quote opens the Quotes page, where the deal-first entry lives today (UC-R4's New quote flow replaces that landing); New invoice opens Invoices (UC-R7).
+  if (has(input, "quotes.create") && quotesOn(input)) out.push({ key: "quote", label: "New quote", path: "/quotes" });
+  if (has(input, "invoices.create")) out.push({ key: "invoice", label: "New invoice", path: "/invoices" });
   if (has(input, "activities.create")) out.push({ key: "note", label: "Log a call or note", path: "/leads" });
   return out;
 }
