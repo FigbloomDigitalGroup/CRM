@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { stringifyCsv as stringify } from "../lib/csv";
 import type { AuthContext } from "../auth/context";
-import { hasPermission, requirePermission } from "../auth/context";
+import { deny, hasPermission, requirePermission } from "../auth/context";
 import { NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { cleanText, parseDateOnly, parseMoneyCents, parseOptionalDate } from "../lib/inputParsing";
@@ -40,7 +40,8 @@ import {
   withLockedInvoice,
   type InvoiceWithPayments,
 } from "../repositories/invoices";
-import { effectiveInvoiceNumbering } from "./invoiceSettingsService";
+import { effectiveInvoiceNumbering, salesDraftInvoicesEnabled } from "./invoiceSettingsService";
+import { toSalesDraftView } from "../lib/invoiceSalesDraft";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { assertBulkExportAllowed } from "./exportService";
 import { notifyEvent } from "./notificationService";
@@ -85,6 +86,15 @@ function requireManage(ctx: AuthContext) {
  */
 function requireKey(ctx: AuthContext, key: string) {
   requirePermission(ctx, key);
+}
+
+/**
+ * UC-R10 (FIG-1781): the Sales role may create and read DRAFT invoices of its own deals when Management switched `invoices.sales_draft` on
+ * (off by default). Only the platform Sales role without the payment keys; every other role goes the normal way. Never any payment data.
+ */
+async function salesDraftActor(ctx: AuthContext): Promise<boolean> {
+  if (ctx.roleKey !== "SALES" || hasPermission(ctx, "finance.manage.payments") || hasPermission(ctx, "finance.view.payments")) return false;
+  return salesDraftInvoicesEnabled(ctx.organizationId);
 }
 function canWriteNote(ctx: AuthContext) {
   return hasPermission(ctx, "finance.followup.note") || hasPermission(ctx, "finance.manage.payments");
@@ -226,8 +236,19 @@ async function resolveInvoiceTarget(ctx: AuthContext, input: { companyId?: strin
 }
 
 export async function createInvoice(ctx: AuthContext, input: InvoiceInput, now = new Date()) {
-  requireManage(ctx);
-  requireKey(ctx, "invoices.create");
+  const salesDraft = !hasPermission(ctx, "finance.manage.payments") && (await salesDraftActor(ctx));
+  if (salesDraft) {
+    // UC-R10: a draft for a won deal of their own, nothing else. Sending and payments stay with Finance and Management.
+    if (!input.dealId) throw new ValidationError("A won deal is required.", [{ path: "dealId", message: "Sales can create a draft invoice from one of their own won deals.", code: "SALES_DRAFT_NEEDS_DEAL" }]);
+    if (input.sent) throw new ValidationError("Sales can only create a draft.", [{ path: "sent", message: "Finance sends invoices.", code: "SALES_DRAFT_ONLY" }]);
+    if (input.recurringServiceId) throw new ValidationError("Sales can only invoice a won deal.", [{ path: "recurringServiceId", message: "Not available for a draft made by Sales.", code: "SALES_DRAFT_ONLY" }]);
+    const deal = await getDealForInvoice(ctx.organizationId, input.dealId);
+    if (!deal) throw new NotFoundError("Deal", input.dealId);
+    if (deal.ownerMembershipId !== ctx.membershipId) throw deny(ctx, "invoices.sales_draft", ["deals.edit.own"]);
+  } else {
+    requireManage(ctx);
+    requireKey(ctx, "invoices.create");
+  }
   const typed = typeof input.number === "string" && input.number.trim() !== "" ? cleanNumber(input.number) : null;
   const numbering = typed === null ? await effectiveInvoiceNumbering(ctx.organizationId) : null;
   if (numbering && !numbering.auto) {
@@ -277,11 +298,21 @@ export async function createInvoice(ctx: AuthContext, input: InvoiceInput, now =
     entityType: "Invoice",
     entityId: row.id,
     newValue: snapshot(detail),
+    ...(salesDraft ? { metadata: { salesDraft: true } } : {}),
   });
-  return detail;
+  // The Sales view is a whitelist subset; typed as the full view so callers keep one type (the shape is covered by tests).
+  return (salesDraft ? toSalesDraftView(detail) : detail) as typeof detail;
 }
 
 export async function getInvoice(ctx: AuthContext, invoiceId: string, now = new Date()) {
+  if (!hasPermission(ctx, "finance.view.payments") && (await salesDraftActor(ctx))) {
+    // UC-R10: only a draft of one of the person's own deals; anything else is "not found", so nothing is revealed.
+    const row = await getInvoiceRow(ctx.organizationId, invoiceId);
+    if (!row || row.status !== "DRAFT" || !row.dealId) throw new NotFoundError("Invoice", invoiceId);
+    const deal = await getDealForInvoice(ctx.organizationId, row.dealId);
+    if (!deal || deal.ownerMembershipId !== ctx.membershipId) throw new NotFoundError("Invoice", invoiceId);
+    return toSalesDraftView(toInvoiceView(row, now)) as never;
+  }
   requireView(ctx);
   requireKey(ctx, "invoices.view");
   return invoiceDetail(ctx.organizationId, invoiceId, now);
@@ -532,6 +563,13 @@ function orderFor(sort: string | undefined): Prisma.InvoiceOrderByWithRelationIn
 }
 
 export async function listInvoices(ctx: AuthContext, filters: InvoiceFilters = {}, request: PageRequest & { sort?: string } = {}, now = new Date()) {
+  if (!hasPermission(ctx, "finance.view.payments") && (await salesDraftActor(ctx))) {
+    // UC-R10: drafts of the person's own deals only; no totals, no ageing, no balances.
+    const paging = resolvePaging(request);
+    const where: Prisma.InvoiceWhereInput = { AND: [whereFor({ ...filters, status: undefined, overdue: false, hasBalance: false }, now), { status: "DRAFT", deal: { ownerMembershipId: ctx.membershipId } }] };
+    const { rows, total } = await listInvoiceRows(ctx.organizationId, where, orderFor(request.sort), paging.skip, paging.take);
+    return { ...buildPage(rows.map((r) => toSalesDraftView(toInvoiceView(r, now))), total, paging), salesDraftOnly: true as const } as never;
+  }
   requireView(ctx);
   requireKey(ctx, "invoices.view");
   const paging = resolvePaging(request);

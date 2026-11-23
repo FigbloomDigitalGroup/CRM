@@ -209,6 +209,8 @@ export interface QuoteSettingsView {
   tax?: { mode: "INCLUSIVE" | "EXCLUSIVE"; rateBp: number; label: string };
   /** UC-R8: invoice auto-numbering. Absent until the organisation sets it (then off, prefix INV-). */
   invoiceNumbering?: { auto: boolean; prefix: string };
+  /** UC-R10: whether Sales may create and read draft invoices. Always present; off by default. */
+  salesDraftInvoices?: boolean;
 }
 
 export interface QuoteActivity {
@@ -374,3 +376,4 @@ export function historyOf(versions: readonly QuoteVersionSummary[]): { key: stri
   }
   return out.sort((a, b) => a.at.localeCompare(b.at) || a.key.localeCompare(b.key));
 }
+export const useSalesDraftInvoices = (orgSlug: string, enabled: boolean) => useRead<QuoteSettingsView>("getQuoteSettings", { params: { orgSlug } }, { retry: false, enabled });
