@@ -14,6 +14,10 @@ const ListInvoicesQuerySchema = z.object({
   dealId: z.string().optional(),
   dueFrom: z.string().optional(),
   dueTo: z.string().optional(),
+  // UC-R7 (additive): amount range and "still owed" only.
+  amountMin: z.string().optional(),
+  amountMax: z.string().optional(),
+  hasBalance: z.enum(["true", "false"]).optional(),
   q: z.string().optional(),
   ...pageQueryShape,
 });
@@ -42,7 +46,7 @@ export async function GET(
     const query = parseQueryParams(new URL(request.url).searchParams, ListInvoicesQuerySchema);
     return listInvoices(
       ctx,
-      { status: query.status, overdue: query.overdue === "true", companyId: query.companyId, dealId: query.dealId, dueFrom: query.dueFrom, dueTo: query.dueTo, q: query.q },
+      { status: query.status, overdue: query.overdue === "true", companyId: query.companyId, dealId: query.dealId, dueFrom: query.dueFrom, dueTo: query.dueTo, amountMin: query.amountMin, amountMax: query.amountMax, hasBalance: query.hasBalance === "true", q: query.q },
       { ...toPageRequest(query), sort: query.sort },
     );
   });

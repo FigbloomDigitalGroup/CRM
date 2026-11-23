@@ -116,6 +116,48 @@ export function statusTotals(organizationId: string, today: Date, filter: Totals
   );
 }
 
+export interface AgeingRow {
+  bucket: string;
+  count: number;
+  outstanding: string;
+}
+
+/**
+ * What is still owed on sent and part paid invoices, by how long it is past its due date (UC-R7, FIG-1785). Buckets: `current` (not yet
+ * due, or due today), `d1_30`, `d31_60`, `d61_90`, `d90_plus`. Same organisation scope and filters as `statusTotals`. Who may see money is
+ * decided in the service, never here.
+ */
+export function ageingBuckets(organizationId: string, today: Date, filter: TotalsFilter) {
+  const conditions: Prisma.Sql[] = [Prisma.sql`i.organization_id = ${organizationId}`, Prisma.sql`i.status IN ('SENT', 'PART_PAID')`];
+  if (filter.companyId) conditions.push(Prisma.sql`i.company_id = ${filter.companyId}`);
+  if (filter.dealId) conditions.push(Prisma.sql`i.deal_id = ${filter.dealId}`);
+  if (filter.dueFrom) conditions.push(Prisma.sql`i.due_on >= ${filter.dueFrom}`);
+  if (filter.dueTo) conditions.push(Prisma.sql`i.due_on <= ${filter.dueTo}`);
+  return withOrgContext(organizationId, (tx) =>
+    tx.$queryRaw<AgeingRow[]>`
+      SELECT bucket, count(*)::int AS count, COALESCE(SUM(owing), 0)::numeric(16,2)::text AS outstanding
+      FROM (
+        SELECT
+          GREATEST(i.amount - COALESCE(p.paid, 0), 0) AS owing,
+          CASE
+            WHEN (${today}::date - i.due_on::date) <= 0 THEN 'current'
+            WHEN (${today}::date - i.due_on::date) <= 30 THEN 'd1_30'
+            WHEN (${today}::date - i.due_on::date) <= 60 THEN 'd31_60'
+            WHEN (${today}::date - i.due_on::date) <= 90 THEN 'd61_90'
+            ELSE 'd90_plus'
+          END AS bucket
+        FROM invoices i
+        LEFT JOIN (
+          SELECT invoice_id, SUM(amount) AS paid FROM payment_records
+          WHERE organization_id = ${organizationId} AND reversed_at IS NULL GROUP BY invoice_id
+        ) p ON p.invoice_id = i.id
+        WHERE ${Prisma.join(conditions, " AND ")}
+      ) t
+      WHERE owing > 0
+      GROUP BY bucket`,
+  );
+}
+
 export interface PaymentAggregateRow {
   dueThisWeekCount: number;
   dueThisWeekOutstanding: string;
