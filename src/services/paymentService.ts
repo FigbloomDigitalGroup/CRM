@@ -33,6 +33,7 @@ import {
   listInvoiceRows,
   listWonDealRows,
   paymentAggregates,
+  ageingBuckets,
   statusTotals,
   upsertPaymentNote,
   withLockedInvoice,
@@ -61,6 +62,8 @@ function money(value: { toString(): string }): string {
 }
 export const INVOICE_SORT_FIELDS = ["dueOn", "issuedOn", "amount", "number", "createdAt"] as const;
 export const MAX_INVOICE_EXPORT_ROWS = 20_000;
+/** UC-R7: the ageing strip's buckets, by days past the due date: not yet due, 1-30, 31-60, 61-90, over 90. */
+export const AGEING_BUCKETS = ["current", "d1_30", "d31_60", "d61_90", "d90_plus"] as const;
 
 export function canViewPayments(ctx: Pick<AuthContext, "permissionKeys">): boolean {
   return ctx.permissionKeys.includes("finance.view.payments");
@@ -71,6 +74,14 @@ function requireView(ctx: AuthContext) {
 }
 function requireManage(ctx: AuthContext) {
   requirePermission(ctx, "finance.manage.payments");
+}
+/**
+ * UC-R7/R9 (FIG-1785, FIG-1780): the split keys of UC-R1 are enforced on top of the existing ones, never instead of them. Every role that
+ * holds `finance.view.payments` / `finance.manage.payments` carries the split keys by implication (docs/QUOTE_INVOICE_PERMISSIONS.md), so no
+ * role changes; a custom role holding only a split key still gets nothing, because payments stay behind the old keys (rule 7).
+ */
+function requireKey(ctx: AuthContext, key: string) {
+  requirePermission(ctx, key);
 }
 function canWriteNote(ctx: AuthContext) {
   return hasPermission(ctx, "finance.followup.note") || hasPermission(ctx, "finance.manage.payments");
@@ -236,6 +247,7 @@ export async function createInvoice(ctx: AuthContext, input: InvoiceInput, now =
 
 export async function getInvoice(ctx: AuthContext, invoiceId: string, now = new Date()) {
   requireView(ctx);
+  requireKey(ctx, "invoices.view");
   return invoiceDetail(ctx.organizationId, invoiceId, now);
 }
 
@@ -246,6 +258,7 @@ export async function updateInvoice(
   now = new Date(),
 ) {
   requireManage(ctx);
+  requireKey(ctx, "invoices.edit");
   const before = await invoiceDetail(ctx.organizationId, invoiceId, now);
   if (before.storedStatus === "VOID") {
     throw new ValidationError("A void invoice cannot be changed.", [{ path: "status", message: "This invoice is void.", code: "INVOICE_VOID" }]);
@@ -291,6 +304,7 @@ export async function updateInvoice(
 
 export async function markInvoiceSent(ctx: AuthContext, invoiceId: string, now = new Date()) {
   requireManage(ctx);
+  requireKey(ctx, "invoices.send");
   const before = await invoiceDetail(ctx.organizationId, invoiceId, now);
   if (before.storedStatus === "SENT") return before;
   if (before.storedStatus !== "DRAFT") {
@@ -313,6 +327,7 @@ export async function markInvoiceSent(ctx: AuthContext, invoiceId: string, now =
 /** Voiding keeps the invoice and its history; it is refused while money is still recorded against it. */
 export async function voidInvoice(ctx: AuthContext, invoiceId: string, input: { reason: string }, now = new Date()) {
   requireManage(ctx);
+  requireKey(ctx, "invoices.edit");
   const reason = cleanText(input.reason, "reason", 300, { required: true })!;
   const before = await invoiceDetail(ctx.organizationId, invoiceId, now);
   if (before.storedStatus === "VOID") return before;
@@ -350,6 +365,7 @@ export async function recordPayment(
   now = new Date(),
 ) {
   requireManage(ctx);
+  requireKey(ctx, "payments.record");
   const paymentCents = parseMoneyCents(input.amount, "amount");
   const paidOn = input.paidOn ? parseDateOnly(input.paidOn, "paidOn") : startOfDay(now);
   if (paidOn.getTime() > startOfDay(now).getTime() + 24 * 60 * 60 * 1000) {
@@ -394,6 +410,7 @@ export async function recordPayment(
 /** A payment recorded by mistake is reversed with a reason; the record stays. */
 export async function reversePayment(ctx: AuthContext, paymentId: string, input: { reason: string }, now = new Date()) {
   requireManage(ctx);
+  requireKey(ctx, "payments.record");
   const reason = cleanText(input.reason, "reason", 300, { required: true })!;
   const record = await adminDb.paymentRecord.findFirst({ where: { id: paymentId, organizationId: ctx.organizationId } });
   if (!record) throw new NotFoundError("PaymentRecord", paymentId);
@@ -440,6 +457,11 @@ export interface InvoiceFilters {
   dealId?: string;
   dueFrom?: string;
   dueTo?: string;
+  /** UC-R7: invoice amount range, two-decimal strings (the invoice total, not the balance). */
+  amountMin?: string;
+  amountMax?: string;
+  /** UC-R7: only invoices that are still owed (sent or part paid, any due date). */
+  hasBalance?: boolean;
   q?: string;
 }
 
@@ -459,6 +481,9 @@ function whereFor(filters: InvoiceFilters, today: Date): Prisma.InvoiceWhereInpu
   if (filters.dealId) and.push({ dealId: filters.dealId });
   if (filters.dueFrom) and.push({ dueOn: { gte: parseDateOnly(filters.dueFrom, "dueFrom") } });
   if (filters.dueTo) and.push({ dueOn: { lte: parseDateOnly(filters.dueTo, "dueTo") } });
+  if (filters.amountMin) and.push({ amount: { gte: fromCents(parseMoneyCents(filters.amountMin, "amountMin", { allowZero: true })) } });
+  if (filters.amountMax) and.push({ amount: { lte: fromCents(parseMoneyCents(filters.amountMax, "amountMax", { allowZero: true })) } });
+  if (filters.hasBalance) and.push({ status: { in: ["SENT", "PART_PAID"] } });
   const q = filters.q?.trim();
   if (q) and.push({ OR: [{ number: { contains: q, mode: "insensitive" } }, { company: { name: { contains: q, mode: "insensitive" } } }] });
   return and.length > 0 ? { AND: and } : {};
@@ -472,15 +497,20 @@ function orderFor(sort: string | undefined): Prisma.InvoiceOrderByWithRelationIn
 
 export async function listInvoices(ctx: AuthContext, filters: InvoiceFilters = {}, request: PageRequest & { sort?: string } = {}, now = new Date()) {
   requireView(ctx);
+  requireKey(ctx, "invoices.view");
   const paging = resolvePaging(request);
   const where = whereFor(filters, now);
   const { rows, total } = await listInvoiceRows(ctx.organizationId, where, orderFor(request.sort), paging.skip, paging.take);
-  const totals = await statusTotals(ctx.organizationId, startOfDay(now), {
+  const totalsFilter = {
     companyId: filters.companyId,
     dealId: filters.dealId,
     dueFrom: filters.dueFrom ? parseDateOnly(filters.dueFrom, "dueFrom") : undefined,
     dueTo: filters.dueTo ? parseDateOnly(filters.dueTo, "dueTo") : undefined,
-  });
+  };
+  const [totals, ageingRows] = await Promise.all([statusTotals(ctx.organizationId, startOfDay(now), totalsFilter), ageingBuckets(ctx.organizationId, startOfDay(now), totalsFilter)]);
+  const ageing: Record<string, { count: number; outstanding: string }> = {};
+  for (const b of AGEING_BUCKETS) ageing[b] = { count: 0, outstanding: "0.00" };
+  for (const row of ageingRows) ageing[row.bucket] = { count: row.count, outstanding: row.outstanding };
   const byStatus: Record<string, { count: number; amount: string; outstanding: string }> = {};
   for (const s of INVOICE_STATUSES) byStatus[s] = { count: 0, amount: "0.00", outstanding: "0.00" };
   for (const row of totals) byStatus[row.status] = { count: row.count, amount: row.amount, outstanding: row.outstanding };
@@ -489,7 +519,7 @@ export async function listInvoices(ctx: AuthContext, filters: InvoiceFilters = {
     .reduce((sum, [, v]) => sum + toCents(v.outstanding), 0);
   return {
     ...buildPage(rows.map((r) => toInvoiceView(r, now)), total, paging),
-    totals: { byStatus, outstanding: fromCents(outstanding), nothingToCollect: outstanding === 0 },
+    totals: { byStatus, outstanding: fromCents(outstanding), nothingToCollect: outstanding === 0, ageing },
   };
 }
 
@@ -499,6 +529,8 @@ const CSV_COLUMNS = ["number", "company", "dealId", "status", "currency", "amoun
 export async function exportInvoicesCsv(ctx: AuthContext, filters: InvoiceFilters = {}, now = new Date()): Promise<string> {
   requireView(ctx);
   requireManage(ctx);
+  requireKey(ctx, "invoices.view");
+  requireKey(ctx, "finance.export");
   const where = whereFor(filters, now);
   const rows = await listAllInvoiceRows(ctx.organizationId, where, orderFor(undefined), MAX_INVOICE_EXPORT_ROWS);
   await assertBulkExportAllowed(ctx, rows.length);

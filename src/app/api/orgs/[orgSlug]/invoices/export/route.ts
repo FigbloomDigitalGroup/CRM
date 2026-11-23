@@ -18,6 +18,9 @@ export async function GET(
       dealId: sp.get("dealId") || undefined,
       dueFrom: sp.get("dueFrom") || undefined,
       dueTo: sp.get("dueTo") || undefined,
+      amountMin: sp.get("amountMin") || undefined,
+      amountMax: sp.get("amountMax") || undefined,
+      hasBalance: sp.get("hasBalance") === "true",
       q: sp.get("q") || undefined,
     });
     return new Response(csv, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": 'attachment; filename="invoices.csv"' } });

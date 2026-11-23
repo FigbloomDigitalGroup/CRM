@@ -204,7 +204,7 @@ export function InvoiceDialog({ invoiceId, onClose }: { invoiceId: string; onClo
 }
 
 /** The invoice's audit trail: who did what and when. Management only (`audit.view`); the API hides payment entities from everyone else. */
-function InvoiceHistory({ invoiceId }: { invoiceId: string }) {
+export function InvoiceHistory({ invoiceId }: { invoiceId: string }) {
   const { orgSlug, timeZone } = useMember();
   const q = useApiQuery("listAuditLog", { params: { orgSlug }, query: { entityType: "Invoice", entityId: invoiceId, pageSize: "20" } });
   const items = (q.data?.items ?? []) as { id?: string; action?: string; createdAt?: string; actorName?: string | null }[];

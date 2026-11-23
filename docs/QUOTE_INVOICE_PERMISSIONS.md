@@ -103,3 +103,12 @@ departure flags at their defaults, with the umbrella flag off and with every dep
 a lost key, an extra key, or a new key a role should not gain. It also covers custom roles, the catalogue and the table, the reserved
 and view-key rules, the migration and sync agreeing, a custom role surviving a sync, and one organisation not seeing another's custom
 role. No table is added, so there is no new row-level-security policy to test.
+
+## Enforced on the invoice routes (UC-R7, UC-R9)
+
+`paymentService` now also requires the split keys, on top of `finance.view.payments` / `finance.manage.payments` (never instead of them):
+list and read need `invoices.view`; send needs `invoices.send`; void and edit need `invoices.edit`; record and reverse a payment need
+`payments.record`; the CSV export needs `finance.export`. Every role that held the old keys carries these by implication, so no role changes.
+The Invoices page (`/o/{org}/invoices`, `src/ui/screens/invoices/`) shows balances, the ageing strip and payments only with `finance.view.payments`.
+The list gained additive query params `amountMin`, `amountMax`, `hasBalance` (also on the export) and `totals.ageing` (buckets `current`,
+`d1_30`, `d31_60`, `d61_90`, `d90_plus`, each `{ count, outstanding }`); the frozen contract 1.1.0 is not edited, the 1.2.0 bump lists them.
