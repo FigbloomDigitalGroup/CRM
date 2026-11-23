@@ -3,7 +3,7 @@
 import { Building2, ClipboardList, Database, FileText, Globe, History, Inbox, Layers, Lock, RefreshCw, Shield, Tag, Upload, Users, Zap, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { NoAccess } from "../../components/states";
 import { useMember } from "../../data/member";
 import { AuditLog } from "./AuditLog";
@@ -81,6 +81,12 @@ export function SettingsScreen({ matrix = null }: { matrix?: MatrixData | null }
   const allowed = canAny("organization.manage_settings", "configuration.manage");
   const requested = search?.get("tab") ?? "org";
   const tab = SETTINGS_TABS.find((t) => t.id === requested) ?? SETTINGS_TABS[0]!;
+  const bodyRef = useRef<HTMLDivElement>(null);
+  // The section list is long, so a link near its end is clicked with the page scrolled down while the section opens at the top of the grid:
+  // the page looked blank. Bring the section into view when the tab changes (a no-op when it is already visible).
+  useEffect(() => {
+    bodyRef.current?.scrollIntoView?.({ block: "nearest" });
+  }, [tab.id]);
 
   if (!allowed) {
     return (
@@ -110,7 +116,7 @@ export function SettingsScreen({ matrix = null }: { matrix?: MatrixData | null }
             </Link>
           ))}
         </nav>
-        <div className="fb-set__body" key={tab.id}>
+        <div className="fb-set__body" key={tab.id} ref={bodyRef}>
           {tab.render(matrix)}
         </div>
       </div>
