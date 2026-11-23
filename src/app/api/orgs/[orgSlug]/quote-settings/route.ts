@@ -2,7 +2,8 @@ import { z } from "zod";
 import { handleRoute } from "@/app/api/_lib/handleRoute";
 import { parseJsonBody } from "@/app/api/_lib/validation";
 import { resolveRequestContext } from "@/auth/requestContext";
-import { getQuoteSettings, updateQuoteSettings } from "@/services/quoteService";
+import { loadInvoiceNumbering, updateInvoiceNumbering } from "@/services/invoiceSettingsService";
+import { getQuoteSettings, loadQuoteSettings, updateQuoteSettings } from "@/services/quoteService";
 
 const SettingsSchema = z.strictObject({
   /** When on, a deal cannot move to Proposal Sent without a valid quote; the block says why. */
@@ -11,7 +12,15 @@ const SettingsSchema = z.strictObject({
   defaultTerms: z.string().optional(),
   /** UC-R5: the tax setting NEW quotes copy. An object sets it (mode INCLUSIVE or EXCLUSIVE, rateBp in basis points, label); null switches tax off. Quotes already made never change. */
   tax: z.strictObject({ mode: z.string(), rateBp: z.number(), label: z.string().optional() }).nullable().optional(),
+  /** UC-R8: invoice auto-numbering. `auto` switches it on; `prefix` is 1 to 20 characters (letters, digits and - _ . /). Management only. */
+  invoiceNumbering: z.strictObject({ auto: z.boolean().optional(), prefix: z.string().optional() }).optional(),
 });
+
+/** The quote settings, plus the invoice numbering setting when the organisation has set it (additive; absent otherwise). */
+async function withInvoiceNumbering<T extends object>(organizationId: string, quote: T) {
+  const invoiceNumbering = await loadInvoiceNumbering(organizationId);
+  return invoiceNumbering ? { ...quote, invoiceNumbering } : quote;
+}
 
 // Quote defaults and the Proposal Sent gate (FIG-1143, B6.11; Management writes).
 export async function GET(
@@ -21,7 +30,7 @@ export async function GET(
   return handleRoute(async () => {
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    return getQuoteSettings(ctx);
+    return withInvoiceNumbering(ctx.organizationId, await getQuoteSettings(ctx));
   });
 }
 
@@ -32,6 +41,10 @@ export async function PATCH(
   return handleRoute(async () => {
     const { orgSlug } = await params;
     const ctx = await resolveRequestContext(orgSlug);
-    return updateQuoteSettings(ctx, await parseJsonBody(request, SettingsSchema));
+    const { invoiceNumbering, ...quotePatch } = await parseJsonBody(request, SettingsSchema);
+    // Quote fields first (they need the quotes feature); a body with only invoice numbering does not.
+    const quote = Object.keys(quotePatch).length > 0 || invoiceNumbering === undefined ? await updateQuoteSettings(ctx, quotePatch) : await loadQuoteSettings(ctx.organizationId);
+    if (invoiceNumbering !== undefined) await updateInvoiceNumbering(ctx, invoiceNumbering);
+    return withInvoiceNumbering(ctx.organizationId, quote);
   });
 }

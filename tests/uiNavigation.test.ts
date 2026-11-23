@@ -215,7 +215,7 @@ describe("Quotes and Invoices in the sidebar (UC-R2)", () => {
     const q = (keys: readonly string[]) => buildQuickCreate({ permissionKeys: keys, membershipId: "m1" });
     expect(q(["quotes.view"])).toEqual([]);
     expect(q(["quotes.create"])).toEqual([{ key: "quote", label: "New quote", path: "/quotes" }]);
-    expect(q(["invoices.create"])).toEqual([{ key: "invoice", label: "New invoice", path: "/invoices" }]);
+    expect(q(["invoices.create"])).toEqual([{ key: "invoice", label: "New invoice", path: "/invoices?new=1" }]);
     expect(q(["invoices.view"])).toEqual([]);
   });
 });

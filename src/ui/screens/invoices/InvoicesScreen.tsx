@@ -66,6 +66,9 @@ export function InvoicesScreen({ newInvoiceSlot }: { newInvoiceSlot?: ReactNode 
   const [filters, setFilters] = useState<InvoiceFilters>(NO_FILTERS);
   const [search, setSearch] = useState("");
   const [invoiceId, setInvoiceId] = useState<string | null>(params?.get("invoice") ?? null);
+  // A created invoice arrives as ?invoice=<id> on the same page (UC-R8): open it.
+  const fromUrl = params?.get("invoice") ?? null;
+  useEffect(() => { if (fromUrl) setInvoiceId(fromUrl); }, [fromUrl]);
   const debounced = useDebounced(search);
   useEffect(() => setFilters((f) => (f.q === debounced ? f : { ...f, q: debounced, page: 1 })), [debounced]);
   const set = (patch: Partial<InvoiceFilters>) => setFilters((f) => ({ ...f, page: 1, ...patch }));

@@ -140,7 +140,7 @@ export function buildQuickCreate(input: NavInput): QuickCreateItem[] {
   if (has(input, "tasks.create")) out.push({ key: "task", label: "New task", path: "/tasks" });
   // UC-R2: New quote opens the Quotes page, where the deal-first entry lives today (UC-R4's New quote flow replaces that landing); New invoice opens Invoices (UC-R7).
   if (has(input, "quotes.create") && quotesOn(input)) out.push({ key: "quote", label: "New quote", path: "/quotes" });
-  if (has(input, "invoices.create")) out.push({ key: "invoice", label: "New invoice", path: "/invoices" });
+  if (has(input, "invoices.create")) out.push({ key: "invoice", label: "New invoice", path: "/invoices?new=1" });
   if (has(input, "activities.create")) out.push({ key: "note", label: "Log a call or note", path: "/leads" });
   return out;
 }
