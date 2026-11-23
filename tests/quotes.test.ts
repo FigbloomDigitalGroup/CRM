@@ -118,14 +118,15 @@ describe("quotes (FIG-1143, B6.11)", () => {
     expect(all).toMatchObject({ total: 100, cost: 60, marginPct: 40 });
   });
 
-  it("follows deal visibility and permissions: another salesperson gets 404, Finance and Delivery are refused, one quote per deal", async () => {
+  it("follows deal visibility and permissions: another salesperson gets 404, Delivery is refused, Finance cannot open a deal that is not won, one quote per deal", async () => {
     const w = await commercialWorld();
     const delivery = await createTestContext(w.org.id, "DELIVERY");
     const { quote } = await createQuote(w.sales, w.deal.id, { lines: [{ catalogueItemId: w.camera.id, quantity: 1 }] });
     await expect(getQuote(w.salesTwo, quote.id)).rejects.toBeInstanceOf(NotFoundError);
     await expect(getQuoteForDeal(w.salesTwo, w.deal.id)).rejects.toBeInstanceOf(NotFoundError);
     await expect(createQuote(w.salesTwo, w.deal.id)).rejects.toBeInstanceOf(NotFoundError);
-    await expect(getQuote(w.finance, quote.id)).rejects.toBeInstanceOf(ForbiddenError);
+    // UC-R3: Finance may read quotes (quotes.view) but only on the deals it can open (won ones), so this open deal answers 404, not "refused".
+    await expect(getQuote(w.finance, quote.id)).rejects.toBeInstanceOf(NotFoundError);
     await expect(getQuote(delivery, quote.id)).rejects.toBeInstanceOf(ForbiddenError);
     expect((await issuesOf(createQuote(w.sales, w.deal.id)))[0]).toMatchObject({ code: "QUOTE_EXISTS" });
     // Management opens any deal. Sales lists only quotes on own deals.

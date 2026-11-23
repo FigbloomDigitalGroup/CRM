@@ -19,6 +19,8 @@ const SendSchema = z.strictObject({
   language: z.string().optional(),
   /** FIG-1186: also create an online signing link (V2). */
   allowSigning: z.boolean().optional(),
+  /** UC-R4: "email" (default) or "link" (make the secure link without sending an email: Copy link, WhatsApp). */
+  channel: z.enum(["email", "link"]).optional(),
 });
 
 // Emails the quote with a secure link and locks the version (FIG-1144, B6.12). The link is in the response once; only its hash is kept.

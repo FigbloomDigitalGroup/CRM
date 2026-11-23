@@ -15,7 +15,19 @@ import { SideDrawer } from "./SideDrawer";
 export const COMPANY_PICKER_PAGE_SIZE = 20;
 
 /** The New deal drawer (design: CrmOverlays, `deal`). Most deals come from converting a lead; this is for a direct opportunity. */
-export function NewDealDrawer({ ref_, onClose }: { ref_: RefData | undefined; onClose: () => void }) {
+export function NewDealDrawer({
+  ref_,
+  onClose,
+  defaultCompany,
+  onCreated,
+}: {
+  ref_: RefData | undefined;
+  onClose: () => void;
+  /** UC-R4: start with this company chosen (the New quote picker creates a deal for the customer it just picked). */
+  defaultCompany?: { id: string; name: string };
+  /** UC-R4: told the new deal's id once it exists (the drawer still closes itself). */
+  onCreated?: (dealId: string) => void;
+}) {
   const { orgSlug } = useMember();
   const toast = useToast();
   const refresh = useRefreshDeals();
@@ -25,18 +37,19 @@ export function NewDealDrawer({ ref_, onClose }: { ref_: RefData | undefined; on
   const create = useApiMutation("postDeals");
 
   const openStages = (ref_?.stages ?? []).filter((s) => !s.isWon && !s.isLost);
-  const [f, setF] = useState({ companyId: "", notes: "", serviceId: "", stageId: "", value: "", close: "" });
+  const [f, setF] = useState({ companyId: defaultCompany?.id ?? "", notes: "", serviceId: "", stageId: "", value: "", close: "" });
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const stageId = f.stageId || openStages[0]?.id || "";
   const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
-  const list = ((companies.data as unknown as { items?: { id: string; name: string }[] } | undefined)?.items ?? []) as { id: string; name: string }[];
+  const found = ((companies.data as unknown as { items?: { id: string; name: string }[] } | undefined)?.items ?? []) as { id: string; name: string }[];
+  const list = defaultCompany && !found.some((c) => c.id === defaultCompany.id) ? [defaultCompany, ...found] : found;
 
   async function save() {
     setError(null);
     setFieldErrors({});
     try {
-      await create.mutateAsync({
+      const created = (await create.mutateAsync({
         params: { orgSlug },
         body: {
           companyId: f.companyId,
@@ -46,8 +59,9 @@ export function NewDealDrawer({ ref_, onClose }: { ref_: RefData | undefined; on
           ...(f.close ? { expectedCloseDate: f.close } : {}),
           ...(f.notes.trim() ? { notes: f.notes.trim() } : {}),
         },
-      });
+      })) as unknown as { id?: string } | undefined;
       refresh();
+      if (created?.id) onCreated?.(created.id);
       toast.show({ tone: "success", message: "Deal created." });
       onClose();
     } catch (e) {

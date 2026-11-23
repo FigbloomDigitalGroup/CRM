@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adminDb } from "../src/db/adminClient";
 import { withOrgContext } from "../src/db/orgScopedClient";
-import { ForbiddenError, NotFoundError, ValidationError } from "../src/auth/errors";
+import { NotFoundError, ValidationError } from "../src/auth/errors";
 import { LOGO_PLACEHOLDER, renderQuoteHtml, type QuoteDocumentInput } from "../src/lib/quoteDocument";
 import { createQuote, getQuoteVersion, transitionVersion, updateDraftVersion } from "../src/services/quoteService";
 import { updateCatalogueEntry } from "../src/services/catalogueService";
@@ -127,7 +127,8 @@ describe("sending a quote (FIG-1144)", () => {
     expect((await issuesOf(sendQuote(w.sales, quote.id, 1, { to: "a@b.example" }, farFuture)))[0]).toMatchObject({ code: "QUOTE_EXPIRED" });
     await expect(sendQuote(w.salesTwo, quote.id, 1, { to: "a@b.example" }, NOW)).rejects.toBeInstanceOf(NotFoundError);
     await expect(sendQuote(w.finance, quote.id, 1, { to: "a@b.example" }, NOW)).rejects.toBeInstanceOf(NotFoundError);
-    await expect(previewQuote(w.finance, quote.id, 1, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    // UC-R3: Finance now has quotes.view, so the permission passes; the deal is not won, so Finance cannot open it (404 as for the send above).
+    await expect(previewQuote(w.finance, quote.id, 1, NOW)).rejects.toBeInstanceOf(NotFoundError);
 
     // A version waiting for approval, or one that was not approved, cannot be sent.
     const id = (await adminDb.quoteVersion.findFirstOrThrow({ where: { quoteId: quote.id, version: 1 } })).id;
