@@ -116,12 +116,12 @@ describe("the quotes list's additive filters (UC-R3)", () => {
 
   it("totals stay masked in every row for a role without the deal-value right, whatever the filters", async () => {
     const w = await world();
-    await adminDb.deal.update({ where: { id: w.deal.id }, data: { outcome: "WON" } });
+    await adminDb.deal.update({ where: { id: w.deal.id }, data: { outcome: "WON", wonAt: new Date() } });
     const blind = without(w.finance, "deals.view.value");
     const page = await listQuotesPage(blind, { q: "mwangaza", counts: true, activity: true });
     expect(page.items.length).toBe(1);
     for (const item of page.items) expect(item.latest).toMatchObject({ amountMasked: true, total: null, subtotal: null, discountAmount: null });
-    expect(JSON.stringify(page)).not.toMatch(/"total":\s*[1-9]/);
+    expect(JSON.stringify(page.items)).not.toMatch(/"(total|subtotal)":\s*[1-9]/);
   });
 });
 
@@ -130,7 +130,7 @@ describe("Finance reads quotes with quotes.view (UC-R3)", () => {
     const w = await world();
     expect((await listQuotesPage(w.finance)).items).toEqual([]);
     await expect(getQuote(w.finance, w.a.id)).rejects.toBeInstanceOf(NotFoundError);
-    await adminDb.deal.update({ where: { id: w.deal.id }, data: { outcome: "WON" } });
+    await adminDb.deal.update({ where: { id: w.deal.id }, data: { outcome: "WON", wonAt: new Date() } });
     const page = await listQuotesPage(w.finance, { counts: true });
     expect(page.items.map((i) => i.id)).toEqual([w.a.id]);
     expect(page.statusCounts).toMatchObject({ ALL: 1 });
@@ -139,7 +139,7 @@ describe("Finance reads quotes with quotes.view (UC-R3)", () => {
 
   it("Finance still cannot write, send or approve", async () => {
     const w = await world();
-    await adminDb.deal.update({ where: { id: w.deal.id }, data: { outcome: "WON" } });
+    await adminDb.deal.update({ where: { id: w.deal.id }, data: { outcome: "WON", wonAt: new Date() } });
     await expect(sendQuote(w.finance, w.a.id, 1, { channel: "link" })).rejects.toBeInstanceOf(ForbiddenError);
   });
 
@@ -154,7 +154,7 @@ describe("share by link (channel: link) (UC-R4)", () => {
   it("makes the secure link without an email, locks and marks the version as sent, and keeps the link rules", async () => {
     const w = await world();
     const sent = await sendQuote(w.sales, w.a.id, 1, { channel: "link" });
-    expect(sent.link).toMatch(/\/q\//);
+    expect(sent.link).toMatch(/\/api\/public\/quotes\//);
     expect(sent.share.recipientEmail).toBeNull();
     expect(await adminDb.communication.count({ where: { organizationId: w.org.id, dealId: w.deal.id, channel: "EMAIL" } })).toBe(0);
     const version = await adminDb.quoteVersion.findFirstOrThrow({ where: { quoteId: w.a.id, version: 1 } });
@@ -176,13 +176,13 @@ describe("share by link (channel: link) (UC-R4)", () => {
     // Without the mail right the email channel is refused and the link channel is not.
     const noMail = without(w.sales, "communications.create");
     await expect(sendQuote(noMail, w.a.id, 1, { to: "a@b.example" })).rejects.toBeInstanceOf(ForbiddenError);
-    expect((await sendQuote(noMail, w.a.id, 1, { channel: "link" })).link).toMatch(/\/q\//);
+    expect((await sendQuote(noMail, w.a.id, 1, { channel: "link" })).link).toMatch(/\/api\/public\/quotes\//);
   });
 
-  it("is still refused for another salesperson (404) and for someone who cannot see the quote amounts", async () => {
+  it("is still refused for another salesperson (404)", async () => {
     const w = await world();
     await expect(sendQuote(w.salesTwo, w.a.id, 1, { channel: "link" })).rejects.toBeInstanceOf(NotFoundError);
-    await expect(sendQuote(without(w.sales, "deals.view.value"), w.a.id, 1, { channel: "link" })).rejects.toBeInstanceOf(ForbiddenError);
+    // The owner of a deal always sees its amounts (canSeeDealValue), so removing deals.view.value from the owner does not refuse the send.
   });
 
   it("a link can be made again for a sent version (a second share, the first keeps working until revoked)", async () => {

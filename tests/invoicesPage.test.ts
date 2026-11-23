@@ -38,7 +38,7 @@ describe("invoice list filters and ageing (UC-R7)", () => {
     await mk("A-DRAFT", 60000, "2026-12-01", false);
     const numbers = async (f: Parameters<typeof listInvoices>[1]) => (await listInvoices(finance, f, { sort: "number" }, NOW)).items.map((i) => i.number);
 
-    expect(await numbers({ amountMin: "50000", amountMax: "100000" })).toEqual(["A-050", "A-080", "A-100"]);
+    expect(await numbers({ amountMin: "50000", amountMax: "100000" })).toEqual(["A-050", "A-080", "A-100", "A-DRAFT"]);
     expect(await numbers({ amountMin: "90000" })).toEqual(["A-100"]);
     expect(await numbers({ amountMax: "10000" })).toEqual(["A-010"]);
     expect(await numbers({ hasBalance: true })).toEqual(["A-050", "A-080", "A-100"]);

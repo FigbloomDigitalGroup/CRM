@@ -5,6 +5,7 @@ import { NotFoundError, ValidationError, type ValidationIssue } from "../auth/er
 import { canSeeDealValue, canSeeMargin } from "../auth/masking";
 import { assertRecordVisible } from "../auth/visibility";
 import { adminDb } from "../db/adminClient";
+import { withOrgContext } from "../db/orgScopedClient";
 import { assertWritable } from "../lib/archive";
 import { discountNeedsApproval, type ApprovalRuleSettings } from "../lib/approvalRules";
 import { normaliseCurrency, parseMoney, round2 } from "../lib/commercialMoney";
@@ -638,10 +639,12 @@ const EMPTY_ACTIVITY: QuoteRowActivity = { links: 0, activeLinks: 0, revokedLink
 async function rowActivity(organizationId: string, versionIds: string[], now: Date): Promise<Map<string, QuoteRowActivity>> {
   const out = new Map<string, QuoteRowActivity>();
   if (versionIds.length === 0) return out;
-  const shares = await adminDb.quoteShare.findMany({
-    where: { organizationId, quoteVersionId: { in: versionIds } },
-    select: { quoteVersionId: true, expiresAt: true, revokedAt: true, viewCount: true, lastViewedAt: true },
-  });
+  const shares = await withOrgContext(organizationId, (tx) =>
+    tx.quoteShare.findMany({
+      where: { organizationId, quoteVersionId: { in: versionIds } },
+      select: { quoteVersionId: true, expiresAt: true, revokedAt: true, viewCount: true, lastViewedAt: true },
+    }),
+  );
   for (const s of shares) {
     const a = out.get(s.quoteVersionId) ?? { ...EMPTY_ACTIVITY };
     a.links += 1;
