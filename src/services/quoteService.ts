@@ -72,10 +72,10 @@ type VersionRow = QuoteVersion & { lines: QuoteLine[] };
 // Access
 // ---------------------------------------------------------------------------
 
-const READ_KEYS = ["quotes.create", "quotes.approve"];
+const READ_KEYS = ["quotes.create", "quotes.approve", "quotes.view"];
 
 function requireQuoteRead(ctx: AuthContext): void {
-  if (!READ_KEYS.some((k) => hasPermission(ctx, k))) throw deny(ctx, "quotes (quotes.create or quotes.approve)", READ_KEYS);
+  if (!READ_KEYS.some((k) => hasPermission(ctx, k))) throw deny(ctx, "quotes (quotes.view, quotes.create or quotes.approve)", READ_KEYS);
 }
 
 async function loadVisibleDeal(ctx: AuthContext, dealId: string) {
@@ -528,31 +528,131 @@ function parseDealIdFilter(value: string | undefined): string[] | undefined {
   return ids;
 }
 
+/** UC-R3: what the Quotes list may be filtered by, besides the deal and the latest version's status. All additive; none is a money value. */
+export interface QuoteListFiltersInput {
+  dealId?: string;
+  status?: string;
+  /** Text in the quote number, the customer's name or the deal's notes. */
+  q?: string;
+  /** The deal's owner (a membership id). */
+  owner?: string;
+  companyId?: string;
+  /** The latest version's validity date, `YYYY-MM-DD`, inclusive. */
+  validFrom?: string;
+  validTo?: string;
+  /** "only" = derived Expired (SENT or APPROVED, past its validity date); "exclude" = everything else. */
+  expired?: string;
+  /** Add `statusCounts` (per chip, over the same filters except the status) to the page. */
+  counts?: boolean;
+  /** Add `activity` (links, views, revocations) to each row. */
+  activity?: boolean;
+}
+
+export interface QuoteRowActivity {
+  /** Links made for the latest version. */
+  links: number;
+  /** Links that still work (not revoked, not past their end). */
+  activeLinks: number;
+  revokedLinks: number;
+  /** Links that ran out without being revoked. */
+  expiredLinks: number;
+  views: number;
+  lastViewedAt: Date | null;
+}
+
+const asDate = (value: string | undefined, path: string): string | undefined => {
+  if (value === undefined || value === "") return undefined;
+  if (!isIsoDate(value)) throw new ValidationError(`${path} is not a date.`, [{ path, message: "Use YYYY-MM-DD." }]);
+  return value;
+};
+
 /** Quotes on the deals the caller can open, newest change first, each with its latest version summary. */
-export async function listQuotesPage(ctx: AuthContext, filters: { dealId?: string; status?: string } = {}, request: PageRequest = {}, now = new Date()) {
+export async function listQuotesPage(ctx: AuthContext, filters: QuoteListFiltersInput = {}, request: PageRequest = {}, now = new Date()) {
   await requireFeature(ctx.organizationId, "quotes.enabled");
   requireQuoteRead(ctx);
   if (filters.status !== undefined && !["DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED", "SENT", "ACCEPTED", "DECLINED"].includes(filters.status)) {
     throw new ValidationError("status is not a quote status.", [{ path: "status", message: "Use DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, SENT, ACCEPTED or DECLINED." }]);
   }
+  if (filters.expired !== undefined && filters.expired !== "" && filters.expired !== "only" && filters.expired !== "exclude") {
+    throw new ValidationError("expired is not a choice.", [{ path: "expired", message: "Use only or exclude." }]);
+  }
+  const validFrom = asDate(filters.validFrom, "validFrom");
+  const validTo = asDate(filters.validTo, "validTo");
+  if (validFrom && validTo && validFrom > validTo) throw new ValidationError("validFrom is after validTo.", [{ path: "validFrom", message: "The start of the range is after its end." }]);
+  const text = filters.q?.trim().slice(0, 100);
   const paging = resolvePaging(request);
   // `dealId` is one deal id or several separated by commas (the Quotes list asks for the quotes of the deals on its page in one request).
   const asked = parseDealIdFilter(filters.dealId);
   let dealIds: string[] | undefined;
   if (!hasPermission(ctx, "deals.view.all")) {
-    if (!hasPermission(ctx, "deals.view.own")) throw deny(ctx, "deals.view", ["deals.view.own", "deals.view.all"]);
+    // The deals the caller may open: their own (deals.view.own) and, for Finance and Delivery, the won ones (deals.view.won), as on the Deals list.
+    const visible: Prisma.DealWhereInput[] = [];
+    if (hasPermission(ctx, "deals.view.own")) visible.push({ ownerMembershipId: ctx.membershipId });
+    if (hasPermission(ctx, "deals.view.won")) visible.push({ outcome: "WON" });
+    if (visible.length === 0) throw deny(ctx, "deals.view", ["deals.view.own", "deals.view.all", "deals.view.won"]);
     // A deal asked for that the caller cannot open drops out here (the answer is an empty list, never another person's quote).
-    dealIds = (await adminDb.deal.findMany({ where: { organizationId: ctx.organizationId, ownerMembershipId: ctx.membershipId, ...(asked ? { id: { in: asked } } : {}) }, select: { id: true } })).map((d) => d.id);
+    dealIds = (await adminDb.deal.findMany({ where: { organizationId: ctx.organizationId, OR: visible, ...(asked ? { id: { in: asked } } : {}) }, select: { id: true } })).map((d) => d.id);
   }
-  const { rows, total } = await listQuotes(ctx.organizationId, { dealIds, dealId: asked, status: filters.status }, paging);
+  const { rows, total, statusCounts } = await listQuotes(
+    ctx.organizationId,
+    {
+      dealIds,
+      dealId: asked,
+      status: filters.status,
+      ...(text ? { q: text } : {}),
+      ...(filters.owner ? { ownerMembershipId: filters.owner } : {}),
+      ...(filters.companyId ? { companyId: filters.companyId } : {}),
+      ...(validFrom ? { validFrom } : {}),
+      ...(validTo ? { validTo } : {}),
+      ...(filters.expired === "only" || filters.expired === "exclude" ? { expired: filters.expired } : {}),
+      today: todayIso(now),
+    },
+    paging,
+    { counts: filters.counts === true },
+  );
   const deals = await adminDb.deal.findMany({ where: { organizationId: ctx.organizationId, id: { in: rows.map((q) => q.dealId) } }, select: { id: true, ownerMembershipId: true, company: { select: { name: true } } } });
   const dealById = new Map(deals.map((d) => [d.id, d]));
+  const activity = filters.activity === true ? await rowActivity(ctx.organizationId, rows.map((q) => q.versions[0]!.id), now) : null;
   const items = rows.map((q) => {
     const deal = dealById.get(q.dealId)!;
     const latest = q.versions[0]!;
-    return { id: q.id, number: q.number, dealId: q.dealId, companyName: deal.company.name, currency: q.currency, latest: presentSummary(ctx, deal, latest, now), updatedAt: q.updatedAt };
+    return {
+      id: q.id,
+      number: q.number,
+      dealId: q.dealId,
+      companyName: deal.company.name,
+      currency: q.currency,
+      latest: presentSummary(ctx, deal, latest, now),
+      updatedAt: q.updatedAt,
+      // The owner's membership id lets the list show who owns it without another call; it is not a hidden field.
+      ownerMembershipId: deal.ownerMembershipId,
+      ...(activity ? { activity: activity.get(latest.id) ?? EMPTY_ACTIVITY } : {}),
+    };
   });
-  return buildPage(items, total, paging);
+  return { ...buildPage(items, total, paging), ...(statusCounts ? { statusCounts } : {}) };
+}
+
+const EMPTY_ACTIVITY: QuoteRowActivity = { links: 0, activeLinks: 0, revokedLinks: 0, expiredLinks: 0, views: 0, lastViewedAt: null };
+
+/** The share links of the given versions, summed per version: what the list shows as sent, viewed, revoked and expired (no tokens, no addresses). */
+async function rowActivity(organizationId: string, versionIds: string[], now: Date): Promise<Map<string, QuoteRowActivity>> {
+  const out = new Map<string, QuoteRowActivity>();
+  if (versionIds.length === 0) return out;
+  const shares = await adminDb.quoteShare.findMany({
+    where: { organizationId, quoteVersionId: { in: versionIds } },
+    select: { quoteVersionId: true, expiresAt: true, revokedAt: true, viewCount: true, lastViewedAt: true },
+  });
+  for (const s of shares) {
+    const a = out.get(s.quoteVersionId) ?? { ...EMPTY_ACTIVITY };
+    a.links += 1;
+    if (s.revokedAt) a.revokedLinks += 1;
+    else if (s.expiresAt.getTime() <= now.getTime()) a.expiredLinks += 1;
+    else a.activeLinks += 1;
+    a.views += s.viewCount;
+    if (s.lastViewedAt && (!a.lastViewedAt || s.lastViewedAt > a.lastViewedAt)) a.lastViewedAt = s.lastViewedAt;
+    out.set(s.quoteVersionId, a);
+  }
+  return out;
 }
 
 function lockedError(status: string): ValidationError {

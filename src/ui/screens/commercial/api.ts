@@ -12,6 +12,8 @@ import type { CallArgs, OperationId, Operations } from "@/api-client";
  * (`null` plus a `*Masked` flag): the screens render what comes back and never rebuild a hidden figure (hard rule 7).
  */
 
+import { queryOf, type QuoteFilters, type RowActivity } from "./quoteListModel";
+
 export type QuoteStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "SENT" | "ACCEPTED" | "DECLINED";
 
 export const STATUS_LABEL: Record<QuoteStatus, string> = {
@@ -92,6 +94,15 @@ export interface QuoteListItem {
   latest: QuoteVersionSummary;
   updatedAt: string;
 }
+
+/** UC-R3: a row of the filtered list: the deal owner and the links' activity come with it when asked for. */
+export interface QuoteRow extends QuoteListItem {
+  ownerMembershipId?: string | null;
+  activity?: RowActivity;
+}
+
+/** UC-R3: the chip counts, over the same filters except the status. Counts of quotes, never of money. */
+export type QuoteStatusCounts = Record<"ALL" | "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "SENT" | "ACCEPTED" | "DECLINED" | "EXPIRED", number>;
 
 export interface Page<T> {
   items: T[];
@@ -216,6 +227,33 @@ export const QUOTES_PAGE_SIZE = 20;
 export const useQuotes = (orgSlug: string, page = 1, enabled = true) =>
   useRead<Page<QuoteListItem>>("getQuotes", { params: { orgSlug }, query: { page: String(page), pageSize: String(QUOTES_PAGE_SIZE) } }, { keepPrevious: true, enabled });
 
+/** UC-R3: the Quotes list with its filters, chip counts and per-row activity (all additive query parameters of the existing list). */
+export const useQuoteSearch = (orgSlug: string, filters: QuoteFilters, page: number, enabled = true) =>
+  useRead<Page<QuoteRow> & { statusCounts?: QuoteStatusCounts }>("getQuotes", { params: { orgSlug }, query: queryOf(filters, page, QUOTES_PAGE_SIZE) }, { keepPrevious: true, enabled });
+
+/** UC-R4: one small page of customers matching the typed text, never the whole directory. */
+export const NEW_QUOTE_PAGE_SIZE = 8;
+export const useCustomerSearch = (orgSlug: string, text: string, enabled = true) =>
+  useRead<Page<{ id: string; name: string }>>(
+    "getCompanies",
+    { params: { orgSlug }, query: { pageSize: String(NEW_QUOTE_PAGE_SIZE), sort: "name", ...(text ? { q: text } : {}) } },
+    { enabled, retry: false, keepPrevious: true },
+  );
+
+/** UC-R4: the open deals of one customer that this person may open (the server narrows to their own for a salesperson). */
+export const useCompanyOpenDeals = (orgSlug: string, companyId: string | null) =>
+  useRead<Page<CustomerDealRow>>("getDeals", { params: { orgSlug }, query: { companyId: companyId ?? "", outcome: "OPEN", pageSize: "50" } }, { enabled: !!companyId, retry: false });
+
+export interface CustomerDealRow {
+  id: string;
+  notes?: string | null;
+  service?: { name?: string } | null;
+  pipelineStage?: { name?: string } | null;
+  value?: string | number | null;
+  valueMasked?: boolean;
+  currency?: string;
+}
+
 /** Open deals per page on the Quotes list (the server pages and searches; the screen never loads every deal). */
 export const OPEN_DEALS_PAGE_SIZE = 20;
 export interface OpenDealRow { id: string; notes?: string | null; company: { name: string }; service?: { name?: string } | null }
@@ -282,7 +320,9 @@ const QUOTE_READS = ["getQuotes", "getDealsByDealIdQuote", "getQuotesByQuoteId",
 export const useCreateQuote = () => useWrite<{ quote: QuoteView; version: QuoteVersionView }>("postDealsByDealIdQuote", QUOTE_READS);
 export const useSaveVersion = () => useWrite<QuoteVersionView>("putQuotesByQuoteIdVersionsByVersion", QUOTE_READS);
 export const useNewVersion = () => useWrite<QuoteVersionView>("postQuotesByQuoteIdVersions", QUOTE_READS);
-export const useSendQuote = () => useWrite<unknown>("postQuotesByQuoteIdVersionsByVersionSend", QUOTE_READS);
+/** UC-R4: revoke one share link of a quote (an existing route). */
+export const useRevokeShare = () => useWrite<unknown>("postQuotesByQuoteIdSharesByShareIdRevoke", QUOTE_READS);
+export const useSendQuote = () => useWrite<{ link: string; signLink: string | null; share: { id: string; recipientEmail: string | null; expiresAt: string } }>("postQuotesByQuoteIdVersionsByVersionSend", QUOTE_READS);
 export const useRequestQuoteApproval = () => useWrite<ApprovalItem>("postQuotesByQuoteIdVersionsByVersionRequestApproval", QUOTE_READS);
 export const useRecordResponse = () => useWrite<QuoteVersionView>("postQuotesByQuoteIdVersionsByVersionResponse", QUOTE_READS);
 export const useApplyToDeal = () => useWrite<unknown>("postQuotesByQuoteIdVersionsByVersionApplyToDeal", QUOTE_READS);

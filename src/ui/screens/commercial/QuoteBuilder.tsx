@@ -78,7 +78,7 @@ interface DealView {
 
 export function QuoteBuilder({ dealId }: { dealId: string }) {
   const { orgSlug, can, roleName } = useMember();
-  const allowed = can("quotes.create") || can("quotes.approve");
+  const allowed = can("quotes.view") || can("quotes.create") || can("quotes.approve");
   const deal = useApiQuery("getDeal", { params: { orgSlug, dealId } }, { enabled: allowed, retry: false });
   const quote = useDealQuote(orgSlug, dealId);
   const noQuote = quote.error instanceof ApiRequestError && quote.error.status === 404;
