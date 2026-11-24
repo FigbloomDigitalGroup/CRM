@@ -399,6 +399,8 @@ export async function importCompanies(
   requirePermission(ctx, "companies.import");
   requirePermission(ctx, "companies.create");
   const canAssignOthers = hasPermission(ctx, "membership.manage");
+  const canCreateContacts = hasPermission(ctx, "contacts.create");
+  let contactsCreated = 0;
 
   const summary = await runImport(input.mapping, {
     organizationId: ctx.organizationId,
@@ -447,7 +449,14 @@ export async function importCompanies(
       return high ? { outcome: "duplicate", matchedId: high.id, reason: `Skipped: looks like the existing company "${high.label}".` } : null;
     },
     create: (candidate) => createCompany(candidate),
-    afterCreate: (record, rawRow, mapping) => applyTags(ctx, "company", record.id, rawRow, mapping),
+    afterCreate: async (record, rawRow, mapping) => {
+      await applyTags(ctx, "company", record.id, rawRow, mapping);
+      // A row's email and phone are a person to call: keep them as a contact on the new company (18 Nov 2026), so the company is not left with no contacts.
+      if (canCreateContacts) {
+        const made = await addContactForCompanyRow(ctx, record.id, requiredCell(rawRow, mapping, "name"), optionalCell(rawRow, mapping, "email"), optionalCell(rawRow, mapping, "phone"));
+        if (made) contactsCreated += 1;
+      }
+    },
   });
 
   await recordAuditEvent({
@@ -455,10 +464,36 @@ export async function importCompanies(
     actorMembershipId: ctx.membershipId,
     action: "companies.imported",
     entityType: "Company",
-    metadata: { ...summary, errors: undefined },
+    metadata: { ...summary, errors: undefined, contactsCreated },
   });
 
   return summary;
+}
+
+/**
+ * Makes the contact for a company created from an import row: from the email and phone the row has (the first phone number is the phone, the rest go
+ * in the notes), named after the company until somebody adds the person. Nothing is made when the row has no usable email or phone, or when the
+ * organisation already has a contact with that email. Returns whether a contact was created.
+ */
+async function addContactForCompanyRow(ctx: AuthContext, companyId: string, companyName: string, rawEmail: string | undefined, rawPhone: string | undefined): Promise<boolean> {
+  const email = rawEmail && EMAIL_SHAPE.test(rawEmail) ? rawEmail.toLowerCase() : undefined;
+  const { phone, others } = splitPhones(rawPhone);
+  if (!email && !phone) return false;
+  if (email) {
+    const known = await adminDb.contact.findFirst({ where: { organizationId: ctx.organizationId, archivedAt: null, mergedIntoId: null, email: { equals: email, mode: "insensitive" } }, select: { id: true } });
+    if (known) return false;
+  }
+  await createContact({
+    organizationId: ctx.organizationId,
+    firstName: companyName.trim().replace(/\s+/g, " ").slice(0, 120),
+    email,
+    phone,
+    notes: others ? `Other phone: ${others}` : undefined,
+    companyId,
+    createdByMembershipId: ctx.membershipId,
+    ownerMembershipId: canWorkAccounts(ctx.permissionKeys, "contacts") ? ctx.membershipId : undefined,
+  });
+  return true;
 }
 
 export interface ImportContactsInput {
