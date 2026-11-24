@@ -9,6 +9,7 @@ import { getMemberContext } from "@/services/meContextService";
 import { MemberProvider } from "@/ui/data/member";
 import { AppShell } from "@/ui/shell/AppShell";
 import { buildNav, buildQuickCreate } from "@/ui/shell/navigation";
+import { socialScreensEnabled } from "@/ui/screens/social/enabled";
 import { NoFlashScript } from "@/ui/theme/NoFlashScript";
 import { ThemeProvider } from "@/ui/theme/ThemeProvider";
 import { defaultLook, type LookInput } from "@/ui/theme/resolve";
@@ -70,7 +71,7 @@ export default async function OrgLayout({
   const multiOrg = me.organisations.length > 1;
 
   const quotesEnabled = await isFeatureEnabled(ctx.organizationId, "quotes.enabled");
-  const navInput = { permissionKeys: ctx.permissionKeys, membershipId: ctx.membershipId, quotesEnabled, hidden: me.preferences?.sidebar.hidden ?? [] };
+  const navInput = { permissionKeys: ctx.permissionKeys, membershipId: ctx.membershipId, quotesEnabled, demoScreens: socialScreensEnabled(), hidden: me.preferences?.sidebar.hidden ?? [] };
   const look: LookInput = me.look
     ? { locked: me.look.locked, toggle: me.look.toggle, colours: me.look.colours }
     : defaultLook();

@@ -33,6 +33,9 @@ export const SETTINGS_TAB_IDS = [
   "approvalrules",
   "quotetax",
   "invoicenumbering",
+  "rolesaccess",
+  "salesaccess",
+  "structure",
 ] as const;
 
 export type SettingsTabId = (typeof SETTINGS_TAB_IDS)[number];

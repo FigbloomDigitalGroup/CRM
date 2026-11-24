@@ -26,6 +26,7 @@ import {
   LifeBuoy,
   FileText,
   ClipboardList,
+  Share2,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -57,6 +58,7 @@ const ICONS: Record<NavIcon, ReactNode> = {
   forecast: <Target size={18} />,
   preferences: <Settings2 size={18} />,
   settings: <Settings size={18} />,
+  social: <Share2 size={18} />,
 };
 
 export const SIDEBAR_DEVICE_KEY = "figbloom-sidebar-collapsed";

@@ -78,6 +78,8 @@ const DEFS: Def[] = [
   { section: "workspace", key: "quotes", label: () => "Quotes", path: "/quotes", icon: "quotes", tint: "g", allowed: (c) => has(c, "quotes.view") && quotesOn(c), built: true },
   { section: "workspace", key: "tasks", label: () => "Tasks", path: "/tasks", icon: "tasks", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
   { section: "workspace", key: "calendar", label: () => "Calendar", path: "/calendar", icon: "calendar", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
+  // Social (UC-S4 to UC-S6, demo data): for holders of reporting.view.all (no role gains access it did not have); drawn only where demo screens are on.
+  { section: "workspace", key: "social", label: () => "Social", path: "/social", icon: "social", tint: "g", allowed: (c) => has(c, "reporting.view.all"), built: true, demo: true },
   // Team (P2-15): Management only today; `canViewTeamPage` is the one place the rule lives (a Head of Sales joins it later).
   { section: "workspace", key: "team", label: () => "Team", path: "/team", icon: "contacts", tint: "g", allowed: (c) => canViewTeamPage(c.permissionKeys), built: true },
   // V1.1 commercial screens (M10, demo data): the permissions below are stripped until the organisation's release reaches V1.1.

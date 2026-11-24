@@ -23,6 +23,7 @@ export type NavIcon =
   | "invoices"
   | "reports"
   | "forecast"
+  | "social"
   | "preferences"
   | "settings";
 

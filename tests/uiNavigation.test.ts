@@ -17,7 +17,7 @@ describe("sidebar navigation per role", () => {
   it("Management sees the whole workspace and the organisation reports", () => {
     expect(menu("MANAGEMENT")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Leads, Deals, Quotes, Tasks, Calendar, Team",
+      "Sales workspace: Leads, Deals, Quotes, Tasks, Calendar, Social, Team",
       "Customers: Companies, Contacts",
       "Communication: Conversations, Mail, Chat, Video Conference",
       "After the sale: Handoffs, Renewals, Invoices, Payments",
@@ -64,7 +64,8 @@ describe("sidebar navigation per role", () => {
 
   it("Forecast and Approvals are wired to the real API (no longer demo-only): they follow their permission keys with or without demo screens, and a role without the keys sees neither", () => {
     const labels = (role: string, demoScreens?: boolean) => buildNav({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1", demoScreens }).flatMap((s) => s.items.map((i) => i.label));
-    expect(labels("MANAGEMENT")).toEqual(labels("MANAGEMENT", true));
+    // Social (UC-S4) is demo-only for now, so it is the one item that differs with demo screens off.
+    expect(labels("MANAGEMENT")).toEqual(labels("MANAGEMENT", true).filter((l) => l !== "Social"));
     expect(labels("MANAGEMENT")).toContain("Forecast & targets");
     expect(labels("MANAGEMENT")).toContain("Approvals");
     expect(labels("SALES")).not.toContain("Approvals");

@@ -14,6 +14,8 @@ import { FileDown as DataRequestsIcon, KeyRound as TwoStepIcon } from "lucide-re
 import { DataRequests, TwoStepSettings } from "../orgside/SettingsTabs";
 import { BookOpen as CatalogueIcon, GitBranch as PipelineIcon, ListOrdered as SequenceIcon, FormInput as WebFormIcon, ShieldCheck as RulesIcon } from "lucide-react";
 import { ApprovalRulesSection, CatalogueSection, PipelinesSection, InvoiceNumberingSection, QuoteTaxSection, SequencesSection, WebFormsSection } from "../settingsplus";
+import { Network as StructureIcon, ShieldUser as RolesIcon, SlidersHorizontal as SalesAccessIcon } from "lucide-react";
+import { OrgStructureSection, RolesAccessSection, SalesAccessSection } from "../roles";
 import { Automations } from "./Automations";
 import { Integrations } from "./Integrations";
 import { InboundEmail, WebsiteIntegration } from "./Website";
@@ -70,6 +72,10 @@ export const SETTINGS_TABS: TabDef[] = [
   { id: "quotetax", label: "Quote tax", icon: <CatalogueIcon size={ICON} aria-hidden="true" />, render: () => <QuoteTaxSection /> },
   // UC-R8: automatic invoice numbers and their prefix (same editor frame).
   { id: "invoicenumbering", label: "Invoice numbering", icon: <CatalogueIcon size={ICON} aria-hidden="true" />, render: () => <InvoiceNumberingSection /> },
+  // UC-C5/C6: roles and access on the real roles API (V2-gated by the API). UC-C4 Sales access and UC-C2 Organisation structure are on demo data (docs/ROLES_ACCESS_SCREENS.md).
+  { id: "rolesaccess", label: "Roles & access", icon: <RolesIcon size={ICON} aria-hidden="true" />, render: () => <RolesAccessSection /> },
+  { id: "salesaccess", label: "Sales access", icon: <SalesAccessIcon size={ICON} aria-hidden="true" />, render: () => <SalesAccessSection /> },
+  { id: "structure", label: "Organisation structure", icon: <StructureIcon size={ICON} aria-hidden="true" />, render: () => <OrgStructureSection /> },
 ];
 
 /**

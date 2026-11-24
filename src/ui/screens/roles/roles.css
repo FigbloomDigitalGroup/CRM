@@ -1,0 +1,24 @@
+/* Roles & access, Sales access and Organisation structure (UC-C2, UC-C4, UC-C5, UC-C6). Every selector starts with a .fb- class (tests/uiGuards.test.ts); colours are tokens only. */
+
+.fb-app .fb-rl-form { display: flex; flex-direction: column; gap: 12px; max-width: 560px; }
+.fb-app .fb-rl-row { flex-direction: row; align-items: flex-end; flex-wrap: wrap; max-width: none; }
+.fb-app .fb-rl-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.fb-app .fb-rl-split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .fb-app .fb-rl-split { grid-template-columns: minmax(0, 1fr); } }
+.fb-app .fb-rl-perms { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.fb-app .fb-rl-group { border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px 12px; margin: 0; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.fb-app .fb-rl-group legend { font-weight: 600; font-size: 13px; padding: 0 6px; }
+.fb-app .fb-rl-perm { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; }
+.fb-app .fb-rl-key { font-size: 12px; color: var(--text); }
+.fb-app .fb-rl-preview { border: 1px solid var(--border); border-radius: 14px; padding: 16px; background: var(--surface-2); display: flex; flex-direction: column; gap: 12px; font-size: 13px; position: sticky; top: 12px; min-width: 0; }
+.fb-app .fb-rl-preview p { margin: 4px 0; }
+.fb-app .fb-rl-sub { font-size: 12px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.fb-app .fb-rl-nav, .fb-app .fb-rl-scopes, .fb-app .fb-rl-seats { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.fb-app .fb-rl-seats { list-style: none; padding-left: 0; }
+.fb-app .fb-rl-seats li { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.fb-app .fb-rl-problem { color: var(--danger-text, var(--text)); }
+.fb-app .fb-rl-warning { border-left: 4px solid var(--blue); padding-left: 10px; }
+.fb-app .fb-rl-who { display: flex; gap: 18px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 12px; }
+.fb-app .fb-rl-depts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.fb-app .fb-rl-dept { border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.fb-app .fb-rl-dept__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
