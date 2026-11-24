@@ -87,7 +87,7 @@
       "status": "DELETED",
       "checksumSha256": null,
       "ownerMembershipId": "00000000-0000-4000-8000-000000000228",
-      "createdAt": "2026-11-02T12:25:00.000Z",
+      "createdAt": "2026-11-02T12:23:00.000Z",
       "readyAt": null
     },
     "same": [
@@ -257,7 +257,7 @@
   "GET /api/orgs/{orgSlug}/attachments/{attachmentId}/download": {
     "default": {
       "download": {
-        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiR0VUIiwiayI6Im9yZ3MvODY0MWZhZjYtOWVhNi00ZTI5LWIxMWYtYWExMDllNzA2MmIzL2F0dGFjaG1lbnQvZDk0ZjQ0MjUtMDUxZC00N2UzLThkZjgtODgzZTM3NGMzNGI4IiwiZSI6MTc5NDc2MDI4OCwiZm4iOiJicmllZi5wZGYiLCJjdCI6ImFwcGxpY2F0aW9uL3BkZiIsImQiOiJhdHRhY2htZW50In0.dkMt4ypsVSETZtn…",
+        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiR0VUIiwiayI6Im9yZ3MvNTllMjM1OGEtYTMzMS00NTQzLTkxZmQtMzVkZDZkYWEwNjkxL2F0dGFjaG1lbnQvMjgyYzIzNWYtZmU0Zi00ZmE3LWJjOTgtYjRjMTA4MGFlOWUwIiwiZSI6MTc5NTUwNDgzNCwiZm4iOiJicmllZi5wZGYiLCJjdCI6ImFwcGxpY2F0aW9uL3BkZiIsImQiOiJhdHRhY2htZW50In0.k2wKc06pqkOoAFZ…",
         "expiresAt": "2026-11-02T09:01:00.000Z"
       },
       "file": {
@@ -272,7 +272,7 @@
     ],
     "SALES": {
       "download": {
-        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiR0VUIiwiayI6Im9yZ3MvODY0MWZhZjYtOWVhNi00ZTI5LWIxMWYtYWExMDllNzA2MmIzL2F0dGFjaG1lbnQvZDk0ZjQ0MjUtMDUxZC00N2UzLThkZjgtODgzZTM3NGMzNGI4IiwiZSI6MTc5NDc2MDI4OCwiZm4iOiJicmllZi5wZGYiLCJjdCI6ImFwcGxpY2F0aW9uL3BkZiIsImQiOiJhdHRhY2htZW50In0.dkMt4ypsVSETZtn…",
+        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiR0VUIiwiayI6Im9yZ3MvNTllMjM1OGEtYTMzMS00NTQzLTkxZmQtMzVkZDZkYWEwNjkxL2F0dGFjaG1lbnQvMjgyYzIzNWYtZmU0Zi00ZmE3LWJjOTgtYjRjMTA4MGFlOWUwIiwiZSI6MTc5NTUwNDgzNCwiZm4iOiJicmllZi5wZGYiLCJjdCI6ImFwcGxpY2F0aW9uL3BkZiIsImQiOiJhdHRhY2htZW50In0.k2wKc06pqkOoAFZ…",
         "expiresAt": "2026-11-02T09:00:00.000Z"
       },
       "file": {
@@ -411,7 +411,7 @@
           "entity": {
             "type": "RecurringService",
             "id": "00000000-0000-4000-8000-000000000013",
-            "label": "CRM (Walk Co 5b8c73)",
+            "label": "CRM (Walk Co bdd05d)",
             "exists": true,
             "archived": false,
             "link": {
@@ -481,16 +481,16 @@
       ],
       "actors": [
         {
-          "membershipId": "00000000-0000-4000-8000-000000000004",
-          "name": "Test User",
-          "roleKey": "MANAGEMENT",
-          "events": 11
-        },
-        {
           "membershipId": "00000000-0000-4000-8000-000000000006",
           "name": "Test User",
           "roleKey": "SALES",
           "events": 1
+        },
+        {
+          "membershipId": "00000000-0000-4000-8000-000000000004",
+          "name": "Test User",
+          "roleKey": "MANAGEMENT",
+          "events": 11
         }
       ],
       "systemEvents": 0
@@ -757,7 +757,7 @@
         {
           "id": "00000000-0000-4000-8000-000000000014",
           "organizationId": "00000000-0000-4000-8000-000000000003",
-          "name": "Walk Co 5b8c73",
+          "name": "Walk Co bdd05d",
           "industry": null,
           "website": null,
           "location": null,
@@ -813,7 +813,7 @@
         {
           "id": "00000000-0000-4000-8000-000000000014",
           "organizationId": "00000000-0000-4000-8000-000000000003",
-          "name": "Walk Co 5b8c73",
+          "name": "Walk Co bdd05d",
           "industry": null,
           "website": null,
           "location": null,
@@ -889,7 +889,7 @@
     ]
   },
   "GET /api/orgs/{orgSlug}/companies/directory/export": {
-    "default": "id,name,industry,website,location,phone,email,lifecycleState,owner,notes,createdAt,tags\n00000000-0000-4000-8000-000000000014,Walk Co 5b8c73,,,,,person3@example.test,,person2@example.test,,2026-11-02T09:10:00.000Z,\n",
+    "default": "id,name,industry,website,location,phone,email,lifecycleState,owner,notes,createdAt,tags\n00000000-0000-4000-8000-000000000014,Walk Co bdd05d,,,,,person3@example.test,,person2@example.test,,2026-11-02T09:10:00.000Z,\n",
     "same": [
       "MANAGEMENT",
       "SALES",
@@ -898,7 +898,7 @@
     ]
   },
   "GET /api/orgs/{orgSlug}/companies/export": {
-    "default": "id,name,industry,website,location,phone,email,lifecycleState,owner,notes,createdAt,tags\n00000000-0000-4000-8000-000000000014,Walk Co 5b8c73,,,,,person3@example.test,,person2@example.test,,2026-11-02T09:10:00.000Z,\n",
+    "default": "id,name,industry,website,location,phone,email,lifecycleState,owner,notes,createdAt,tags\n00000000-0000-4000-8000-000000000014,Walk Co bdd05d,,,,,person3@example.test,,person2@example.test,,2026-11-02T09:10:00.000Z,\n",
     "same": [
       "MANAGEMENT",
       "SALES",
@@ -910,7 +910,7 @@
     "default": {
       "id": "00000000-0000-4000-8000-000000000014",
       "organizationId": "00000000-0000-4000-8000-000000000003",
-      "name": "Walk Co 5b8c73",
+      "name": "Walk Co bdd05d",
       "industry": null,
       "website": null,
       "location": null,
@@ -981,7 +981,7 @@
     "default": {
       "company": {
         "id": "00000000-0000-4000-8000-000000000014",
-        "name": "Walk Co 5b8c73",
+        "name": "Walk Co bdd05d",
         "archived": false,
         "readOnly": false
       },
@@ -991,7 +991,7 @@
           "scope": "organisation",
           "data": {
             "id": "00000000-0000-4000-8000-000000000014",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -1055,7 +1055,7 @@
               {
                 "id": "00000000-0000-4000-8000-000000000013",
                 "companyId": "00000000-0000-4000-8000-000000000014",
-                "companyName": "Walk Co 5b8c73",
+                "companyName": "Walk Co bdd05d",
                 "serviceId": "00000000-0000-4000-8000-000000000015",
                 "serviceName": "CRM",
                 "billingCycle": "YEARLY",
@@ -1064,7 +1064,7 @@
                 "currency": "KES",
                 "startsOn": "2026-11-02T09:13:00.000Z",
                 "renewsOn": "2026-11-02T09:07:00.000Z",
-                "daysToRenewal": 47,
+                "daysToRenewal": 38,
                 "state": "ACTIVE",
                 "stateSource": "rule",
                 "overrideReason": null,
@@ -1187,7 +1187,7 @@
             "items": [
               {
                 "id": "00000000-0000-4000-8000-000000000021",
-                "number": "INV-SENTINEL-b3e15d",
+                "number": "INV-SENTINEL-7f9dc6",
                 "dealId": null,
                 "status": "OVERDUE",
                 "amount": "8123456.50",
@@ -1195,7 +1195,7 @@
                 "paid": "1000.00",
                 "balance": "8122456.50",
                 "dueOn": "2026-11-02T09:17:00.000Z",
-                "daysOverdue": 15
+                "daysOverdue": 24
               }
             ],
             "followUpNotes": []
@@ -1240,7 +1240,7 @@
     "SALES": {
       "company": {
         "id": "00000000-0000-4000-8000-000000000014",
-        "name": "Walk Co 5b8c73",
+        "name": "Walk Co bdd05d",
         "archived": false,
         "readOnly": false
       },
@@ -1250,7 +1250,7 @@
           "scope": "organisation",
           "data": {
             "id": "00000000-0000-4000-8000-000000000014",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -1314,7 +1314,7 @@
               {
                 "id": "00000000-0000-4000-8000-000000000013",
                 "companyId": "00000000-0000-4000-8000-000000000014",
-                "companyName": "Walk Co 5b8c73",
+                "companyName": "Walk Co bdd05d",
                 "serviceId": "00000000-0000-4000-8000-000000000015",
                 "serviceName": "CRM",
                 "billingCycle": "YEARLY",
@@ -1323,7 +1323,7 @@
                 "currency": "KES",
                 "startsOn": "2026-11-02T09:13:00.000Z",
                 "renewsOn": "2026-11-02T09:07:00.000Z",
-                "daysToRenewal": 47,
+                "daysToRenewal": 38,
                 "state": "ACTIVE",
                 "stateSource": "rule",
                 "overrideReason": null,
@@ -1450,7 +1450,7 @@
     "DELIVERY": {
       "company": {
         "id": "00000000-0000-4000-8000-000000000014",
-        "name": "Walk Co 5b8c73",
+        "name": "Walk Co bdd05d",
         "archived": false,
         "readOnly": false
       },
@@ -1460,7 +1460,7 @@
           "scope": "organisation",
           "data": {
             "id": "00000000-0000-4000-8000-000000000014",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -1524,7 +1524,7 @@
               {
                 "id": "00000000-0000-4000-8000-000000000013",
                 "companyId": "00000000-0000-4000-8000-000000000014",
-                "companyName": "Walk Co 5b8c73",
+                "companyName": "Walk Co bdd05d",
                 "serviceId": "00000000-0000-4000-8000-000000000015",
                 "serviceName": "CRM",
                 "billingCycle": "YEARLY",
@@ -1533,7 +1533,7 @@
                 "currency": "KES",
                 "startsOn": "2026-11-02T09:13:00.000Z",
                 "renewsOn": "2026-11-02T09:07:00.000Z",
-                "daysToRenewal": 47,
+                "daysToRenewal": 38,
                 "state": "ACTIVE",
                 "stateSource": "rule",
                 "overrideReason": null,
@@ -1642,7 +1642,7 @@
     "FINANCE": {
       "company": {
         "id": "00000000-0000-4000-8000-000000000014",
-        "name": "Walk Co 5b8c73",
+        "name": "Walk Co bdd05d",
         "archived": false,
         "readOnly": false
       },
@@ -1652,7 +1652,7 @@
           "scope": "organisation",
           "data": {
             "id": "00000000-0000-4000-8000-000000000014",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -1716,7 +1716,7 @@
               {
                 "id": "00000000-0000-4000-8000-000000000013",
                 "companyId": "00000000-0000-4000-8000-000000000014",
-                "companyName": "Walk Co 5b8c73",
+                "companyName": "Walk Co bdd05d",
                 "serviceId": "00000000-0000-4000-8000-000000000015",
                 "serviceName": "CRM",
                 "billingCycle": "YEARLY",
@@ -1725,7 +1725,7 @@
                 "currency": "KES",
                 "startsOn": "2026-11-02T09:13:00.000Z",
                 "renewsOn": "2026-11-02T09:07:00.000Z",
-                "daysToRenewal": 47,
+                "daysToRenewal": 38,
                 "state": "ACTIVE",
                 "stateSource": "rule",
                 "overrideReason": null,
@@ -1793,7 +1793,7 @@
             "items": [
               {
                 "id": "00000000-0000-4000-8000-000000000021",
-                "number": "INV-SENTINEL-b3e15d",
+                "number": "INV-SENTINEL-7f9dc6",
                 "dealId": null,
                 "status": "OVERDUE",
                 "amount": "8123456.50",
@@ -1801,7 +1801,7 @@
                 "paid": "1000.00",
                 "balance": "8122456.50",
                 "dueOn": "2026-11-02T09:17:00.000Z",
-                "daysOverdue": 15
+                "daysOverdue": 24
               }
             ],
             "followUpNotes": []
@@ -2040,7 +2040,7 @@
           "company": {
             "id": "00000000-0000-4000-8000-000000000014",
             "organizationId": "00000000-0000-4000-8000-000000000003",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -2136,7 +2136,7 @@
           "company": {
             "id": "00000000-0000-4000-8000-000000000014",
             "organizationId": "00000000-0000-4000-8000-000000000003",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -2210,7 +2210,7 @@
     ]
   },
   "GET /api/orgs/{orgSlug}/contacts/directory/export": {
-    "default": "id,firstName,lastName,company,phone,email,jobTitle,department,owner,notes,createdAt,tags\n00000000-0000-4000-8000-000000000019,Wanjiru,Kamau,Walk Co 5b8c73,+254700123456,person4@example.test,,,person2@example.test,,2026-11-02T09:11:00.000Z,\n",
+    "default": "id,firstName,lastName,company,phone,email,jobTitle,department,owner,notes,createdAt,tags\n00000000-0000-4000-8000-000000000019,Wanjiru,Kamau,Walk Co bdd05d,+254700123456,person4@example.test,,,person2@example.test,,2026-11-02T09:11:00.000Z,\n",
     "same": [
       "MANAGEMENT",
       "SALES",
@@ -2219,7 +2219,7 @@
     ]
   },
   "GET /api/orgs/{orgSlug}/contacts/export": {
-    "default": "id,firstName,lastName,company,phone,email,jobTitle,department,owner,notes,createdAt,tags\n00000000-0000-4000-8000-000000000019,Wanjiru,Kamau,Walk Co 5b8c73,+254700123456,person4@example.test,,,person2@example.test,,2026-11-02T09:11:00.000Z,\n",
+    "default": "id,firstName,lastName,company,phone,email,jobTitle,department,owner,notes,createdAt,tags\n00000000-0000-4000-8000-000000000019,Wanjiru,Kamau,Walk Co bdd05d,+254700123456,person4@example.test,,,person2@example.test,,2026-11-02T09:11:00.000Z,\n",
     "same": [
       "MANAGEMENT",
       "SALES",
@@ -2255,7 +2255,7 @@
       "company": {
         "id": "00000000-0000-4000-8000-000000000014",
         "organizationId": "00000000-0000-4000-8000-000000000003",
-        "name": "Walk Co 5b8c73",
+        "name": "Walk Co bdd05d",
         "industry": null,
         "website": null,
         "location": null,
@@ -2448,7 +2448,7 @@
           },
           "link": {
             "companyId": "00000000-0000-4000-8000-000000000014",
-            "companyName": "Walk Co 5b8c73",
+            "companyName": "Walk Co bdd05d",
             "contactId": "00000000-0000-4000-8000-000000000019",
             "contactName": "Wanjiru Kamau",
             "leadId": null,
@@ -2504,7 +2504,7 @@
           },
           "link": {
             "companyId": "00000000-0000-4000-8000-000000000014",
-            "companyName": "Walk Co 5b8c73",
+            "companyName": "Walk Co bdd05d",
             "contactId": "00000000-0000-4000-8000-000000000019",
             "contactName": "Wanjiru Kamau",
             "leadId": null,
@@ -2627,7 +2627,7 @@
       },
       "link": {
         "companyId": "00000000-0000-4000-8000-000000000014",
-        "companyName": "Walk Co 5b8c73",
+        "companyName": "Walk Co bdd05d",
         "contactId": "00000000-0000-4000-8000-000000000019",
         "contactName": "Wanjiru Kamau",
         "leadId": null,
@@ -2878,13 +2878,13 @@
             },
             "teamWorkload": [
               {
-                "membershipId": "00000000-0000-4000-8000-000000000004",
+                "membershipId": "00000000-0000-4000-8000-000000000006",
                 "name": "Test User",
                 "openTasks": 1,
                 "overdueTasks": 0
               },
               {
-                "membershipId": "00000000-0000-4000-8000-000000000006",
+                "membershipId": "00000000-0000-4000-8000-000000000004",
                 "name": "Test User",
                 "openTasks": 1,
                 "overdueTasks": 0
@@ -2908,13 +2908,6 @@
               "rate": 0,
               "weeks": [
                 {
-                  "to": "2026-11-02T09:26:00.000Z",
-                  "from": "2026-11-02T09:30:00.000Z",
-                  "views": 0,
-                  "pagesUsed": 0,
-                  "activeUsers": 0
-                },
-                {
                   "to": "2026-11-02T09:30:00.000Z",
                   "from": "2026-11-02T09:31:00.000Z",
                   "views": 0,
@@ -2924,6 +2917,13 @@
                 {
                   "to": "2026-11-02T09:31:00.000Z",
                   "from": "2026-11-02T09:32:00.000Z",
+                  "views": 0,
+                  "pagesUsed": 0,
+                  "activeUsers": 0
+                },
+                {
+                  "to": "2026-11-02T09:32:00.000Z",
+                  "from": "2026-11-02T09:33:00.000Z",
                   "views": 0,
                   "pagesUsed": 0,
                   "activeUsers": 0
@@ -2968,7 +2968,7 @@
               "overdue": {
                 "count": 1,
                 "outstanding": "8122456.50",
-                "oldestDaysOverdue": 15
+                "oldestDaysOverdue": 24
               },
               "collectedThisMonth": {
                 "count": 0,
@@ -3193,7 +3193,7 @@
               "overdue": {
                 "count": 1,
                 "outstanding": "8122456.50",
-                "oldestDaysOverdue": 15
+                "oldestDaysOverdue": 24
               },
               "collectedThisMonth": {
                 "count": 0,
@@ -3376,13 +3376,13 @@
         },
         "teamWorkload": [
           {
-            "membershipId": "00000000-0000-4000-8000-000000000004",
+            "membershipId": "00000000-0000-4000-8000-000000000006",
             "name": "Test User",
             "openTasks": 1,
             "overdueTasks": 0
           },
           {
-            "membershipId": "00000000-0000-4000-8000-000000000006",
+            "membershipId": "00000000-0000-4000-8000-000000000004",
             "name": "Test User",
             "openTasks": 1,
             "overdueTasks": 0
@@ -3406,13 +3406,6 @@
           "rate": 0,
           "weeks": [
             {
-              "to": "2026-11-02T09:26:00.000Z",
-              "from": "2026-11-02T09:30:00.000Z",
-              "views": 0,
-              "pagesUsed": 0,
-              "activeUsers": 0
-            },
-            {
               "to": "2026-11-02T09:30:00.000Z",
               "from": "2026-11-02T09:31:00.000Z",
               "views": 0,
@@ -3422,6 +3415,13 @@
             {
               "to": "2026-11-02T09:31:00.000Z",
               "from": "2026-11-02T09:32:00.000Z",
+              "views": 0,
+              "pagesUsed": 0,
+              "activeUsers": 0
+            },
+            {
+              "to": "2026-11-02T09:32:00.000Z",
+              "from": "2026-11-02T09:33:00.000Z",
               "views": 0,
               "pagesUsed": 0,
               "activeUsers": 0
@@ -3574,7 +3574,7 @@
           "entity": "COMPANY",
           "mapping": {},
           "valueMappings": {},
-          "updatedAt": "2026-11-02T09:33:00.000Z"
+          "updatedAt": "2026-11-02T09:34:00.000Z"
         }
       ]
     },
@@ -3645,8 +3645,8 @@
           },
           "startedAt": null,
           "finishedAt": null,
-          "createdAt": "2026-11-02T09:34:00.000Z",
-          "updatedAt": "2026-11-02T09:34:00.000Z"
+          "createdAt": "2026-11-02T09:35:00.000Z",
+          "updatedAt": "2026-11-02T09:35:00.000Z"
         }
       ],
       "page": 1,
@@ -3720,8 +3720,8 @@
       },
       "startedAt": null,
       "finishedAt": null,
-      "createdAt": "2026-11-02T09:34:00.000Z",
-      "updatedAt": "2026-11-02T09:34:00.000Z"
+      "createdAt": "2026-11-02T09:35:00.000Z",
+      "updatedAt": "2026-11-02T09:35:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -3763,7 +3763,7 @@
           "createdByMembershipId": "00000000-0000-4000-8000-000000000004",
           "startedAt": null,
           "finishedAt": null,
-          "createdAt": "2026-11-02T09:35:00.000Z"
+          "createdAt": "2026-11-02T09:36:00.000Z"
         }
       ],
       "page": 1,
@@ -3829,7 +3829,7 @@
       "createdByMembershipId": "00000000-0000-4000-8000-000000000004",
       "startedAt": null,
       "finishedAt": null,
-      "createdAt": "2026-11-02T09:35:00.000Z"
+      "createdAt": "2026-11-02T09:36:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -3899,14 +3899,14 @@
           "archivedByMembershipId": null,
           "archiveReason": null,
           "customFields": {},
-          "lastActivityAt": "2026-11-02T09:38:00.000Z",
-          "createdAt": "2026-11-02T09:38:00.000Z",
-          "updatedAt": "2026-11-02T09:38:00.000Z",
+          "lastActivityAt": "2026-11-02T09:39:00.000Z",
+          "createdAt": "2026-11-02T09:39:00.000Z",
+          "updatedAt": "2026-11-02T09:39:00.000Z",
           "importSessionId": null,
           "company": {
             "id": "00000000-0000-4000-8000-000000000014",
             "organizationId": "00000000-0000-4000-8000-000000000003",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -3966,8 +3966,8 @@
             "isWon": false,
             "isLost": false,
             "isActive": true,
-            "createdAt": "2026-11-02T09:37:00.000Z",
-            "updatedAt": "2026-11-02T09:37:00.000Z"
+            "createdAt": "2026-11-02T09:38:00.000Z",
+            "updatedAt": "2026-11-02T09:38:00.000Z"
           },
           "lostReason": null,
           "tagLinks": [],
@@ -4002,14 +4002,14 @@
           "archivedByMembershipId": null,
           "archiveReason": null,
           "customFields": {},
-          "lastActivityAt": "2026-11-02T09:36:00.000Z",
-          "createdAt": "2026-11-02T09:36:00.000Z",
-          "updatedAt": "2026-11-02T09:36:00.000Z",
+          "lastActivityAt": "2026-11-02T09:37:00.000Z",
+          "createdAt": "2026-11-02T09:37:00.000Z",
+          "updatedAt": "2026-11-02T09:37:00.000Z",
           "importSessionId": null,
           "company": {
             "id": "00000000-0000-4000-8000-000000000014",
             "organizationId": "00000000-0000-4000-8000-000000000003",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -4093,8 +4093,8 @@
             "isWon": false,
             "isLost": false,
             "isActive": true,
-            "createdAt": "2026-11-02T09:37:00.000Z",
-            "updatedAt": "2026-11-02T09:37:00.000Z"
+            "createdAt": "2026-11-02T09:38:00.000Z",
+            "updatedAt": "2026-11-02T09:38:00.000Z"
           },
           "lostReason": null,
           "tagLinks": [],
@@ -4141,14 +4141,14 @@
           "archivedByMembershipId": null,
           "archiveReason": null,
           "customFields": {},
-          "lastActivityAt": "2026-11-02T09:36:00.000Z",
-          "createdAt": "2026-11-02T09:36:00.000Z",
-          "updatedAt": "2026-11-02T09:36:00.000Z",
+          "lastActivityAt": "2026-11-02T09:37:00.000Z",
+          "createdAt": "2026-11-02T09:37:00.000Z",
+          "updatedAt": "2026-11-02T09:37:00.000Z",
           "importSessionId": null,
           "company": {
             "id": "00000000-0000-4000-8000-000000000014",
             "organizationId": "00000000-0000-4000-8000-000000000003",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -4232,8 +4232,8 @@
             "isWon": false,
             "isLost": false,
             "isActive": true,
-            "createdAt": "2026-11-02T09:37:00.000Z",
-            "updatedAt": "2026-11-02T09:37:00.000Z"
+            "createdAt": "2026-11-02T09:38:00.000Z",
+            "updatedAt": "2026-11-02T09:38:00.000Z"
           },
           "lostReason": null,
           "tagLinks": [],
@@ -4483,11 +4483,11 @@
     }
   },
   "GET /api/orgs/{orgSlug}/deals/export": {
-    "default": "id,company,primaryContact,service,pipelineStage,value,valueMasked,currency,outcome,lostReason,expectedCloseDate,owner,createdAt,tags\n00000000-0000-4000-8000-000000000023,Walk Co 5b8c73,,,Solution Presented,1111,,KES,OPEN,,,person1@example.test,2026-11-02T09:38:00.000Z,\n00000000-0000-4000-8000-000000000022,Walk Co 5b8c73,Wanjiru Kamau,,Solution Presented,7654321,,KES,OPEN,,,person2@example.test,2026-11-02T09:36:00.000Z,",
+    "default": "id,company,primaryContact,service,pipelineStage,value,valueMasked,currency,outcome,lostReason,expectedCloseDate,owner,createdAt,tags\n00000000-0000-4000-8000-000000000023,Walk Co bdd05d,,,Solution Presented,1111,,KES,OPEN,,,person1@example.test,2026-11-02T09:39:00.000Z,\n00000000-0000-4000-8000-000000000022,Walk Co bdd05d,Wanjiru Kamau,,Solution Presented,7654321,,KES,OPEN,,,person2@example.test,2026-11-02T09:37:00.000Z,",
     "same": [
       "MANAGEMENT"
     ],
-    "SALES": "id,company,primaryContact,service,pipelineStage,value,valueMasked,currency,outcome,lostReason,expectedCloseDate,owner,createdAt,tags\n00000000-0000-4000-8000-000000000022,Walk Co 5b8c73,Wanjiru Kamau,,Solution Presented,7654321,,KES,OPEN,,,person2@example.test,2026-11-02T09:36:00.000Z,\n",
+    "SALES": "id,company,primaryContact,service,pipelineStage,value,valueMasked,currency,outcome,lostReason,expectedCloseDate,owner,createdAt,tags\n00000000-0000-4000-8000-000000000022,Walk Co bdd05d,Wanjiru Kamau,,Solution Presented,7654321,,KES,OPEN,,,person2@example.test,2026-11-02T09:37:00.000Z,\n",
     "DELIVERY": "id,company,primaryContact,service,pipelineStage,value,valueMasked,currency,outcome,lostReason,expectedCloseDate,owner,createdAt,tags\n",
     "FINANCE": "id,company,primaryContact,service,pipelineStage,value,valueMasked,currency,outcome,lostReason,expectedCloseDate,owner,createdAt,tags\n"
   },
@@ -4514,14 +4514,14 @@
       "archivedByMembershipId": null,
       "archiveReason": null,
       "customFields": {},
-      "lastActivityAt": "2026-11-02T09:36:00.000Z",
-      "createdAt": "2026-11-02T09:36:00.000Z",
-      "updatedAt": "2026-11-02T09:36:00.000Z",
+      "lastActivityAt": "2026-11-02T09:37:00.000Z",
+      "createdAt": "2026-11-02T09:37:00.000Z",
+      "updatedAt": "2026-11-02T09:37:00.000Z",
       "importSessionId": null,
       "company": {
         "id": "00000000-0000-4000-8000-000000000014",
         "organizationId": "00000000-0000-4000-8000-000000000003",
-        "name": "Walk Co 5b8c73",
+        "name": "Walk Co bdd05d",
         "industry": null,
         "website": null,
         "location": null,
@@ -4605,8 +4605,8 @@
         "isWon": false,
         "isLost": false,
         "isActive": true,
-        "createdAt": "2026-11-02T09:37:00.000Z",
-        "updatedAt": "2026-11-02T09:37:00.000Z"
+        "createdAt": "2026-11-02T09:38:00.000Z",
+        "updatedAt": "2026-11-02T09:38:00.000Z"
       },
       "lostReason": null,
       "valueMasked": false,
@@ -4649,14 +4649,14 @@
       "archivedByMembershipId": null,
       "archiveReason": null,
       "customFields": {},
-      "lastActivityAt": "2026-11-02T09:36:00.000Z",
-      "createdAt": "2026-11-02T09:36:00.000Z",
-      "updatedAt": "2026-11-02T09:36:00.000Z",
+      "lastActivityAt": "2026-11-02T09:37:00.000Z",
+      "createdAt": "2026-11-02T09:37:00.000Z",
+      "updatedAt": "2026-11-02T09:37:00.000Z",
       "importSessionId": null,
       "company": {
         "id": "00000000-0000-4000-8000-000000000014",
         "organizationId": "00000000-0000-4000-8000-000000000003",
-        "name": "Walk Co 5b8c73",
+        "name": "Walk Co bdd05d",
         "industry": null,
         "website": null,
         "location": null,
@@ -4740,8 +4740,8 @@
         "isWon": false,
         "isLost": false,
         "isActive": true,
-        "createdAt": "2026-11-02T09:37:00.000Z",
-        "updatedAt": "2026-11-02T09:37:00.000Z"
+        "createdAt": "2026-11-02T09:38:00.000Z",
+        "updatedAt": "2026-11-02T09:38:00.000Z"
       },
       "lostReason": null,
       "valueMasked": false,
@@ -4817,7 +4817,7 @@
         "id": "00000000-0000-4000-8000-000000000035",
         "organizationId": "00000000-0000-4000-8000-000000000003",
         "dealId": "00000000-0000-4000-8000-000000000022",
-        "proposalNumber": "P-6795",
+        "proposalNumber": "P-df21",
         "status": "DRAFT",
         "amount": "1000",
         "currency": "KES",
@@ -4826,8 +4826,8 @@
         "respondedAt": null,
         "documentReference": null,
         "notes": null,
-        "createdAt": "2026-11-02T09:39:00.000Z",
-        "updatedAt": "2026-11-02T09:39:00.000Z",
+        "createdAt": "2026-11-02T09:40:00.000Z",
+        "updatedAt": "2026-11-02T09:40:00.000Z",
         "amountMasked": false
       }
     ],
@@ -4856,8 +4856,8 @@
           "body": "Hi {{name}}",
           "isActive": true,
           "createdByMembershipId": "00000000-0000-4000-8000-000000000004",
-          "createdAt": "2026-11-02T09:40:00.000Z",
-          "updatedAt": "2026-11-02T09:40:00.000Z"
+          "createdAt": "2026-11-02T09:41:00.000Z",
+          "updatedAt": "2026-11-02T09:41:00.000Z"
         }
       ],
       "mergeFields": [
@@ -4941,7 +4941,7 @@
       "status": "READY",
       "checksumSha256": null,
       "ownerMembershipId": "00000000-0000-4000-8000-000000000006",
-      "createdAt": "2026-11-02T09:41:00.000Z",
+      "createdAt": "2026-11-02T09:42:00.000Z",
       "readyAt": null
     },
     "same": [
@@ -4960,12 +4960,12 @@
         "status": "READY",
         "checksumSha256": null,
         "ownerMembershipId": "00000000-0000-4000-8000-000000000006",
-        "createdAt": "2026-11-02T09:41:00.000Z",
+        "createdAt": "2026-11-02T09:42:00.000Z",
         "readyAt": null
       },
       "download": {
-        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiR0VUIiwiayI6Im9yZ3MvODY0MWZhZjYtOWVhNi00ZTI5LWIxMWYtYWExMDllNzA2MmIzL2F0dGFjaG1lbnQvZDk0ZjQ0MjUtMDUxZC00N2UzLThkZjgtODgzZTM3NGMzNGI4IiwiZSI6MTc5NDc2MDI5NSwiZm4iOiJicmllZi5wZGYiLCJjdCI6ImFwcGxpY2F0aW9uL3BkZiIsImQiOiJhdHRhY2htZW50In0.WTrulItUJqP3K6U…",
-        "expiresAt": "2026-11-02T09:43:00.000Z"
+        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiR0VUIiwiayI6Im9yZ3MvNTllMjM1OGEtYTMzMS00NTQzLTkxZmQtMzVkZDZkYWEwNjkxL2F0dGFjaG1lbnQvMjgyYzIzNWYtZmU0Zi00ZmE3LWJjOTgtYjRjMTA4MGFlOWUwIiwiZSI6MTc5NTUwNDg0NiwiZm4iOiJicmllZi5wZGYiLCJjdCI6ImFwcGxpY2F0aW9uL3BkZiIsImQiOiJhdHRhY2htZW50In0.s5Wsuyo-4YyEpqq…",
+        "expiresAt": "2026-11-02T09:44:00.000Z"
       }
     },
     "same": [
@@ -4981,12 +4981,12 @@
         "status": "READY",
         "checksumSha256": null,
         "ownerMembershipId": "00000000-0000-4000-8000-000000000006",
-        "createdAt": "2026-11-02T09:41:00.000Z",
+        "createdAt": "2026-11-02T09:42:00.000Z",
         "readyAt": null
       },
       "download": {
-        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiR0VUIiwiayI6Im9yZ3MvODY0MWZhZjYtOWVhNi00ZTI5LWIxMWYtYWExMDllNzA2MmIzL2F0dGFjaG1lbnQvZDk0ZjQ0MjUtMDUxZC00N2UzLThkZjgtODgzZTM3NGMzNGI4IiwiZSI6MTc5NDc2MDI5NSwiZm4iOiJicmllZi5wZGYiLCJjdCI6ImFwcGxpY2F0aW9uL3BkZiIsImQiOiJhdHRhY2htZW50In0.WTrulItUJqP3K6U…",
-        "expiresAt": "2026-11-02T09:42:00.000Z"
+        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiR0VUIiwiayI6Im9yZ3MvNTllMjM1OGEtYTMzMS00NTQzLTkxZmQtMzVkZDZkYWEwNjkxL2F0dGFjaG1lbnQvMjgyYzIzNWYtZmU0Zi00ZmE3LWJjOTgtYjRjMTA4MGFlOWUwIiwiZSI6MTc5NTUwNDg0NiwiZm4iOiJicmllZi5wZGYiLCJjdCI6ImFwcGxpY2F0aW9uL3BkZiIsImQiOiJhdHRhY2htZW50In0.s5Wsuyo-4YyEpqq…",
+        "expiresAt": "2026-11-02T09:43:00.000Z"
       }
     }
   },
@@ -5154,12 +5154,12 @@
       "items": [
         {
           "id": "00000000-0000-4000-8000-000000000021",
-          "number": "INV-SENTINEL-b3e15d",
+          "number": "INV-SENTINEL-7f9dc6",
           "status": "OVERDUE",
           "storedStatus": "PART_PAID",
           "dealId": null,
           "companyId": "00000000-0000-4000-8000-000000000014",
-          "companyName": "Walk Co 5b8c73",
+          "companyName": "Walk Co bdd05d",
           "recurringServiceId": null,
           "amount": "8123456.50",
           "currency": "KES",
@@ -5167,15 +5167,17 @@
           "balance": "8122456.50",
           "overpaid": "0.00",
           "overdue": true,
-          "daysOverdue": 15,
+          "daysOverdue": 24,
           "issuedOn": "2026-11-02T09:29:00.000Z",
           "dueOn": "2026-11-02T09:17:00.000Z",
           "allowOverpayment": false,
           "notes": null,
+          "paymentTermsDays": null,
+          "terms": null,
           "voidedAt": null,
           "voidReason": null,
-          "createdAt": "2026-11-02T09:44:00.000Z",
-          "updatedAt": "2026-11-02T09:45:00.000Z"
+          "createdAt": "2026-11-02T09:45:00.000Z",
+          "updatedAt": "2026-11-02T09:46:00.000Z"
         }
       ],
       "page": 1,
@@ -5217,7 +5219,29 @@
           }
         },
         "outstanding": "8122456.50",
-        "nothingToCollect": false
+        "nothingToCollect": false,
+        "ageing": {
+          "current": {
+            "count": 0,
+            "outstanding": "0.00"
+          },
+          "d1_30": {
+            "count": 1,
+            "outstanding": "8122456.50"
+          },
+          "d31_60": {
+            "count": 0,
+            "outstanding": "0.00"
+          },
+          "d61_90": {
+            "count": 0,
+            "outstanding": "0.00"
+          },
+          "d90_plus": {
+            "count": 0,
+            "outstanding": "0.00"
+          }
+        }
       }
     },
     "same": [
@@ -5226,7 +5250,7 @@
     ]
   },
   "GET /api/orgs/{orgSlug}/invoices/export": {
-    "default": "number,company,dealId,status,currency,amount,paid,balance,issuedOn,dueOn,daysOverdue\nINV-SENTINEL-b3e15d,Walk Co 5b8c73,,OVERDUE,KES,8123456.50,1000.00,8122456.50,2026-10-01,2026-10-31,15\n",
+    "default": "number,company,dealId,status,currency,amount,paid,balance,issuedOn,dueOn,daysOverdue\nINV-SENTINEL-7f9dc6,Walk Co bdd05d,,OVERDUE,KES,8123456.50,1000.00,8122456.50,2026-10-01,2026-10-31,24\n",
     "same": [
       "MANAGEMENT",
       "FINANCE"
@@ -5235,12 +5259,12 @@
   "GET /api/orgs/{orgSlug}/invoices/{invoiceId}": {
     "default": {
       "id": "00000000-0000-4000-8000-000000000021",
-      "number": "INV-SENTINEL-b3e15d",
+      "number": "INV-SENTINEL-7f9dc6",
       "status": "OVERDUE",
       "storedStatus": "PART_PAID",
       "dealId": null,
       "companyId": "00000000-0000-4000-8000-000000000014",
-      "companyName": "Walk Co 5b8c73",
+      "companyName": "Walk Co bdd05d",
       "recurringServiceId": null,
       "amount": "8123456.50",
       "currency": "KES",
@@ -5248,28 +5272,30 @@
       "balance": "8122456.50",
       "overpaid": "0.00",
       "overdue": true,
-      "daysOverdue": 15,
+      "daysOverdue": 24,
       "issuedOn": "2026-11-02T09:29:00.000Z",
       "dueOn": "2026-11-02T09:17:00.000Z",
       "allowOverpayment": false,
       "notes": null,
+      "paymentTermsDays": null,
+      "terms": null,
       "voidedAt": null,
       "voidReason": null,
-      "createdAt": "2026-11-02T09:44:00.000Z",
-      "updatedAt": "2026-11-02T09:45:00.000Z",
+      "createdAt": "2026-11-02T09:45:00.000Z",
+      "updatedAt": "2026-11-02T09:46:00.000Z",
       "payments": [
         {
           "id": "00000000-0000-4000-8000-000000000037",
           "invoiceId": "00000000-0000-4000-8000-000000000021",
           "amount": "1000.00",
-          "paidOn": "2026-11-02T09:46:00.000Z",
+          "paidOn": "2026-11-02T09:47:00.000Z",
           "methodLabel": null,
           "reference": null,
           "recordedByMembershipId": "00000000-0000-4000-8000-000000000004",
           "reversed": false,
           "reversedAt": null,
           "reversalReason": null,
-          "createdAt": "2026-11-02T09:47:00.000Z"
+          "createdAt": "2026-11-02T09:48:00.000Z"
         }
       ]
     },
@@ -5287,12 +5313,12 @@
           "status": "QUEUED",
           "attempts": 0,
           "maxAttempts": 5,
-          "runAt": "2026-11-02T09:48:00.000Z",
+          "runAt": "2026-11-02T09:49:00.000Z",
           "startedAt": null,
           "finishedAt": null,
           "lastError": null,
           "requestId": "request-id",
-          "createdAt": "2026-11-02T09:49:00.000Z"
+          "createdAt": "2026-11-02T09:50:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000039",
@@ -5300,12 +5326,12 @@
           "status": "QUEUED",
           "attempts": 0,
           "maxAttempts": 1,
-          "runAt": "2026-11-02T09:50:00.000Z",
+          "runAt": "2026-11-02T09:51:00.000Z",
           "startedAt": null,
           "finishedAt": null,
           "lastError": null,
           "requestId": "request-id",
-          "createdAt": "2026-11-02T09:51:00.000Z"
+          "createdAt": "2026-11-02T09:52:00.000Z"
         }
       ],
       "page": 1,
@@ -5355,12 +5381,12 @@
       "status": "QUEUED",
       "attempts": 0,
       "maxAttempts": 5,
-      "runAt": "2026-11-02T09:48:00.000Z",
+      "runAt": "2026-11-02T09:49:00.000Z",
       "startedAt": null,
       "finishedAt": null,
       "lastError": null,
       "requestId": "request-id",
-      "createdAt": "2026-11-02T09:49:00.000Z"
+      "createdAt": "2026-11-02T09:50:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -5379,13 +5405,13 @@
           "decisionReason": null,
           "decidedByMembershipId": null,
           "decidedAt": null,
-          "createdAt": "2026-11-02T09:52:00.000Z",
-          "updatedAt": "2026-11-02T09:52:00.000Z",
+          "createdAt": "2026-11-02T09:53:00.000Z",
+          "updatedAt": "2026-11-02T09:53:00.000Z",
           "lead": {
             "id": "00000000-0000-4000-8000-000000000005",
             "ownerMembershipId": "00000000-0000-4000-8000-000000000006",
             "company": {
-              "name": "Walk Co 5b8c73"
+              "name": "Walk Co bdd05d"
             },
             "contact": {
               "firstName": "Wanjiru",
@@ -5448,8 +5474,8 @@
           "archiveReason": null,
           "customFields": {},
           "lastContactedAt": null,
-          "createdAt": "2026-11-02T09:57:00.000Z",
-          "updatedAt": "2026-11-02T09:58:00.000Z",
+          "createdAt": "2026-11-02T09:58:00.000Z",
+          "updatedAt": "2026-11-02T09:59:00.000Z",
           "importSessionId": null,
           "company": null,
           "contact": null,
@@ -5461,8 +5487,8 @@
             "description": null,
             "sequence": 1,
             "isActive": true,
-            "createdAt": "2026-11-02T09:55:00.000Z",
-            "updatedAt": "2026-11-02T09:55:00.000Z"
+            "createdAt": "2026-11-02T09:56:00.000Z",
+            "updatedAt": "2026-11-02T09:56:00.000Z"
           },
           "leadSource": null,
           "tags": [],
@@ -5481,7 +5507,7 @@
                 "points": -3
               }
             ],
-            "computedAt": "2026-11-02T09:59:00.000Z"
+            "computedAt": "2026-11-02T10:00:00.000Z"
           },
           "archived": false,
           "archive": null,
@@ -5510,13 +5536,13 @@
           "archiveReason": null,
           "customFields": {},
           "lastContactedAt": null,
-          "createdAt": "2026-11-02T09:53:00.000Z",
-          "updatedAt": "2026-11-02T09:54:00.000Z",
+          "createdAt": "2026-11-02T09:54:00.000Z",
+          "updatedAt": "2026-11-02T09:55:00.000Z",
           "importSessionId": null,
           "company": {
             "id": "00000000-0000-4000-8000-000000000014",
             "organizationId": "00000000-0000-4000-8000-000000000003",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -5593,8 +5619,8 @@
             "description": null,
             "sequence": 1,
             "isActive": true,
-            "createdAt": "2026-11-02T09:55:00.000Z",
-            "updatedAt": "2026-11-02T09:55:00.000Z"
+            "createdAt": "2026-11-02T09:56:00.000Z",
+            "updatedAt": "2026-11-02T09:56:00.000Z"
           },
           "leadSource": null,
           "tags": [],
@@ -5618,7 +5644,7 @@
                 "points": -3
               }
             ],
-            "computedAt": "2026-11-02T09:56:00.000Z"
+            "computedAt": "2026-11-02T09:57:00.000Z"
           },
           "archived": false,
           "archive": null,
@@ -5659,13 +5685,13 @@
           "archiveReason": null,
           "customFields": {},
           "lastContactedAt": null,
-          "createdAt": "2026-11-02T09:53:00.000Z",
-          "updatedAt": "2026-11-02T09:54:00.000Z",
+          "createdAt": "2026-11-02T09:54:00.000Z",
+          "updatedAt": "2026-11-02T09:55:00.000Z",
           "importSessionId": null,
           "company": {
             "id": "00000000-0000-4000-8000-000000000014",
             "organizationId": "00000000-0000-4000-8000-000000000003",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -5742,8 +5768,8 @@
             "description": null,
             "sequence": 1,
             "isActive": true,
-            "createdAt": "2026-11-02T09:55:00.000Z",
-            "updatedAt": "2026-11-02T09:55:00.000Z"
+            "createdAt": "2026-11-02T09:56:00.000Z",
+            "updatedAt": "2026-11-02T09:56:00.000Z"
           },
           "leadSource": null,
           "tags": [],
@@ -5767,7 +5793,7 @@
                 "points": -3
               }
             ],
-            "computedAt": "2026-11-02T09:56:00.000Z"
+            "computedAt": "2026-11-02T09:57:00.000Z"
           },
           "archived": false,
           "archive": null,
@@ -5784,11 +5810,11 @@
     }
   },
   "GET /api/orgs/{orgSlug}/leads/export": {
-    "default": "id,company,contact,contactEmail,contactPhone,leadStatus,leadSource,temperature,serviceInterest,owner,nextFollowUpAt,convertedAt,notes,createdAt,tags,cf:source_note_0fb0,q:budget_range,q:decision_maker,q:timeline,q:social_channels,q:acct_users,q:net_location,q:cctv_cameras,q:hr_headcount,q:isp_subscribers,q:prop_units,q:crm_users,q:fleet_vehicles,q:auto_process,q:inv_locations,q:web_type,q:other_need,q:brand_scope,q:inv_items,q:prop_rent_collection,q:isp_current_tool,q:crm_current_tool,q:web_domain,q:net_users,q:hr_payroll,q:social_posts_week,q:cctv_site_type,q:auto_systems,q:fleet_vehicle_types,q:acct_current_tool,q:net_hardware,q:cctv_site_visit,q:acct_vat\n00000000-0000-4000-8000-000000000042,,,,,New,,COLD,,person1@example.test,,,,2026-11-02T09:57:00.000Z,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n00000000-0000-4000-8000-000000000005,Walk Co 5b8c73,Wanjiru Kamau,person4@example.test,+254700123456,New,,WARM,,person2@example.test,,,,2026-11-02T09:53:00.000Z,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,",
+    "default": "id,company,contact,contactEmail,contactPhone,leadStatus,leadSource,temperature,serviceInterest,owner,nextFollowUpAt,convertedAt,notes,createdAt,tags,cf:source_note_62a9,q:budget_range,q:decision_maker,q:timeline,q:social_channels,q:acct_users,q:net_location,q:cctv_cameras,q:hr_headcount,q:isp_subscribers,q:prop_units,q:crm_users,q:fleet_vehicles,q:auto_process,q:inv_locations,q:web_type,q:other_need,q:brand_scope,q:inv_items,q:prop_rent_collection,q:isp_current_tool,q:crm_current_tool,q:web_domain,q:net_users,q:hr_payroll,q:social_posts_week,q:cctv_site_type,q:auto_systems,q:fleet_vehicle_types,q:acct_current_tool,q:net_hardware,q:cctv_site_visit,q:acct_vat\n00000000-0000-4000-8000-000000000042,,,,,New,,COLD,,person1@example.test,,,,2026-11-02T09:58:00.000Z,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n00000000-0000-4000-8000-000000000005,Walk Co bdd05d,Wanjiru Kamau,person4@example.test,+254700123456,New,,WARM,,person2@example.test,,,,2026-11-02T09:54:00.000Z,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,",
     "same": [
       "MANAGEMENT"
     ],
-    "SALES": "id,company,contact,contactEmail,contactPhone,leadStatus,leadSource,temperature,serviceInterest,owner,nextFollowUpAt,convertedAt,notes,createdAt,tags,cf:source_note_0fb0,q:budget_range,q:decision_maker,q:timeline,q:social_channels,q:acct_users,q:net_location,q:cctv_cameras,q:hr_headcount,q:isp_subscribers,q:prop_units,q:crm_users,q:fleet_vehicles,q:auto_process,q:inv_locations,q:web_type,q:other_need,q:brand_scope,q:inv_items,q:prop_rent_collection,q:isp_current_tool,q:crm_current_tool,q:web_domain,q:net_users,q:hr_payroll,q:social_posts_week,q:cctv_site_type,q:auto_systems,q:fleet_vehicle_types,q:acct_current_tool,q:net_hardware,q:cctv_site_visit,q:acct_vat\n00000000-0000-4000-8000-000000000005,Walk Co 5b8c73,Wanjiru Kamau,person4@example.test,+254700123456,New,,WARM,,person2@example.test,,,,2026-11-02T09:53:00.000Z,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n"
+    "SALES": "id,company,contact,contactEmail,contactPhone,leadStatus,leadSource,temperature,serviceInterest,owner,nextFollowUpAt,convertedAt,notes,createdAt,tags,cf:source_note_62a9,q:budget_range,q:decision_maker,q:timeline,q:social_channels,q:acct_users,q:net_location,q:cctv_cameras,q:hr_headcount,q:isp_subscribers,q:prop_units,q:crm_users,q:fleet_vehicles,q:auto_process,q:inv_locations,q:web_type,q:other_need,q:brand_scope,q:inv_items,q:prop_rent_collection,q:isp_current_tool,q:crm_current_tool,q:web_domain,q:net_users,q:hr_payroll,q:social_posts_week,q:cctv_site_type,q:auto_systems,q:fleet_vehicle_types,q:acct_current_tool,q:net_hardware,q:cctv_site_visit,q:acct_vat\n00000000-0000-4000-8000-000000000005,Walk Co bdd05d,Wanjiru Kamau,person4@example.test,+254700123456,New,,WARM,,person2@example.test,,,,2026-11-02T09:54:00.000Z,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,\n"
   },
   "GET /api/orgs/{orgSlug}/leads/key-notes": {
     "default": {
@@ -5857,15 +5883,15 @@
           "points": -3
         }
       ],
-      "scoredAt": "2026-11-02T09:56:00.000Z",
+      "scoredAt": "2026-11-02T09:57:00.000Z",
       "lastContactedAt": null,
-      "createdAt": "2026-11-02T09:53:00.000Z",
-      "updatedAt": "2026-11-02T09:54:00.000Z",
+      "createdAt": "2026-11-02T09:54:00.000Z",
+      "updatedAt": "2026-11-02T09:55:00.000Z",
       "importSessionId": null,
       "company": {
         "id": "00000000-0000-4000-8000-000000000014",
         "organizationId": "00000000-0000-4000-8000-000000000003",
-        "name": "Walk Co 5b8c73",
+        "name": "Walk Co bdd05d",
         "industry": null,
         "website": null,
         "location": null,
@@ -5942,8 +5968,8 @@
         "description": null,
         "sequence": 1,
         "isActive": true,
-        "createdAt": "2026-11-02T09:55:00.000Z",
-        "updatedAt": "2026-11-02T09:55:00.000Z"
+        "createdAt": "2026-11-02T09:56:00.000Z",
+        "updatedAt": "2026-11-02T09:56:00.000Z"
       },
       "leadSource": null,
       "lostReason": null,
@@ -5970,7 +5996,7 @@
           "title": null,
           "shared": false,
           "uploadedByMembershipId": "00000000-0000-4000-8000-000000000006",
-          "createdAt": "2026-11-02T10:00:00.000Z",
+          "createdAt": "2026-11-02T10:01:00.000Z",
           "deletedAt": null,
           "file": {
             "id": "00000000-0000-4000-8000-000000000001",
@@ -5998,7 +6024,7 @@
           "deleted": false,
           "edited": false,
           "editedAt": null,
-          "createdAt": "2026-11-02T10:01:00.000Z",
+          "createdAt": "2026-11-02T10:02:00.000Z",
           "mentions": [],
           "canEdit": true,
           "canDelete": true
@@ -6019,7 +6045,7 @@
           "deleted": false,
           "edited": false,
           "editedAt": null,
-          "createdAt": "2026-11-02T10:01:00.000Z",
+          "createdAt": "2026-11-02T10:02:00.000Z",
           "mentions": [],
           "canEdit": false,
           "canDelete": false
@@ -6170,7 +6196,7 @@
           "points": -3
         }
       ],
-      "computedAt": "2026-11-02T09:56:00.000Z"
+      "computedAt": "2026-11-02T09:57:00.000Z"
     },
     "same": [
       "MANAGEMENT",
@@ -6188,8 +6214,8 @@
   },
   "GET /api/orgs/{orgSlug}/look": {
     "default": {
-      "name": "Walk cef1b894",
-      "shownName": "Walk cef1b894",
+      "name": "Walk be09e9c7",
+      "shownName": "Walk be09e9c7",
       "displayName": null,
       "logoUrl": null,
       "defaultTheme": "SKY",
@@ -7303,7 +7329,7 @@
         "status": "ACTIVE",
         "state": "active",
         "invitedAt": null,
-        "joinedAt": "2026-11-02T10:02:00.000Z",
+        "joinedAt": "2026-11-02T10:03:00.000Z",
         "inviteExpiresAt": null,
         "inviteExpired": false,
         "inviteLastSentAt": null,
@@ -7327,7 +7353,7 @@
         "status": "ACTIVE",
         "state": "active",
         "invitedAt": null,
-        "joinedAt": "2026-11-02T10:03:00.000Z",
+        "joinedAt": "2026-11-02T10:04:00.000Z",
         "inviteExpiresAt": null,
         "inviteExpired": false,
         "inviteLastSentAt": null,
@@ -7351,7 +7377,7 @@
         "status": "ACTIVE",
         "state": "active",
         "invitedAt": null,
-        "joinedAt": "2026-11-02T10:04:00.000Z",
+        "joinedAt": "2026-11-02T10:05:00.000Z",
         "inviteExpiresAt": null,
         "inviteExpired": false,
         "inviteLastSentAt": null,
@@ -7541,7 +7567,7 @@
           "read": false,
           "readAt": null,
           "archivedAt": null,
-          "createdAt": "2026-11-02T10:05:00.000Z"
+          "createdAt": "2026-11-02T10:06:00.000Z"
         }
       ],
       "page": 1,
@@ -7564,7 +7590,7 @@
           "read": false,
           "readAt": null,
           "archivedAt": null,
-          "createdAt": "2026-11-02T10:05:00.000Z"
+          "createdAt": "2026-11-02T10:06:00.000Z"
         }
       ]
     }
@@ -7606,7 +7632,7 @@
       "overdue": {
         "count": 1,
         "outstanding": "8122456.50",
-        "oldestDaysOverdue": 15
+        "oldestDaysOverdue": 24
       },
       "collectedThisMonth": {
         "count": 0,
@@ -7713,7 +7739,7 @@
           "decisionNote": null,
           "expiresAt": null,
           "usedAt": null,
-          "createdAt": "2026-11-02T10:06:00.000Z"
+          "createdAt": "2026-11-02T10:07:00.000Z"
         }
       ],
       "page": 1,
@@ -7770,7 +7796,7 @@
             "contactId": "00000000-0000-4000-8000-000000000019",
             "label": "Wanjiru Kamau"
           },
-          "dueOn": "2026-11-02T10:07:00.000Z",
+          "dueOn": "2026-11-02T10:08:00.000Z",
           "overdue": false,
           "daysLeft": 30,
           "evidenceNotes": null,
@@ -7782,7 +7808,7 @@
           "result": null,
           "hasExport": false,
           "completedAt": null,
-          "createdAt": "2026-11-02T10:08:00.000Z"
+          "createdAt": "2026-11-02T10:09:00.000Z"
         }
       ],
       "page": 1,
@@ -7804,7 +7830,7 @@
         "contactId": "00000000-0000-4000-8000-000000000019",
         "label": "Wanjiru Kamau"
       },
-      "dueOn": "2026-11-02T10:07:00.000Z",
+      "dueOn": "2026-11-02T10:08:00.000Z",
       "overdue": false,
       "daysLeft": 30,
       "evidenceNotes": null,
@@ -7816,7 +7842,7 @@
       "result": null,
       "hasExport": false,
       "completedAt": null,
-      "createdAt": "2026-11-02T10:08:00.000Z"
+      "createdAt": "2026-11-02T10:09:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -7824,7 +7850,7 @@
   },
   "GET /api/orgs/{orgSlug}/profile": {
     "default": {
-      "name": "Walk cef1b894",
+      "name": "Walk be09e9c7",
       "timezone": "Africa/Nairobi",
       "defaultCurrency": "KES",
       "phone": null,
@@ -7873,7 +7899,7 @@
           "id": "00000000-0000-4000-8000-000000000052",
           "service": "fcm.googleapis.com",
           "userAgent": null,
-          "registeredAt": "2026-11-02T10:09:00.000Z",
+          "registeredAt": "2026-11-02T10:10:00.000Z",
           "lastSuccessAt": null,
           "lastFailureAt": null,
           "failureCount": 0
@@ -7885,9 +7911,9 @@
   },
   "GET /api/orgs/{orgSlug}/pwa/manifest": {
     "default": {
-      "name": "Walk cef1b894",
-      "short_name": "Walk cef1b89",
-      "description": "Walk cef1b894 CRM",
+      "name": "Walk be09e9c7",
+      "short_name": "Walk be09e9c",
+      "description": "Walk be09e9c7 CRM",
       "start_url": "/o/figbloom-demo",
       "scope": "/o/figbloom-demo",
       "display": "standalone",
@@ -7950,7 +7976,7 @@
           "ownership"
         ]
       },
-      "serverTime": "2026-11-02T10:14:00.000Z"
+      "serverTime": "2026-11-02T10:15:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -7977,7 +8003,7 @@
           "ownership"
         ]
       },
-      "serverTime": "2026-11-02T10:13:00.000Z"
+      "serverTime": "2026-11-02T10:14:00.000Z"
     },
     "DELIVERY": {
       "cacheVersion": "7bef6a6fd2520870",
@@ -8001,7 +8027,7 @@
           "ownership"
         ]
       },
-      "serverTime": "2026-11-02T10:11:00.000Z"
+      "serverTime": "2026-11-02T10:12:00.000Z"
     },
     "FINANCE": {
       "cacheVersion": "7bef6a6fd2520870",
@@ -8025,7 +8051,7 @@
           "ownership"
         ]
       },
-      "serverTime": "2026-11-02T10:12:00.000Z"
+      "serverTime": "2026-11-02T10:13:00.000Z"
     },
     "RESTRICTED_TECHNICAL": {
       "cacheVersion": "7bef6a6fd2520870",
@@ -8049,7 +8075,7 @@
           "ownership"
         ]
       },
-      "serverTime": "2026-11-02T10:10:00.000Z"
+      "serverTime": "2026-11-02T10:11:00.000Z"
     }
   },
   "GET /api/orgs/{orgSlug}/quick-log/prompt": {
@@ -8074,7 +8100,7 @@
         {
           "id": "00000000-0000-4000-8000-000000000013",
           "companyId": "00000000-0000-4000-8000-000000000014",
-          "companyName": "Walk Co 5b8c73",
+          "companyName": "Walk Co bdd05d",
           "serviceId": "00000000-0000-4000-8000-000000000015",
           "serviceName": "CRM",
           "billingCycle": "YEARLY",
@@ -8083,7 +8109,7 @@
           "currency": "KES",
           "startsOn": "2026-11-02T09:13:00.000Z",
           "renewsOn": "2026-11-02T09:07:00.000Z",
-          "daysToRenewal": 47,
+          "daysToRenewal": 38,
           "state": "ACTIVE",
           "stateSource": "rule",
           "overrideReason": null,
@@ -8113,7 +8139,7 @@
         {
           "id": "00000000-0000-4000-8000-000000000013",
           "companyId": "00000000-0000-4000-8000-000000000014",
-          "companyName": "Walk Co 5b8c73",
+          "companyName": "Walk Co bdd05d",
           "serviceId": "00000000-0000-4000-8000-000000000015",
           "serviceName": "CRM",
           "billingCycle": "YEARLY",
@@ -8122,7 +8148,7 @@
           "currency": "KES",
           "startsOn": "2026-11-02T09:13:00.000Z",
           "renewsOn": "2026-11-02T09:07:00.000Z",
-          "daysToRenewal": 47,
+          "daysToRenewal": 38,
           "state": "ACTIVE",
           "stateSource": "rule",
           "overrideReason": null,
@@ -8147,7 +8173,7 @@
     "default": {
       "id": "00000000-0000-4000-8000-000000000013",
       "companyId": "00000000-0000-4000-8000-000000000014",
-      "companyName": "Walk Co 5b8c73",
+      "companyName": "Walk Co bdd05d",
       "serviceId": "00000000-0000-4000-8000-000000000015",
       "serviceName": "CRM",
       "billingCycle": "YEARLY",
@@ -8156,7 +8182,7 @@
       "currency": "KES",
       "startsOn": "2026-11-02T09:13:00.000Z",
       "renewsOn": "2026-11-02T09:07:00.000Z",
-      "daysToRenewal": 47,
+      "daysToRenewal": 38,
       "state": "ACTIVE",
       "stateSource": "rule",
       "overrideReason": null,
@@ -8177,7 +8203,7 @@
     "DELIVERY": {
       "id": "00000000-0000-4000-8000-000000000013",
       "companyId": "00000000-0000-4000-8000-000000000014",
-      "companyName": "Walk Co 5b8c73",
+      "companyName": "Walk Co bdd05d",
       "serviceId": "00000000-0000-4000-8000-000000000015",
       "serviceName": "CRM",
       "billingCycle": "YEARLY",
@@ -8186,7 +8212,7 @@
       "currency": "KES",
       "startsOn": "2026-11-02T09:13:00.000Z",
       "renewsOn": "2026-11-02T09:07:00.000Z",
-      "daysToRenewal": 47,
+      "daysToRenewal": 38,
       "state": "ACTIVE",
       "stateSource": "rule",
       "overrideReason": null,
@@ -8333,8 +8359,8 @@
         "description": null,
         "sequence": 1,
         "isActive": true,
-        "createdAt": "2026-11-02T10:15:00.000Z",
-        "updatedAt": "2026-11-02T10:15:00.000Z",
+        "createdAt": "2026-11-02T10:16:00.000Z",
+        "updatedAt": "2026-11-02T10:16:00.000Z",
         "usageCount": 0
       },
       {
@@ -8345,8 +8371,8 @@
         "description": null,
         "sequence": 2,
         "isActive": true,
-        "createdAt": "2026-11-02T10:15:00.000Z",
-        "updatedAt": "2026-11-02T10:15:00.000Z",
+        "createdAt": "2026-11-02T10:16:00.000Z",
+        "updatedAt": "2026-11-02T10:16:00.000Z",
         "usageCount": 0
       },
       {
@@ -8377,8 +8403,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T10:15:00.000Z",
-          "updatedAt": "2026-11-02T10:15:00.000Z"
+          "createdAt": "2026-11-02T10:16:00.000Z",
+          "updatedAt": "2026-11-02T10:16:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000056",
@@ -8388,8 +8414,8 @@
           "description": null,
           "sequence": 2,
           "isActive": true,
-          "createdAt": "2026-11-02T10:15:00.000Z",
-          "updatedAt": "2026-11-02T10:15:00.000Z"
+          "createdAt": "2026-11-02T10:16:00.000Z",
+          "updatedAt": "2026-11-02T10:16:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000057",
@@ -8412,8 +8438,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000058",
@@ -8423,8 +8449,8 @@
           "description": null,
           "sequence": 2,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000059",
@@ -8434,8 +8460,8 @@
           "description": null,
           "sequence": 3,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         }
       ],
       "pipelineStages": [
@@ -8452,8 +8478,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000032",
@@ -8468,8 +8494,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000033",
@@ -8484,8 +8510,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         }
       ],
       "lifecycleStates": [
@@ -8554,8 +8580,8 @@
           "description": null,
           "sequence": 3,
           "isActive": true,
-          "createdAt": "2026-11-02T10:19:00.000Z",
-          "updatedAt": "2026-11-02T10:19:00.000Z"
+          "createdAt": "2026-11-02T10:18:00.000Z",
+          "updatedAt": "2026-11-02T10:18:00.000Z"
         }
       ],
       "services": [
@@ -8568,8 +8594,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T10:20:00.000Z",
-          "updatedAt": "2026-11-02T10:20:00.000Z"
+          "createdAt": "2026-11-02T10:19:00.000Z",
+          "updatedAt": "2026-11-02T10:19:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000066",
@@ -8580,8 +8606,8 @@
           "description": null,
           "sequence": 13,
           "isActive": true,
-          "createdAt": "2026-11-02T10:21:00.000Z",
-          "updatedAt": "2026-11-02T10:21:00.000Z"
+          "createdAt": "2026-11-02T10:20:00.000Z",
+          "updatedAt": "2026-11-02T10:20:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000067",
@@ -8592,8 +8618,8 @@
           "description": null,
           "sequence": 11,
           "isActive": true,
-          "createdAt": "2026-11-02T10:21:00.000Z",
-          "updatedAt": "2026-11-02T10:21:00.000Z"
+          "createdAt": "2026-11-02T10:20:00.000Z",
+          "updatedAt": "2026-11-02T10:20:00.000Z"
         }
       ],
       "members": [
@@ -8639,8 +8665,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T10:15:00.000Z",
-          "updatedAt": "2026-11-02T10:15:00.000Z"
+          "createdAt": "2026-11-02T10:16:00.000Z",
+          "updatedAt": "2026-11-02T10:16:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000056",
@@ -8650,8 +8676,8 @@
           "description": null,
           "sequence": 2,
           "isActive": true,
-          "createdAt": "2026-11-02T10:15:00.000Z",
-          "updatedAt": "2026-11-02T10:15:00.000Z"
+          "createdAt": "2026-11-02T10:16:00.000Z",
+          "updatedAt": "2026-11-02T10:16:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000057",
@@ -8674,8 +8700,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000058",
@@ -8685,8 +8711,8 @@
           "description": null,
           "sequence": 2,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000059",
@@ -8696,8 +8722,8 @@
           "description": null,
           "sequence": 3,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         }
       ],
       "pipelineStages": [
@@ -8714,8 +8740,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000032",
@@ -8730,8 +8756,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000033",
@@ -8746,8 +8772,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         }
       ],
       "lifecycleStates": [
@@ -8816,8 +8842,8 @@
           "description": null,
           "sequence": 3,
           "isActive": true,
-          "createdAt": "2026-11-02T10:19:00.000Z",
-          "updatedAt": "2026-11-02T10:19:00.000Z"
+          "createdAt": "2026-11-02T10:18:00.000Z",
+          "updatedAt": "2026-11-02T10:18:00.000Z"
         }
       ],
       "services": [
@@ -8830,8 +8856,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T10:20:00.000Z",
-          "updatedAt": "2026-11-02T10:20:00.000Z"
+          "createdAt": "2026-11-02T10:19:00.000Z",
+          "updatedAt": "2026-11-02T10:19:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000066",
@@ -8842,8 +8868,8 @@
           "description": null,
           "sequence": 13,
           "isActive": true,
-          "createdAt": "2026-11-02T10:21:00.000Z",
-          "updatedAt": "2026-11-02T10:21:00.000Z"
+          "createdAt": "2026-11-02T10:20:00.000Z",
+          "updatedAt": "2026-11-02T10:20:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000067",
@@ -8854,8 +8880,8 @@
           "description": null,
           "sequence": 11,
           "isActive": true,
-          "createdAt": "2026-11-02T10:21:00.000Z",
-          "updatedAt": "2026-11-02T10:21:00.000Z"
+          "createdAt": "2026-11-02T10:20:00.000Z",
+          "updatedAt": "2026-11-02T10:20:00.000Z"
         }
       ],
       "members": []
@@ -8870,8 +8896,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T10:15:00.000Z",
-          "updatedAt": "2026-11-02T10:15:00.000Z"
+          "createdAt": "2026-11-02T10:16:00.000Z",
+          "updatedAt": "2026-11-02T10:16:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000056",
@@ -8881,8 +8907,8 @@
           "description": null,
           "sequence": 2,
           "isActive": true,
-          "createdAt": "2026-11-02T10:15:00.000Z",
-          "updatedAt": "2026-11-02T10:15:00.000Z"
+          "createdAt": "2026-11-02T10:16:00.000Z",
+          "updatedAt": "2026-11-02T10:16:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000057",
@@ -8905,8 +8931,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000058",
@@ -8916,8 +8942,8 @@
           "description": null,
           "sequence": 2,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000059",
@@ -8927,8 +8953,8 @@
           "description": null,
           "sequence": 3,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         }
       ],
       "pipelineStages": [
@@ -8945,8 +8971,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000032",
@@ -8961,8 +8987,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000033",
@@ -8977,8 +9003,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         }
       ],
       "lifecycleStates": [
@@ -9047,8 +9073,8 @@
           "description": null,
           "sequence": 3,
           "isActive": true,
-          "createdAt": "2026-11-02T10:19:00.000Z",
-          "updatedAt": "2026-11-02T10:19:00.000Z"
+          "createdAt": "2026-11-02T10:18:00.000Z",
+          "updatedAt": "2026-11-02T10:18:00.000Z"
         }
       ],
       "services": [
@@ -9061,8 +9087,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T10:20:00.000Z",
-          "updatedAt": "2026-11-02T10:20:00.000Z"
+          "createdAt": "2026-11-02T10:19:00.000Z",
+          "updatedAt": "2026-11-02T10:19:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000066",
@@ -9073,8 +9099,8 @@
           "description": null,
           "sequence": 13,
           "isActive": true,
-          "createdAt": "2026-11-02T10:21:00.000Z",
-          "updatedAt": "2026-11-02T10:21:00.000Z"
+          "createdAt": "2026-11-02T10:20:00.000Z",
+          "updatedAt": "2026-11-02T10:20:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000067",
@@ -9085,8 +9111,8 @@
           "description": null,
           "sequence": 11,
           "isActive": true,
-          "createdAt": "2026-11-02T10:21:00.000Z",
-          "updatedAt": "2026-11-02T10:21:00.000Z"
+          "createdAt": "2026-11-02T10:20:00.000Z",
+          "updatedAt": "2026-11-02T10:20:00.000Z"
         }
       ],
       "members": []
@@ -9101,8 +9127,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T10:15:00.000Z",
-          "updatedAt": "2026-11-02T10:15:00.000Z"
+          "createdAt": "2026-11-02T10:16:00.000Z",
+          "updatedAt": "2026-11-02T10:16:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000056",
@@ -9112,8 +9138,8 @@
           "description": null,
           "sequence": 2,
           "isActive": true,
-          "createdAt": "2026-11-02T10:15:00.000Z",
-          "updatedAt": "2026-11-02T10:15:00.000Z"
+          "createdAt": "2026-11-02T10:16:00.000Z",
+          "updatedAt": "2026-11-02T10:16:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000057",
@@ -9136,8 +9162,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000058",
@@ -9147,8 +9173,8 @@
           "description": null,
           "sequence": 2,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000059",
@@ -9158,8 +9184,8 @@
           "description": null,
           "sequence": 3,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         }
       ],
       "pipelineStages": [
@@ -9176,8 +9202,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000032",
@@ -9192,8 +9218,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000033",
@@ -9208,8 +9234,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         }
       ],
       "lifecycleStates": [
@@ -9278,8 +9304,8 @@
           "description": null,
           "sequence": 3,
           "isActive": true,
-          "createdAt": "2026-11-02T10:19:00.000Z",
-          "updatedAt": "2026-11-02T10:19:00.000Z"
+          "createdAt": "2026-11-02T10:18:00.000Z",
+          "updatedAt": "2026-11-02T10:18:00.000Z"
         }
       ],
       "services": [
@@ -9292,8 +9318,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T10:20:00.000Z",
-          "updatedAt": "2026-11-02T10:20:00.000Z"
+          "createdAt": "2026-11-02T10:19:00.000Z",
+          "updatedAt": "2026-11-02T10:19:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000066",
@@ -9304,8 +9330,8 @@
           "description": null,
           "sequence": 13,
           "isActive": true,
-          "createdAt": "2026-11-02T10:21:00.000Z",
-          "updatedAt": "2026-11-02T10:21:00.000Z"
+          "createdAt": "2026-11-02T10:20:00.000Z",
+          "updatedAt": "2026-11-02T10:20:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000067",
@@ -9316,8 +9342,8 @@
           "description": null,
           "sequence": 11,
           "isActive": true,
-          "createdAt": "2026-11-02T10:21:00.000Z",
-          "updatedAt": "2026-11-02T10:21:00.000Z"
+          "createdAt": "2026-11-02T10:20:00.000Z",
+          "updatedAt": "2026-11-02T10:20:00.000Z"
         }
       ],
       "members": []
@@ -9332,8 +9358,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T10:15:00.000Z",
-          "updatedAt": "2026-11-02T10:15:00.000Z"
+          "createdAt": "2026-11-02T10:16:00.000Z",
+          "updatedAt": "2026-11-02T10:16:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000056",
@@ -9343,8 +9369,8 @@
           "description": null,
           "sequence": 2,
           "isActive": true,
-          "createdAt": "2026-11-02T10:15:00.000Z",
-          "updatedAt": "2026-11-02T10:15:00.000Z"
+          "createdAt": "2026-11-02T10:16:00.000Z",
+          "updatedAt": "2026-11-02T10:16:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000057",
@@ -9367,8 +9393,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000058",
@@ -9378,8 +9404,8 @@
           "description": null,
           "sequence": 2,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000059",
@@ -9389,8 +9415,8 @@
           "description": null,
           "sequence": 3,
           "isActive": true,
-          "createdAt": "2026-11-02T09:55:00.000Z",
-          "updatedAt": "2026-11-02T09:55:00.000Z"
+          "createdAt": "2026-11-02T09:56:00.000Z",
+          "updatedAt": "2026-11-02T09:56:00.000Z"
         }
       ],
       "pipelineStages": [
@@ -9407,8 +9433,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000032",
@@ -9423,8 +9449,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000033",
@@ -9439,8 +9465,8 @@
           "isWon": false,
           "isLost": false,
           "isActive": true,
-          "createdAt": "2026-11-02T09:37:00.000Z",
-          "updatedAt": "2026-11-02T09:37:00.000Z"
+          "createdAt": "2026-11-02T09:38:00.000Z",
+          "updatedAt": "2026-11-02T09:38:00.000Z"
         }
       ],
       "lifecycleStates": [
@@ -9509,8 +9535,8 @@
           "description": null,
           "sequence": 3,
           "isActive": true,
-          "createdAt": "2026-11-02T10:19:00.000Z",
-          "updatedAt": "2026-11-02T10:19:00.000Z"
+          "createdAt": "2026-11-02T10:18:00.000Z",
+          "updatedAt": "2026-11-02T10:18:00.000Z"
         }
       ],
       "services": [
@@ -9523,8 +9549,8 @@
           "description": null,
           "sequence": 1,
           "isActive": true,
-          "createdAt": "2026-11-02T10:20:00.000Z",
-          "updatedAt": "2026-11-02T10:20:00.000Z"
+          "createdAt": "2026-11-02T10:19:00.000Z",
+          "updatedAt": "2026-11-02T10:19:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000066",
@@ -9535,8 +9561,8 @@
           "description": null,
           "sequence": 13,
           "isActive": true,
-          "createdAt": "2026-11-02T10:21:00.000Z",
-          "updatedAt": "2026-11-02T10:21:00.000Z"
+          "createdAt": "2026-11-02T10:20:00.000Z",
+          "updatedAt": "2026-11-02T10:20:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000067",
@@ -9547,8 +9573,8 @@
           "description": null,
           "sequence": 11,
           "isActive": true,
-          "createdAt": "2026-11-02T10:21:00.000Z",
-          "updatedAt": "2026-11-02T10:21:00.000Z"
+          "createdAt": "2026-11-02T10:20:00.000Z",
+          "updatedAt": "2026-11-02T10:20:00.000Z"
         }
       ],
       "members": []
@@ -9628,8 +9654,8 @@
         "deals": "all",
         "tasks": "all"
       },
-      "dateFrom": "2026-11-02T10:28:00.000Z",
-      "dateTo": "2026-11-02T10:29:00.000Z",
+      "dateFrom": "2026-11-02T10:27:00.000Z",
+      "dateTo": "2026-11-02T10:28:00.000Z",
       "leadVolumeBySource": [
         {
           "_count": {
@@ -9683,8 +9709,8 @@
         "deals": "own",
         "tasks": "own"
       },
-      "dateFrom": "2026-11-02T10:26:00.000Z",
-      "dateTo": "2026-11-02T10:27:00.000Z",
+      "dateFrom": "2026-11-02T10:25:00.000Z",
+      "dateTo": "2026-11-02T10:26:00.000Z",
       "leadVolumeBySource": [
         {
           "_count": {
@@ -9735,8 +9761,8 @@
         "deals": "won",
         "tasks": "own"
       },
-      "dateFrom": "2026-11-02T10:22:00.000Z",
-      "dateTo": "2026-11-02T10:23:00.000Z",
+      "dateFrom": "2026-11-02T10:21:00.000Z",
+      "dateTo": "2026-11-02T10:22:00.000Z",
       "leadVolumeBySource": null,
       "leadConversion": null,
       "dealOutcomes": {
@@ -9760,8 +9786,8 @@
         "deals": "won",
         "tasks": null
       },
-      "dateFrom": "2026-11-02T10:24:00.000Z",
-      "dateTo": "2026-11-02T10:25:00.000Z",
+      "dateFrom": "2026-11-02T10:23:00.000Z",
+      "dateTo": "2026-11-02T10:24:00.000Z",
       "leadVolumeBySource": null,
       "leadConversion": null,
       "dealOutcomes": {
@@ -9820,10 +9846,10 @@
               "points": -3
             }
           ],
-          "scoredAt": "2026-11-02T09:59:00.000Z",
+          "scoredAt": "2026-11-02T10:00:00.000Z",
           "lastContactedAt": null,
-          "createdAt": "2026-11-02T09:57:00.000Z",
-          "updatedAt": "2026-11-02T09:58:00.000Z",
+          "createdAt": "2026-11-02T09:58:00.000Z",
+          "updatedAt": "2026-11-02T09:59:00.000Z",
           "importSessionId": null,
           "company": null,
           "contact": null,
@@ -9835,8 +9861,8 @@
             "description": null,
             "sequence": 1,
             "isActive": true,
-            "createdAt": "2026-11-02T09:55:00.000Z",
-            "updatedAt": "2026-11-02T09:55:00.000Z"
+            "createdAt": "2026-11-02T09:56:00.000Z",
+            "updatedAt": "2026-11-02T09:56:00.000Z"
           },
           "leadSource": null,
           "tagLinks": []
@@ -9883,15 +9909,15 @@
               "points": -3
             }
           ],
-          "scoredAt": "2026-11-02T09:56:00.000Z",
+          "scoredAt": "2026-11-02T09:57:00.000Z",
           "lastContactedAt": null,
-          "createdAt": "2026-11-02T09:53:00.000Z",
-          "updatedAt": "2026-11-02T09:54:00.000Z",
+          "createdAt": "2026-11-02T09:54:00.000Z",
+          "updatedAt": "2026-11-02T09:55:00.000Z",
           "importSessionId": null,
           "company": {
             "id": "00000000-0000-4000-8000-000000000014",
             "organizationId": "00000000-0000-4000-8000-000000000003",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -9968,8 +9994,8 @@
             "description": null,
             "sequence": 1,
             "isActive": true,
-            "createdAt": "2026-11-02T09:55:00.000Z",
-            "updatedAt": "2026-11-02T09:55:00.000Z"
+            "createdAt": "2026-11-02T09:56:00.000Z",
+            "updatedAt": "2026-11-02T09:56:00.000Z"
           },
           "leadSource": null,
           "tagLinks": []
@@ -10032,15 +10058,15 @@
               "points": -3
             }
           ],
-          "scoredAt": "2026-11-02T09:56:00.000Z",
+          "scoredAt": "2026-11-02T09:57:00.000Z",
           "lastContactedAt": null,
-          "createdAt": "2026-11-02T09:53:00.000Z",
-          "updatedAt": "2026-11-02T09:54:00.000Z",
+          "createdAt": "2026-11-02T09:54:00.000Z",
+          "updatedAt": "2026-11-02T09:55:00.000Z",
           "importSessionId": null,
           "company": {
             "id": "00000000-0000-4000-8000-000000000014",
             "organizationId": "00000000-0000-4000-8000-000000000003",
-            "name": "Walk Co 5b8c73",
+            "name": "Walk Co bdd05d",
             "industry": null,
             "website": null,
             "location": null,
@@ -10117,8 +10143,8 @@
             "description": null,
             "sequence": 1,
             "isActive": true,
-            "createdAt": "2026-11-02T09:55:00.000Z",
-            "updatedAt": "2026-11-02T09:55:00.000Z"
+            "createdAt": "2026-11-02T09:56:00.000Z",
+            "updatedAt": "2026-11-02T09:56:00.000Z"
           },
           "leadSource": null,
           "tagLinks": []
@@ -10159,8 +10185,8 @@
   },
   "GET /api/orgs/{orgSlug}/reports/organization": {
     "default": {
-      "dateFrom": "2026-11-02T10:30:00.000Z",
-      "dateTo": "2026-11-02T10:31:00.000Z",
+      "dateFrom": "2026-11-02T10:29:00.000Z",
+      "dateTo": "2026-11-02T10:30:00.000Z",
       "leadVolumeBySource": [
         {
           "_count": {
@@ -10228,8 +10254,8 @@
   },
   "GET /api/orgs/{orgSlug}/reports/sales-by-salesperson": {
     "default": {
-      "dateFrom": "2026-11-02T10:38:00.000Z",
-      "dateTo": "2026-11-02T10:39:00.000Z",
+      "dateFrom": "2026-11-02T10:37:00.000Z",
+      "dateTo": "2026-11-02T10:38:00.000Z",
       "period": "total",
       "rows": [],
       "valueMasked": false
@@ -10238,22 +10264,22 @@
       "MANAGEMENT"
     ],
     "SALES": {
-      "dateFrom": "2026-11-02T10:36:00.000Z",
-      "dateTo": "2026-11-02T10:37:00.000Z",
+      "dateFrom": "2026-11-02T10:35:00.000Z",
+      "dateTo": "2026-11-02T10:36:00.000Z",
       "period": "total",
       "rows": [],
       "valueMasked": false
     },
     "DELIVERY": {
-      "dateFrom": "2026-11-02T10:32:00.000Z",
-      "dateTo": "2026-11-02T10:33:00.000Z",
+      "dateFrom": "2026-11-02T10:31:00.000Z",
+      "dateTo": "2026-11-02T10:32:00.000Z",
       "period": "total",
       "rows": [],
       "valueMasked": true
     },
     "FINANCE": {
-      "dateFrom": "2026-11-02T10:34:00.000Z",
-      "dateTo": "2026-11-02T10:35:00.000Z",
+      "dateFrom": "2026-11-02T10:33:00.000Z",
+      "dateTo": "2026-11-02T10:34:00.000Z",
       "period": "total",
       "rows": [],
       "valueMasked": false
@@ -10270,8 +10296,8 @@
   "GET /api/orgs/{orgSlug}/reports/v2": {
     "default": {
       "range": {
-        "from": "2026-11-02T10:40:00.000Z",
-        "to": "2026-11-02T10:41:00.000Z"
+        "from": "2026-11-02T10:39:00.000Z",
+        "to": "2026-11-02T10:40:00.000Z"
       },
       "reports": [
         {
@@ -10280,8 +10306,8 @@
           "definition": "Leads created in the date range, counted by the source they came from. A lead with no source is counted as No source.",
           "scope": "organisation",
           "range": {
-            "from": "2026-11-02T10:42:00.000Z",
-            "to": "2026-11-02T10:43:00.000Z"
+            "from": "2026-11-02T10:41:00.000Z",
+            "to": "2026-11-02T10:42:00.000Z"
           },
           "valueMasked": false,
           "chart": {
@@ -10325,8 +10351,8 @@
           "definition": "Of the leads created in the date range, how many have become a deal as of today, by source. Conversion is converted divided by created, shown as 0% when no leads were created.",
           "scope": "organisation",
           "range": {
-            "from": "2026-11-02T10:44:00.000Z",
-            "to": "2026-11-02T10:45:00.000Z"
+            "from": "2026-11-02T10:43:00.000Z",
+            "to": "2026-11-02T10:44:00.000Z"
           },
           "valueMasked": false,
           "chart": {
@@ -10379,8 +10405,8 @@
           "definition": "Of the leads created in the date range, how many sit at each lead status now, and how many of those have become a deal. Conversion is converted divided by leads at that status.",
           "scope": "organisation",
           "range": {
-            "from": "2026-11-02T10:44:00.000Z",
-            "to": "2026-11-02T10:45:00.000Z"
+            "from": "2026-11-02T10:43:00.000Z",
+            "to": "2026-11-02T10:44:00.000Z"
           },
           "valueMasked": false,
           "chart": {
@@ -10440,8 +10466,8 @@
       "definition": "Your own figures for the date range: only records you own or work on, never anyone else's.",
       "scope": "own",
       "range": {
-        "from": "2026-11-02T10:54:00.000Z",
-        "to": "2026-11-02T10:55:00.000Z"
+        "from": "2026-11-02T10:53:00.000Z",
+        "to": "2026-11-02T10:54:00.000Z"
       },
       "valueMasked": false,
       "chart": {
@@ -10524,8 +10550,8 @@
       "definition": "Your own figures for the date range: only records you own or work on, never anyone else's.",
       "scope": "own",
       "range": {
-        "from": "2026-11-02T10:52:00.000Z",
-        "to": "2026-11-02T10:53:00.000Z"
+        "from": "2026-11-02T10:51:00.000Z",
+        "to": "2026-11-02T10:52:00.000Z"
       },
       "valueMasked": false,
       "chart": {
@@ -10605,8 +10631,8 @@
       "definition": "Your own figures for the date range: only records you own or work on, never anyone else's.",
       "scope": "own",
       "range": {
-        "from": "2026-11-02T10:48:00.000Z",
-        "to": "2026-11-02T10:49:00.000Z"
+        "from": "2026-11-02T10:47:00.000Z",
+        "to": "2026-11-02T10:48:00.000Z"
       },
       "valueMasked": false,
       "chart": {
@@ -10686,8 +10712,8 @@
       "definition": "Your own figures for the date range: only records you own or work on, never anyone else's.",
       "scope": "own",
       "range": {
-        "from": "2026-11-02T10:50:00.000Z",
-        "to": "2026-11-02T10:51:00.000Z"
+        "from": "2026-11-02T10:49:00.000Z",
+        "to": "2026-11-02T10:50:00.000Z"
       },
       "valueMasked": false,
       "chart": {
@@ -10778,8 +10804,8 @@
       "definition": "Leads created in the date range, counted by the source they came from. A lead with no source is counted as No source.",
       "scope": "organisation",
       "range": {
-        "from": "2026-11-02T10:46:00.000Z",
-        "to": "2026-11-02T10:47:00.000Z"
+        "from": "2026-11-02T10:45:00.000Z",
+        "to": "2026-11-02T10:46:00.000Z"
       },
       "valueMasked": false,
       "chart": {
@@ -11144,7 +11170,7 @@
   "GET /api/orgs/{orgSlug}/settings/overview": {
     "default": {
       "profile": {
-        "name": "Walk cef1b894",
+        "name": "Walk be09e9c7",
         "timezone": "Africa/Nairobi",
         "defaultCurrency": "KES",
         "phone": null,
@@ -11221,7 +11247,7 @@
   },
   "GET /api/orgs/{orgSlug}/signals": {
     "default": {
-      "computedAt": "2026-11-02T09:26:00.000Z",
+      "computedAt": "2026-11-02T09:30:00.000Z",
       "stalledDeals": {
         "scope": "all",
         "total": 0,
@@ -11244,13 +11270,6 @@
         "rate": 0,
         "weeks": [
           {
-            "to": "2026-11-02T09:26:00.000Z",
-            "from": "2026-11-02T09:30:00.000Z",
-            "views": 0,
-            "pagesUsed": 0,
-            "activeUsers": 0
-          },
-          {
             "to": "2026-11-02T09:30:00.000Z",
             "from": "2026-11-02T09:31:00.000Z",
             "views": 0,
@@ -11263,6 +11282,13 @@
             "views": 0,
             "pagesUsed": 0,
             "activeUsers": 0
+          },
+          {
+            "to": "2026-11-02T09:32:00.000Z",
+            "from": "2026-11-02T09:33:00.000Z",
+            "views": 0,
+            "pagesUsed": 0,
+            "activeUsers": 0
           }
         ],
         "activeMembers": 6
@@ -11272,7 +11298,7 @@
       "MANAGEMENT"
     ],
     "SALES": {
-      "computedAt": "2026-11-02T09:26:00.000Z",
+      "computedAt": "2026-11-02T09:30:00.000Z",
       "stalledDeals": {
         "scope": "own",
         "total": 0
@@ -11287,17 +11313,17 @@
       }
     },
     "DELIVERY": {
-      "computedAt": "2026-11-02T09:26:00.000Z",
+      "computedAt": "2026-11-02T09:30:00.000Z",
       "overdueTasks": {
         "scope": "own",
         "total": 0
       }
     },
     "FINANCE": {
-      "computedAt": "2026-11-02T09:26:00.000Z"
+      "computedAt": "2026-11-02T09:30:00.000Z"
     },
     "RESTRICTED_TECHNICAL": {
-      "computedAt": "2026-11-02T09:26:00.000Z",
+      "computedAt": "2026-11-02T09:30:00.000Z",
       "overdueTasks": {
         "scope": "own",
         "total": 0
@@ -11306,7 +11332,7 @@
   },
   "GET /api/orgs/{orgSlug}/sync/status": {
     "default": {
-      "serverTime": "2026-11-02T11:00:00.000Z",
+      "serverTime": "2026-11-02T10:59:00.000Z",
       "lastSyncAt": null,
       "lastSevenDays": {
         "applied": 0,
@@ -11321,30 +11347,6 @@
       "MANAGEMENT"
     ],
     "SALES": {
-      "serverTime": "2026-11-02T10:59:00.000Z",
-      "lastSyncAt": null,
-      "lastSevenDays": {
-        "applied": 0,
-        "conflict": 0,
-        "rejected": 0,
-        "pending": 0
-      },
-      "needsAttention": [],
-      "maxBatch": 100
-    },
-    "DELIVERY": {
-      "serverTime": "2026-11-02T10:57:00.000Z",
-      "lastSyncAt": null,
-      "lastSevenDays": {
-        "applied": 0,
-        "conflict": 0,
-        "rejected": 0,
-        "pending": 0
-      },
-      "needsAttention": [],
-      "maxBatch": 100
-    },
-    "FINANCE": {
       "serverTime": "2026-11-02T10:58:00.000Z",
       "lastSyncAt": null,
       "lastSevenDays": {
@@ -11356,8 +11358,32 @@
       "needsAttention": [],
       "maxBatch": 100
     },
-    "RESTRICTED_TECHNICAL": {
+    "DELIVERY": {
       "serverTime": "2026-11-02T10:56:00.000Z",
+      "lastSyncAt": null,
+      "lastSevenDays": {
+        "applied": 0,
+        "conflict": 0,
+        "rejected": 0,
+        "pending": 0
+      },
+      "needsAttention": [],
+      "maxBatch": 100
+    },
+    "FINANCE": {
+      "serverTime": "2026-11-02T10:57:00.000Z",
+      "lastSyncAt": null,
+      "lastSevenDays": {
+        "applied": 0,
+        "conflict": 0,
+        "rejected": 0,
+        "pending": 0
+      },
+      "needsAttention": [],
+      "maxBatch": 100
+    },
+    "RESTRICTED_TECHNICAL": {
+      "serverTime": "2026-11-02T10:55:00.000Z",
       "lastSyncAt": null,
       "lastSevenDays": {
         "applied": 0,
@@ -11375,12 +11401,12 @@
         {
           "id": "00000000-0000-4000-8000-000000000068",
           "organizationId": "00000000-0000-4000-8000-000000000003",
-          "name": "vip-7906",
+          "name": "vip-3038",
           "colour": "forest",
           "isActive": true,
           "createdByMembershipId": "00000000-0000-4000-8000-000000000004",
-          "createdAt": "2026-11-02T11:01:00.000Z",
-          "updatedAt": "2026-11-02T11:01:00.000Z",
+          "createdAt": "2026-11-02T11:00:00.000Z",
+          "updatedAt": "2026-11-02T11:00:00.000Z",
           "usage": 0
         }
       ]
@@ -11403,7 +11429,7 @@
           "requirements": null,
           "assigneeMembershipId": "00000000-0000-4000-8000-000000000006",
           "createdByMembershipId": "00000000-0000-4000-8000-000000000004",
-          "dueAt": "2026-11-02T11:02:00.000Z",
+          "dueAt": "2026-11-02T11:01:00.000Z",
           "priority": "MEDIUM",
           "status": "PENDING",
           "completedAt": null,
@@ -11417,8 +11443,8 @@
           "type": "TASK",
           "sourceActivityId": null,
           "isFollowUp": false,
-          "createdAt": "2026-11-02T11:03:00.000Z",
-          "updatedAt": "2026-11-02T11:03:00.000Z",
+          "createdAt": "2026-11-02T11:02:00.000Z",
+          "updatedAt": "2026-11-02T11:02:00.000Z",
           "importSessionId": null,
           "assigneeName": "Test User"
         },
@@ -11444,8 +11470,8 @@
           "type": "TASK",
           "sourceActivityId": null,
           "isFollowUp": false,
-          "createdAt": "2026-11-02T11:04:00.000Z",
-          "updatedAt": "2026-11-02T11:04:00.000Z",
+          "createdAt": "2026-11-02T11:03:00.000Z",
+          "updatedAt": "2026-11-02T11:03:00.000Z",
           "importSessionId": null,
           "assigneeName": "Test User"
         }
@@ -11469,7 +11495,7 @@
           "requirements": null,
           "assigneeMembershipId": "00000000-0000-4000-8000-000000000006",
           "createdByMembershipId": "00000000-0000-4000-8000-000000000004",
-          "dueAt": "2026-11-02T11:02:00.000Z",
+          "dueAt": "2026-11-02T11:01:00.000Z",
           "priority": "MEDIUM",
           "status": "PENDING",
           "completedAt": null,
@@ -11483,8 +11509,8 @@
           "type": "TASK",
           "sourceActivityId": null,
           "isFollowUp": false,
-          "createdAt": "2026-11-02T11:03:00.000Z",
-          "updatedAt": "2026-11-02T11:03:00.000Z",
+          "createdAt": "2026-11-02T11:02:00.000Z",
+          "updatedAt": "2026-11-02T11:02:00.000Z",
           "importSessionId": null,
           "assigneeName": "Test User"
         }
@@ -11518,8 +11544,8 @@
       "counts": {
         "OVERDUE": 0,
         "TODAY": 0,
-        "THIS_WEEK": 0,
-        "LATER": 1,
+        "THIS_WEEK": 1,
+        "LATER": 0,
         "NO_DATE": 1,
         "DONE": 0
       },
@@ -11551,12 +11577,46 @@
         {
           "key": "THIS_WEEK",
           "label": "This week",
-          "count": 0,
+          "count": 1,
           "collapsed": false,
-          "items": [],
+          "items": [
+            {
+              "id": "00000000-0000-4000-8000-000000000069",
+              "organizationId": "00000000-0000-4000-8000-000000000003",
+              "title": "Call back",
+              "description": null,
+              "requirements": null,
+              "assigneeMembershipId": "00000000-0000-4000-8000-000000000006",
+              "createdByMembershipId": "00000000-0000-4000-8000-000000000004",
+              "dueAt": "2026-11-02T11:01:00.000Z",
+              "priority": "MEDIUM",
+              "status": "PENDING",
+              "completedAt": null,
+              "archivedAt": null,
+              "archivedByMembershipId": null,
+              "archiveReason": null,
+              "companyId": null,
+              "contactId": null,
+              "leadId": "00000000-0000-4000-8000-000000000005",
+              "dealId": null,
+              "type": "TASK",
+              "sourceActivityId": null,
+              "isFollowUp": false,
+              "createdAt": "2026-11-02T11:02:00.000Z",
+              "updatedAt": "2026-11-02T11:02:00.000Z",
+              "importSessionId": null,
+              "assigneeName": "Test User",
+              "link": {
+                "type": "Lead",
+                "id": "00000000-0000-4000-8000-000000000005",
+                "label": "Walk Co bdd05d"
+              },
+              "readOnly": false
+            }
+          ],
           "page": 1,
           "pageSize": 10,
-          "total": 0,
+          "total": 1,
           "pageCount": 1,
           "nextCursor": null
         }
@@ -11570,8 +11630,8 @@
       "counts": {
         "OVERDUE": 0,
         "TODAY": 0,
-        "THIS_WEEK": 0,
-        "LATER": 1,
+        "THIS_WEEK": 1,
+        "LATER": 0,
         "NO_DATE": 0,
         "DONE": 0
       },
@@ -11603,12 +11663,46 @@
         {
           "key": "THIS_WEEK",
           "label": "This week",
-          "count": 0,
+          "count": 1,
           "collapsed": false,
-          "items": [],
+          "items": [
+            {
+              "id": "00000000-0000-4000-8000-000000000069",
+              "organizationId": "00000000-0000-4000-8000-000000000003",
+              "title": "Call back",
+              "description": null,
+              "requirements": null,
+              "assigneeMembershipId": "00000000-0000-4000-8000-000000000006",
+              "createdByMembershipId": "00000000-0000-4000-8000-000000000004",
+              "dueAt": "2026-11-02T11:01:00.000Z",
+              "priority": "MEDIUM",
+              "status": "PENDING",
+              "completedAt": null,
+              "archivedAt": null,
+              "archivedByMembershipId": null,
+              "archiveReason": null,
+              "companyId": null,
+              "contactId": null,
+              "leadId": "00000000-0000-4000-8000-000000000005",
+              "dealId": null,
+              "type": "TASK",
+              "sourceActivityId": null,
+              "isFollowUp": false,
+              "createdAt": "2026-11-02T11:02:00.000Z",
+              "updatedAt": "2026-11-02T11:02:00.000Z",
+              "importSessionId": null,
+              "assigneeName": "Test User",
+              "link": {
+                "type": "Lead",
+                "id": "00000000-0000-4000-8000-000000000005",
+                "label": "Walk Co bdd05d"
+              },
+              "readOnly": false
+            }
+          ],
           "page": 1,
           "pageSize": 10,
-          "total": 0,
+          "total": 1,
           "pageCount": 1,
           "nextCursor": null
         }
@@ -11741,7 +11835,7 @@
       "requirements": null,
       "assigneeMembershipId": "00000000-0000-4000-8000-000000000006",
       "createdByMembershipId": "00000000-0000-4000-8000-000000000004",
-      "dueAt": "2026-11-02T11:02:00.000Z",
+      "dueAt": "2026-11-02T11:01:00.000Z",
       "priority": "MEDIUM",
       "status": "PENDING",
       "completedAt": null,
@@ -11755,8 +11849,8 @@
       "type": "TASK",
       "sourceActivityId": null,
       "isFollowUp": false,
-      "createdAt": "2026-11-02T11:03:00.000Z",
-      "updatedAt": "2026-11-02T11:03:00.000Z",
+      "createdAt": "2026-11-02T11:02:00.000Z",
+      "updatedAt": "2026-11-02T11:02:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -11843,32 +11937,9 @@
       },
       "items": [
         {
-          "membershipId": "00000000-0000-4000-8000-000000000004",
+          "membershipId": "00000000-0000-4000-8000-000000000048",
           "name": "Test User",
-          "email": "person1@example.test",
-          "initials": "TU",
-          "avatarUrl": null,
-          "role": {
-            "key": "MANAGEMENT",
-            "name": "Management"
-          },
-          "status": "ACTIVE",
-          "lastActiveAt": "2026-11-02T11:05:00.000Z",
-          "openLeads": 1,
-          "openDeals": 1,
-          "openDealsValue": {
-            "amount": "1111",
-            "masked": false
-          },
-          "tasksDueToday": 0,
-          "overdueTasks": 0,
-          "newLeads": 1,
-          "stuckDeals": 0
-        },
-        {
-          "membershipId": "00000000-0000-4000-8000-000000000017",
-          "name": "Test User",
-          "email": "person7@example.test",
+          "email": "person9@example.test",
           "initials": "TU",
           "avatarUrl": null,
           "role": {
@@ -11876,7 +11947,7 @@
             "name": "Delivery"
           },
           "status": "ACTIVE",
-          "lastActiveAt": "2026-11-02T11:06:00.000Z",
+          "lastActiveAt": null,
           "openLeads": 0,
           "openDeals": 0,
           "openDealsValue": {
@@ -11900,6 +11971,29 @@
           },
           "status": "ACTIVE",
           "lastActiveAt": null,
+          "openLeads": 0,
+          "openDeals": 0,
+          "openDealsValue": {
+            "amount": "0",
+            "masked": false
+          },
+          "tasksDueToday": 0,
+          "overdueTasks": 0,
+          "newLeads": 0,
+          "stuckDeals": 0
+        },
+        {
+          "membershipId": "00000000-0000-4000-8000-000000000017",
+          "name": "Test User",
+          "email": "person7@example.test",
+          "initials": "TU",
+          "avatarUrl": null,
+          "role": {
+            "key": "DELIVERY",
+            "name": "Delivery"
+          },
+          "status": "ACTIVE",
+          "lastActiveAt": "2026-11-02T11:04:00.000Z",
           "openLeads": 0,
           "openDeals": 0,
           "openDealsValue": {
@@ -11974,15 +12068,15 @@
       "tasks": [],
       "trend": [
         {
+          "start": "2026-11-02T11:05:00.000Z",
+          "count": 0
+        },
+        {
+          "start": "2026-11-02T11:06:00.000Z",
+          "count": 0
+        },
+        {
           "start": "2026-11-02T11:07:00.000Z",
-          "count": 0
-        },
-        {
-          "start": "2026-11-02T11:08:00.000Z",
-          "count": 0
-        },
-        {
-          "start": "2026-11-02T11:09:00.000Z",
           "count": 0
         }
       ]
@@ -11994,8 +12088,8 @@
   "GET /api/orgs/{orgSlug}/team/summary": {
     "default": {
       "range": "7d",
-      "rangeStart": "2026-11-02T11:10:00.000Z",
-      "generatedAt": "2026-11-02T11:11:00.000Z",
+      "rangeStart": "2026-11-02T11:08:00.000Z",
+      "generatedAt": "2026-11-02T11:09:00.000Z",
       "staleDays": 10,
       "access": {
         "leads": true,
@@ -12025,17 +12119,17 @@
       },
       "workload": [
         {
-          "membershipId": "00000000-0000-4000-8000-000000000004",
-          "name": "Test User",
-          "openLeads": 1
-        },
-        {
           "membershipId": "00000000-0000-4000-8000-000000000006",
           "name": "Test User",
           "openLeads": 1
         },
         {
-          "membershipId": "00000000-0000-4000-8000-000000000017",
+          "membershipId": "00000000-0000-4000-8000-000000000004",
+          "name": "Test User",
+          "openLeads": 1
+        },
+        {
+          "membershipId": "00000000-0000-4000-8000-000000000048",
           "name": "Test User",
           "openLeads": 0
         }
@@ -12058,8 +12152,8 @@
         "lastAssignedMembershipId": null,
         "sequence": 1,
         "isActive": true,
-        "createdAt": "2026-11-02T11:12:00.000Z",
-        "updatedAt": "2026-11-02T11:12:00.000Z"
+        "createdAt": "2026-11-02T11:10:00.000Z",
+        "updatedAt": "2026-11-02T11:10:00.000Z"
       }
     ],
     "same": [
@@ -12110,8 +12204,8 @@
       "body": "Sample",
       "deleted": false,
       "edited": true,
-      "editedAt": "2026-11-02T11:17:00.000Z",
-      "createdAt": "2026-11-02T11:18:00.000Z",
+      "editedAt": "2026-11-02T11:15:00.000Z",
+      "createdAt": "2026-11-02T11:16:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -12124,7 +12218,7 @@
     "default": {
       "id": "00000000-0000-4000-8000-000000000102",
       "organizationId": "00000000-0000-4000-8000-000000000103",
-      "name": "Walk Co 94b64e",
+      "name": "Walk Co 6330e5",
       "industry": null,
       "website": null,
       "location": null,
@@ -12145,8 +12239,8 @@
       "lifecycleChangedAt": null,
       "lifecycleManual": false,
       "mergedIntoId": null,
-      "createdAt": "2026-11-02T11:23:00.000Z",
-      "updatedAt": "2026-11-02T11:23:00.000Z",
+      "createdAt": "2026-11-02T11:21:00.000Z",
+      "updatedAt": "2026-11-02T11:21:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -12185,8 +12279,8 @@
       "mergedIntoId": null,
       "lastContactedAt": null,
       "doNotContact": false,
-      "createdAt": "2026-11-02T11:36:00.000Z",
-      "updatedAt": "2026-11-02T11:36:00.000Z",
+      "createdAt": "2026-11-02T11:34:00.000Z",
+      "updatedAt": "2026-11-02T11:34:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -12209,7 +12303,7 @@
       "organizationId": "00000000-0000-4000-8000-000000000154",
       "entityType": "LEAD",
       "section": "GENERAL",
-      "key": "source_note_c6f4",
+      "key": "source_note_9ffb",
       "label": "Source note",
       "fieldType": "TEXT",
       "options": null,
@@ -12219,8 +12313,8 @@
       "serviceId": null,
       "sortOrder": 330,
       "isActive": true,
-      "createdAt": "2026-11-02T11:44:00.000Z",
-      "updatedAt": "2026-11-02T11:44:00.000Z"
+      "createdAt": "2026-11-02T11:42:00.000Z",
+      "updatedAt": "2026-11-02T11:42:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -12288,14 +12382,14 @@
       "archivedByMembershipId": null,
       "archiveReason": null,
       "customFields": {},
-      "lastActivityAt": "2026-11-02T11:54:00.000Z",
-      "createdAt": "2026-11-02T11:54:00.000Z",
-      "updatedAt": "2026-11-02T11:54:00.000Z",
+      "lastActivityAt": "2026-11-02T11:52:00.000Z",
+      "createdAt": "2026-11-02T11:52:00.000Z",
+      "updatedAt": "2026-11-02T11:52:00.000Z",
       "importSessionId": null,
       "company": {
         "id": "00000000-0000-4000-8000-000000000175",
         "organizationId": "00000000-0000-4000-8000-000000000174",
-        "name": "Walk Co 62fdf1",
+        "name": "Walk Co d8fc1b",
         "industry": null,
         "website": null,
         "location": null,
@@ -12316,8 +12410,8 @@
         "lifecycleChangedAt": null,
         "lifecycleManual": false,
         "mergedIntoId": null,
-        "createdAt": "2026-11-02T11:55:00.000Z",
-        "updatedAt": "2026-11-02T11:55:00.000Z",
+        "createdAt": "2026-11-02T11:53:00.000Z",
+        "updatedAt": "2026-11-02T11:53:00.000Z",
         "importSessionId": null
       },
       "primaryContact": {
@@ -12341,8 +12435,8 @@
         "mergedIntoId": null,
         "lastContactedAt": null,
         "doNotContact": false,
-        "createdAt": "2026-11-02T11:56:00.000Z",
-        "updatedAt": "2026-11-02T11:56:00.000Z",
+        "createdAt": "2026-11-02T11:54:00.000Z",
+        "updatedAt": "2026-11-02T11:54:00.000Z",
         "importSessionId": null
       },
       "lead": null,
@@ -12360,8 +12454,8 @@
         "isWon": false,
         "isLost": false,
         "isActive": true,
-        "createdAt": "2026-11-02T11:57:00.000Z",
-        "updatedAt": "2026-11-02T11:57:00.000Z"
+        "createdAt": "2026-11-02T11:55:00.000Z",
+        "updatedAt": "2026-11-02T11:55:00.000Z"
       },
       "lostReason": null,
       "tagLinks": [],
@@ -12377,7 +12471,7 @@
       "id": "00000000-0000-4000-8000-000000000205",
       "organizationId": "00000000-0000-4000-8000-000000000206",
       "dealId": "00000000-0000-4000-8000-000000000207",
-      "proposalNumber": "P-a0df",
+      "proposalNumber": "P-975a",
       "status": "DRAFT",
       "amount": "1000",
       "currency": "KES",
@@ -12386,8 +12480,8 @@
       "respondedAt": null,
       "documentReference": null,
       "notes": null,
-      "createdAt": "2026-11-02T12:11:00.000Z",
-      "updatedAt": "2026-11-02T12:13:00.000Z",
+      "createdAt": "2026-11-02T12:09:00.000Z",
+      "updatedAt": "2026-11-02T12:11:00.000Z",
       "amountMasked": false
     },
     "same": [
@@ -12397,7 +12491,7 @@
       "id": "00000000-0000-4000-8000-000000000205",
       "organizationId": "00000000-0000-4000-8000-000000000206",
       "dealId": "00000000-0000-4000-8000-000000000207",
-      "proposalNumber": "P-a0df",
+      "proposalNumber": "P-975a",
       "status": "DRAFT",
       "amount": "1000",
       "currency": "KES",
@@ -12406,8 +12500,8 @@
       "respondedAt": null,
       "documentReference": null,
       "notes": null,
-      "createdAt": "2026-11-02T12:11:00.000Z",
-      "updatedAt": "2026-11-02T12:12:00.000Z",
+      "createdAt": "2026-11-02T12:09:00.000Z",
+      "updatedAt": "2026-11-02T12:10:00.000Z",
       "amountMasked": false
     }
   },
@@ -12429,8 +12523,8 @@
       "body": "Sample",
       "isActive": false,
       "createdByMembershipId": "00000000-0000-4000-8000-000000000214",
-      "createdAt": "2026-11-02T12:15:00.000Z",
-      "updatedAt": "2026-11-02T12:16:00.000Z"
+      "createdAt": "2026-11-02T12:13:00.000Z",
+      "updatedAt": "2026-11-02T12:14:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -12439,12 +12533,12 @@
   "PATCH /api/orgs/{orgSlug}/invoices/{invoiceId}": {
     "default": {
       "id": "00000000-0000-4000-8000-000000000235",
-      "number": "INV-SENTINEL-1864c8",
+      "number": "INV-SENTINEL-7219bc",
       "status": "OVERDUE",
       "storedStatus": "PART_PAID",
       "dealId": null,
       "companyId": "00000000-0000-4000-8000-000000000236",
-      "companyName": "Walk Co 402524",
+      "companyName": "Walk Co 92068b",
       "recurringServiceId": null,
       "amount": "8123456.50",
       "currency": "KES",
@@ -12452,28 +12546,30 @@
       "balance": "8122456.50",
       "overpaid": "0.00",
       "overdue": true,
-      "daysOverdue": 15,
+      "daysOverdue": 24,
       "issuedOn": "2026-11-02T09:29:00.000Z",
       "dueOn": "2026-11-02T09:17:00.000Z",
       "allowOverpayment": false,
       "notes": null,
+      "paymentTermsDays": null,
+      "terms": null,
       "voidedAt": null,
       "voidReason": null,
-      "createdAt": "2026-11-02T12:30:00.000Z",
-      "updatedAt": "2026-11-02T12:31:00.000Z",
+      "createdAt": "2026-11-02T12:28:00.000Z",
+      "updatedAt": "2026-11-02T12:29:00.000Z",
       "payments": [
         {
           "id": "00000000-0000-4000-8000-000000000237",
           "invoiceId": "00000000-0000-4000-8000-000000000235",
           "amount": "1000.00",
-          "paidOn": "2026-11-02T09:46:00.000Z",
+          "paidOn": "2026-11-02T09:47:00.000Z",
           "methodLabel": null,
           "reference": null,
           "recordedByMembershipId": "00000000-0000-4000-8000-000000000238",
           "reversed": false,
           "reversedAt": null,
           "reversalReason": null,
-          "createdAt": "2026-11-02T12:32:00.000Z"
+          "createdAt": "2026-11-02T12:30:00.000Z"
         }
       ]
     },
@@ -12533,10 +12629,10 @@
           "points": -3
         }
       ],
-      "scoredAt": "2026-11-02T12:51:00.000Z",
+      "scoredAt": "2026-11-02T12:49:00.000Z",
       "lastContactedAt": null,
-      "createdAt": "2026-11-02T12:49:00.000Z",
-      "updatedAt": "2026-11-02T12:52:00.000Z",
+      "createdAt": "2026-11-02T12:47:00.000Z",
+      "updatedAt": "2026-11-02T12:50:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -12584,10 +12680,10 @@
           "points": -3
         }
       ],
-      "scoredAt": "2026-11-02T12:48:00.000Z",
+      "scoredAt": "2026-11-02T12:46:00.000Z",
       "lastContactedAt": null,
-      "createdAt": "2026-11-02T12:49:00.000Z",
-      "updatedAt": "2026-11-02T12:50:00.000Z",
+      "createdAt": "2026-11-02T12:47:00.000Z",
+      "updatedAt": "2026-11-02T12:48:00.000Z",
       "importSessionId": null
     }
   },
@@ -13775,7 +13871,7 @@
   },
   "PATCH /api/orgs/{orgSlug}/profile": {
     "default": {
-      "name": "Walk edf80ec7",
+      "name": "Walk 1300f888",
       "timezone": "Africa/Nairobi",
       "defaultCurrency": "KES",
       "phone": null,
@@ -13797,7 +13893,7 @@
     "default": {
       "id": "00000000-0000-4000-8000-000000000367",
       "companyId": "00000000-0000-4000-8000-000000000368",
-      "companyName": "Walk Co d4c315",
+      "companyName": "Walk Co 124904",
       "serviceId": "00000000-0000-4000-8000-000000000369",
       "serviceName": "CRM",
       "billingCycle": "YEARLY",
@@ -13806,7 +13902,7 @@
       "currency": "KES",
       "startsOn": "2026-11-02T09:13:00.000Z",
       "renewsOn": "2026-11-02T09:07:00.000Z",
-      "daysToRenewal": 47,
+      "daysToRenewal": 38,
       "state": "ACTIVE",
       "stateSource": "rule",
       "overrideReason": null,
@@ -13816,8 +13912,8 @@
       "cancelReason": null,
       "lastRenewedAt": null,
       "notes": null,
-      "createdAt": "2026-11-02T13:46:00.000Z",
-      "updatedAt": "2026-11-02T13:46:00.000Z"
+      "createdAt": "2026-11-02T13:44:00.000Z",
+      "updatedAt": "2026-11-02T13:44:00.000Z"
     },
     "same": [
       "MANAGEMENT",
@@ -13853,12 +13949,12 @@
     "default": {
       "id": "00000000-0000-4000-8000-000000000391",
       "organizationId": "00000000-0000-4000-8000-000000000392",
-      "name": "vip-c723",
+      "name": "vip-8083",
       "colour": "forest",
       "isActive": true,
       "createdByMembershipId": "00000000-0000-4000-8000-000000000393",
-      "createdAt": "2026-11-02T14:14:00.000Z",
-      "updatedAt": "2026-11-02T14:14:00.000Z"
+      "createdAt": "2026-11-02T14:12:00.000Z",
+      "updatedAt": "2026-11-02T14:12:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -13873,7 +13969,7 @@
       "requirements": null,
       "assigneeMembershipId": "00000000-0000-4000-8000-000000000406",
       "createdByMembershipId": "00000000-0000-4000-8000-000000000407",
-      "dueAt": "2026-11-02T14:19:00.000Z",
+      "dueAt": "2026-11-02T14:17:00.000Z",
       "priority": "MEDIUM",
       "status": "PENDING",
       "completedAt": null,
@@ -13887,8 +13983,8 @@
       "type": "TASK",
       "sourceActivityId": null,
       "isFollowUp": false,
-      "createdAt": "2026-11-02T14:20:00.000Z",
-      "updatedAt": "2026-11-02T14:20:00.000Z",
+      "createdAt": "2026-11-02T14:18:00.000Z",
+      "updatedAt": "2026-11-02T14:18:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -13903,14 +13999,14 @@
       "type": "CALL",
       "subject": "Sample",
       "description": "Sample",
-      "occurredAt": "2026-11-02T11:14:00.000Z",
+      "occurredAt": "2026-11-02T11:12:00.000Z",
       "outcome": "Sample",
       "authorMembershipId": "00000000-0000-4000-8000-000000000004",
       "companyId": "00000000-0000-4000-8000-000000000014",
       "contactId": "00000000-0000-4000-8000-000000000019",
       "leadId": "00000000-0000-4000-8000-000000000005",
       "dealId": "00000000-0000-4000-8000-000000000022",
-      "createdAt": "2026-11-02T11:14:00.000Z",
+      "createdAt": "2026-11-02T11:12:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -13922,14 +14018,14 @@
       "type": "CALL",
       "subject": "Sample",
       "description": "Sample",
-      "occurredAt": "2026-11-02T11:13:00.000Z",
+      "occurredAt": "2026-11-02T11:11:00.000Z",
       "outcome": "Sample",
       "authorMembershipId": "00000000-0000-4000-8000-000000000006",
       "companyId": "00000000-0000-4000-8000-000000000014",
       "contactId": "00000000-0000-4000-8000-000000000019",
       "leadId": "00000000-0000-4000-8000-000000000005",
       "dealId": "00000000-0000-4000-8000-000000000022",
-      "createdAt": "2026-11-02T11:13:00.000Z",
+      "createdAt": "2026-11-02T11:11:00.000Z",
       "importSessionId": null
     }
   },
@@ -13947,7 +14043,7 @@
       "title": null,
       "shared": false,
       "uploadedByMembershipId": "00000000-0000-4000-8000-000000000079",
-      "createdAt": "2026-11-02T11:15:00.000Z",
+      "createdAt": "2026-11-02T11:13:00.000Z",
       "deletedAt": null,
       "file": {
         "id": "00000000-0000-4000-8000-000000000077",
@@ -13966,7 +14062,7 @@
       "kind": "task",
       "id": "00000000-0000-4000-8000-000000000083",
       "type": "TASK",
-      "start": "2026-11-02T11:16:00.000Z"
+      "start": "2026-11-02T11:14:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -13975,19 +14071,19 @@
       "kind": "task",
       "id": "00000000-0000-4000-8000-000000000082",
       "type": "TASK",
-      "start": "2026-11-02T11:16:00.000Z"
+      "start": "2026-11-02T11:14:00.000Z"
     },
     "DELIVERY": {
       "kind": "task",
       "id": "00000000-0000-4000-8000-000000000081",
       "type": "TASK",
-      "start": "2026-11-02T11:16:00.000Z"
+      "start": "2026-11-02T11:14:00.000Z"
     },
     "RESTRICTED_TECHNICAL": {
       "kind": "task",
       "id": "00000000-0000-4000-8000-000000000080",
       "type": "TASK",
-      "start": "2026-11-02T11:16:00.000Z"
+      "start": "2026-11-02T11:14:00.000Z"
     }
   },
   "POST /api/orgs/{orgSlug}/communications/send-email": {
@@ -13996,7 +14092,7 @@
       "organizationId": "00000000-0000-4000-8000-000000000088",
       "channel": "EMAIL",
       "direction": "OUTBOUND",
-      "occurredAt": "2026-11-02T11:20:00.000Z",
+      "occurredAt": "2026-11-02T11:18:00.000Z",
       "subject": "Sample",
       "summary": "Sample",
       "externalReference": null,
@@ -14017,7 +14113,7 @@
       "dismissedAt": null,
       "dismissedByMembershipId": null,
       "dismissReason": null,
-      "createdAt": "2026-11-02T11:20:00.000Z"
+      "createdAt": "2026-11-02T11:18:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -14027,7 +14123,7 @@
       "organizationId": "00000000-0000-4000-8000-000000000088",
       "channel": "EMAIL",
       "direction": "OUTBOUND",
-      "occurredAt": "2026-11-02T11:19:00.000Z",
+      "occurredAt": "2026-11-02T11:17:00.000Z",
       "subject": "Sample",
       "summary": "Sample",
       "externalReference": null,
@@ -14048,7 +14144,7 @@
       "dismissedAt": null,
       "dismissedByMembershipId": null,
       "dismissReason": null,
-      "createdAt": "2026-11-02T11:19:00.000Z"
+      "createdAt": "2026-11-02T11:17:00.000Z"
     }
   },
   "POST /api/orgs/{orgSlug}/companies": {
@@ -14077,8 +14173,8 @@
         "lifecycleChangedAt": null,
         "lifecycleManual": false,
         "mergedIntoId": null,
-        "createdAt": "2026-11-02T11:22:00.000Z",
-        "updatedAt": "2026-11-02T11:22:00.000Z",
+        "createdAt": "2026-11-02T11:20:00.000Z",
+        "updatedAt": "2026-11-02T11:20:00.000Z",
         "importSessionId": null
       },
       "possibleDuplicates": [
@@ -14106,8 +14202,8 @@
           "lifecycleChangedAt": null,
           "lifecycleManual": false,
           "mergedIntoId": null,
-          "createdAt": "2026-11-02T11:21:00.000Z",
-          "updatedAt": "2026-11-02T11:21:00.000Z",
+          "createdAt": "2026-11-02T11:19:00.000Z",
+          "updatedAt": "2026-11-02T11:19:00.000Z",
           "importSessionId": null
         }
       ],
@@ -14156,8 +14252,8 @@
         "lifecycleChangedAt": null,
         "lifecycleManual": false,
         "mergedIntoId": null,
-        "createdAt": "2026-11-02T11:21:00.000Z",
-        "updatedAt": "2026-11-02T11:21:00.000Z",
+        "createdAt": "2026-11-02T11:19:00.000Z",
+        "updatedAt": "2026-11-02T11:19:00.000Z",
         "importSessionId": null
       },
       "possibleDuplicates": [],
@@ -14202,7 +14298,7 @@
     "default": {
       "id": "00000000-0000-4000-8000-000000000106",
       "organizationId": "00000000-0000-4000-8000-000000000107",
-      "name": "Walk Co da6332",
+      "name": "Walk Co 016e45",
       "industry": null,
       "website": null,
       "location": null,
@@ -14212,7 +14308,7 @@
       "lifecycleStateId": null,
       "ownerMembershipId": "00000000-0000-4000-8000-000000000108",
       "createdByMembershipId": "00000000-0000-4000-8000-000000000109",
-      "archivedAt": "2026-11-02T11:24:00.000Z",
+      "archivedAt": "2026-11-02T11:22:00.000Z",
       "archivedByMembershipId": "00000000-0000-4000-8000-000000000108",
       "archiveReason": null,
       "customFields": {},
@@ -14223,8 +14319,8 @@
       "lifecycleChangedAt": null,
       "lifecycleManual": false,
       "mergedIntoId": null,
-      "createdAt": "2026-11-02T11:25:00.000Z",
-      "updatedAt": "2026-11-02T11:26:00.000Z",
+      "createdAt": "2026-11-02T11:23:00.000Z",
+      "updatedAt": "2026-11-02T11:24:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -14240,7 +14336,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T11:30:00.000Z",
+      "createdAt": "2026-11-02T11:28:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -14256,7 +14352,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T11:29:00.000Z",
+      "createdAt": "2026-11-02T11:27:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -14269,7 +14365,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T11:27:00.000Z",
+      "createdAt": "2026-11-02T11:25:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -14282,7 +14378,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T11:28:00.000Z",
+      "createdAt": "2026-11-02T11:26:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -14309,19 +14405,19 @@
       "startDate": null,
       "endDate": null,
       "notes": null,
-      "createdAt": "2026-11-02T11:33:00.000Z",
-      "updatedAt": "2026-11-02T11:33:00.000Z",
+      "createdAt": "2026-11-02T11:31:00.000Z",
+      "updatedAt": "2026-11-02T11:31:00.000Z",
       "service": {
         "id": "00000000-0000-4000-8000-000000000122",
         "organizationId": "00000000-0000-4000-8000-000000000120",
-        "key": "SOCIAL_MEDIA_MANAGEMENT",
-        "name": "Social Media Management",
-        "category": "Digital",
+        "key": "STARLINK_INTERNET",
+        "name": "Starlink / Internet",
+        "category": "Connectivity",
         "description": null,
-        "sequence": 12,
+        "sequence": 8,
         "isActive": true,
-        "createdAt": "2026-11-02T11:32:00.000Z",
-        "updatedAt": "2026-11-02T11:32:00.000Z"
+        "createdAt": "2026-11-02T11:30:00.000Z",
+        "updatedAt": "2026-11-02T11:30:00.000Z"
       }
     },
     "same": [
@@ -14336,19 +14432,19 @@
       "startDate": null,
       "endDate": null,
       "notes": null,
-      "createdAt": "2026-11-02T11:31:00.000Z",
-      "updatedAt": "2026-11-02T11:31:00.000Z",
+      "createdAt": "2026-11-02T11:29:00.000Z",
+      "updatedAt": "2026-11-02T11:29:00.000Z",
       "service": {
         "id": "00000000-0000-4000-8000-000000000122",
         "organizationId": "00000000-0000-4000-8000-000000000120",
-        "key": "SOCIAL_MEDIA_MANAGEMENT",
-        "name": "Social Media Management",
-        "category": "Digital",
+        "key": "STARLINK_INTERNET",
+        "name": "Starlink / Internet",
+        "category": "Connectivity",
         "description": null,
-        "sequence": 12,
+        "sequence": 8,
         "isActive": true,
-        "createdAt": "2026-11-02T11:32:00.000Z",
-        "updatedAt": "2026-11-02T11:32:00.000Z"
+        "createdAt": "2026-11-02T11:30:00.000Z",
+        "updatedAt": "2026-11-02T11:30:00.000Z"
       }
     }
   },
@@ -14375,8 +14471,8 @@
         "mergedIntoId": null,
         "lastContactedAt": null,
         "doNotContact": false,
-        "createdAt": "2026-11-02T11:35:00.000Z",
-        "updatedAt": "2026-11-02T11:35:00.000Z",
+        "createdAt": "2026-11-02T11:33:00.000Z",
+        "updatedAt": "2026-11-02T11:33:00.000Z",
         "importSessionId": null
       },
       "possibleDuplicates": [],
@@ -14408,8 +14504,8 @@
         "mergedIntoId": null,
         "lastContactedAt": null,
         "doNotContact": false,
-        "createdAt": "2026-11-02T11:34:00.000Z",
-        "updatedAt": "2026-11-02T11:34:00.000Z",
+        "createdAt": "2026-11-02T11:32:00.000Z",
+        "updatedAt": "2026-11-02T11:32:00.000Z",
         "importSessionId": null
       },
       "possibleDuplicates": [],
@@ -14454,15 +14550,15 @@
       "notes": null,
       "ownerMembershipId": "00000000-0000-4000-8000-000000000137",
       "createdByMembershipId": "00000000-0000-4000-8000-000000000138",
-      "archivedAt": "2026-11-02T11:37:00.000Z",
+      "archivedAt": "2026-11-02T11:35:00.000Z",
       "archivedByMembershipId": "00000000-0000-4000-8000-000000000137",
       "archiveReason": null,
       "customFields": {},
       "mergedIntoId": null,
       "lastContactedAt": null,
       "doNotContact": false,
-      "createdAt": "2026-11-02T11:38:00.000Z",
-      "updatedAt": "2026-11-02T11:39:00.000Z",
+      "createdAt": "2026-11-02T11:36:00.000Z",
+      "updatedAt": "2026-11-02T11:37:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -14478,7 +14574,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T11:43:00.000Z",
+      "createdAt": "2026-11-02T11:41:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -14494,7 +14590,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T11:42:00.000Z",
+      "createdAt": "2026-11-02T11:40:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -14507,7 +14603,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T11:40:00.000Z",
+      "createdAt": "2026-11-02T11:38:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -14520,7 +14616,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T11:41:00.000Z",
+      "createdAt": "2026-11-02T11:39:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -14543,7 +14639,7 @@
       "kind": "COMMUNICATION",
       "channel": "EMAIL",
       "direction": "INBOUND",
-      "occurredAt": "2026-11-02T11:16:00.000Z",
+      "occurredAt": "2026-11-02T11:14:00.000Z",
       "subject": "Sample",
       "summary": "Sample",
       "durationSeconds": null,
@@ -14574,7 +14670,7 @@
       "kind": "COMMUNICATION",
       "channel": "EMAIL",
       "direction": "INBOUND",
-      "occurredAt": "2026-11-02T11:16:00.000Z",
+      "occurredAt": "2026-11-02T11:14:00.000Z",
       "subject": "Sample",
       "summary": "Sample",
       "durationSeconds": null,
@@ -14602,7 +14698,7 @@
       "kind": "COMMUNICATION",
       "channel": "EMAIL",
       "direction": "INBOUND",
-      "occurredAt": "2026-11-02T11:16:00.000Z",
+      "occurredAt": "2026-11-02T11:14:00.000Z",
       "subject": "Sample",
       "summary": "Sample",
       "durationSeconds": null,
@@ -14687,8 +14783,8 @@
       },
       "startedAt": null,
       "finishedAt": null,
-      "createdAt": "2026-11-02T11:45:00.000Z",
-      "updatedAt": "2026-11-02T11:45:00.000Z"
+      "createdAt": "2026-11-02T11:43:00.000Z",
+      "updatedAt": "2026-11-02T11:43:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -14766,8 +14862,8 @@
         },
         "startedAt": null,
         "finishedAt": null,
-        "createdAt": "2026-11-02T11:46:00.000Z",
-        "updatedAt": "2026-11-02T11:47:00.000Z"
+        "createdAt": "2026-11-02T11:44:00.000Z",
+        "updatedAt": "2026-11-02T11:45:00.000Z"
       },
       "suggestedMapping": {
         "name": "name",
@@ -14799,8 +14895,8 @@
       "hasErrorReport": false,
       "createdByMembershipId": "00000000-0000-4000-8000-000000000161",
       "startedAt": null,
-      "finishedAt": "2026-11-02T11:48:00.000Z",
-      "createdAt": "2026-11-02T11:49:00.000Z"
+      "finishedAt": "2026-11-02T11:46:00.000Z",
+      "createdAt": "2026-11-02T11:47:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -14829,14 +14925,14 @@
       "archivedByMembershipId": null,
       "archiveReason": null,
       "customFields": {},
-      "lastActivityAt": "2026-11-02T11:53:00.000Z",
-      "createdAt": "2026-11-02T11:53:00.000Z",
-      "updatedAt": "2026-11-02T11:53:00.000Z",
+      "lastActivityAt": "2026-11-02T11:51:00.000Z",
+      "createdAt": "2026-11-02T11:51:00.000Z",
+      "updatedAt": "2026-11-02T11:51:00.000Z",
       "importSessionId": null,
       "company": {
         "id": "00000000-0000-4000-8000-000000000167",
         "organizationId": "00000000-0000-4000-8000-000000000166",
-        "name": "Walk Co 189cd4",
+        "name": "Walk Co 3c0dad",
         "industry": null,
         "website": null,
         "location": null,
@@ -14857,8 +14953,8 @@
         "lifecycleChangedAt": null,
         "lifecycleManual": false,
         "mergedIntoId": null,
-        "createdAt": "2026-11-02T11:51:00.000Z",
-        "updatedAt": "2026-11-02T11:51:00.000Z",
+        "createdAt": "2026-11-02T11:49:00.000Z",
+        "updatedAt": "2026-11-02T11:49:00.000Z",
         "importSessionId": null
       },
       "primaryContact": null,
@@ -14877,8 +14973,8 @@
         "isWon": false,
         "isLost": false,
         "isActive": true,
-        "createdAt": "2026-11-02T11:52:00.000Z",
-        "updatedAt": "2026-11-02T11:52:00.000Z"
+        "createdAt": "2026-11-02T11:50:00.000Z",
+        "updatedAt": "2026-11-02T11:50:00.000Z"
       },
       "lostReason": null,
       "tagLinks": [],
@@ -14909,14 +15005,14 @@
       "archivedByMembershipId": null,
       "archiveReason": null,
       "customFields": {},
-      "lastActivityAt": "2026-11-02T11:50:00.000Z",
-      "createdAt": "2026-11-02T11:50:00.000Z",
-      "updatedAt": "2026-11-02T11:50:00.000Z",
+      "lastActivityAt": "2026-11-02T11:48:00.000Z",
+      "createdAt": "2026-11-02T11:48:00.000Z",
+      "updatedAt": "2026-11-02T11:48:00.000Z",
       "importSessionId": null,
       "company": {
         "id": "00000000-0000-4000-8000-000000000167",
         "organizationId": "00000000-0000-4000-8000-000000000166",
-        "name": "Walk Co 189cd4",
+        "name": "Walk Co 3c0dad",
         "industry": null,
         "website": null,
         "location": null,
@@ -14937,8 +15033,8 @@
         "lifecycleChangedAt": null,
         "lifecycleManual": false,
         "mergedIntoId": null,
-        "createdAt": "2026-11-02T11:51:00.000Z",
-        "updatedAt": "2026-11-02T11:51:00.000Z",
+        "createdAt": "2026-11-02T11:49:00.000Z",
+        "updatedAt": "2026-11-02T11:49:00.000Z",
         "importSessionId": null
       },
       "primaryContact": null,
@@ -14957,8 +15053,8 @@
         "isWon": false,
         "isLost": false,
         "isActive": true,
-        "createdAt": "2026-11-02T11:52:00.000Z",
-        "updatedAt": "2026-11-02T11:52:00.000Z"
+        "createdAt": "2026-11-02T11:50:00.000Z",
+        "updatedAt": "2026-11-02T11:50:00.000Z"
       },
       "lostReason": null,
       "tagLinks": [],
@@ -14984,18 +15080,18 @@
       "lostAt": null,
       "notes": null,
       "createdByMembershipId": "00000000-0000-4000-8000-000000000187",
-      "archivedAt": "2026-11-02T11:58:00.000Z",
+      "archivedAt": "2026-11-02T11:56:00.000Z",
       "archivedByMembershipId": "00000000-0000-4000-8000-000000000185",
       "archiveReason": null,
       "customFields": {},
-      "lastActivityAt": "2026-11-02T11:59:00.000Z",
-      "createdAt": "2026-11-02T11:59:00.000Z",
-      "updatedAt": "2026-11-02T12:00:00.000Z",
+      "lastActivityAt": "2026-11-02T11:57:00.000Z",
+      "createdAt": "2026-11-02T11:57:00.000Z",
+      "updatedAt": "2026-11-02T11:58:00.000Z",
       "importSessionId": null,
       "company": {
         "id": "00000000-0000-4000-8000-000000000183",
         "organizationId": "00000000-0000-4000-8000-000000000182",
-        "name": "Walk Co 445453",
+        "name": "Walk Co 4d169b",
         "industry": null,
         "website": null,
         "location": null,
@@ -15016,8 +15112,8 @@
         "lifecycleChangedAt": null,
         "lifecycleManual": false,
         "mergedIntoId": null,
-        "createdAt": "2026-11-02T12:01:00.000Z",
-        "updatedAt": "2026-11-02T12:01:00.000Z",
+        "createdAt": "2026-11-02T11:59:00.000Z",
+        "updatedAt": "2026-11-02T11:59:00.000Z",
         "importSessionId": null
       },
       "primaryContact": {
@@ -15041,8 +15137,8 @@
         "mergedIntoId": null,
         "lastContactedAt": null,
         "doNotContact": false,
-        "createdAt": "2026-11-02T12:02:00.000Z",
-        "updatedAt": "2026-11-02T12:02:00.000Z",
+        "createdAt": "2026-11-02T12:00:00.000Z",
+        "updatedAt": "2026-11-02T12:00:00.000Z",
         "importSessionId": null
       },
       "lead": null,
@@ -15060,8 +15156,8 @@
         "isWon": false,
         "isLost": false,
         "isActive": true,
-        "createdAt": "2026-11-02T12:03:00.000Z",
-        "updatedAt": "2026-11-02T12:03:00.000Z"
+        "createdAt": "2026-11-02T12:01:00.000Z",
+        "updatedAt": "2026-11-02T12:01:00.000Z"
       },
       "lostReason": null,
       "tagLinks": [],
@@ -15094,14 +15190,14 @@
       "archivedByMembershipId": null,
       "archiveReason": null,
       "customFields": {},
-      "lastActivityAt": "2026-11-02T12:04:00.000Z",
-      "createdAt": "2026-11-02T12:04:00.000Z",
-      "updatedAt": "2026-11-02T12:04:00.000Z",
+      "lastActivityAt": "2026-11-02T12:02:00.000Z",
+      "createdAt": "2026-11-02T12:02:00.000Z",
+      "updatedAt": "2026-11-02T12:02:00.000Z",
       "importSessionId": null,
       "company": {
         "id": "00000000-0000-4000-8000-000000000191",
         "organizationId": "00000000-0000-4000-8000-000000000190",
-        "name": "Walk Co 5b4f6d",
+        "name": "Walk Co 7d098c",
         "industry": null,
         "website": null,
         "location": null,
@@ -15122,8 +15218,8 @@
         "lifecycleChangedAt": null,
         "lifecycleManual": false,
         "mergedIntoId": null,
-        "createdAt": "2026-11-02T12:05:00.000Z",
-        "updatedAt": "2026-11-02T12:05:00.000Z",
+        "createdAt": "2026-11-02T12:03:00.000Z",
+        "updatedAt": "2026-11-02T12:03:00.000Z",
         "importSessionId": null
       },
       "primaryContact": {
@@ -15147,8 +15243,8 @@
         "mergedIntoId": null,
         "lastContactedAt": null,
         "doNotContact": false,
-        "createdAt": "2026-11-02T12:06:00.000Z",
-        "updatedAt": "2026-11-02T12:06:00.000Z",
+        "createdAt": "2026-11-02T12:04:00.000Z",
+        "updatedAt": "2026-11-02T12:04:00.000Z",
         "importSessionId": null
       },
       "lead": null,
@@ -15166,8 +15262,8 @@
         "isWon": false,
         "isLost": false,
         "isActive": true,
-        "createdAt": "2026-11-02T12:07:00.000Z",
-        "updatedAt": "2026-11-02T12:07:00.000Z"
+        "createdAt": "2026-11-02T12:05:00.000Z",
+        "updatedAt": "2026-11-02T12:05:00.000Z"
       },
       "lostReason": null,
       "tagLinks": [],
@@ -15186,7 +15282,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T12:09:00.000Z",
+      "createdAt": "2026-11-02T12:07:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -15202,7 +15298,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T12:08:00.000Z",
+      "createdAt": "2026-11-02T12:06:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -15250,8 +15346,8 @@
       "respondedAt": null,
       "documentReference": null,
       "notes": null,
-      "createdAt": "2026-11-02T12:10:00.000Z",
-      "updatedAt": "2026-11-02T12:10:00.000Z",
+      "createdAt": "2026-11-02T12:08:00.000Z",
+      "updatedAt": "2026-11-02T12:08:00.000Z",
       "amountMasked": false
     },
     "same": [
@@ -15277,8 +15373,8 @@
       "body": "Sample",
       "isActive": true,
       "createdByMembershipId": "00000000-0000-4000-8000-000000000211",
-      "createdAt": "2026-11-02T12:14:00.000Z",
-      "updatedAt": "2026-11-02T12:14:00.000Z"
+      "createdAt": "2026-11-02T12:12:00.000Z",
+      "updatedAt": "2026-11-02T12:12:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -15320,7 +15416,7 @@
       "createdByMembershipId": "00000000-0000-4000-8000-000000000220",
       "startedAt": null,
       "finishedAt": null,
-      "createdAt": "2026-11-02T12:18:00.000Z"
+      "createdAt": "2026-11-02T12:16:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -15345,7 +15441,7 @@
       "createdByMembershipId": "00000000-0000-4000-8000-000000000218",
       "startedAt": null,
       "finishedAt": null,
-      "createdAt": "2026-11-02T12:17:00.000Z"
+      "createdAt": "2026-11-02T12:15:00.000Z"
     }
   },
   "POST /api/orgs/{orgSlug}/files": {
@@ -15359,16 +15455,16 @@
         "status": "UPLOADING",
         "checksumSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "ownerMembershipId": "00000000-0000-4000-8000-000000000226",
-        "createdAt": "2026-11-02T12:23:00.000Z",
+        "createdAt": "2026-11-02T12:21:00.000Z",
         "readyAt": null
       },
       "upload": {
-        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiUFVUIiwiayI6Im9yZ3MvZmMzNmMzOTUtZThkMC00NjZmLWJjMzEtYmNmNGQ0N2VlNmRlL2F0dGFjaG1lbnQvNjQxNTRmYTYtMmU4Yi00MzI2LTkxOWItMzI5Yzk1NDQzYTFiIiwiZSI6MTc5NDc2MTIxMCwiY3QiOiJhcHBsaWNhdGlvbi9wZGYiLCJtYiI6MjYyMTQ0MDB9.IUCiaaA_RB-KaXAcuhzP4w1RZ--CjJljMiD4kLQ8hm…",
+        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiUFVUIiwiayI6Im9yZ3MvNTBkNWE1NjItMzE3Yi00YjhkLTliM2MtZjUyNjM4Y2U1MjJlL2F0dGFjaG1lbnQvNWRkMzJjZjYtNDIwMi00NzM0LWE3ZjYtZTJkNzA0MDk5OTJmIiwiZSI6MTc5NTUwNTgxOSwiY3QiOiJhcHBsaWNhdGlvbi9wZGYiLCJtYiI6MjYyMTQ0MDB9.v5UFQnku3rXQt2_4goK3hZYGfY7780ihZ9Uc7X9qGs…",
         "method": "PUT",
         "headers": {
           "Content-Type": "application/pdf"
         },
-        "expiresAt": "2026-11-02T12:24:00.000Z"
+        "expiresAt": "2026-11-02T12:22:00.000Z"
       }
     },
     "same": [
@@ -15384,16 +15480,16 @@
         "status": "UPLOADING",
         "checksumSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "ownerMembershipId": "00000000-0000-4000-8000-000000000224",
-        "createdAt": "2026-11-02T12:21:00.000Z",
+        "createdAt": "2026-11-02T12:19:00.000Z",
         "readyAt": null
       },
       "upload": {
-        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiUFVUIiwiayI6Im9yZ3MvZmMzNmMzOTUtZThkMC00NjZmLWJjMzEtYmNmNGQ0N2VlNmRlL2F0dGFjaG1lbnQvNjA2ZTJjNjctMDAwZS00NDRkLWI3YmEtYTJhNjRkYmUwN2VjIiwiZSI6MTc5NDc2MTIxMCwiY3QiOiJhcHBsaWNhdGlvbi9wZGYiLCJtYiI6MjYyMTQ0MDB9.1KznNZ2I7Bm0txyb9W407_fw4fRGmTh855p5deiPmu…",
+        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiUFVUIiwiayI6Im9yZ3MvNTBkNWE1NjItMzE3Yi00YjhkLTliM2MtZjUyNjM4Y2U1MjJlL2F0dGFjaG1lbnQvZGZmZjBjNWYtMWIzNC00MWY1LTk2ZTQtMmM2YzY0ODMzMDZhIiwiZSI6MTc5NTUwNTgxOSwiY3QiOiJhcHBsaWNhdGlvbi9wZGYiLCJtYiI6MjYyMTQ0MDB9.leCpwjr0jyOgWSGdpOdraZaqfEPUVlq4oJeH31LtPt…",
         "method": "PUT",
         "headers": {
           "Content-Type": "application/pdf"
         },
-        "expiresAt": "2026-11-02T12:22:00.000Z"
+        "expiresAt": "2026-11-02T12:20:00.000Z"
       }
     },
     "DELIVERY": {
@@ -15406,16 +15502,16 @@
         "status": "UPLOADING",
         "checksumSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "ownerMembershipId": "00000000-0000-4000-8000-000000000222",
-        "createdAt": "2026-11-02T12:19:00.000Z",
+        "createdAt": "2026-11-02T12:17:00.000Z",
         "readyAt": null
       },
       "upload": {
-        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiUFVUIiwiayI6Im9yZ3MvZmMzNmMzOTUtZThkMC00NjZmLWJjMzEtYmNmNGQ0N2VlNmRlL2F0dGFjaG1lbnQvNmFiN2UwZmQtOWVlYS00Y2FjLTg5MTYtODdlOWMxY2I5YTc4IiwiZSI6MTc5NDc2MTIxMCwiY3QiOiJhcHBsaWNhdGlvbi9wZGYiLCJtYiI6MjYyMTQ0MDB9.7xpEwcfWQJbS-Ygz6sDRYf3xI6GL6ZosQLg5HGOJwm…",
+        "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiUFVUIiwiayI6Im9yZ3MvNTBkNWE1NjItMzE3Yi00YjhkLTliM2MtZjUyNjM4Y2U1MjJlL2F0dGFjaG1lbnQvNzA1NmM1ZTktNTQxNi00ZDRjLWFjNjYtN2EwY2I1MzU5MWViIiwiZSI6MTc5NTUwNTgxOSwiY3QiOiJhcHBsaWNhdGlvbi9wZGYiLCJtYiI6MjYyMTQ0MDB9.2e-WKkHiulQyHhyqC9ZNZK8bMZsgXIQv7gbieLIxoQ…",
         "method": "PUT",
         "headers": {
           "Content-Type": "application/pdf"
         },
-        "expiresAt": "2026-11-02T12:20:00.000Z"
+        "expiresAt": "2026-11-02T12:18:00.000Z"
       }
     }
   },
@@ -15429,7 +15525,7 @@
       "status": "READY",
       "checksumSha256": null,
       "ownerMembershipId": "00000000-0000-4000-8000-000000000230",
-      "createdAt": "2026-11-02T12:26:00.000Z",
+      "createdAt": "2026-11-02T12:24:00.000Z",
       "readyAt": null
     },
     "same": [
@@ -15457,7 +15553,7 @@
       "createdByMembershipId": "00000000-0000-4000-8000-000000000234",
       "startedAt": null,
       "finishedAt": null,
-      "createdAt": "2026-11-02T12:28:00.000Z"
+      "createdAt": "2026-11-02T12:26:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -15482,13 +15578,13 @@
       "createdByMembershipId": "00000000-0000-4000-8000-000000000232",
       "startedAt": null,
       "finishedAt": null,
-      "createdAt": "2026-11-02T12:27:00.000Z"
+      "createdAt": "2026-11-02T12:25:00.000Z"
     }
   },
   "POST /api/orgs/{orgSlug}/integrations/inbound-email-key": {
     "default": {
-      "token": "iek_live__v_ryWtdl5rPujuAmGrYijpavt2R4-B7bgS2ZYkozDQ",
-      "keyPrefix": "iek_live__v_"
+      "token": "iek_live_tOa8bYKfjACbvXHA486DfJ6ZnEdpTJPPB-dkAJVsD8Q",
+      "keyPrefix": "iek_live_tOa"
     },
     "same": [
       "MANAGEMENT"
@@ -15496,9 +15592,9 @@
   },
   "POST /api/orgs/{orgSlug}/integrations/website-key": {
     "default": {
-      "apiKey": "wlk_live__yAETCkS-qcoylg0tDtjC29FD9IxGD_R5PJTtCsNKeQ",
-      "keyPrefix": "wlk_live__yA",
-      "previousKeyValidUntil": "2026-11-02T12:29:00.000Z"
+      "apiKey": "wlk_live_WbRnYr2ec-3sr3JXk3pnSQxH6v0nGH2U2XhBhV6iPlg",
+      "keyPrefix": "wlk_live_WbR",
+      "previousKeyValidUntil": "2026-11-02T12:27:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -15523,12 +15619,12 @@
   "POST /api/orgs/{orgSlug}/invoices/{invoiceId}/payments": {
     "default": {
       "id": "00000000-0000-4000-8000-000000000239",
-      "number": "INV-SENTINEL-79d46a",
+      "number": "INV-SENTINEL-c19c38",
       "status": "OVERDUE",
       "storedStatus": "PART_PAID",
       "dealId": null,
       "companyId": "00000000-0000-4000-8000-000000000240",
-      "companyName": "Walk Co 3a4b9b",
+      "companyName": "Walk Co b40f05",
       "recurringServiceId": null,
       "amount": "8123456.50",
       "currency": "KES",
@@ -15536,54 +15632,56 @@
       "balance": "8122454.50",
       "overpaid": "0.00",
       "overdue": true,
-      "daysOverdue": 15,
+      "daysOverdue": 24,
       "issuedOn": "2026-11-02T09:29:00.000Z",
       "dueOn": "2026-11-02T09:17:00.000Z",
       "allowOverpayment": false,
       "notes": null,
+      "paymentTermsDays": null,
+      "terms": null,
       "voidedAt": null,
       "voidReason": null,
-      "createdAt": "2026-11-02T12:33:00.000Z",
-      "updatedAt": "2026-11-02T12:38:00.000Z",
+      "createdAt": "2026-11-02T12:31:00.000Z",
+      "updatedAt": "2026-11-02T12:36:00.000Z",
       "payments": [
         {
           "id": "00000000-0000-4000-8000-000000000241",
           "invoiceId": "00000000-0000-4000-8000-000000000239",
           "amount": "1000.00",
-          "paidOn": "2026-11-02T09:46:00.000Z",
+          "paidOn": "2026-11-02T09:47:00.000Z",
           "methodLabel": null,
           "reference": null,
           "recordedByMembershipId": "00000000-0000-4000-8000-000000000242",
           "reversed": false,
           "reversedAt": null,
           "reversalReason": null,
-          "createdAt": "2026-11-02T12:35:00.000Z"
+          "createdAt": "2026-11-02T12:33:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000243",
           "invoiceId": "00000000-0000-4000-8000-000000000239",
           "amount": "1.00",
-          "paidOn": "2026-11-02T12:36:00.000Z",
+          "paidOn": "2026-11-02T12:34:00.000Z",
           "methodLabel": null,
           "reference": null,
           "recordedByMembershipId": "00000000-0000-4000-8000-000000000244",
           "reversed": false,
           "reversedAt": null,
           "reversalReason": null,
-          "createdAt": "2026-11-02T12:37:00.000Z"
+          "createdAt": "2026-11-02T12:35:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000245",
           "invoiceId": "00000000-0000-4000-8000-000000000239",
           "amount": "1.00",
-          "paidOn": "2026-11-02T12:36:00.000Z",
+          "paidOn": "2026-11-02T12:34:00.000Z",
           "methodLabel": null,
           "reference": null,
           "recordedByMembershipId": "00000000-0000-4000-8000-000000000242",
           "reversed": false,
           "reversedAt": null,
           "reversalReason": null,
-          "createdAt": "2026-11-02T12:39:00.000Z"
+          "createdAt": "2026-11-02T12:37:00.000Z"
         }
       ]
     },
@@ -15592,12 +15690,12 @@
     ],
     "FINANCE": {
       "id": "00000000-0000-4000-8000-000000000239",
-      "number": "INV-SENTINEL-79d46a",
+      "number": "INV-SENTINEL-c19c38",
       "status": "OVERDUE",
       "storedStatus": "PART_PAID",
       "dealId": null,
       "companyId": "00000000-0000-4000-8000-000000000240",
-      "companyName": "Walk Co 3a4b9b",
+      "companyName": "Walk Co b40f05",
       "recurringServiceId": null,
       "amount": "8123456.50",
       "currency": "KES",
@@ -15605,41 +15703,43 @@
       "balance": "8122455.50",
       "overpaid": "0.00",
       "overdue": true,
-      "daysOverdue": 15,
+      "daysOverdue": 24,
       "issuedOn": "2026-11-02T09:29:00.000Z",
       "dueOn": "2026-11-02T09:17:00.000Z",
       "allowOverpayment": false,
       "notes": null,
+      "paymentTermsDays": null,
+      "terms": null,
       "voidedAt": null,
       "voidReason": null,
-      "createdAt": "2026-11-02T12:33:00.000Z",
-      "updatedAt": "2026-11-02T12:34:00.000Z",
+      "createdAt": "2026-11-02T12:31:00.000Z",
+      "updatedAt": "2026-11-02T12:32:00.000Z",
       "payments": [
         {
           "id": "00000000-0000-4000-8000-000000000241",
           "invoiceId": "00000000-0000-4000-8000-000000000239",
           "amount": "1000.00",
-          "paidOn": "2026-11-02T09:46:00.000Z",
+          "paidOn": "2026-11-02T09:47:00.000Z",
           "methodLabel": null,
           "reference": null,
           "recordedByMembershipId": "00000000-0000-4000-8000-000000000242",
           "reversed": false,
           "reversedAt": null,
           "reversalReason": null,
-          "createdAt": "2026-11-02T12:35:00.000Z"
+          "createdAt": "2026-11-02T12:33:00.000Z"
         },
         {
           "id": "00000000-0000-4000-8000-000000000243",
           "invoiceId": "00000000-0000-4000-8000-000000000239",
           "amount": "1.00",
-          "paidOn": "2026-11-02T12:36:00.000Z",
+          "paidOn": "2026-11-02T12:34:00.000Z",
           "methodLabel": null,
           "reference": null,
           "recordedByMembershipId": "00000000-0000-4000-8000-000000000244",
           "reversed": false,
           "reversedAt": null,
           "reversalReason": null,
-          "createdAt": "2026-11-02T12:37:00.000Z"
+          "createdAt": "2026-11-02T12:35:00.000Z"
         }
       ]
     }
@@ -15651,12 +15751,12 @@
       "status": "CANCELLED",
       "attempts": 0,
       "maxAttempts": 5,
-      "runAt": "2026-11-02T12:40:00.000Z",
+      "runAt": "2026-11-02T12:38:00.000Z",
       "startedAt": null,
-      "finishedAt": "2026-11-02T12:41:00.000Z",
+      "finishedAt": "2026-11-02T12:39:00.000Z",
       "lastError": null,
       "requestId": "request-id",
-      "createdAt": "2026-11-02T12:42:00.000Z"
+      "createdAt": "2026-11-02T12:40:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -15672,14 +15772,14 @@
       "note": null,
       "decisionReason": null,
       "decidedByMembershipId": "00000000-0000-4000-8000-000000000250",
-      "decidedAt": "2026-11-02T12:43:00.000Z",
-      "createdAt": "2026-11-02T12:44:00.000Z",
-      "updatedAt": "2026-11-02T12:45:00.000Z",
+      "decidedAt": "2026-11-02T12:41:00.000Z",
+      "createdAt": "2026-11-02T12:42:00.000Z",
+      "updatedAt": "2026-11-02T12:43:00.000Z",
       "lead": {
         "id": "00000000-0000-4000-8000-000000000249",
         "ownerMembershipId": "00000000-0000-4000-8000-000000000251",
         "company": {
-          "name": "Walk Co ab3d79"
+          "name": "Walk Co a29893"
         },
         "contact": {
           "firstName": "Wanjiru",
@@ -15718,8 +15818,8 @@
         "scoreFactors": null,
         "scoredAt": null,
         "lastContactedAt": null,
-        "createdAt": "2026-11-02T12:47:00.000Z",
-        "updatedAt": "2026-11-02T12:47:00.000Z",
+        "createdAt": "2026-11-02T12:45:00.000Z",
+        "updatedAt": "2026-11-02T12:45:00.000Z",
         "importSessionId": null
       },
       "possibleDuplicates": [],
@@ -15757,8 +15857,8 @@
         "scoreFactors": null,
         "scoredAt": null,
         "lastContactedAt": null,
-        "createdAt": "2026-11-02T12:46:00.000Z",
-        "updatedAt": "2026-11-02T12:46:00.000Z",
+        "createdAt": "2026-11-02T12:44:00.000Z",
+        "updatedAt": "2026-11-02T12:44:00.000Z",
         "importSessionId": null
       },
       "possibleDuplicates": [],
@@ -15791,7 +15891,7 @@
       "errors": [
         {
           "row": 2,
-          "reason": "\"leadStatus\" is required but was empty.",
+          "reason": "This row is empty.",
           "outcome": "failed"
         }
       ]
@@ -15818,7 +15918,7 @@
       "convertedAt": null,
       "notes": null,
       "createdByMembershipId": "00000000-0000-4000-8000-000000000271",
-      "archivedAt": "2026-11-02T12:53:00.000Z",
+      "archivedAt": "2026-11-02T12:51:00.000Z",
       "archivedByMembershipId": "00000000-0000-4000-8000-000000000270",
       "archiveReason": null,
       "customFields": {},
@@ -15844,10 +15944,10 @@
           "points": -3
         }
       ],
-      "scoredAt": "2026-11-02T12:54:00.000Z",
+      "scoredAt": "2026-11-02T12:52:00.000Z",
       "lastContactedAt": null,
-      "createdAt": "2026-11-02T12:55:00.000Z",
-      "updatedAt": "2026-11-02T12:56:00.000Z",
+      "createdAt": "2026-11-02T12:53:00.000Z",
+      "updatedAt": "2026-11-02T12:54:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -15897,10 +15997,10 @@
           "points": -3
         }
       ],
-      "scoredAt": "2026-11-02T12:57:00.000Z",
+      "scoredAt": "2026-11-02T12:55:00.000Z",
       "lastContactedAt": null,
-      "createdAt": "2026-11-02T12:58:00.000Z",
-      "updatedAt": "2026-11-02T12:59:00.000Z",
+      "createdAt": "2026-11-02T12:56:00.000Z",
+      "updatedAt": "2026-11-02T12:57:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -15916,7 +16016,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T13:01:00.000Z",
+      "createdAt": "2026-11-02T12:59:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -15932,7 +16032,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T13:00:00.000Z",
+      "createdAt": "2026-11-02T12:58:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -15961,14 +16061,14 @@
       "archivedByMembershipId": null,
       "archiveReason": null,
       "customFields": {},
-      "lastActivityAt": "2026-11-02T13:02:00.000Z",
-      "createdAt": "2026-11-02T13:02:00.000Z",
-      "updatedAt": "2026-11-02T13:02:00.000Z",
+      "lastActivityAt": "2026-11-02T13:00:00.000Z",
+      "createdAt": "2026-11-02T13:00:00.000Z",
+      "updatedAt": "2026-11-02T13:00:00.000Z",
       "importSessionId": null,
       "company": {
         "id": "00000000-0000-4000-8000-000000000285",
         "organizationId": "00000000-0000-4000-8000-000000000284",
-        "name": "Walk Co 22e7c0",
+        "name": "Walk Co ca7204",
         "industry": null,
         "website": null,
         "location": null,
@@ -15989,8 +16089,8 @@
         "lifecycleChangedAt": null,
         "lifecycleManual": false,
         "mergedIntoId": null,
-        "createdAt": "2026-11-02T13:03:00.000Z",
-        "updatedAt": "2026-11-02T13:03:00.000Z",
+        "createdAt": "2026-11-02T13:01:00.000Z",
+        "updatedAt": "2026-11-02T13:01:00.000Z",
         "importSessionId": null
       },
       "primaryContact": {
@@ -16014,8 +16114,8 @@
         "mergedIntoId": null,
         "lastContactedAt": null,
         "doNotContact": false,
-        "createdAt": "2026-11-02T13:04:00.000Z",
-        "updatedAt": "2026-11-02T13:04:00.000Z",
+        "createdAt": "2026-11-02T13:02:00.000Z",
+        "updatedAt": "2026-11-02T13:02:00.000Z",
         "importSessionId": null
       },
       "lead": {
@@ -16060,10 +16160,10 @@
             "points": -3
           }
         ],
-        "scoredAt": "2026-11-02T13:05:00.000Z",
+        "scoredAt": "2026-11-02T13:03:00.000Z",
         "lastContactedAt": null,
-        "createdAt": "2026-11-02T13:06:00.000Z",
-        "updatedAt": "2026-11-02T13:07:00.000Z",
+        "createdAt": "2026-11-02T13:04:00.000Z",
+        "updatedAt": "2026-11-02T13:05:00.000Z",
         "importSessionId": null
       },
       "service": null,
@@ -16080,8 +16180,8 @@
         "isWon": false,
         "isLost": false,
         "isActive": true,
-        "createdAt": "2026-11-02T13:08:00.000Z",
-        "updatedAt": "2026-11-02T13:08:00.000Z"
+        "createdAt": "2026-11-02T13:06:00.000Z",
+        "updatedAt": "2026-11-02T13:06:00.000Z"
       },
       "lostReason": null,
       "tagLinks": []
@@ -16210,8 +16310,8 @@
         "undoAvailable": true
       },
       "undo": {
-        "token": "7Dg6IFYq-RVxwY4wfPpggTVezi0t-Xye",
-        "expiresAt": "2026-11-02T13:13:00.000Z",
+        "token": "xl4urHGiabO6jZRh5g-IZyJA1CxrLhjl",
+        "expiresAt": "2026-11-02T13:11:00.000Z",
         "expiresInSeconds": 600
       }
     },
@@ -16328,8 +16428,8 @@
         "undoAvailable": true
       },
       "undo": {
-        "token": "XMx5HHzD1djSnoDlIMCI1kdaYqORGqRe",
-        "expiresAt": "2026-11-02T13:12:00.000Z",
+        "token": "Ip9YniArC5gdSZl46lQCwaj-TjFRSxr6",
+        "expiresAt": "2026-11-02T13:10:00.000Z",
         "expiresInSeconds": 600
       }
     },
@@ -16443,8 +16543,8 @@
         "undoAvailable": true
       },
       "undo": {
-        "token": "4bfouhhQHhGlalG18UHz910N3MnQiPjh",
-        "expiresAt": "2026-11-02T13:10:00.000Z",
+        "token": "Z-hsdmZrTaNuqoeILlLNb1p7W6M3Nrei",
+        "expiresAt": "2026-11-02T13:08:00.000Z",
         "expiresInSeconds": 600
       }
     },
@@ -16558,8 +16658,8 @@
         "undoAvailable": true
       },
       "undo": {
-        "token": "4E2oLFALMicaAcfjqBl85HcS30shigWw",
-        "expiresAt": "2026-11-02T13:11:00.000Z",
+        "token": "VXR6MX7JxxXjYbI6FcpML8PJPuFC2Bae",
+        "expiresAt": "2026-11-02T13:09:00.000Z",
         "expiresInSeconds": 600
       }
     },
@@ -16668,8 +16768,8 @@
         "undoAvailable": true
       },
       "undo": {
-        "token": "5kTV4_leOEav3gFh4oE7OmoRlpAQVBXP",
-        "expiresAt": "2026-11-02T13:09:00.000Z",
+        "token": "4yV3H0FPak9YBi_WS6uhK8vgCc-HDGeJ",
+        "expiresAt": "2026-11-02T13:07:00.000Z",
         "expiresInSeconds": 600
       }
     }
@@ -16682,20 +16782,20 @@
       "roleId": "00000000-0000-4000-8000-000000000317",
       "status": "INACTIVE",
       "invitedAt": null,
-      "joinedAt": "2026-11-02T13:14:00.000Z",
+      "joinedAt": "2026-11-02T13:12:00.000Z",
       "inviteTokenHash": null,
       "inviteTokenExpiresAt": null,
       "invitedByMembershipId": null,
       "inviteLastSentAt": null,
-      "deactivatedAt": "2026-11-02T13:15:00.000Z",
+      "deactivatedAt": "2026-11-02T13:13:00.000Z",
       "deactivatedByMembershipId": "00000000-0000-4000-8000-000000000318",
       "removedAt": null,
       "removedByMembershipId": null,
       "avatarFileId": null,
       "avatarCrop": null,
       "avatarUpdatedAt": null,
-      "createdAt": "2026-11-02T13:16:00.000Z",
-      "updatedAt": "2026-11-02T13:17:00.000Z",
+      "createdAt": "2026-11-02T13:14:00.000Z",
+      "updatedAt": "2026-11-02T13:15:00.000Z",
       "reassignment": {
         "membershipId": "00000000-0000-4000-8000-000000000314",
         "userName": "Test User",
@@ -16730,20 +16830,20 @@
       "roleId": "00000000-0000-4000-8000-000000000317",
       "status": "REMOVED",
       "invitedAt": null,
-      "joinedAt": "2026-11-02T13:18:00.000Z",
+      "joinedAt": "2026-11-02T13:16:00.000Z",
       "inviteTokenHash": null,
       "inviteTokenExpiresAt": null,
       "invitedByMembershipId": null,
       "inviteLastSentAt": null,
       "deactivatedAt": null,
       "deactivatedByMembershipId": null,
-      "removedAt": "2026-11-02T13:19:00.000Z",
+      "removedAt": "2026-11-02T13:17:00.000Z",
       "removedByMembershipId": "00000000-0000-4000-8000-000000000322",
       "avatarFileId": null,
       "avatarCrop": null,
       "avatarUpdatedAt": null,
-      "createdAt": "2026-11-02T13:20:00.000Z",
-      "updatedAt": "2026-11-02T13:21:00.000Z"
+      "createdAt": "2026-11-02T13:18:00.000Z",
+      "updatedAt": "2026-11-02T13:19:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -16768,8 +16868,8 @@
       "emailEnabled": true,
       "inAppEnabled": true,
       "pushEnabled": false,
-      "createdAt": "2026-11-02T13:26:00.000Z",
-      "updatedAt": "2026-11-02T13:26:00.000Z"
+      "createdAt": "2026-11-02T13:24:00.000Z",
+      "updatedAt": "2026-11-02T13:24:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -16782,8 +16882,8 @@
       "emailEnabled": true,
       "inAppEnabled": true,
       "pushEnabled": false,
-      "createdAt": "2026-11-02T13:25:00.000Z",
-      "updatedAt": "2026-11-02T13:25:00.000Z"
+      "createdAt": "2026-11-02T13:23:00.000Z",
+      "updatedAt": "2026-11-02T13:23:00.000Z"
     },
     "DELIVERY": {
       "id": "00000000-0000-4000-8000-000000000327",
@@ -16793,8 +16893,8 @@
       "emailEnabled": true,
       "inAppEnabled": true,
       "pushEnabled": false,
-      "createdAt": "2026-11-02T13:23:00.000Z",
-      "updatedAt": "2026-11-02T13:23:00.000Z"
+      "createdAt": "2026-11-02T13:21:00.000Z",
+      "updatedAt": "2026-11-02T13:21:00.000Z"
     },
     "FINANCE": {
       "id": "00000000-0000-4000-8000-000000000329",
@@ -16804,8 +16904,8 @@
       "emailEnabled": true,
       "inAppEnabled": true,
       "pushEnabled": false,
-      "createdAt": "2026-11-02T13:24:00.000Z",
-      "updatedAt": "2026-11-02T13:24:00.000Z"
+      "createdAt": "2026-11-02T13:22:00.000Z",
+      "updatedAt": "2026-11-02T13:22:00.000Z"
     },
     "RESTRICTED_TECHNICAL": {
       "id": "00000000-0000-4000-8000-000000000324",
@@ -16815,8 +16915,8 @@
       "emailEnabled": true,
       "inAppEnabled": true,
       "pushEnabled": false,
-      "createdAt": "2026-11-02T13:22:00.000Z",
-      "updatedAt": "2026-11-02T13:22:00.000Z"
+      "createdAt": "2026-11-02T13:20:00.000Z",
+      "updatedAt": "2026-11-02T13:20:00.000Z"
     }
   },
   "POST /api/orgs/{orgSlug}/notifications/mark-all-read": {
@@ -16871,11 +16971,11 @@
       "status": "REJECTED",
       "requestedByMembershipId": "00000000-0000-4000-8000-000000000336",
       "decidedByMembershipId": "00000000-0000-4000-8000-000000000337",
-      "decidedAt": "2026-11-02T13:27:00.000Z",
+      "decidedAt": "2026-11-02T13:25:00.000Z",
       "decisionNote": null,
       "expiresAt": null,
       "usedAt": null,
-      "createdAt": "2026-11-02T13:28:00.000Z"
+      "createdAt": "2026-11-02T13:26:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -16888,7 +16988,7 @@
       "status": "SUBMITTED_TO_PLATFORM",
       "note": null,
       "requestedByMembershipId": "00000000-0000-4000-8000-000000000339",
-      "submittedAt": "2026-11-02T13:29:00.000Z",
+      "submittedAt": "2026-11-02T13:27:00.000Z",
       "exportStatus": "NONE",
       "exportExpiresAt": null,
       "deleteAfter": null
@@ -16906,10 +17006,10 @@
         "contactId": "00000000-0000-4000-8000-000000000341",
         "label": "Wanjiru Kamau"
       },
-      "dueOn": "2026-11-02T10:07:00.000Z",
+      "dueOn": "2026-11-02T10:08:00.000Z",
       "overdue": false,
       "daysLeft": 30,
-      "evidenceNotes": "[2026-11-15 16:32 by b5e035fa] Sample",
+      "evidenceNotes": "[2026-11-24 07:23 by eb98df78] Sample",
       "requestedByMembershipId": "00000000-0000-4000-8000-000000000342",
       "confirmations": {
         "first": null,
@@ -16918,7 +17018,7 @@
       "result": null,
       "hasExport": false,
       "completedAt": null,
-      "createdAt": "2026-11-02T13:30:00.000Z"
+      "createdAt": "2026-11-02T13:28:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -16934,7 +17034,7 @@
           "contactId": "00000000-0000-4000-8000-000000000344",
           "label": "Wanjiru Kamau"
         },
-        "dueOn": "2026-11-02T10:07:00.000Z",
+        "dueOn": "2026-11-02T10:08:00.000Z",
         "overdue": false,
         "daysLeft": null,
         "evidenceNotes": null,
@@ -16942,7 +17042,7 @@
         "confirmations": {
           "first": {
             "by": "00000000-0000-4000-8000-000000000345",
-            "at": "2026-11-02T13:31:00.000Z"
+            "at": "2026-11-02T13:29:00.000Z"
           },
           "second": null
         },
@@ -16955,8 +17055,8 @@
           "conversations": 1
         },
         "hasExport": true,
-        "completedAt": "2026-11-02T13:31:00.000Z",
-        "createdAt": "2026-11-02T13:32:00.000Z"
+        "completedAt": "2026-11-02T13:29:00.000Z",
+        "createdAt": "2026-11-02T13:30:00.000Z"
       },
       "download": {
         "file": {
@@ -16964,24 +17064,24 @@
           "organizationId": "00000000-0000-4000-8000-000000000347",
           "ownerMembershipId": "00000000-0000-4000-8000-000000000345",
           "purpose": "EXPORT",
-          "name": "subject-access-8e13d477.csv",
+          "name": "subject-access-5c249ea1.csv",
           "sizeBytes": 1414,
           "mimeType": "text/csv",
-          "checksumSha256": "b31d0632e4b0a0a35621c8da070120f91024dba5acd9fcf0db0dd7a69210f911",
+          "checksumSha256": "bc687c6e175e4ab027809401148eb155ef02dc83d03c2bdb9a1dd051b6e4e51d",
           "storageKey": "orgs/00000000-0000-4000-8000-000000000347/export/00000000-0000-4000-8000-000000000346",
           "status": "READY",
           "scanResult": null,
           "quarantineReason": null,
           "uploadExpiresAt": null,
-          "createdAt": "2026-11-02T13:33:00.000Z",
-          "updatedAt": "2026-11-02T13:33:00.000Z",
+          "createdAt": "2026-11-02T13:31:00.000Z",
+          "updatedAt": "2026-11-02T13:31:00.000Z",
           "readyAt": null,
           "deletedAt": null,
           "purgedAt": null
         },
         "download": {
-          "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiR0VUIiwiayI6Im9yZ3MvOTBhMDEzNTctMzc4MC00NWVhLThlYWQtMDZkZWE0YTg0YmI0L2V4cG9ydC83NjIxZjBhMi03YTU5LTQ2ZmItYjgzOS05YzA2ZjBiODM3ZmQiLCJlIjoxNzk0NzYwNDQwLCJmbiI6InN1YmplY3QtYWNjZXNzLThlMTNkNDc3LmNzdiIsImN0IjoidGV4dC9jc3YiLCJkIjoiYXR0YWNobWVudCJ9.iY0EiY…",
-          "expiresAt": "2026-11-02T13:34:00.000Z"
+          "url": "http://localhost:3000/api/storage/blob?token=eyJtIjoiR0VUIiwiayI6Im9yZ3MvNjNhMTIxZWMtMGQzNS00MmE3LTk3MmQtOWRiYzNkNjY0NWNiL2V4cG9ydC8yYzQ3ZDQ0ZS1kYmM5LTQyNmQtYTYwMS0zYzUwYmI4NGIzYzYiLCJlIjoxNzk1NTA1MDczLCJmbiI6InN1YmplY3QtYWNjZXNzLTVjMjQ5ZWExLmNzdiIsImN0IjoidGV4dC9jc3YiLCJkIjoiYXR0YWNobWVudCJ9.pdfhKh…",
+          "expiresAt": "2026-11-02T13:32:00.000Z"
         }
       }
     },
@@ -16998,10 +17098,10 @@
         "contactId": "00000000-0000-4000-8000-000000000349",
         "label": "Wanjiru Kamau"
       },
-      "dueOn": "2026-11-02T10:07:00.000Z",
+      "dueOn": "2026-11-02T10:08:00.000Z",
       "overdue": false,
       "daysLeft": null,
-      "evidenceNotes": "[2026-11-15 16:33 by 55b8b94e] Rejected: Sample",
+      "evidenceNotes": "[2026-11-24 07:23 by df8ac514] Rejected: Sample",
       "requestedByMembershipId": "00000000-0000-4000-8000-000000000350",
       "confirmations": {
         "first": null,
@@ -17009,8 +17109,8 @@
       },
       "result": null,
       "hasExport": false,
-      "completedAt": "2026-11-02T13:35:00.000Z",
-      "createdAt": "2026-11-02T13:36:00.000Z"
+      "completedAt": "2026-11-02T13:33:00.000Z",
+      "createdAt": "2026-11-02T13:34:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -17021,7 +17121,7 @@
       "id": "00000000-0000-4000-8000-000000000355",
       "service": "fcm.googleapis.com",
       "userAgent": null,
-      "registeredAt": "2026-11-02T13:41:00.000Z",
+      "registeredAt": "2026-11-02T13:39:00.000Z",
       "lastSuccessAt": null,
       "lastFailureAt": null,
       "failureCount": 0,
@@ -17035,7 +17135,7 @@
       "id": "00000000-0000-4000-8000-000000000354",
       "service": "fcm.googleapis.com",
       "userAgent": null,
-      "registeredAt": "2026-11-02T13:40:00.000Z",
+      "registeredAt": "2026-11-02T13:38:00.000Z",
       "lastSuccessAt": null,
       "lastFailureAt": null,
       "failureCount": 0,
@@ -17046,7 +17146,7 @@
       "id": "00000000-0000-4000-8000-000000000352",
       "service": "fcm.googleapis.com",
       "userAgent": null,
-      "registeredAt": "2026-11-02T13:38:00.000Z",
+      "registeredAt": "2026-11-02T13:36:00.000Z",
       "lastSuccessAt": null,
       "lastFailureAt": null,
       "failureCount": 0,
@@ -17057,7 +17157,7 @@
       "id": "00000000-0000-4000-8000-000000000353",
       "service": "fcm.googleapis.com",
       "userAgent": null,
-      "registeredAt": "2026-11-02T13:39:00.000Z",
+      "registeredAt": "2026-11-02T13:37:00.000Z",
       "lastSuccessAt": null,
       "lastFailureAt": null,
       "failureCount": 0,
@@ -17068,7 +17168,7 @@
       "id": "00000000-0000-4000-8000-000000000351",
       "service": "fcm.googleapis.com",
       "userAgent": null,
-      "registeredAt": "2026-11-02T13:37:00.000Z",
+      "registeredAt": "2026-11-02T13:35:00.000Z",
       "lastSuccessAt": null,
       "lastFailureAt": null,
       "failureCount": 0,
@@ -17117,7 +17217,7 @@
         "sourceId": "00000000-0000-4000-8000-000000000359",
         "serviceId": null,
         "ownerMembershipId": "00000000-0000-4000-8000-000000000360",
-        "createdAt": "2026-11-02T13:42:00.000Z"
+        "createdAt": "2026-11-02T13:40:00.000Z"
       },
       "contact": {
         "id": "00000000-0000-4000-8000-000000000361",
@@ -17131,17 +17231,17 @@
     "default": {
       "id": "00000000-0000-4000-8000-000000000366",
       "companyId": "00000000-0000-4000-8000-000000000363",
-      "companyName": "Walk Co 824633",
+      "companyName": "Walk Co c36501",
       "serviceId": "00000000-0000-4000-8000-000000000364",
-      "serviceName": "Web Development",
+      "serviceName": "Automation Systems",
       "billingCycle": "YEARLY",
       "value": null,
       "valueMasked": false,
       "currency": "KES",
-      "startsOn": "2026-11-02T13:43:00.000Z",
-      "renewsOn": "2026-11-02T13:43:00.000Z",
-      "daysToRenewal": -13,
-      "state": "DUE_SOON",
+      "startsOn": "2026-11-02T13:41:00.000Z",
+      "renewsOn": "2026-11-02T13:41:00.000Z",
+      "daysToRenewal": -22,
+      "state": "LAPSED",
       "stateSource": "rule",
       "overrideReason": null,
       "ownerMembershipId": "00000000-0000-4000-8000-000000000365",
@@ -17150,8 +17250,8 @@
       "cancelReason": null,
       "lastRenewedAt": null,
       "notes": null,
-      "createdAt": "2026-11-02T13:45:00.000Z",
-      "updatedAt": "2026-11-02T13:45:00.000Z"
+      "createdAt": "2026-11-02T13:43:00.000Z",
+      "updatedAt": "2026-11-02T13:43:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -17159,17 +17259,17 @@
     "SALES": {
       "id": "00000000-0000-4000-8000-000000000362",
       "companyId": "00000000-0000-4000-8000-000000000363",
-      "companyName": "Walk Co 824633",
+      "companyName": "Walk Co c36501",
       "serviceId": "00000000-0000-4000-8000-000000000364",
-      "serviceName": "Web Development",
+      "serviceName": "Automation Systems",
       "billingCycle": "YEARLY",
       "value": null,
       "valueMasked": false,
       "currency": "KES",
-      "startsOn": "2026-11-02T13:43:00.000Z",
-      "renewsOn": "2026-11-02T13:43:00.000Z",
-      "daysToRenewal": -13,
-      "state": "DUE_SOON",
+      "startsOn": "2026-11-02T13:41:00.000Z",
+      "renewsOn": "2026-11-02T13:41:00.000Z",
+      "daysToRenewal": -22,
+      "state": "LAPSED",
       "stateSource": "rule",
       "overrideReason": null,
       "ownerMembershipId": "00000000-0000-4000-8000-000000000365",
@@ -17178,15 +17278,15 @@
       "cancelReason": null,
       "lastRenewedAt": null,
       "notes": null,
-      "createdAt": "2026-11-02T13:44:00.000Z",
-      "updatedAt": "2026-11-02T13:44:00.000Z"
+      "createdAt": "2026-11-02T13:42:00.000Z",
+      "updatedAt": "2026-11-02T13:42:00.000Z"
     }
   },
   "POST /api/orgs/{orgSlug}/recurring-services/{serviceId}/cancel": {
     "default": {
       "id": "00000000-0000-4000-8000-000000000371",
       "companyId": "00000000-0000-4000-8000-000000000372",
-      "companyName": "Walk Co f29ded",
+      "companyName": "Walk Co 084b74",
       "serviceId": "00000000-0000-4000-8000-000000000373",
       "serviceName": "CRM",
       "billingCycle": "YEARLY",
@@ -17195,18 +17295,18 @@
       "currency": "KES",
       "startsOn": "2026-11-02T09:13:00.000Z",
       "renewsOn": "2026-11-02T09:07:00.000Z",
-      "daysToRenewal": 47,
+      "daysToRenewal": 38,
       "state": "CANCELLED",
       "stateSource": "rule",
       "overrideReason": null,
       "ownerMembershipId": "00000000-0000-4000-8000-000000000374",
       "autoRenew": false,
-      "cancelledAt": "2026-11-02T13:47:00.000Z",
+      "cancelledAt": "2026-11-02T13:45:00.000Z",
       "cancelReason": "Sample",
       "lastRenewedAt": null,
       "notes": null,
-      "createdAt": "2026-11-02T13:48:00.000Z",
-      "updatedAt": "2026-11-02T13:49:00.000Z"
+      "createdAt": "2026-11-02T13:46:00.000Z",
+      "updatedAt": "2026-11-02T13:47:00.000Z"
     },
     "same": [
       "MANAGEMENT",
@@ -17218,7 +17318,7 @@
       "service": {
         "id": "00000000-0000-4000-8000-000000000375",
         "companyId": "00000000-0000-4000-8000-000000000376",
-        "companyName": "Walk Co 9cdb9a",
+        "companyName": "Walk Co 98a452",
         "serviceId": "00000000-0000-4000-8000-000000000377",
         "serviceName": "CRM",
         "billingCycle": "YEARLY",
@@ -17226,8 +17326,8 @@
         "valueMasked": false,
         "currency": "KES",
         "startsOn": "2026-11-02T09:13:00.000Z",
-        "renewsOn": "2026-11-02T13:54:00.000Z",
-        "daysToRenewal": 778,
+        "renewsOn": "2026-11-02T13:52:00.000Z",
+        "daysToRenewal": 769,
         "state": "ACTIVE",
         "stateSource": "rule",
         "overrideReason": null,
@@ -17235,10 +17335,10 @@
         "autoRenew": false,
         "cancelledAt": null,
         "cancelReason": null,
-        "lastRenewedAt": "2026-11-02T13:55:00.000Z",
+        "lastRenewedAt": "2026-11-02T13:53:00.000Z",
         "notes": null,
-        "createdAt": "2026-11-02T13:52:00.000Z",
-        "updatedAt": "2026-11-02T13:56:00.000Z"
+        "createdAt": "2026-11-02T13:50:00.000Z",
+        "updatedAt": "2026-11-02T13:54:00.000Z"
       },
       "taskId": null,
       "invoiceId": null
@@ -17250,7 +17350,7 @@
       "service": {
         "id": "00000000-0000-4000-8000-000000000375",
         "companyId": "00000000-0000-4000-8000-000000000376",
-        "companyName": "Walk Co 9cdb9a",
+        "companyName": "Walk Co 98a452",
         "serviceId": "00000000-0000-4000-8000-000000000377",
         "serviceName": "CRM",
         "billingCycle": "YEARLY",
@@ -17258,8 +17358,8 @@
         "valueMasked": false,
         "currency": "KES",
         "startsOn": "2026-11-02T09:13:00.000Z",
-        "renewsOn": "2026-11-02T13:50:00.000Z",
-        "daysToRenewal": 412,
+        "renewsOn": "2026-11-02T13:48:00.000Z",
+        "daysToRenewal": 403,
         "state": "ACTIVE",
         "stateSource": "rule",
         "overrideReason": null,
@@ -17267,10 +17367,10 @@
         "autoRenew": false,
         "cancelledAt": null,
         "cancelReason": null,
-        "lastRenewedAt": "2026-11-02T13:51:00.000Z",
+        "lastRenewedAt": "2026-11-02T13:49:00.000Z",
         "notes": null,
-        "createdAt": "2026-11-02T13:52:00.000Z",
-        "updatedAt": "2026-11-02T13:53:00.000Z"
+        "createdAt": "2026-11-02T13:50:00.000Z",
+        "updatedAt": "2026-11-02T13:51:00.000Z"
       },
       "taskId": null,
       "invoiceId": null
@@ -17309,8 +17409,8 @@
       "description": null,
       "sequence": 16,
       "isActive": true,
-      "createdAt": "2026-11-02T14:00:00.000Z",
-      "updatedAt": "2026-11-02T14:00:00.000Z"
+      "createdAt": "2026-11-02T13:58:00.000Z",
+      "updatedAt": "2026-11-02T13:58:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -17320,13 +17420,13 @@
     "default": {
       "id": "00000000-0000-4000-8000-000000000386",
       "organizationId": "00000000-0000-4000-8000-000000000387",
-      "key": "TIKTOK",
-      "name": "Tiktok",
+      "key": "LINKEDIN",
+      "name": "Linkedin",
       "description": null,
-      "sequence": 8,
+      "sequence": 7,
       "isActive": true,
-      "createdAt": "2026-11-02T14:01:00.000Z",
-      "updatedAt": "2026-11-02T14:02:00.000Z"
+      "createdAt": "2026-11-02T13:59:00.000Z",
+      "updatedAt": "2026-11-02T14:00:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -17345,7 +17445,7 @@
       "recents": [
         {
           "query": "Sample",
-          "lastUsedAt": "2026-11-02T14:07:00.000Z"
+          "lastUsedAt": "2026-11-02T14:05:00.000Z"
         }
       ]
     },
@@ -17353,14 +17453,6 @@
       "MANAGEMENT"
     ],
     "SALES": {
-      "recents": [
-        {
-          "query": "Sample",
-          "lastUsedAt": "2026-11-02T14:06:00.000Z"
-        }
-      ]
-    },
-    "DELIVERY": {
       "recents": [
         {
           "query": "Sample",
@@ -17368,11 +17460,19 @@
         }
       ]
     },
+    "DELIVERY": {
+      "recents": [
+        {
+          "query": "Sample",
+          "lastUsedAt": "2026-11-02T14:02:00.000Z"
+        }
+      ]
+    },
     "FINANCE": {
       "recents": [
         {
           "query": "Sample",
-          "lastUsedAt": "2026-11-02T14:05:00.000Z"
+          "lastUsedAt": "2026-11-02T14:03:00.000Z"
         }
       ]
     },
@@ -17380,89 +17480,14 @@
       "recents": [
         {
           "query": "Sample",
-          "lastUsedAt": "2026-11-02T14:03:00.000Z"
+          "lastUsedAt": "2026-11-02T14:01:00.000Z"
         }
       ]
     }
   },
   "POST /api/orgs/{orgSlug}/sync/batch": {
     "default": {
-      "batchId": "1e7d93fd33a4fe08e9d9e295",
-      "serverTime": "2026-11-02T14:12:00.000Z",
-      "processedOrder": [
-        0
-      ],
-      "results": [
-        {
-          "clientId": "Sample",
-          "kind": "Sample",
-          "status": "REJECTED",
-          "reason": {
-            "code": "INVALID_MUTATION",
-            "message": "clientId must be 8 to 200 printable characters, unique for each queued action."
-          }
-        }
-      ],
-      "counts": {
-        "applied": 0,
-        "duplicate": 0,
-        "conflict": 0,
-        "rejected": 1
-      }
-    },
-    "same": [
-      "MANAGEMENT"
-    ],
-    "SALES": {
-      "batchId": "673defadf0919713bdc6a391",
-      "serverTime": "2026-11-02T14:11:00.000Z",
-      "processedOrder": [
-        0
-      ],
-      "results": [
-        {
-          "clientId": "Sample",
-          "kind": "Sample",
-          "status": "REJECTED",
-          "reason": {
-            "code": "INVALID_MUTATION",
-            "message": "clientId must be 8 to 200 printable characters, unique for each queued action."
-          }
-        }
-      ],
-      "counts": {
-        "applied": 0,
-        "duplicate": 0,
-        "conflict": 0,
-        "rejected": 1
-      }
-    },
-    "DELIVERY": {
-      "batchId": "b17fca674a8ba9a7ae304891",
-      "serverTime": "2026-11-02T14:09:00.000Z",
-      "processedOrder": [
-        0
-      ],
-      "results": [
-        {
-          "clientId": "Sample",
-          "kind": "Sample",
-          "status": "REJECTED",
-          "reason": {
-            "code": "INVALID_MUTATION",
-            "message": "clientId must be 8 to 200 printable characters, unique for each queued action."
-          }
-        }
-      ],
-      "counts": {
-        "applied": 0,
-        "duplicate": 0,
-        "conflict": 0,
-        "rejected": 1
-      }
-    },
-    "FINANCE": {
-      "batchId": "90557eb7c44f15b05161bc95",
+      "batchId": "7f28336b554b8e1395be1a83",
       "serverTime": "2026-11-02T14:10:00.000Z",
       "processedOrder": [
         0
@@ -17485,9 +17510,84 @@
         "rejected": 1
       }
     },
-    "RESTRICTED_TECHNICAL": {
-      "batchId": "6efae56ac32b9080ac4f4405",
+    "same": [
+      "MANAGEMENT"
+    ],
+    "SALES": {
+      "batchId": "e3ffe059d7fd2220f65e1e47",
+      "serverTime": "2026-11-02T14:09:00.000Z",
+      "processedOrder": [
+        0
+      ],
+      "results": [
+        {
+          "clientId": "Sample",
+          "kind": "Sample",
+          "status": "REJECTED",
+          "reason": {
+            "code": "INVALID_MUTATION",
+            "message": "clientId must be 8 to 200 printable characters, unique for each queued action."
+          }
+        }
+      ],
+      "counts": {
+        "applied": 0,
+        "duplicate": 0,
+        "conflict": 0,
+        "rejected": 1
+      }
+    },
+    "DELIVERY": {
+      "batchId": "e195470722550aed9035f1e4",
+      "serverTime": "2026-11-02T14:07:00.000Z",
+      "processedOrder": [
+        0
+      ],
+      "results": [
+        {
+          "clientId": "Sample",
+          "kind": "Sample",
+          "status": "REJECTED",
+          "reason": {
+            "code": "INVALID_MUTATION",
+            "message": "clientId must be 8 to 200 printable characters, unique for each queued action."
+          }
+        }
+      ],
+      "counts": {
+        "applied": 0,
+        "duplicate": 0,
+        "conflict": 0,
+        "rejected": 1
+      }
+    },
+    "FINANCE": {
+      "batchId": "0d67c001ffb3f10df2e8ddeb",
       "serverTime": "2026-11-02T14:08:00.000Z",
+      "processedOrder": [
+        0
+      ],
+      "results": [
+        {
+          "clientId": "Sample",
+          "kind": "Sample",
+          "status": "REJECTED",
+          "reason": {
+            "code": "INVALID_MUTATION",
+            "message": "clientId must be 8 to 200 printable characters, unique for each queued action."
+          }
+        }
+      ],
+      "counts": {
+        "applied": 0,
+        "duplicate": 0,
+        "conflict": 0,
+        "rejected": 1
+      }
+    },
+    "RESTRICTED_TECHNICAL": {
+      "batchId": "64fd483c814e12023f8ab8ff",
+      "serverTime": "2026-11-02T14:06:00.000Z",
       "processedOrder": [
         0
       ],
@@ -17518,8 +17618,8 @@
       "colour": "forest",
       "isActive": true,
       "createdByMembershipId": "00000000-0000-4000-8000-000000000390",
-      "createdAt": "2026-11-02T14:13:00.000Z",
-      "updatedAt": "2026-11-02T14:13:00.000Z"
+      "createdAt": "2026-11-02T14:11:00.000Z",
+      "updatedAt": "2026-11-02T14:11:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -17548,8 +17648,8 @@
       "type": "TASK",
       "sourceActivityId": null,
       "isFollowUp": false,
-      "createdAt": "2026-11-02T14:18:00.000Z",
-      "updatedAt": "2026-11-02T14:18:00.000Z",
+      "createdAt": "2026-11-02T14:16:00.000Z",
+      "updatedAt": "2026-11-02T14:16:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -17577,8 +17677,8 @@
       "type": "TASK",
       "sourceActivityId": null,
       "isFollowUp": false,
-      "createdAt": "2026-11-02T14:17:00.000Z",
-      "updatedAt": "2026-11-02T14:17:00.000Z",
+      "createdAt": "2026-11-02T14:15:00.000Z",
+      "updatedAt": "2026-11-02T14:15:00.000Z",
       "importSessionId": null
     },
     "DELIVERY": {
@@ -17603,8 +17703,8 @@
       "type": "TASK",
       "sourceActivityId": null,
       "isFollowUp": false,
-      "createdAt": "2026-11-02T14:16:00.000Z",
-      "updatedAt": "2026-11-02T14:16:00.000Z",
+      "createdAt": "2026-11-02T14:14:00.000Z",
+      "updatedAt": "2026-11-02T14:14:00.000Z",
       "importSessionId": null
     },
     "RESTRICTED_TECHNICAL": {
@@ -17629,8 +17729,8 @@
       "type": "TASK",
       "sourceActivityId": null,
       "isFollowUp": false,
-      "createdAt": "2026-11-02T14:15:00.000Z",
-      "updatedAt": "2026-11-02T14:15:00.000Z",
+      "createdAt": "2026-11-02T14:13:00.000Z",
+      "updatedAt": "2026-11-02T14:13:00.000Z",
       "importSessionId": null
     }
   },
@@ -17643,11 +17743,11 @@
       "requirements": null,
       "assigneeMembershipId": "00000000-0000-4000-8000-000000000411",
       "createdByMembershipId": "00000000-0000-4000-8000-000000000412",
-      "dueAt": "2026-11-02T14:21:00.000Z",
+      "dueAt": "2026-11-02T14:19:00.000Z",
       "priority": "MEDIUM",
       "status": "PENDING",
       "completedAt": null,
-      "archivedAt": "2026-11-02T14:22:00.000Z",
+      "archivedAt": "2026-11-02T14:20:00.000Z",
       "archivedByMembershipId": "00000000-0000-4000-8000-000000000411",
       "archiveReason": null,
       "companyId": null,
@@ -17657,8 +17757,8 @@
       "type": "TASK",
       "sourceActivityId": null,
       "isFollowUp": false,
-      "createdAt": "2026-11-02T14:23:00.000Z",
-      "updatedAt": "2026-11-02T14:24:00.000Z",
+      "createdAt": "2026-11-02T14:21:00.000Z",
+      "updatedAt": "2026-11-02T14:22:00.000Z",
       "importSessionId": null
     },
     "same": [
@@ -17674,7 +17774,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T14:26:00.000Z",
+      "createdAt": "2026-11-02T14:24:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -17690,7 +17790,7 @@
       "deleted": false,
       "edited": false,
       "editedAt": null,
-      "createdAt": "2026-11-02T14:25:00.000Z",
+      "createdAt": "2026-11-02T14:23:00.000Z",
       "mentions": [],
       "canEdit": true,
       "canDelete": true
@@ -17717,8 +17817,8 @@
       "lastAssignedMembershipId": null,
       "sequence": 1,
       "isActive": true,
-      "createdAt": "2026-11-02T14:27:00.000Z",
-      "updatedAt": "2026-11-02T14:28:00.000Z"
+      "createdAt": "2026-11-02T14:25:00.000Z",
+      "updatedAt": "2026-11-02T14:26:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -17799,7 +17899,7 @@
     "default": {
       "id": "00000000-0000-4000-8000-000000000379",
       "companyId": "00000000-0000-4000-8000-000000000380",
-      "companyName": "Walk Co 9d0010",
+      "companyName": "Walk Co 32dffe",
       "serviceId": "00000000-0000-4000-8000-000000000381",
       "serviceName": "CRM",
       "billingCycle": "YEARLY",
@@ -17808,7 +17908,7 @@
       "currency": "KES",
       "startsOn": "2026-11-02T09:13:00.000Z",
       "renewsOn": "2026-11-02T09:07:00.000Z",
-      "daysToRenewal": 47,
+      "daysToRenewal": 38,
       "state": "ACTIVE",
       "stateSource": "override",
       "overrideReason": "Sample",
@@ -17818,8 +17918,8 @@
       "cancelReason": null,
       "lastRenewedAt": null,
       "notes": null,
-      "createdAt": "2026-11-02T13:57:00.000Z",
-      "updatedAt": "2026-11-02T13:59:00.000Z"
+      "createdAt": "2026-11-02T13:55:00.000Z",
+      "updatedAt": "2026-11-02T13:57:00.000Z"
     },
     "same": [
       "MANAGEMENT"
@@ -17827,7 +17927,7 @@
     "SALES": {
       "id": "00000000-0000-4000-8000-000000000379",
       "companyId": "00000000-0000-4000-8000-000000000380",
-      "companyName": "Walk Co 9d0010",
+      "companyName": "Walk Co 32dffe",
       "serviceId": "00000000-0000-4000-8000-000000000381",
       "serviceName": "CRM",
       "billingCycle": "YEARLY",
@@ -17836,7 +17936,7 @@
       "currency": "KES",
       "startsOn": "2026-11-02T09:13:00.000Z",
       "renewsOn": "2026-11-02T09:07:00.000Z",
-      "daysToRenewal": 47,
+      "daysToRenewal": 38,
       "state": "ACTIVE",
       "stateSource": "override",
       "overrideReason": "Sample",
@@ -17846,8 +17946,8 @@
       "cancelReason": null,
       "lastRenewedAt": null,
       "notes": null,
-      "createdAt": "2026-11-02T13:57:00.000Z",
-      "updatedAt": "2026-11-02T13:58:00.000Z"
+      "createdAt": "2026-11-02T13:55:00.000Z",
+      "updatedAt": "2026-11-02T13:56:00.000Z"
     }
   },
   "PUT /api/orgs/{orgSlug}/reminder-settings": {

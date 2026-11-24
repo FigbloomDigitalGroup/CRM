@@ -27,7 +27,7 @@ describe("Sales draft invoices setting (UC-R10)", () => {
   it("is read-only without configuration.manage", async () => {
     const { client } = stubClient(handlers());
     renderScreen(<SalesDraftInvoicesEditor />, client, { permissionKeys: [], roleName: "Finance" });
-    expect(await screen.findByRole("switch", { name: "Let Sales create draft invoices" })).toBeDisabled();
+    expect(await screen.findByRole("switch", { name: "Let Sales create draft invoices" })).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByText("Only Management changes this setting")).toBeInTheDocument();
   });
 });

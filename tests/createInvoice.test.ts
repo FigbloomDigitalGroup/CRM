@@ -106,8 +106,10 @@ describe("create invoice (UC-R8)", () => {
     const body = { ...base, companyId: w.deal.companyId };
     const req = () => new Request("http://localhost/x", { method: "POST", headers: { "idempotency-key": "invoice-key-0001" } });
     const first = (await withIdempotency(w.finance, req(), body, () => createInvoice(w.finance, body))) as { id: string; number: string };
-    const second = (await withIdempotency(w.finance, req(), body, () => createInvoice(w.finance, body))) as { id: string };
-    expect(second.id).toBe(first.id);
+    // A replay is answered from the stored response, as the route would send it (header Idempotent-Replayed).
+    const replay = (await withIdempotency(w.finance, req(), body, () => createInvoice(w.finance, body))) as Response;
+    expect(replay.headers.get("Idempotent-Replayed")).toBe("true");
+    expect(((await replay.json()) as { id: string }).id).toBe(first.id);
     expect(await adminDb.invoice.count({ where: { organizationId: w.org.id } })).toBe(1);
   });
 

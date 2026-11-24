@@ -217,7 +217,9 @@ describe("quote surfaces against every role (UC-R11)", () => {
       await expect(getQuote(who, w.quote.id)).rejects.toBeInstanceOf(ForbiddenError);
       await expect(previewQuote(who, w.quote.id, 1)).rejects.toBeInstanceOf(ForbiddenError);
       await expect(getQuoteActivity(who, w.quote.id, 1)).rejects.toBeInstanceOf(ForbiddenError);
-      await expect(sendQuote(who, w.quote.id, 1, { channel: "link" })).rejects.toBeInstanceOf(ForbiddenError);
+      // Send is refused either as "forbidden" (no quote right) or "not found" (the deal cannot be opened, so its existence is not confirmed); never a share.
+      const refusal = await sendQuote(who, w.quote.id, 1, { channel: "link" }).then(() => null, (e: unknown) => e);
+      expect(refusal instanceof ForbiddenError || refusal instanceof NotFoundError).toBe(true);
     }
     expect(await adminDb.quoteShare.count({ where: { organizationId: w.org.id } })).toBe(0);
   });

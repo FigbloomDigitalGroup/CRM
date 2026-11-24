@@ -1153,6 +1153,19 @@
         "dueTo": {
           "type": "string"
         },
+        "amountMin": {
+          "type": "string"
+        },
+        "amountMax": {
+          "type": "string"
+        },
+        "hasBalance": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
         "q": {
           "type": "string"
         },
@@ -1558,6 +1571,44 @@
         },
         "status": {
           "type": "string"
+        },
+        "q": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "owner": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "companyId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "validFrom": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "validTo": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "expired": {
+          "type": "string",
+          "maxLength": 10
+        },
+        "counts": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        },
+        "activity": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
         },
         "limit": {
           "type": "string",
@@ -3236,6 +3287,10 @@
             "null"
           ]
         },
+        "serviceInterestName": {
+          "type": "string",
+          "maxLength": 80
+        },
         "qualificationData": {},
         "lostReasonId": {
           "type": [
@@ -3658,6 +3713,47 @@
         },
         "defaultTerms": {
           "type": "string"
+        },
+        "tax": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string"
+                },
+                "rateBp": {
+                  "type": "number"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "mode",
+                "rateBp"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "invoiceNumbering": {
+          "type": "object",
+          "properties": {
+            "auto": {
+              "type": "boolean"
+            },
+            "prefix": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "salesDraftInvoices": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false
@@ -6209,12 +6305,19 @@
         "notes": {
           "type": "string"
         },
+        "paymentTermsDays": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "terms": {
+          "type": "string"
+        },
         "sent": {
           "type": "boolean"
         }
       },
       "required": [
-        "number",
         "amount",
         "issuedOn",
         "dueOn"
@@ -6318,6 +6421,10 @@
         },
         "serviceInterestId": {
           "type": "string"
+        },
+        "serviceInterestName": {
+          "type": "string",
+          "maxLength": 80
         },
         "ownerMembershipId": {
           "type": "string"
@@ -7364,6 +7471,13 @@
         },
         "allowSigning": {
           "type": "boolean"
+        },
+        "channel": {
+          "type": "string",
+          "enum": [
+            "email",
+            "link"
+          ]
         }
       },
       "additionalProperties": false
