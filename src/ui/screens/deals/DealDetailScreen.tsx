@@ -71,7 +71,7 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
   const refresh = useRefreshDeals();
   const ref = useRefData();
   const nameOf = useMemberName();
-  const salesDraftSetting = useSalesDraftInvoices(orgSlug, !can("invoices.create") && can("deals.edit.own"));
+  const salesDraftSetting = useSalesDraftInvoices(orgSlug, !can("finance.manage.payments") && can("invoices.create") && can("deals.edit.own"));
   const mover = useDealMover(ref.data);
   const [drawer, setDrawer] = useState<Drawer>(null);
   const [invoicing, setInvoicing] = useState(false);
@@ -129,8 +129,10 @@ export function DealDetailScreen({ dealId }: { dealId: string }) {
   const reminderOn = (reminderDays?.enabled ?? true) && open && !archived && lastProposal?.status === "SENT" && sentDays !== null && sentDays >= followDays;
 
   // UC-R10: a Sales person with no invoice keys may start a draft from their own won deal when Management switched it on (the API checks again).
-  const salesDraftOn = !can("invoices.create") && can("deals.edit.own") && owns && salesDraftSetting.data?.salesDraftInvoices === true;
-  const canInvoice = d.outcome === "WON" && !archived && (can("invoices.create") || salesDraftOn);
+  // UC-C7: Sales now holds invoices.create (it opens the Invoices page), so the draft path is told apart by the missing payment-manage key.
+  const salesDraftRole = !can("finance.manage.payments") && can("invoices.create") && can("deals.edit.own");
+  const salesDraftOn = salesDraftRole && owns && salesDraftSetting.data?.salesDraftInvoices === true;
+  const canInvoice = d.outcome === "WON" && !archived && ((can("invoices.create") && !salesDraftRole) || salesDraftOn);
   const target = { id: d.id, company: company.name, stageId: d.pipelineStageId, outcome: d.outcome, title, valueLabel: valueText };
 
   async function archiveDeal() {

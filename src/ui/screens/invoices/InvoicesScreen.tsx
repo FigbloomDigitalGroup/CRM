@@ -74,11 +74,14 @@ export function InvoicesScreen({ newInvoiceSlot }: { newInvoiceSlot?: ReactNode 
   const set = (patch: Partial<InvoiceFilters>) => setFilters((f) => ({ ...f, page: 1, ...patch }));
 
   const allowed = mayOpen && mayFigures;
+  // UC-C7: Sales prepares drafts here. The API returns only DRAFT invoices of the person's own deals with a whitelist of fields (no payments,
+  // balances or overdue state); when Management switched the setting off it answers no-access and the masked note below shows instead.
+  const draftMode = mayOpen && !mayFigures && can("deals.edit.own");
   const query = listQuery(filters);
   const list = useApiQuery(
     "listInvoices",
     { params: { orgSlug }, query: query as Operations["listInvoices"]["query"] },
-    { enabled: allowed, placeholderData: (prev) => prev },
+    { enabled: allowed || draftMode, placeholderData: (prev) => prev },
   );
   // The ageing strip and chip counts follow customer and due-date filters only, never the status chip, so they stay a map of the whole book.
   const totals = list.data?.totals as Totals | undefined;
@@ -106,6 +109,34 @@ export function InvoicesScreen({ newInvoiceSlot }: { newInvoiceSlot?: ReactNode 
       <div className="fb-inv" data-screen-label="Invoices">
         {header}
         <NoAccess area="Invoices" denial={{ yourRole: member.roleName, ownerRoles: ["Finance", "Management"], whoToAsk: ["Your Management lead"] }} />
+      </div>
+    );
+  }
+
+  if (draftMode && !list.isError) {
+    const drafts = (list.data?.items ?? []) as InvoiceRow[];
+    const draftColumns: Column<InvoiceRow>[] = [
+      { key: "number", header: "Invoice", alwaysVisible: true, sortValue: (r) => r.number, cell: (r) => <span className="fb-inv__co">{r.number}</span> },
+      { key: "customer", header: "Customer", cell: (r) => <span><span className="fb-inv__co">{r.companyName}</span>{r.notes ? <span className="fb-inv__what">{String(r.notes)}</span> : null}</span> },
+      { key: "dueOn", header: "Due", sortValue: (r) => r.dueOn, cell: (r) => <span className="fb-inv__due">{day(r.dueOn, timeZone)}</span> },
+      { key: "amount", header: "Amount", align: "right", sortValue: (r) => Number(r.amount), cell: (r) => kes(r.amount, r.currency) },
+      { key: "status", header: "Status", cell: () => <span className="fb-inv__pill" style={{ background: INVOICE_TONE.DRAFT.bg, color: INVOICE_TONE.DRAFT.fg }}>Draft</span> },
+    ];
+    return (
+      <div className="fb-inv" data-screen-label="Invoices">
+        {header}
+        <div className="fb-inv__masked" role="status" data-testid="inv-draft-note">
+          <HIcon name="lock" size={16} />
+          <span>You prepare drafts from your won deals. Finance and Management send them and record payments, so balances and payments are not shown to your role.</span>
+        </div>
+        <DataTable<InvoiceRow>
+          caption="Draft invoices"
+          columns={draftColumns}
+          rows={drafts}
+          rowKey={(r) => r.id}
+          loading={list.isPending}
+          empty={<div className="fb-inv__state" role="status">No draft invoices yet. Open a won deal of yours and create one.</div>}
+        />
       </div>
     );
   }

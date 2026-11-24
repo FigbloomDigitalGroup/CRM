@@ -38,3 +38,9 @@
 .fb-app .fb-social__funnel li { display: flex; flex-direction: column; gap: 2px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; }
 .fb-app .fb-social__bars { display: flex; align-items: flex-end; gap: 3px; height: 140px; margin-top: 10px; }
 .fb-app .fb-social__bars span { flex: 1; min-width: 3px; background: var(--primary); border-radius: 3px 3px 0 0; }
+.fb-app .fb-social__head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.fb-app .fb-social__head .fb-social__actions { margin-top: 0; }
+.fb-app .fb-social__sentbar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--surface-3); }
+.fb-app .fb-social__sentbar span[data-sent="Positive"] { background: var(--success, var(--primary)); }
+.fb-app .fb-social__sentbar span[data-sent="Neutral"] { background: var(--text-3); }
+.fb-app .fb-social__sentbar span[data-sent="Negative"] { background: var(--danger, var(--text-2)); }

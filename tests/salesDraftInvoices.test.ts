@@ -7,7 +7,7 @@ import { createTestContext, createTestOrganization } from "./helpers/fixtures";
 import { createWonDeal } from "./helpers/stage3";
 
 /**
- * UC-R10 (FIG-1781): Sales draft-only invoice access, off by default. DB-backed. NOT RUN when written (the shared test database was busy).
+ * UC-R10 (FIG-1781): Sales draft-only invoice access, on by default since UC-C7 (Management can switch it off). DB-backed.
  * Covers: the role matrix with the setting off and on, own-deal scoping, no send, no payment, masking (no payment data in any Sales response),
  * and the setting itself (Management only, audited, off by default).
  */
@@ -27,17 +27,20 @@ async function setup() {
 }
 
 describe("Sales draft invoices (UC-R10)", () => {
-  it("is off by default: Sales cannot create, list or read, and the setting is audited when switched", async () => {
+  it("is on by default (UC-C7); Management can switch it off, which is audited, and then Sales cannot create, list or read", async () => {
     const w = await setup();
-    await expect(createInvoice(w.sales, { ...base, number: "S-1", dealId: w.mine.id })).rejects.toBeInstanceOf(ForbiddenError);
-    await expect(listInvoices(w.sales)).rejects.toBeInstanceOf(ForbiddenError);
+    const made = await createInvoice(w.sales, { ...base, number: "S-1", dealId: w.mine.id });
+    expect(made).toMatchObject({ number: "S-1", status: "DRAFT", salesDraftOnly: true });
+    expect((await listInvoices(w.sales)).items.map((i: { number: string }) => i.number)).toEqual(["S-1"]);
     const fin = await createInvoice(w.finance, { ...base, number: "F-1", dealId: w.mine.id });
-    await expect(getInvoice(w.sales, fin.id)).rejects.toBeInstanceOf(ForbiddenError);
+    await updateSalesDraftInvoices(w.management, false);
     await updateSalesDraftInvoices(w.management, true);
     await updateSalesDraftInvoices(w.management, false);
     const events = await adminDb.auditEvent.findMany({ where: { organizationId: w.org.id, action: "invoice_sales_draft.updated" } });
-    expect(events).toHaveLength(2);
+    expect(events).toHaveLength(3);
     await expect(createInvoice(w.sales, { ...base, number: "S-2", dealId: w.mine.id })).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(listInvoices(w.sales)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(getInvoice(w.sales, fin.id)).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it("only Management changes the setting", async () => {

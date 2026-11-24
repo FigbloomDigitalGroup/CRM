@@ -64,10 +64,10 @@ export async function updateInvoiceNumbering(ctx: AuthContext, patch: { auto?: u
   return next;
 }
 
-/** UC-R10: whether Sales may create and read draft invoices. Off unless Management switched it on. */
+/** UC-R10: whether Sales may create and read draft invoices. ON by default (UC-C7, Given, 24 Nov 2026); Management can switch it off, which is stored as `{ enabled: false }`. */
 export async function salesDraftInvoicesEnabled(organizationId: string): Promise<boolean> {
   const row = await withOrgContext(organizationId, (tx) => tx.organizationSetting.findUnique({ where: { organizationId_key: { organizationId, key: SALES_DRAFT_KEY } } }));
-  return row ? parseStoredSalesDraft(row.value) : false;
+  return row ? parseStoredSalesDraft(row.value) : true;
 }
 
 export async function updateSalesDraftInvoices(ctx: AuthContext, enabled: unknown): Promise<boolean> {

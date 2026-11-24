@@ -42,6 +42,8 @@ export const DEV_USERS: readonly DevUser[] = [
   { id: "dl", email: "dev.delivery@figbloom.local", name: "Zion Suzuki", roleKey: "DELIVERY" },
   { id: "fn", email: "dev.finance@figbloom.local", name: "Zilpa Okoth", roleKey: "FINANCE" },
   { id: "tc", email: "dev.tech@figbloom.local", name: "Katam Kipkemboi", roleKey: "RESTRICTED_TECHNICAL" },
+  // UC-C7 (FIG-1791): the Marketing dev account. It owns no sample records; it exists to show the Social workspace and the Marketing access.
+  { id: "mk", email: "dev.marketing@figbloom.local", name: "Amani Wekesa", roleKey: "MARKETING" },
   // There is no Customer Support role (dropped 5 Nov 2026, docs/DECISIONS.md 5.0 decision 12). With the Dev Super Admin below, these are the seven dev accounts.
 ];
 

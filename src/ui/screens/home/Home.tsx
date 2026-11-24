@@ -28,8 +28,10 @@ import {
 import type { DeliveryData, FinanceData, ManagementData, SalesTodayData, SectionAnswer, TechnicalData } from "./dash";
 import { LoaderBlock } from "../../components/loader";
 import { settingsHref } from "@/lib/settingsLinks";
+import { SocialHome } from "./SocialHome";
+import { AgeingPanel, InvoiceDraftsPanel, InvoiceTiles, QuotesPanel, SocialSnapshotTile } from "./widgets";
 
-type Kind = "management" | "sales" | "delivery" | "finance" | "technical";
+type Kind = "management" | "sales" | "delivery" | "finance" | "technical" | "marketing";
 
 interface Quick {
   key: string;
@@ -45,6 +47,7 @@ const COPY: Record<Kind, { scope: string; scopeTone: "organisation" | "read-only
   delivery: { scope: "Delivery view", scopeTone: "read-only", subtitle: "Here’s the won work coming your way." },
   finance: { scope: "Finance view", scopeTone: "read-only", subtitle: "Here’s the won value and what’s still to collect." },
   technical: { scope: "Assigned to me", scopeTone: "mine", subtitle: "Here are the tasks assigned to you." },
+  marketing: { scope: "Social", scopeTone: "read-only", subtitle: "Here’s how your channels are doing." },
 };
 
 const EMPTY: Record<Kind, { icon: string; title: string; body: string }> = {
@@ -61,6 +64,7 @@ const EMPTY: Record<Kind, { icon: string; title: string; body: string }> = {
   delivery: { icon: "package", title: "No handoffs yet", body: "When Sales marks a deal won, the scope, requirements and onboarding tasks land here with a start date. Nothing to do until then." },
   finance: { icon: "wallet", title: "No won deals yet", body: "Won deals appear here with their contract amount so you can track invoices and payments. The open pipeline stays with Sales." },
   technical: { icon: "tasks", title: "No work assigned yet", body: "When someone assigns you a task, it shows here with the client requirements you need. You can also add tasks for yourself." },
+  marketing: { icon: "globe", title: "No channels connected yet", body: "Connect your social accounts to see followers, mentions and campaigns here." },
 };
 
 function dateLine(timeZone: string | null): string {
@@ -100,10 +104,21 @@ export function HomeScreen() {
     if (has("delivery")) return "delivery";
     if (has("finance")) return "finance";
     if (has("technical")) return "technical";
+    if (m.can("social.view")) return "marketing";
     return null;
-  }, [sections]);
+  }, [sections, m]);
 
   const retry = () => void qc.invalidateQueries({ queryKey: ["getDashboard"] });
+
+  // Marketing has no dashboard section of its own: its home is the Social overview, whatever the dashboard call answers.
+  if (m.can("social.view") && (dash.isError || (sections && !sections.some((s) => s.key !== "my_metrics")))) {
+    return (
+      <div className="fb-home">
+        <Header kind="marketing" timeZone={m.timeZone} quick={[]} />
+        <SocialHome />
+      </div>
+    );
+  }
 
   if (dash.isError) {
     const e = describeError(dash.error);
@@ -154,6 +169,7 @@ export function HomeScreen() {
       {kind === "delivery" ? <DeliveryHome sections={sections} retry={retry} /> : null}
       {kind === "finance" ? <FinanceHome sections={sections} retry={retry} /> : null}
       {kind === "technical" ? <TechnicalHome sections={sections} retry={retry} /> : null}
+      {kind === "marketing" ? <SocialHome /> : null}
     </div>
   );
 }
@@ -293,8 +309,8 @@ function SalesHome({ sections, retry }: RoleProps) {
     <>
       <KpiGrid items={kpis} />
       <HCols
-        left={[<TodoPanel key="todo" />, ...(d.pipeline ? [<PipelineByStage key="pipe" />] : [])]}
-        right={[<NewLeadsPanel key="new" rows={leads.rows} since={since} />, ...(d.pipeline ? [<MovingAndStalled key="moving" />] : [])]}
+        left={[<TodoPanel key="todo" />, ...(d.pipeline ? [<PipelineByStage key="pipe" />] : []), <InvoiceDraftsPanel key="drafts" />]}
+        right={[<NewLeadsPanel key="new" rows={leads.rows} since={since} />, ...(d.pipeline ? [<MovingAndStalled key="moving" />] : []), <QuotesPanel key="quotes" variant="sales" />]}
       />
     </>
   );
@@ -330,6 +346,8 @@ function ManagementHome({ sections, retry }: RoleProps) {
         left={[<TodoPanel key="todo" showOwner />, <PipelineByStage key="pipe" />]}
         right={[<NewLeadsPanel key="new" rows={leads.rows} since={since} />, <MovingAndStalled key="moving" showOwner />]}
       />
+      <InvoiceTiles />
+      <HCols left={[<QuotesPanel key="quotes" variant="management" />]} right={[<SocialSnapshotTile key="social" />]} />
       <MonthVsLast data={d} />
       <HCols left={[<RevenueByService key="rev" data={d} />, <RetentionCard key="ret" />]} right={[<TeamHealth key="team" data={d} />, <AdoptionCard key="adopt" data={d} />]} />
     </>
@@ -366,7 +384,8 @@ function FinanceHome({ sections, retry }: RoleProps) {
   return (
     <>
       <KpiGrid items={financeKpis(s.data, pay.rows, pay.loading)} />
-      <WonDealsTable rows={pay.rows} loading={pay.loading} />
+      <InvoiceTiles />
+      <HCols left={[<WonDealsTable key="won" rows={pay.rows} loading={pay.loading} />]} right={[<AgeingPanel key="ageing" />]} />
     </>
   );
 }

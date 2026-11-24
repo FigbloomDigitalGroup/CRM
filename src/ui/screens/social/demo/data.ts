@@ -80,3 +80,6 @@ export const DAILY_ENGAGEMENT = [310, 280, 340, 420, 390, 260, 240, 360, 410, 52
 export const kes = (v: number) => `KES ${Math.round(v).toLocaleString("en-KE")}`;
 export const short = (v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(v >= 1e4 ? 0 : 1)}k` : String(v));
 export const dayLabel = (d: number) => (d === 0 ? "Today" : d === 1 ? "Tomorrow" : d === -1 ? "Yesterday" : d > 0 ? `In ${d} days` : `${-d} days ago`);
+
+/** The unread count the sidebar shows on Unified inbox (demo: counted from the demo threads). */
+export const unreadSocialThreads = (): number => THREADS.filter((t) => t.unread).length;

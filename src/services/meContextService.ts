@@ -28,6 +28,7 @@ export const WORKSPACE_LABELS: Record<string, string> = {
   DELIVERY: "Delivery workspace",
   FINANCE: "Finance workspace",
   RESTRICTED_TECHNICAL: "Technical workspace",
+  MARKETING: "Marketing workspace",
 };
 
 function formatLocal(date: Date, timeZone: string | null, hourFormat: string): string {

@@ -8,7 +8,7 @@ import { Switch } from "../settings/kit";
 import { EditorFrame, recordAudit } from "./kit";
 
 /**
- * Sales draft invoices (UC-R10) on `GET/PATCH /quote-settings` (`salesDraftInvoices`). Off by default. When on, Sales can create a DRAFT invoice
+ * Sales draft invoices (UC-R10) on `GET/PATCH /quote-settings` (`salesDraftInvoices`). On by default. When on, Sales can create a DRAFT invoice
  * from a won deal they own and see its number, amount, due date and status. Finance still sends it and records the payments; Sales never sees
  * payments, balances or overdue state. Management only (`configuration.manage`). Same editor frame as Invoice numbering.
  */
@@ -21,7 +21,7 @@ export function SalesDraftInvoicesEditor() {
   if (q.isLoading) return <LoadingState label="Loading Sales draft invoices" />;
   if (q.error || !q.data) return <QueryFailure error={q.error} area="Sales draft invoices" onRetry={() => void q.refetch()} />;
 
-  const saved = q.data.salesDraftInvoices === true;
+  const saved = q.data.salesDraftInvoices !== false;
   const on = draft ?? saved;
   const dirty = on !== saved;
   const mayEdit = can("configuration.manage");

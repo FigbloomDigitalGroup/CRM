@@ -90,10 +90,11 @@ function requireKey(ctx: AuthContext, key: string) {
 
 /**
  * UC-R10 (FIG-1781): the Sales role may create and read DRAFT invoices of its own deals when Management switched `invoices.sales_draft` on
- * (off by default). Only the platform Sales role without the payment keys; every other role goes the normal way. Never any payment data.
+ * (ON by default since UC-C7). Only a member who holds invoices.create and deals.edit.own (the platform Sales role) and no payment key; every other role goes the normal way. Never any payment data.
  */
 async function salesDraftActor(ctx: AuthContext): Promise<boolean> {
-  if (ctx.roleKey !== "SALES" || hasPermission(ctx, "finance.manage.payments") || hasPermission(ctx, "finance.view.payments")) return false;
+  // Decided by keys, never by a role name (permissionsV2 guard): the invoice keys that open the page, ownership of deals, and no payment key.
+  if (!hasPermission(ctx, "invoices.create") || !hasPermission(ctx, "deals.edit.own") || hasPermission(ctx, "finance.manage.payments") || hasPermission(ctx, "finance.view.payments")) return false;
   return salesDraftInvoicesEnabled(ctx.organizationId);
 }
 function canWriteNote(ctx: AuthContext) {

@@ -264,9 +264,9 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /integrations/website-key/settings` | H | D | D | D | D | same |
 | `GET /integrations/whatsapp` | A | D | D | D | D | same |
 | `PUT /integrations/whatsapp` | A | D | D | D | D | same |
-| `GET /invoices` | A | D | D | A | D | same |
-| `POST /invoices` | V | D | D | V | D | same |
-| `GET /invoices/{invoiceId}` | A | D | D | A | D | same |
+| `GET /invoices` | A | A | D | A | D | changed |
+| `POST /invoices` | V | V | D | V | D | changed |
+| `GET /invoices/{invoiceId}` | A | H | D | A | D | changed |
 | `PATCH /invoices/{invoiceId}` | A | D | D | A | D | same |
 | `POST /invoices/{invoiceId}/payments` | A | D | D | A | D | same |
 | `POST /invoices/{invoiceId}/send` | V | D | D | V | D | same |
@@ -533,4 +533,4 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D | same |
 | `GET /whats-new` | A | A | A | A | A | opened |
 
-516 route and method pairs, 2580 role answers: A 872, D 1280, H 260, V 168.
+516 route and method pairs, 2580 role answers: A 873, D 1277, H 261, V 169.

@@ -209,7 +209,7 @@ export interface QuoteSettingsView {
   tax?: { mode: "INCLUSIVE" | "EXCLUSIVE"; rateBp: number; label: string };
   /** UC-R8: invoice auto-numbering. Absent until the organisation sets it (then off, prefix INV-). */
   invoiceNumbering?: { auto: boolean; prefix: string };
-  /** UC-R10: whether Sales may create and read draft invoices. Always present; off by default. */
+  /** UC-R10: whether Sales may create and read draft invoices. Always present; on by default (UC-C7). */
   salesDraftInvoices?: boolean;
 }
 

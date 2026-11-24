@@ -10,14 +10,14 @@ import { filterNav, isActivePath, sectionBadge, sectionHasActive } from "../src/
 
 function menu(role: keyof typeof ROLE_PERMISSIONS | string, badges?: Record<string, number>) {
   const keys = ROLE_PERMISSIONS[role]!;
-  return buildNav({ permissionKeys: keys, membershipId: "m1", badges, demoScreens: true }).map((s) => `${s.label}: ${s.items.map((i) => i.label).join(", ")}`);
+  return buildNav({ permissionKeys: keys, membershipId: "m1", badges, demoScreens: true }).filter((s) => s.key !== "social").map((s) => `${s.label}: ${s.items.map((i) => i.label).join(", ")}`);
 }
 
 describe("sidebar navigation per role", () => {
   it("Management sees the whole workspace and the organisation reports", () => {
     expect(menu("MANAGEMENT")).toEqual([
       "Overview: Dashboard",
-      "Sales workspace: Leads, Deals, Quotes, Tasks, Calendar, Social, Team",
+      "Sales workspace: Leads, Deals, Quotes, Tasks, Calendar, Team",
       "Customers: Companies, Contacts",
       "Communication: Conversations, Mail, Chat, Video Conference",
       "After the sale: Handoffs, Renewals, Invoices, Payments",
@@ -31,7 +31,7 @@ describe("sidebar navigation per role", () => {
       "Sales workspace: Leads, Deals, Quotes, Tasks, Calendar",
       "Customers: Companies, Contacts",
       "Communication: Conversations, Mail, Chat, Video Conference",
-      "After the sale: Handoffs, Renewals",
+      "After the sale: Handoffs, Renewals, Invoices",
       "Insights & settings: Forecast & targets, My metrics, Preferences",
     ]);
   });
@@ -64,11 +64,25 @@ describe("sidebar navigation per role", () => {
 
   it("Forecast and Approvals are wired to the real API (no longer demo-only): they follow their permission keys with or without demo screens, and a role without the keys sees neither", () => {
     const labels = (role: string, demoScreens?: boolean) => buildNav({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1", demoScreens }).flatMap((s) => s.items.map((i) => i.label));
-    // Social (UC-S4) is demo-only for now, so it is the one item that differs with demo screens off.
-    expect(labels("MANAGEMENT")).toEqual(labels("MANAGEMENT", true).filter((l) => l !== "Social"));
+    // The Social media group (UC-S4) is demo-only for now, so it is the one group that differs with demo screens off.
+    const social = ["Social overview", "Unified inbox", "Publishing", "Campaigns", "Social analytics"];
+    expect(labels("MANAGEMENT")).toEqual(labels("MANAGEMENT", true).filter((l) => !social.includes(l)));
     expect(labels("MANAGEMENT")).toContain("Forecast & targets");
     expect(labels("MANAGEMENT")).toContain("Approvals");
     expect(labels("SALES")).not.toContain("Approvals");
+  });
+
+  it("Social media is its own group between the Sales workspace and Customers, five pages, the unread count on Unified inbox, Publishing needs social.publish", () => {
+    const sections = (keys: string[], demoScreens = true) => buildNav({ permissionKeys: keys, membershipId: "m1", demoScreens });
+    const full = sections(["social.view", "social.publish", "companies.view", "leads.view.all"]);
+    expect(full.map((s) => s.key)).toEqual(["overview", "workspace", "social", "customers", "insights"]);
+    const group = full.find((s) => s.key === "social")!;
+    expect(group.label).toBe("Social media");
+    expect(group.items.map((i) => i.label)).toEqual(["Social overview", "Unified inbox", "Publishing", "Campaigns", "Social analytics"]);
+    expect(group.items.find((i) => i.key === "social-inbox")!.badge).toBeGreaterThan(0);
+    expect(sections(["social.view"]).find((s) => s.key === "social")!.items.map((i) => i.label)).not.toContain("Publishing");
+    expect(sections(["leads.view.all"]).some((s) => s.key === "social")).toBe(false);
+    expect(sections(["social.view", "social.publish"], false).some((s) => s.key === "social")).toBe(false);
   });
 
   it("Conversations lives in the Communication group only, never also under Customers (F6.20)", () => {
@@ -140,8 +154,8 @@ describe("sidebar navigation per role", () => {
 
 describe("no Customer Support role (decision 12, FIG-1525)", () => {
   it("offers five roles and no role sees a Support workspace, tickets or customers link", () => {
-    expect(ROLES.map((r) => r.key).sort()).toEqual(["DELIVERY", "FINANCE", "MANAGEMENT", "RESTRICTED_TECHNICAL", "SALES"]);
-    expect(Object.keys(ROLE_PERMISSIONS).sort()).toEqual(["DELIVERY", "FINANCE", "MANAGEMENT", "RESTRICTED_TECHNICAL", "SALES"]);
+    expect(ROLES.map((r) => r.key).sort()).toEqual(["DELIVERY", "FINANCE", "MANAGEMENT", "MARKETING", "RESTRICTED_TECHNICAL", "SALES"]);
+    expect(Object.keys(ROLE_PERMISSIONS).sort()).toEqual(["DELIVERY", "FINANCE", "MANAGEMENT", "MARKETING", "RESTRICTED_TECHNICAL", "SALES"]);
     for (const role of Object.keys(ROLE_PERMISSIONS)) {
       const items = buildNav({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1", demoScreens: true }).flatMap((s) => s.items);
       expect(items.filter((i) => /support|ticket/i.test(`${i.key} ${i.label} ${i.path}`)), role).toEqual([]);
@@ -153,7 +167,7 @@ describe("quick create", () => {
   const kinds = (role: string) => buildQuickCreate({ permissionKeys: ROLE_PERMISSIONS[role]!, membershipId: "m1" }).map((q) => q.key);
   it("offers only what the role may create", () => {
     expect(kinds("MANAGEMENT")).toEqual(["lead", "contact", "company", "task", "quote", "invoice", "note"]);
-    expect(kinds("SALES")).toEqual(["lead", "contact", "company", "task", "quote", "note"]);
+    expect(kinds("SALES")).toEqual(["lead", "contact", "company", "task", "quote", "invoice", "note"]);
     expect(kinds("DELIVERY")).toEqual(["task", "note"]);
     expect(kinds("FINANCE")).toEqual(["invoice"]);
     expect(kinds("RESTRICTED_TECHNICAL")).toEqual(["task"]);
@@ -177,7 +191,7 @@ describe("Quotes and Invoices in the sidebar (UC-R2)", () => {
 
   it("each role: the two links appear exactly for the holders of the keys, and nobody else's menu changes", () => {
     expect(quoteKeys(ROLE_PERMISSIONS.MANAGEMENT!)).toEqual(["workspace/quotes", "after-sale/invoices"]);
-    expect(quoteKeys(ROLE_PERMISSIONS.SALES!)).toEqual(["workspace/quotes"]);
+    expect(quoteKeys(ROLE_PERMISSIONS.SALES!)).toEqual(["workspace/quotes", "after-sale/invoices"]);
     expect(quoteKeys(ROLE_PERMISSIONS.FINANCE!)).toEqual(["workspace/quotes", "after-sale/invoices"]);
     expect(quoteKeys(ROLE_PERMISSIONS.DELIVERY!)).toEqual([]);
     expect(quoteKeys(ROLE_PERMISSIONS.RESTRICTED_TECHNICAL!)).toEqual([]);

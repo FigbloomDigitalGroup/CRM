@@ -55,6 +55,14 @@ export const ROLES: readonly RoleDef[] = [
     description:
       "Least-privilege technical support and troubleshooting access.",
   },
+  // UC-C7 (FIG-1791): the sixth platform role. Sourcing leads, customer context, communications, tasks, calendar and the Social workspace.
+  // No deal values, no payments, no invoices (rule 7).
+  {
+    key: "MARKETING",
+    name: "Marketing",
+    description:
+      "Lead sourcing, campaigns and the Social workspace. No deal values, payments or invoices.",
+  },
 ];
 
 export const PERMISSIONS: { key: string; area: string; description: string }[] =
@@ -562,6 +570,17 @@ export const PERMISSIONS: { key: string; area: string; description: string }[] =
       description:
         "Receive a handoff: take ownership, update status and deliverables, mark Delivered.",
     },
+    // UC-C7 (FIG-1791): the Social workspace.
+    {
+      key: "social.view",
+      area: "Social",
+      description: "See the Social workspace: overview, inbox, campaigns and analytics.",
+    },
+    {
+      key: "social.publish",
+      area: "Social",
+      description: "Compose, schedule and publish social posts.",
+    },
   ];
 
 /**
@@ -718,6 +737,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "chat.channels.manage",
     "mail.use",
     "meetings.schedule",
+    "social.view",
+    "social.publish",
   ],
   SALES: [
     "leads.view.own",
@@ -763,6 +784,10 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "quotes.view",
     "quotes.edit",
     "quotes.send",
+    // UC-R10 / UC-C7: Sales prepares draft invoices of its own won deals (the Invoices page). The keys open the page and the create button; what
+    // Sales actually reads is decided by the sales-draft rules in paymentService (own deals, DRAFT only, whitelisted fields, no payments).
+    "invoices.view",
+    "invoices.create",
     "ai.use",
     "leads.view.shared",
     "leads.claim",
@@ -834,5 +859,26 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     "mywork.view",
     "chat.view",
     "chat.post",
+  ],
+  // UC-C7 (FIG-1791): sources leads of its own, sees customers, communicates, works tasks and the calendar, and runs the Social workspace.
+  MARKETING: [
+    "leads.view.own",
+    "leads.create",
+    "leads.edit.own",
+    "contacts.view",
+    "companies.view",
+    "activities.create",
+    "activities.view",
+    "communications.view",
+    "communications.create",
+    "tasks.create",
+    "tasks.assign.own",
+    "tasks.view.own",
+    "reporting.view.own",
+    "meetings.schedule",
+    "chat.view",
+    "chat.post",
+    "social.view",
+    "social.publish",
   ],
 };

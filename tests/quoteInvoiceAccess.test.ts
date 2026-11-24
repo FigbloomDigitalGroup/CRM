@@ -4,7 +4,7 @@ import type { AuthContext } from "../src/auth/context";
 import { adminDb } from "../src/db/adminClient";
 import { withOrgContext } from "../src/db/orgScopedClient";
 import { listOrganizationAuditLog } from "../src/services/auditLogService";
-import { updateInvoiceNumbering } from "../src/services/invoiceSettingsService";
+import { updateInvoiceNumbering, updateSalesDraftInvoices } from "../src/services/invoiceSettingsService";
 import {
   createInvoice,
   exportInvoicesCsv,
@@ -51,12 +51,12 @@ async function invoiceWorld(label = "R11Inv") {
 }
 
 describe("invoice surfaces against every role (UC-R11)", () => {
-  it("Sales, Delivery and Restricted Technical are refused on every invoice and payment read and write", async () => {
+  it("Delivery and Restricted Technical are refused on every invoice and payment read and write", async () => {
     const w = await invoiceWorld();
     const inv = await w.mk("MX-1");
     await recordPayment(w.finance, inv.id, { amount: 100 }, NOW);
     const paymentId = (await getInvoice(w.finance, inv.id, NOW)).payments[0]!.id;
-    for (const who of [w.sales, w.delivery, w.technical]) {
+    for (const who of [w.delivery, w.technical]) {
       await expect(listInvoices(who, {}, {}, NOW)).rejects.toBeInstanceOf(ForbiddenError);
       await expect(getInvoice(who, inv.id, NOW)).rejects.toBeInstanceOf(ForbiddenError);
       await expect(exportInvoicesCsv(who, {}, NOW)).rejects.toBeInstanceOf(ForbiddenError);
@@ -69,6 +69,32 @@ describe("invoice surfaces against every role (UC-R11)", () => {
       await expect(reversePayment(who, paymentId, { reason: "x" }, NOW)).rejects.toBeInstanceOf(ForbiddenError);
     }
     expect(await adminDb.invoice.count({ where: { organizationId: w.org.id } })).toBe(1);
+  });
+
+  it("Sales (draft invoices are on by default, UC-C7) sees only DRAFT invoices of its own deals, never a payment, balance or overdue figure, and is refused everything else; switched off, it is refused every read", async () => {
+    const w = await invoiceWorld();
+    const sent = await w.mk("MX-S1");
+    await recordPayment(w.finance, sent.id, { amount: 100 }, NOW);
+    const paymentId = (await getInvoice(w.finance, sent.id, NOW)).payments[0]!.id;
+    const draft = (await createInvoice(w.sales, { number: "MX-D1", amount: 500, issuedOn: "2026-11-01", dueOn: "2026-12-01", dealId: w.deal.id }, NOW)) as unknown as Record<string, unknown>;
+    for (const k of ["paidAmount", "balance", "overdue", "daysOverdue", "overpaid", "payments", "storedStatus"]) expect(draft, k).not.toHaveProperty(k);
+    const page = (await listInvoices(w.sales, {}, {}, NOW)) as unknown as { items: Record<string, unknown>[]; totals?: unknown; salesDraftOnly: boolean };
+    expect(page.items.map((i) => i.number)).toEqual(["MX-D1"]);
+    expect(page.salesDraftOnly).toBe(true);
+    expect(page.totals).toBeUndefined();
+    for (const row of page.items) for (const k of ["paidAmount", "balance", "overdue", "daysOverdue", "payments"]) expect(row, k).not.toHaveProperty(k);
+    await expect(getInvoice(w.sales, sent.id, NOW)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(exportInvoicesCsv(w.sales, {}, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(getPaymentAggregates(w.sales, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(listWonDealPayments(w.sales, {}, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(markInvoiceSent(w.sales, sent.id, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(voidInvoice(w.sales, sent.id, { reason: "x" }, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(recordPayment(w.sales, sent.id, { amount: 1 }, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(reversePayment(w.sales, paymentId, { reason: "x" }, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await updateSalesDraftInvoices(w.management, false);
+    await expect(listInvoices(w.sales, {}, {}, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(getInvoice(w.sales, draft.id as string, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(createInvoice(w.sales, { number: "MX-D2", amount: 1, issuedOn: "2026-11-01", dueOn: "2026-12-01", dealId: w.deal.id }, NOW)).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it("Management and Finance see the list, the ageing strip, the drawer with its payment history, and the export", async () => {

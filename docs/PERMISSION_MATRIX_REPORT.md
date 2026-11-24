@@ -261,9 +261,9 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `POST /integrations/website-key/settings` | H | D | D | D | D |
 | `GET /integrations/whatsapp` | A | D | D | D | D |
 | `PUT /integrations/whatsapp` | A | D | D | D | D |
-| `GET /invoices` | A | D | D | A | D |
-| `POST /invoices` | V | D | D | V | D |
-| `GET /invoices/{invoiceId}` | A | D | D | A | D |
+| `GET /invoices` | A | A | D | A | D |
+| `POST /invoices` | V | V | D | V | D |
+| `GET /invoices/{invoiceId}` | A | H | D | A | D |
 | `PATCH /invoices/{invoiceId}` | A | D | D | A | D |
 | `POST /invoices/{invoiceId}/payments` | A | D | D | A | D |
 | `POST /invoices/{invoiceId}/send` | V | D | D | V | D |
@@ -530,4 +530,4 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D |
 | `GET /whats-new` | D | D | D | D | D |
 
-516 route and method pairs, 2580 role answers: A 676, D 1679, H 134, V 91.
+516 route and method pairs, 2580 role answers: A 677, D 1676, H 135, V 92.

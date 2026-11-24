@@ -4,23 +4,23 @@ Design source: `CrmSocial.dc.html` (frames MK1, SO1 and the inbox, publishing, c
 
 ## What is built
 
-One route, `/o/{org}/social`, with seven tabs (`src/ui/screens/social/SocialWorkspace.tsx`):
+A sidebar group "Social media" (between Sales workspace and Customers) with five real routes, all on `src/ui/screens/social/SocialWorkspace.tsx` (exports `SocialOverview`, `SocialInbox`, `SocialPublishing`, `SocialCampaigns`, `SocialAnalytics` from `index.ts`):
 
-| Tab | What it shows |
-|---|---|
-| Overview | KPI strip, "Do these today", "Going out next", "Campaigns running", "Leads you brought in". A "Dashboard for" picker turns it into the per-account dashboard (all accounts, or one connected account). No connected account gives the "Connect your first social account" state. |
-| Accounts | One card per network: handle, followers, sync time, Reconnect (expired token banner), Connect for networks not linked. |
-| Monitor | Mentions with sentiment filter, reach, and Convert to lead. |
-| Inbox | Unified inbox (open, unread, done), conversation, reply, Convert to lead, mark done. |
-| Publishing | Week calendar and list, new post composer (accounts, text, day, campaign, boost), approval of boosted posts (Management only), draft. |
-| Campaigns | List with status, spend, reach, leads, cost per lead; campaign detail (reach to won deals, posts); new campaign as draft. |
-| Analytics | KPIs, engagements per day, by channel, top posts, period picker. |
+| Route | Sidebar item | What it shows |
+|---|---|---|
+| `/o/{org}/social` | Social overview | Header, Marketing team chip, Connect account; one card per account (followers, synced, Reconnect when the token expired); Mentions with All/Positive/Neutral/Negative filter, Reply in inbox and Create lead; Sentiment this week bar; Needs attention list. `SocialOverview` is also the Marketing role home. |
+| `/social/inbox` | Unified inbox (unread badge) | Thread list (open, unread, done), conversation, reply, Convert to lead, mark done. |
+| `/social/publishing` | Publishing | Week calendar and list, composer, boost approval (Management). Needs `social.publish` as well. |
+| `/social/campaigns` | Campaigns | List, new campaign as a draft, detail dialog (reach to won deals, posts). |
+| `/social/analytics` | Social analytics | KPIs, engagements per day, by channel, top posts, period picker. |
 
-Access and nav: sidebar item "Social" in the Sales workspace section, shown for holders of the existing key `reporting.view.all` (no role gains or loses anything; no new permission key). The screen shows the explained no-access without it. Campaign spend, budget, cost per lead and pipeline value show the masked-value marker unless the member has `deals.view.value` (hard rule 7).
+Access and nav: every page needs `social.view` (the explained no-access otherwise); Publishing also `social.publish`. The keys and the Management and Marketing grants are added in `src/auth/permissions.ts` and the seed by the permissions work; the nav only calls `has()`. The unread badge on Unified inbox is counted from the demo threads (`unreadSocialThreads()`). Campaign spend, budget, cost per lead and pipeline value show the masked-value marker unless the member has `deals.view.value` (hard rule 7). The per-account dashboard picker of the first version was dropped to match the design.
 
-Gate: the screens exist only where `DEMO_SCREENS=true` (`npm run preview` sets it; helper `src/ui/screens/social/enabled.ts`). Otherwise the page returns 404 and the sidebar draws no link (nav `demo: true`, layout passes `demoScreens`). Remove the gate when wired.
+Quotes and Invoices: the nav items already exist (`quotes.view`, `invoices.view`); Sales shows them as soon as the permission seed grants those keys. `tests/uiNavigation.test.ts` still lists Sales without Invoices until then.
 
-Files: `src/ui/screens/social/` (`SocialWorkspace.tsx`, `social.css`, `enabled.ts`, `index.ts`, `demo/data.ts`), `src/app/o/[orgSlug]/social/page.tsx`, one `@import` in `src/ui/ui.css`, nav entries in `src/ui/shell/navModel.ts`, `navigation.ts`, `Sidebar.tsx` and `demoScreens` in the org layout. Test: `tests/components/screens/social/social.test.tsx`.
+Gate: unchanged. The pages exist only where `DEMO_SCREENS=true`; otherwise 404 and no sidebar group.
+
+Files: `src/ui/screens/social/`, `src/app/o/[orgSlug]/social/{page,inbox,publishing,campaigns,analytics}`, `src/ui/shell/navigation.ts`. Tests: `tests/components/screens/social/social.test.tsx`, `tests/uiNavigation.test.ts`.
 
 ## What is demo
 
@@ -33,5 +33,5 @@ All data in `demo/data.ts`. Nothing calls a social network, nothing is scraped. 
 3. Convert to lead calls the leads API with source, channel and campaign attribution (unassigned, in the pool) and an idempotency key.
 4. Post approval and boost go through the real approval path; campaign spend and cost per lead come from finance data with the same masking.
 5. Per-account dashboard widgets move to the widget catalogue and saved dashboards (FIG-1802, FIG-1803) once those exist; today the picker filters fixed widgets.
-6. Replace `socialScreensEnabled()` with the release flag and add a permission key (for example `social.view`) with the seed pattern of `docs/QUOTE_INVOICE_PERMISSIONS.md` when Given decides who may use Social.
+6. Replace `socialScreensEnabled()` with the release flag.
 7. Add a cross-organisation test and an API-backed e2e when the API exists.

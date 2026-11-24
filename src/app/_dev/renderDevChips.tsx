@@ -3,7 +3,7 @@ import { adminDb } from "@/db/adminClient";
 import { DevChipsPanel, type DevChipAccount } from "./DevChipsPanel";
 
 /** Order the chips the way the design lists the accounts. */
-const ORDER = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"];
+const ORDER = ["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "MARKETING"];
 
 export async function renderDevChips() {
   const preview = !devAccountsAllowed() && previewChipsAllowed();

@@ -26,6 +26,9 @@ type Label = keyof typeof baseline.effective;
 type Release = "v1" | "v1.1" | "v2";
 
 const NEW = new Set(UC_R1_NEW_KEYS);
+/** The five roles the baseline commit knew; roles added later (Marketing, UC-C7) have no "before" side and are covered by tests/marketingRoleAndSalesInvoices.test.ts. */
+const PLATFORM_ROLES = ROLES.filter((r) => r.key in baseline.effective["v2|defaults"]);
+const SOCIAL_KEYS = new Set(["social.view", "social.publish"]); // UC-C7: Management gains the two Social keys; they are not part of the UC-R1 comparison
 const QUOTE_KEYS = ["quotes.edit", "quotes.send", "quotes.view"];
 const FINANCE_KEYS = ["finance.export", "finance.reports.view", "invoices.create", "invoices.edit", "invoices.send", "invoices.view", "payments.record"];
 
@@ -33,7 +36,7 @@ const FINANCE_KEYS = ["finance.export", "finance.reports.view", "invoices.create
 function expectedAdditions(roleKey: string, release: Release): string[] {
   const quotes = release === "v1" ? [] : QUOTE_KEYS; // the quote keys follow quotes.create, which is V1.1
   if (roleKey === "MANAGEMENT") return [...quotes, ...FINANCE_KEYS].sort();
-  if (roleKey === "SALES") return [...quotes].sort(); // quotes.create implies view, edit and send
+  if (roleKey === "SALES") return [...quotes, "invoices.create", "invoices.view"].sort(); // quotes.create implies view, edit and send; UC-C7 adds the two invoice keys that open the draft Invoices page
   if (roleKey === "FINANCE") return [...(release === "v1" ? [] : ["quotes.view"]), ...FINANCE_KEYS].sort(); // Finance gains quotes.view; the rest mirror finance.*.payments
   return []; // DELIVERY and RESTRICTED_TECHNICAL hold none of the source keys
 }
@@ -50,16 +53,16 @@ const platformLabels = Object.keys(baseline.effective).filter((l) => !l.startsWi
 describe("platform roles keep exactly their effective access (snapshot against the baseline commit)", () => {
   it("has a baseline for every role, release and departure setting it compares", () => {
     expect(platformLabels.length).toBe(9);
-    expect(Object.keys(baseline.effective["v2|defaults"]).sort()).toEqual(ROLES.map((r) => r.key).sort());
+    expect(Object.keys(baseline.effective["v2|defaults"]).sort()).toEqual(["DELIVERY", "FINANCE", "MANAGEMENT", "RESTRICTED_TECHNICAL", "SALES"]);
   });
 
   for (const label of platformLabels) {
-    for (const role of ROLES) {
+    for (const role of PLATFORM_ROLES) {
       it(`${role.key} at ${label}: nothing lost, nothing else gained, new keys exactly as the compatibility rule says`, () => {
         const { release, toggles } = configFor(label);
         const now = effectivePermissionKeys({ roleKey: role.key, catalogueKeys: ROLE_PERMISSIONS[role.key] ?? [], config: { release, toggles } });
         const before = (baseline.effective[label] as Record<string, string[]>)[role.key]!;
-        expect(now.filter((k) => !NEW.has(k)), "keys other than the ten new ones must be identical to the baseline").toEqual(before);
+        expect(now.filter((k) => !NEW.has(k) && !SOCIAL_KEYS.has(k)), "keys other than the ten new ones must be identical to the baseline").toEqual(before);
         expect(now.filter((k) => NEW.has(k)).sort(), "the new keys this role gains").toEqual(expectedAdditions(role.key, release));
       });
     }
@@ -71,10 +74,10 @@ describe("platform roles keep exactly their effective access (snapshot against t
     const seeded = effectivePermissionKeys({ roleKey: "FINANCE", catalogueKeys: ROLE_PERMISSIONS.FINANCE!, config: { release: "v2", toggles: {} } });
     expect(seeded.filter((k) => !onlyImplied.includes(k))).toEqual(["quotes.view"]);
     // and every other new key a platform role is seeded with is already implied, so the seeded rows are redundant, never wider
-    for (const role of ROLES) {
+    for (const role of PLATFORM_ROLES) {
       const stripped = effectivePermissionKeys({ roleKey: role.key, catalogueKeys: (ROLE_PERMISSIONS[role.key] ?? []).filter((k) => !NEW.has(k)), config: { release: "v2", toggles: {} } });
       const full = effectivePermissionKeys({ roleKey: role.key, catalogueKeys: ROLE_PERMISSIONS[role.key] ?? [], config: { release: "v2", toggles: {} } });
-      expect(full.filter((k) => !stripped.includes(k)), role.key).toEqual(role.key === "FINANCE" ? ["quotes.view"] : []);
+      expect(full.filter((k) => !stripped.includes(k)), role.key).toEqual(role.key === "FINANCE" ? ["quotes.view"] : role.key === "SALES" ? ["invoices.create", "invoices.view"] : []);
     }
   });
 });

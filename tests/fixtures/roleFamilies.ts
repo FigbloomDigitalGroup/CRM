@@ -167,6 +167,9 @@ export const ROLE_FAMILIES: Record<Worker, RegExp[]> = {
     key("/email-templates", "GET"),
     key("/email-templates/{templateId}/render"),
     key("/handoffs", "GET"),
+    // UC-C7 / UC-R10: Sales prepares DRAFT invoices of its own won deals (default on). The API returns drafts of its own deals with a whitelist of fields.
+    key("/invoices", "GET|POST"),
+    key("/invoices/{invoiceId}", "GET"),
     key("/lead-pool/requests", "GET"),
     key("/leads"),
     key("/leads/key-notes"),

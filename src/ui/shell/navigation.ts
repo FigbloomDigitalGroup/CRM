@@ -1,6 +1,7 @@
 import { canUseResource, resolveScope } from "@/auth/permissions";
 import { canViewTeamPage } from "@/auth/teamAccess";
 import type { NavIcon, NavItem, NavSection, QuickCreateItem } from "./navModel";
+import { unreadSocialThreads } from "@/ui/screens/social/demo/data";
 import { SETTINGS_ROOT } from "@/lib/settingsLinks";
 
 /**
@@ -53,6 +54,8 @@ const SECTIONS: { key: string; label: (c: NavInput) => string; bottom?: boolean;
   { key: "overview", label: () => "Overview" },
   // Delivery and Finance see won deals only (provisional departure), and the design calls their section "Pipeline".
   { key: "workspace", label: (c) => (resolveScope(c, "deals", "view").scope === "read-only" && !has(c, "leads.view.own") && !has(c, "leads.view.all") ? "Pipeline" : "Sales workspace") },
+  // Social media (UC-S4 to UC-S6, demo data): its own group between the Sales workspace and Customers, for holders of social.view.
+  { key: "social", label: () => "Social media" },
   { key: "customers", label: () => "Customers" },
   // F6.20: one dropdown for every way of talking. Conversations moved here from Customers (same page, same route); Mail, Chat and Video
   // Conference are V1.1 screens on demo data (docs/COMMUNICATION_HUB_SCOPE.md).
@@ -78,8 +81,12 @@ const DEFS: Def[] = [
   { section: "workspace", key: "quotes", label: () => "Quotes", path: "/quotes", icon: "quotes", tint: "g", allowed: (c) => has(c, "quotes.view") && quotesOn(c), built: true },
   { section: "workspace", key: "tasks", label: () => "Tasks", path: "/tasks", icon: "tasks", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
   { section: "workspace", key: "calendar", label: () => "Calendar", path: "/calendar", icon: "calendar", tint: "g", allowed: (c) => any(c, "tasks.view.own", "tasks.view.all"), built: true },
-  // Social (UC-S4 to UC-S6, demo data): for holders of reporting.view.all (no role gains access it did not have); drawn only where demo screens are on.
-  { section: "workspace", key: "social", label: () => "Social", path: "/social", icon: "social", tint: "g", allowed: (c) => has(c, "reporting.view.all"), built: true, demo: true },
+  // Social media (demo data, drawn only where demo screens are on): five pages, gated by social.view (Publishing also needs social.publish).
+  { section: "social", key: "social", label: () => "Social overview", path: "/social", icon: "social", tint: "g", allowed: (c) => has(c, "social.view"), built: true, demo: true, exact: true },
+  { section: "social", key: "social-inbox", label: () => "Unified inbox", path: "/social/inbox", icon: "conversations", tint: "g", allowed: (c) => has(c, "social.view"), built: true, demo: true },
+  { section: "social", key: "social-publishing", label: () => "Publishing", path: "/social/publishing", icon: "calendar", tint: "g", allowed: (c) => has(c, "social.view") && has(c, "social.publish"), built: true, demo: true },
+  { section: "social", key: "social-campaigns", label: () => "Campaigns", path: "/social/campaigns", icon: "forecast", tint: "g", allowed: (c) => has(c, "social.view"), built: true, demo: true },
+  { section: "social", key: "social-analytics", label: () => "Social analytics", path: "/social/analytics", icon: "reports", tint: "g", allowed: (c) => has(c, "social.view"), built: true, demo: true },
   // Team (P2-15): Management only today; `canViewTeamPage` is the one place the rule lives (a Head of Sales joins it later).
   { section: "workspace", key: "team", label: () => "Team", path: "/team", icon: "contacts", tint: "g", allowed: (c) => canViewTeamPage(c.permissionKeys), built: true },
   // V1.1 commercial screens (M10, demo data): the permissions below are stripped until the organisation's release reaches V1.1.
@@ -128,7 +135,7 @@ export function buildNav(input: NavInput): NavSection[] {
       icon: d.icon,
       tint: d.tint,
       exact: d.exact,
-      badge: input.badges?.[d.key] || undefined,
+      badge: input.badges?.[d.key] || (d.key === "social-inbox" ? unreadSocialThreads() : undefined) || undefined,
     })),
   })).filter((s) => s.items.length > 0);
 }
