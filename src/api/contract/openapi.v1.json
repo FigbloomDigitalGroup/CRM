@@ -59476,9 +59476,11 @@
             "sessionCookie": []
           }
         ],
-        "x-allowed-roles": [],
+        "x-allowed-roles": [
+          "MANAGEMENT"
+        ],
         "x-role-outcomes": {
-          "MANAGEMENT": "D",
+          "MANAGEMENT": "A",
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
@@ -59575,9 +59577,11 @@
             "sessionCookie": []
           }
         ],
-        "x-allowed-roles": [],
+        "x-allowed-roles": [
+          "MANAGEMENT"
+        ],
         "x-role-outcomes": {
-          "MANAGEMENT": "D",
+          "MANAGEMENT": "A",
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
@@ -79276,9 +79280,11 @@
             "sessionCookie": []
           }
         ],
-        "x-allowed-roles": [],
+        "x-allowed-roles": [
+          "MANAGEMENT"
+        ],
         "x-role-outcomes": {
-          "MANAGEMENT": "D",
+          "MANAGEMENT": "A",
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",
@@ -79532,9 +79538,11 @@
             "sessionCookie": []
           }
         ],
-        "x-allowed-roles": [],
+        "x-allowed-roles": [
+          "MANAGEMENT"
+        ],
         "x-role-outcomes": {
-          "MANAGEMENT": "D",
+          "MANAGEMENT": "H",
           "SALES": "D",
           "DELIVERY": "D",
           "FINANCE": "D",

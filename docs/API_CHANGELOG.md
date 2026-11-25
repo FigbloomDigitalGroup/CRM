@@ -14,6 +14,12 @@ To change the API on purpose:
 A change that removes or renames a path, field or enum value, narrows what a role may do, or makes an optional field required is **breaking** and
 needs a new major version (`API_VERSION` in `src/api/openapi.ts`). Additions are minor. Wording-only and documentation changes are patches.
 
+## 1.1.0, addendum — roles brought forward from V2 (25 Nov 2026)
+
+contract-hash: de6f5a1c63d4b467f975e1990fccbcab544eaa121a62790867f35f730ac2baef
+
+No path, field or enum changed (still version 1.1.0). The roles routes (`GET`/`POST /orgs/{org}/roles`, `GET`/`PATCH`/`DELETE /orgs/{org}/roles/{roleId}`, `GET /roles/catalog`, `POST /roles/preview`) and `GET`/`PUT /orgs/{org}/memberships/{membershipId}/permissions` are gated by the organisation toggle `roles.custom` (V1.1 and later, on by default) instead of the V2 release. On a V1.1 organisation Management is now allowed (`A`) where the contract recorded `D` (feature unavailable); the other four roles stay denied. Widens access for Management only, so not breaking. See `docs/ROLES_ACCESS_SCREENS.md`.
+
 ## 1.1.0, addendum — per-member permission overrides (UC-C5 step 3, FIG-1790, 24 Nov 2026)
 
 contract-hash: c7e5d7846d2145ea55ffac4d00900a1bad399d09053238c097b10bd269260863
