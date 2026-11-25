@@ -6,6 +6,7 @@ import { OrganizationUnavailableError } from "../src/auth/errors";
 import { effectivePermissionKeys } from "../src/auth/permissions";
 import { adminDb } from "../src/db/adminClient";
 import { loadFeatureConfig, RELEASE_KEY, TOGGLES_KEY } from "../src/lib/featureConfig";
+import { isReservedKey } from "../src/lib/roleLimits";
 import { resolveActiveMembership } from "../src/repositories/memberships";
 import { createTestMembership, createTestOrganization } from "./helpers/fixtures";
 
@@ -35,6 +36,8 @@ async function resolveActiveMembershipPrisma(userId: string, organizationId: str
   // B7.06 (FIG-1188): a custom role counts only for its own organisation and only while it is not archived.
   const customRole = membership.role.organizationId !== null;
   if (customRole && (membership.role.organizationId !== membership.organizationId || membership.role.archivedAt !== null)) return null;
+  // UC-C5 step 3: per-member overrides, read the same way the raw SQL reads them.
+  const overrideRows = await adminDb.membershipPermissionOverride.findMany({ where: { membershipId: membership.id } });
   const lock = membership.organization.status;
   if (lock === "SUSPENDED" || lock === "OFFBOARDED" || (lock === "OFFBOARDING" && !options.allowOffboarding)) {
     throw new OrganizationUnavailableError(lock, membership.organization.name);
@@ -49,6 +52,10 @@ async function resolveActiveMembershipPrisma(userId: string, organizationId: str
       catalogueKeys: membership.role.rolePermissions.map((rp) => rp.permission.key),
       config,
       custom: customRole,
+      overrides: {
+        grant: overrideRows.filter((o) => o.effect === "GRANT").map((o) => o.permissionKey).filter((k) => !isReservedKey(k)),
+        deny: overrideRows.filter((o) => o.effect === "DENY").map((o) => o.permissionKey),
+      },
     }),
     ...(customRole
       ? await (async () => {
@@ -114,7 +121,7 @@ describe("resolveActiveMembership raw SQL: schema guard", () => {
     // Aliases: "FROM memberships m", "JOIN roles r", ...
     const aliases = new Map<string, string>();
     for (const [, table, alias] of sql.matchAll(/\b(?:FROM|JOIN)\s+(\w+)\s+(\w+)/g)) aliases.set(alias!, table!);
-    expect([...aliases.values()].sort()).toEqual(["memberships", "organizations", "permissions", "role_permissions", "roles"]);
+    expect([...aliases.values()].sort()).toEqual(["membership_permission_overrides", "memberships", "organizations", "permissions", "role_permissions", "roles"]);
     for (const table of aliases.values()) expect(byTable.has(table), `table ${table} is not in the Prisma schema`).toBe(true);
 
     const refs = [...sql.matchAll(/\b([a-z]{1,2})\.(\w+)\b/g)].filter(([, alias]) => aliases.has(alias!));

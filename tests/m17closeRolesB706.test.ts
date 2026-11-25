@@ -172,7 +172,7 @@ describe("platform roles are read-only and reserved powers can never be granted,
     current.ctx = management;
     const list = await invoke(route("/roles"), "GET", V);
     const platform = (list.json.roles as Array<{ id: string; kind: string; key: string }>).filter((r) => r.kind === "platform");
-    expect(platform).toHaveLength(5);
+    expect(platform).toHaveLength(6);
     for (const r of platform) {
       const patch = await invoke(route("/roles/{roleId}"), "PATCH", { ...V, roleId: r.id }, { body: { name: `Renamed ${r.key}` } });
       expect(patch.status, r.key).toBe(400);

@@ -90,8 +90,8 @@ export async function resolveActiveMembership(
       SELECT m.id, m.user_id, m.organization_id, r.id AS role_id, r.key AS role_key, r.organization_id AS role_org, o.status::text AS org_status, o.name AS org_name,
              COALESCE(array_agg(p.key) FILTER (WHERE p.key IS NOT NULL), ARRAY[]::text[]) AS keys,
              -- UC-C5 step 3: per-member overrides, applied after the role's keys (effectivePermissionKeys).
-             COALESCE((SELECT array_agg(o.permission_key) FROM membership_permission_overrides o WHERE o.membership_id = m.id AND o.effect = 'GRANT'), ARRAY[]::text[]) AS grants,
-             COALESCE((SELECT array_agg(o.permission_key) FROM membership_permission_overrides o WHERE o.membership_id = m.id AND o.effect = 'DENY'), ARRAY[]::text[]) AS denies
+             COALESCE((SELECT array_agg(mpo.permission_key) FROM membership_permission_overrides mpo WHERE mpo.membership_id = m.id AND mpo.effect = 'GRANT'), ARRAY[]::text[]) AS grants,
+             COALESCE((SELECT array_agg(mpo.permission_key) FROM membership_permission_overrides mpo WHERE mpo.membership_id = m.id AND mpo.effect = 'DENY'), ARRAY[]::text[]) AS denies
       FROM memberships m
       JOIN roles r ON r.id = m.role_id
       JOIN organizations o ON o.id = m.organization_id
