@@ -9635,6 +9635,9 @@
           "quotes.enabled": {
             "type": "boolean"
           },
+          "roles.custom": {
+            "type": "boolean"
+          },
           "communication.group": {
             "type": "boolean"
           }
@@ -9655,6 +9658,7 @@
           "preferences.own_colours",
           "organisation.switcher",
           "quotes.enabled",
+          "roles.custom",
           "communication.group"
         ],
         "additionalProperties": true
@@ -13387,6 +13391,46 @@
       "organizationTimeZone",
       "effectiveTimeZone",
       "avatar"
+    ],
+    "additionalProperties": true
+  },
+  "GET /api/orgs/{orgSlug}/memberships/{membershipId}/permissions": {
+    "type": "object",
+    "properties": {
+      "membershipId": {
+        "type": "string"
+      },
+      "roleKey": {
+        "type": "string"
+      },
+      "roleKeys": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "grant": {
+        "type": "array",
+        "items": {}
+      },
+      "deny": {
+        "type": "array",
+        "items": {}
+      },
+      "effectiveKeys": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "membershipId",
+      "roleKey",
+      "roleKeys",
+      "grant",
+      "deny",
+      "effectiveKeys"
     ],
     "additionalProperties": true
   },
@@ -18300,6 +18344,104 @@
       "total",
       "lists",
       "thresholds"
+    ],
+    "additionalProperties": true
+  },
+  "GET /api/orgs/{orgSlug}/roles": {
+    "type": "object",
+    "properties": {
+      "roles": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "basedOnRoleKey": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            },
+            "editable": {
+              "type": "boolean"
+            },
+            "permissionKeys": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "fieldRules": {
+              "type": "object",
+              "properties": {
+                "deal.value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "deal.value"
+              ],
+              "additionalProperties": true
+            },
+            "memberCount": {
+              "type": "integer"
+            },
+            "archivedAt": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            },
+            "updatedAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "key",
+            "name",
+            "description",
+            "kind",
+            "editable",
+            "permissionKeys",
+            "fieldRules",
+            "memberCount",
+            "updatedAt"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "limits": {
+        "type": "object",
+        "properties": {
+          "maxCustomRoles": {
+            "type": "integer"
+          },
+          "customRoles": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "maxCustomRoles",
+          "customRoles"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "roles",
+      "limits"
     ],
     "additionalProperties": true
   },
@@ -33641,6 +33783,46 @@
       "templates",
       "mode",
       "mergeFields"
+    ],
+    "additionalProperties": true
+  },
+  "PUT /api/orgs/{orgSlug}/memberships/{membershipId}/permissions": {
+    "type": "object",
+    "properties": {
+      "membershipId": {
+        "type": "string"
+      },
+      "roleKey": {
+        "type": "string"
+      },
+      "roleKeys": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "grant": {
+        "type": "array",
+        "items": {}
+      },
+      "deny": {
+        "type": "array",
+        "items": {}
+      },
+      "effectiveKeys": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "membershipId",
+      "roleKey",
+      "roleKeys",
+      "grant",
+      "deny",
+      "effectiveKeys"
     ],
     "additionalProperties": true
   },
