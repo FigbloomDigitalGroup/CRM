@@ -6,6 +6,6 @@ import { getRoleCatalog } from "@/services/roleEditorService";
 export async function GET(_request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    return getRoleCatalog(await resolveGatedContext(orgSlug, "release.v2"));
+    return getRoleCatalog(await resolveGatedContext(orgSlug, "roles.custom"));
   });
 }

@@ -3819,6 +3819,39 @@
       "additionalProperties": false
     }
   },
+  "PATCH /api/orgs/{orgSlug}/roles/{roleId}": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "permissionKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fieldRules": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
   "PATCH /api/orgs/{orgSlug}/scoring/weights": {
     "body": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -7710,6 +7743,75 @@
       ]
     }
   },
+  "POST /api/orgs/{orgSlug}/roles": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "basedOnRoleKey": {
+          "type": "string"
+        },
+        "permissionKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fieldRules": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /api/orgs/{orgSlug}/roles/preview": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "roleId": {
+          "type": "string"
+        },
+        "basedOnRoleKey": {
+          "type": "string"
+        },
+        "permissionKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fieldRules": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
   "POST /api/orgs/{orgSlug}/search/recents": {
     "body": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -8477,6 +8579,35 @@
               "body"
             ],
             "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "PUT /api/orgs/{orgSlug}/memberships/{membershipId}/permissions": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "grant": {
+          "default": [],
+          "maxItems": 300,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "deny": {
+          "default": [],
+          "maxItems": 300,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
           }
         }
       },

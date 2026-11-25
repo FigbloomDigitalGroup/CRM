@@ -4420,7 +4420,7 @@ CSV of My metrics
 
 One member's per-member permission overrides (keys added and removed on top of the role) and the keys that result (role.assign; V2)
 
-- **Credential:** sessionCookie; **access:** nobody
+- **Credential:** sessionCookie; **access:** management
 - **Returns:** object
 - **Errors:** 401, 403, 404
 
@@ -4430,7 +4430,7 @@ One member's per-member permission overrides (keys added and removed on top of t
 
 Replace one member's permission overrides: add (grant) or remove (deny) single keys on top of the role. Reserved and payment keys cannot be added, you cannot edit your own, effective on the next request, audited (role.assign; V2)
 
-- **Credential:** sessionCookie; **access:** nobody
+- **Credential:** sessionCookie; **access:** management
 - **Body:** `grant`: string[], `deny`: string[]
 - **Returns:** object
 - **Errors:** 400, 401, 403, 404
@@ -4441,7 +4441,7 @@ Replace one member's permission overrides: add (grant) or remove (deny) single k
 
 The platform roles and this organisation's custom roles with their permissions, field rules and member counts (roles.manage or role.assign; V2)
 
-- **Credential:** sessionCookie; **access:** nobody
+- **Credential:** sessionCookie; **access:** management
 - **Query:** `includeArchived`?: string
 - **Returns:** object
 - **Errors:** 401, 403, 404
@@ -4463,7 +4463,7 @@ Create a custom role, optionally starting from a platform role; reserved keys ar
 
 One role
 
-- **Credential:** sessionCookie; **access:** nobody
+- **Credential:** sessionCookie; **access:** management
 - **Returns:** object
 - **Errors:** 401, 403, 404
 

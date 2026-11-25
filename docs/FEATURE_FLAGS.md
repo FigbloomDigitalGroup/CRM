@@ -28,6 +28,7 @@ Code: `src/lib/featureFlags.ts` (definitions and resolution, no database), `src/
 | `assistant.enabled` | V1.1 | off | The Ask Figbloom assistant |
 | `organisation.switcher` | V1.1 | on | The multi-organisation switcher |
 | `quotes.enabled` | V1.1 | on | Quotes, approvals, forecast |
+| `roles.custom` | V1.1 | on | Roles & access: custom roles, the role editor, per-member permission overrides (brought forward from V2, 25 Nov 2026) |
 
 ## Gating a route or service
 

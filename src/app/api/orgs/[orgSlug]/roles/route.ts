@@ -17,7 +17,7 @@ const CreateRoleSchema = z.strictObject({
 export async function GET(request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveGatedContext(orgSlug, "release.v2");
+    const ctx = await resolveGatedContext(orgSlug, "roles.custom");
     return listRoles(ctx, { includeArchived: new URL(request.url).searchParams.get("includeArchived") === "true" });
   });
 }
@@ -25,7 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ orgS
 export async function POST(request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveGatedContext(orgSlug, "release.v2"); // release gate before body validation
+    const ctx = await resolveGatedContext(orgSlug, "roles.custom"); // release gate before body validation
     const body = await parseJsonBody(request, CreateRoleSchema);
     return withIdempotency(ctx, request, body, () => createRole(ctx, body));
   });

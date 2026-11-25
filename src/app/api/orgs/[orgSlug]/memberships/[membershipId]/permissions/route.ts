@@ -15,14 +15,14 @@ type Params = { params: Promise<{ orgSlug: string; membershipId: string }> };
 export async function GET(_request: Request, { params }: Params) {
   return handleRoute(async () => {
     const { orgSlug, membershipId } = await params;
-    return getMemberAccess(await resolveGatedContext(orgSlug, "release.v2"), membershipId);
+    return getMemberAccess(await resolveGatedContext(orgSlug, "roles.custom"), membershipId);
   });
 }
 
 export async function PUT(request: Request, { params }: Params) {
   return handleRoute(async () => {
     const { orgSlug, membershipId } = await params;
-    const ctx = await resolveGatedContext(orgSlug, "release.v2");
+    const ctx = await resolveGatedContext(orgSlug, "roles.custom");
     return setMemberAccess(ctx, membershipId, await parseJsonBody(request, MemberAccessSchema));
   });
 }

@@ -16,14 +16,14 @@ type Params = { params: Promise<{ orgSlug: string; roleId: string }> };
 export async function GET(_request: Request, { params }: Params) {
   return handleRoute(async () => {
     const { orgSlug, roleId } = await params;
-    return getRole(await resolveGatedContext(orgSlug, "release.v2"), roleId);
+    return getRole(await resolveGatedContext(orgSlug, "roles.custom"), roleId);
   });
 }
 
 export async function PATCH(request: Request, { params }: Params) {
   return handleRoute(async () => {
     const { orgSlug, roleId } = await params;
-    const ctx = await resolveGatedContext(orgSlug, "release.v2");
+    const ctx = await resolveGatedContext(orgSlug, "roles.custom");
     return updateRole(ctx, roleId, await parseJsonBody(request, UpdateRoleSchema));
   });
 }
@@ -32,7 +32,7 @@ export async function PATCH(request: Request, { params }: Params) {
 export async function DELETE(_request: Request, { params }: Params) {
   return handleRoute(async () => {
     const { orgSlug, roleId } = await params;
-    await archiveRole(await resolveGatedContext(orgSlug, "release.v2"), roleId);
+    await archiveRole(await resolveGatedContext(orgSlug, "roles.custom"), roleId);
     return { archived: true };
   });
 }

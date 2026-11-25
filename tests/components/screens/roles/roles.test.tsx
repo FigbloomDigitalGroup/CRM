@@ -50,13 +50,16 @@ describe("Roles & access (real roles API)", () => {
     previewRole: () => preview,
   });
 
-  it("lists the standard roles as read-only and custom roles with their people", async () => {
+  it("lists the standard roles and your own roles with their people, and opens the first role read-only", async () => {
     const { client } = stubClient(handlers());
     const { container } = renderScreen(<RolesAccess />, client, { permissionKeys: MANAGER });
     expect(await screen.findByRole("heading", { name: "Roles & access" })).toBeInTheDocument();
-    const table = screen.getByRole("table", { name: "Roles" });
-    expect(within(table).getByText("Standard, read-only")).toBeInTheDocument();
-    expect(within(table).getByText("Custom")).toBeInTheDocument();
+    const rail = screen.getByRole("navigation", { name: "Roles" });
+    expect(within(rail).getByText("Standard roles")).toBeInTheDocument();
+    expect(within(rail).getByText("Your roles")).toBeInTheDocument();
+    expect(within(rail).getByRole("button", { name: /Sales/ })).toHaveAttribute("aria-current", "true");
+    expect(within(rail).getByLabelText("4 people")).toBeInTheDocument();
+    expect(screen.getByLabelText("Name")).toHaveAttribute("readonly");
     expect(screen.getByRole("table", { name: /Permissions held per role/ })).toBeInTheDocument();
     expect(await violations(container)).toEqual([]);
   });
@@ -68,45 +71,87 @@ describe("Roles & access (real roles API)", () => {
     });
     renderScreen(<RolesAccess />, client, { permissionKeys: MANAGER });
     await waitFor(() => expect(screen.queryByText(/Loading roles/)).not.toBeInTheDocument());
-    expect(screen.queryByRole("table", { name: "Roles" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Roles" })).not.toBeInTheDocument();
   });
 
-  it("Add role from the Sales starting point creates a custom role with the copied keys and shows the live preview", async () => {
+  it("New role with Copy from Sales creates a custom role with the copied keys and shows the live preview", async () => {
     const created: unknown[] = [];
     const { client, calls } = stubClient({ ...handlers(), createRole: (a) => (created.push(a.body), { ...custom, id: "r-new", name: "Junior sales" }) });
     renderScreen(<RolesAccess />, client, { permissionKeys: MANAGER });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Add role" }));
+    await user.click(await screen.findByRole("button", { name: "+ New role" }));
     await user.type(screen.getByLabelText("Name"), "Junior sales");
-    await user.selectOptions(screen.getByLabelText("Start from"), "SALES");
+    await user.selectOptions(screen.getByLabelText("Copy from"), "r-sales");
     // The reserved key stays off and explains why; the copied ones are on.
-    expect(screen.getByRole("switch", { name: /audit\.view/ })).toHaveAttribute("aria-checked", "false");
-    expect(screen.getByRole("switch", { name: /leads\.create/ })).toHaveAttribute("aria-checked", "true");
-    expect(await screen.findByRole("complementary", { name: "What can this role access?" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "audit.view" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "audit.view" })).toBeDisabled();
+    expect(screen.getByRole("checkbox", { name: "leads.create" })).toBeChecked();
+    expect(screen.getByText("2 / 2 Active")).toBeInTheDocument();
     await waitFor(() => expect(calls.some((c) => c.id === "previewRole")).toBe(true));
-    await user.click(screen.getAllByRole("button", { name: "Add role" }).at(-1)!);
+    await user.click(screen.getByRole("button", { name: "Add role" }));
     await waitFor(() => expect(created).toHaveLength(1));
     expect(created[0]).toMatchObject({ name: "Junior sales", basedOnRoleKey: "SALES", permissionKeys: ["leads.view.all", "leads.create"] });
   });
 
-  it("a standard role opens read-only and a role in use cannot be archived", async () => {
+  it("Grant all switches on every grantable permission and Revoke all clears them", async () => {
+    const { client } = stubClient(handlers());
+    renderScreen(<RolesAccess />, client, { permissionKeys: MANAGER });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /Analyst/ }));
+    await user.click(screen.getByRole("button", { name: "Grant all" }));
+    expect(screen.getByRole("checkbox", { name: "contacts.view" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "leads.create" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "audit.view" })).not.toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Revoke all" }));
+    expect(screen.getByRole("checkbox", { name: "leads.view.all" })).not.toBeChecked();
+    expect(screen.getByText("0 / 2 Active")).toBeInTheDocument();
+  });
+
+  it("the category filter narrows the permission cards and the search finds one", async () => {
+    const { client } = stubClient(handlers());
+    renderScreen(<RolesAccess />, client, { permissionKeys: MANAGER });
+    const user = userEvent.setup();
+    await screen.findByRole("heading", { name: "Roles & access" });
+    await user.selectOptions(screen.getByLabelText("Category"), "Contacts & Companies");
+    expect(screen.queryByRole("checkbox", { name: "leads.create" })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "contacts.view" })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Category"), "");
+    await user.type(screen.getByLabelText("Search permissions"), "audit");
+    expect(screen.getByRole("checkbox", { name: "audit.view" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "leads.create" })).not.toBeInTheDocument();
+  });
+
+  it("a standard role is read-only, and a role in use cannot be archived", async () => {
     const used = { ...custom, id: "r-used", name: "Used", memberCount: 2 };
     const { client } = stubClient({ ...handlers(), listRoles: () => ({ roles: [sales, used], limits: { maxCustomRoles: 25, customRoles: 1 } }) });
     renderScreen(<RolesAccess />, client, { permissionKeys: MANAGER });
     const user = userEvent.setup();
-    const table = await screen.findByRole("table", { name: "Roles" });
-    expect(within(table).getByRole("button", { name: "Archive" })).toHaveAttribute("aria-disabled", "true");
-    await user.click(within(table).getAllByRole("button", { name: "View" })[0]!);
     expect(await screen.findByText(/cannot be changed/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Name")).toHaveAttribute("readonly");
+    expect(screen.queryByRole("button", { name: "Grant all" })).not.toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "leads.create" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: /Used/ }));
+    expect(screen.getByRole("button", { name: "Archive role" })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("Save changes sends the edited role's new keys", async () => {
+    const saved: unknown[] = [];
+    const { client } = stubClient({ ...handlers(), updateRole: (a) => (saved.push(a.body), custom) });
+    renderScreen(<RolesAccess />, client, { permissionKeys: MANAGER });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: /Analyst/ }));
+    await user.click(screen.getByRole("checkbox", { name: "contacts.view" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(saved).toHaveLength(1));
+    expect(saved[0]).toMatchObject({ name: "Analyst", permissionKeys: ["leads.view.all", "contacts.view"] });
   });
 
   it("shows the API's refusal in the preview when a proposal is not allowed", async () => {
     const { client } = stubClient({ ...handlers(), previewRole: () => apiError(400, "leads.create needs the right to see leads", { code: "VALIDATION" }) });
     renderScreen(<RolesAccess />, client, { permissionKeys: MANAGER });
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "Add role" }));
+    await user.click(await screen.findByRole("button", { name: "+ New role" }));
+    await user.click(screen.getByText("Preview as this role"));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
 });

@@ -22,3 +22,41 @@
 .fb-app .fb-rl-depts { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .fb-app .fb-rl-dept { border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .fb-app .fb-rl-dept__head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+/* Roles & access v2 layout: role rail on the left, one role's editor on the right. */
+.fb-app .fb-rl-shell { display: grid; grid-template-columns: minmax(200px, 260px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .fb-app .fb-rl-shell { grid-template-columns: minmax(0, 1fr); } }
+.fb-app .fb-rl-rail { border: 1px solid var(--border); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 12px; background: var(--surface); position: sticky; top: 12px; min-width: 0; }
+.fb-app .fb-rl-railtitle { font-size: 11.5px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-2); margin-bottom: 4px; }
+.fb-app .fb-rl-roles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.fb-app .fb-rl-roleitem { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 10px; min-height: 40px; border: 0; border-radius: 10px; background: transparent; font: inherit; font-size: 13.5px; color: var(--text); text-align: left; cursor: pointer; }
+.fb-app .fb-rl-roleitem:hover { background: var(--surface-3); }
+.fb-app .fb-rl-roleitem[aria-current="true"] { background: var(--surface-3); font-weight: 600; }
+.fb-app .fb-rl-roleitem:focus-visible { outline: 2px solid var(--focus-ring, var(--primary)); outline-offset: 2px; }
+.fb-app .fb-rl-count { font-size: 12px; color: var(--text-2); }
+.fb-app .fb-rl-new { width: 100%; border-style: dashed; }
+.fb-app .fb-rl-main { min-width: 0; }
+.fb-app .fb-rl-editor { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.fb-app .fb-rl-card { border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; background: var(--surface); margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.fb-app .fb-rl-card h3 { margin: 0; font-size: 14.5px; }
+.fb-app .fb-rl-details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 12px; }
+@media (max-width: 700px) { .fb-app .fb-rl-details { grid-template-columns: minmax(0, 1fr); } }
+.fb-app .fb-rl-detailfoot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.fb-app .fb-rl-detailfoot p { margin: 0; }
+.fb-app .fb-rl-toolbar { display: grid; grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)) auto; gap: 12px; align-items: end; }
+@media (max-width: 900px) { .fb-app .fb-rl-toolbar { grid-template-columns: minmax(0, 1fr); } }
+.fb-app .fb-rl-bulk { display: flex; gap: 8px; flex-wrap: wrap; }
+.fb-app .fb-rl-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.fb-app .fb-rl-chip { border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; font-size: 12.5px; background: var(--surface-2); }
+.fb-app .fb-rl-lock { margin: 0; font-size: 12.5px; color: var(--text-2); }
+.fb-app .fb-rl-preview-box summary { cursor: pointer; display: flex; gap: 10px; align-items: center; }
+.fb-app .fb-rl-preview-box .fb-rl-preview { position: static; margin-top: 10px; }
+.fb-app .fb-rl-grouphead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.fb-app .fb-rl-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 700px) { .fb-app .fb-rl-cards { grid-template-columns: minmax(0, 1fr); } }
+.fb-app .fb-rl-perm { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); cursor: pointer; font-size: 13px; }
+.fb-app .fb-rl-perm.is-on { border-color: var(--primary-btn); }
+.fb-app .fb-rl-perm.is-locked { opacity: 0.65; cursor: not-allowed; }
+.fb-app .fb-rl-perm input { flex: none; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary-btn); }
+.fb-app .fb-rl-perm:focus-within { outline: 2px solid var(--focus-ring, var(--primary)); outline-offset: 2px; }
+.fb-app .fb-rl-permtext { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
