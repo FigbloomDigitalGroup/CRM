@@ -14,6 +14,7 @@ import {
   ReassignmentRequiredError,
   ValidationError,
 } from "../auth/errors";
+import { inviteUrlFor } from "../auth/inviteLinks";
 import { generateInviteToken } from "../auth/membershipInvite";
 import { revokeSessionsForUser } from "../auth/session";
 import { adminDb } from "../db/adminClient";
@@ -138,7 +139,7 @@ export async function inviteMember(
     invitedByMembershipId: ctx.membershipId,
   });
 
-  await sendMembershipInviteEmail(user.email, buildAcceptUrl(plaintext));
+  await sendMembershipInviteEmail(user.email, inviteUrlFor(user, buildAcceptUrl(plaintext)));
 
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -199,7 +200,7 @@ export async function resendAdminInvite(
 
   const { plaintext, tokenHash, expiresAt } = generateInviteToken();
   await setInviteToken(membershipId, tokenHash, expiresAt);
-  await sendMembershipInviteEmail(membership.user.email, buildAcceptUrl(plaintext));
+  await sendMembershipInviteEmail(membership.user.email, inviteUrlFor(membership.user, buildAcceptUrl(plaintext)));
 
   await recordAuditEvent({
     organizationId,

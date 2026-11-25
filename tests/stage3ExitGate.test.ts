@@ -204,8 +204,9 @@ describe("permission matrix across roles", () => {
     const unique = () => `M-${++counter.n}-${Math.random().toString(36).slice(2, 7)}`;
 
     const actions: { name: string; allowed: (c: AuthContext) => boolean; run: (c: AuthContext) => Promise<unknown> }[] = [
-      { name: "list invoices", allowed: (c) => c.permissionKeys.includes("finance.view.payments"), run: (c) => listInvoices(c) },
-      { name: "create an invoice", allowed: (c) => c.permissionKeys.includes("finance.manage.payments"), run: (c) => createInvoice(c, { number: unique(), amount: 100, issuedOn: "2026-10-01", dueOn: "2026-12-01", dealId: deal.id }) },
+      // Sales (24 Nov 2026) lists and creates DRAFTS of its own won deals only (draft view, no payment data); everything else still needs the payment keys.
+      { name: "list invoices", allowed: (c) => c.permissionKeys.includes("finance.view.payments") || c.permissionKeys.includes("invoices.create"), run: (c) => listInvoices(c) },
+      { name: "create an invoice", allowed: (c) => c.permissionKeys.includes("finance.manage.payments") || (c.permissionKeys.includes("invoices.create") && c.permissionKeys.includes("deals.edit.own")), run: (c) => createInvoice(c, { number: unique(), amount: 100, issuedOn: "2026-10-01", dueOn: "2026-12-01", dealId: deal.id }) },
       { name: "export invoices", allowed: (c) => c.permissionKeys.includes("finance.manage.payments"), run: (c) => exportInvoicesCsv(c) },
       { name: "keep the next note on a won deal", allowed: (c) => c.permissionKeys.includes("finance.view.payments") && (c.permissionKeys.includes("finance.followup.note") || c.permissionKeys.includes("finance.manage.payments")), run: (c) => setDealNextNote(c, deal.id, { note: "n" }) },
       { name: "add a recurring service", allowed: (c) => c.permissionKeys.includes("company_services.manage"), run: (c) => createRecurringService(c, { companyId: company.id, serviceId: crm, startsOn: "2026-01-01", renewsOn: "2027-01-01" }) },

@@ -104,7 +104,7 @@ describe("custom roles", () => {
     expect(sales.editable).toBe(false);
     await expectInvalid(updateRole(management, sales.id, { permissionKeys: ["leads.view.all"] }), "PLATFORM_ROLE_FIXED");
     await expectInvalid(archiveRole(management, sales.id), "PLATFORM_ROLE_FIXED");
-    expect(roles.filter((r) => r.kind === "platform").map((r) => r.key)).toEqual(["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"]);
+    expect(roles.filter((r) => r.kind === "platform").map((r) => r.key)).toEqual(["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "MARKETING"]);
   });
 
   it("takes effect on the very next request, and an edit is audited with before and after", async () => {

@@ -1,5 +1,6 @@
 import {
   PERMISSIONS,
+  PERMISSION_IMPLICATIONS,
   PERMISSION_MIN_RELEASE,
   ROLES,
 } from "../../prisma/seedData";
@@ -142,7 +143,9 @@ export function roleIsAvailable(roleKey: string, config: FeatureConfig): boolean
  *  1. A flag-gated role (none today) with its flag off carries nothing.
  *  2. A departure that is off removes the keys it introduced and gives back
  *     the keys the seeded matrix had.
- *  3. Keys for a release the organization has not reached are dropped.
+ *  3. Implied keys are added (UC-R1, `PERMISSION_IMPLICATIONS`): a role or custom role that holds quotes.create also carries
+ *     quotes.view, quotes.edit and quotes.send, and so on, so splitting a key never changes what a role may do.
+ *  4. Keys for a release the organization has not reached are dropped (implied keys too: they follow the same table).
  */
 export function effectivePermissionKeys(input: {
   roleKey: string;
@@ -150,6 +153,8 @@ export function effectivePermissionKeys(input: {
   config: FeatureConfig;
   /** B7.06: a custom role of the organisation. It has no seeded departure rows, so a departure that is off removes its keys from it whole. */
   custom?: boolean;
+  /** UC-C5 step 3: per-member overrides. Applied last: GRANT keys are added (with their implied keys, release-filtered), then DENY keys are removed. */
+  overrides?: { grant?: readonly string[]; deny?: readonly string[] };
 }): string[] {
   const { roleKey, catalogueKeys, config } = input;
   if (!roleIsAvailable(roleKey, config)) return [];
@@ -165,9 +170,23 @@ export function effectivePermissionKeys(input: {
     for (const key of departure.restores[roleKey] ?? []) keys.add(key);
   }
   for (const key of [...keys]) {
+    for (const implied of PERMISSION_IMPLICATIONS[key] ?? []) keys.add(implied);
+  }
+  for (const key of [...keys]) {
     const min = PERMISSION_MIN_RELEASE[key];
     if (min && !releaseAtLeast(config.release, min)) keys.delete(key);
   }
+  if (input.overrides?.grant?.length) {
+    for (const key of input.overrides.grant) {
+      keys.add(key);
+      for (const implied of PERMISSION_IMPLICATIONS[key] ?? []) keys.add(implied);
+    }
+    for (const key of [...keys]) {
+      const min = PERMISSION_MIN_RELEASE[key];
+      if (min && !releaseAtLeast(config.release, min)) keys.delete(key);
+    }
+  }
+  for (const key of input.overrides?.deny ?? []) keys.delete(key);
   return [...keys].sort();
 }
 

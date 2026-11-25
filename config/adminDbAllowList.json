@@ -1,0 +1,2002 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "file": "src/app/api/health/route.ts",
+      "model": "$raw-unreadable",
+      "count": 1,
+      "category": "platform",
+      "note": "Health probe: `SELECT 1` only."
+    },
+    {
+      "file": "src/app/api/orgs/[orgSlug]/deals/route.ts",
+      "model": "pipelineStage",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/auth/apiToken.ts",
+      "model": "apiToken",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/apiToken.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/inboundBccAddress.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/inboundEmailKey.ts",
+      "model": "inboundEmailKey",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/inboundEmailKey.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/platformIdentity.ts",
+      "model": "auditEvent",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/requestContext.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/requestContext.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/session.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/session.ts",
+      "model": "session",
+      "count": 7,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/sessionPolicy.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/twoStep/stores.ts",
+      "model": "$adminDb-escape",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/websiteApiKey.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/auth/websiteApiKey.ts",
+      "model": "websiteApiKey",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/automations/runLog.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/jobs/runner.ts",
+      "model": "backgroundJob",
+      "count": 1,
+      "category": "cron-claim"
+    },
+    {
+      "file": "src/jobs/runner.ts",
+      "model": "organization",
+      "count": 2,
+      "category": "cron-claim"
+    },
+    {
+      "file": "src/lib/apiErrors.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/lib/apiErrors.ts",
+      "model": "role",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/lib/featureConfig.ts",
+      "model": "organizationSetting",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/notifications/webPush.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/observability/jobQueue.ts",
+      "model": "backgroundJob",
+      "count": 1,
+      "category": "cron-claim"
+    },
+    {
+      "file": "src/repositories/backgroundJobs.ts",
+      "model": "backgroundJob",
+      "count": 6,
+      "category": "cron-claim"
+    },
+    {
+      "file": "src/repositories/followUps.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/repositories/memberships.ts",
+      "model": "membership",
+      "count": 17,
+      "category": "identity",
+      "note": "Hand-checked and fine in the audit (S-1)."
+    },
+    {
+      "file": "src/repositories/memberships.ts",
+      "model": "membershipPermissionOverride",
+      "count": 1,
+      "category": "identity",
+      "note": "UC-C5 step 3: the per-member overrides are read in the same statement that resolves the member's role keys (resolveActiveMembership), keyed on the membership id of the lookup itself. Writes go through withOrgContext (memberAccessService)."
+    },
+    {
+      "file": "src/repositories/memberships.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "identity",
+      "note": "Hand-checked and fine in the audit (S-1)."
+    },
+    {
+      "file": "src/repositories/memberships.ts",
+      "model": "role",
+      "count": 2,
+      "category": "identity",
+      "note": "Hand-checked and fine in the audit (S-1)."
+    },
+    {
+      "file": "src/repositories/memberships.ts",
+      "model": "roleFieldRule",
+      "count": 1,
+      "category": "identity",
+      "note": "Hand-checked and fine in the audit (S-1)."
+    },
+    {
+      "file": "src/repositories/memberships.ts",
+      "model": "signInEvent",
+      "count": 1,
+      "category": "identity",
+      "note": "Hand-checked and fine in the audit (S-1)."
+    },
+    {
+      "file": "src/repositories/organizations.ts",
+      "model": "organization",
+      "count": 2,
+      "category": "identity"
+    },
+    {
+      "file": "src/repositories/quoteShares.ts",
+      "model": "quoteShare",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/repositories/roles.ts",
+      "model": "role",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/repositories/scheduledJobRuns.ts",
+      "model": "backgroundJob",
+      "count": 2,
+      "category": "cron-claim"
+    },
+    {
+      "file": "src/repositories/webForms.ts",
+      "model": "organization",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/repositories/webForms.ts",
+      "model": "webForm",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/repositories/websiteLeadRequestLog.ts",
+      "model": "websiteApiKey",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/repositories/websiteLeadRequestLog.ts",
+      "model": "websiteLeadRequestLog",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/sequences/engine.ts",
+      "model": "contact",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/accessStateService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/activityService.ts",
+      "model": "deal",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/activityService.ts",
+      "model": "lead",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/approvalGateService.ts",
+      "model": "deal",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/approvalRuleService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/approvalService.ts",
+      "model": "$adminDb-escape",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/approvalService.ts",
+      "model": "company",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/approvalService.ts",
+      "model": "dataSubjectRequest",
+      "count": 5,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/approvalService.ts",
+      "model": "exportApproval",
+      "count": 5,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/approvalService.ts",
+      "model": "membership",
+      "count": 4,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/approvalService.ts",
+      "model": "organization",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/approvalService.ts",
+      "model": "pipelineStage",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/assistantService.ts",
+      "model": "assistantProposal",
+      "count": 7,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/assistantService.ts",
+      "model": "assistantRequest",
+      "count": 10,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/assistantService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/assistantService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/auditLogService.ts",
+      "model": "company",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/auditLogService.ts",
+      "model": "contact",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/auditLogService.ts",
+      "model": "deal",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/auditLogService.ts",
+      "model": "invoice",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/auditLogService.ts",
+      "model": "lead",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/auditLogService.ts",
+      "model": "membership",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/auditLogService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/auditLogService.ts",
+      "model": "recurringService",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/auditLogService.ts",
+      "model": "task",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/authAudit.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/authService.ts",
+      "model": "organization",
+      "count": 2,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/automationService.ts",
+      "model": "organizationSetting",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/cardCaptureService.ts",
+      "model": "cardCapture",
+      "count": 9,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/cardCaptureService.ts",
+      "model": "file",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/chatPrivacyService.ts",
+      "model": "attachment",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/chatPrivacyService.ts",
+      "model": "chatMessageAttachment",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/chatPrivacyService.ts",
+      "model": "file",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/chatPrivacyService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/chatService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/chatService.ts",
+      "model": "notification",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/chatService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/churnHintService.ts",
+      "model": "activity",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/churnHintService.ts",
+      "model": "churnHint",
+      "count": 8,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/churnHintService.ts",
+      "model": "company",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/churnHintService.ts",
+      "model": "contact",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/churnHintService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/churnHintService.ts",
+      "model": "organizationSetting",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/churnHintService.ts",
+      "model": "recurringService",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/commentService.ts",
+      "model": "membership",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/commentService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/communicationService.ts",
+      "model": "activity",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/companyService.ts",
+      "model": "customerLifecycleState",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/conversationService.ts",
+      "model": "lead",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/conversationService.ts",
+      "model": "leadSource",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/conversationService.ts",
+      "model": "leadStatus",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/customFieldService.ts",
+      "model": "service",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/customerReportService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/dashboardService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/dataRunService.ts",
+      "model": "file",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/dataRunService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/dealRuleService.ts",
+      "model": "lostReason",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/dealRuleService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/dealRuleService.ts",
+      "model": "pipeline",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/dealRuleService.ts",
+      "model": "pipelineStage",
+      "count": 7,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/dealService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/dealService.ts",
+      "model": "pipelineStage",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/dealStageGate.ts",
+      "model": "pipelineStage",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/directoryService.ts",
+      "model": "customerLifecycleState",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/emailTemplateService.ts",
+      "model": "$adminDb-escape",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/emailTemplateService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/erasureService.ts",
+      "model": "attachment",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/erasureService.ts",
+      "model": "auditEvent",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/erasureService.ts",
+      "model": "contact",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/erasureService.ts",
+      "model": "mergeRecord",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/exportService.ts",
+      "model": "customerLifecycleState",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/exportService.ts",
+      "model": "service",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/featureService.ts",
+      "model": "organizationSetting",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/fileService.ts",
+      "model": "attachment",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/fileService.ts",
+      "model": "file",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/handoffService.ts",
+      "model": "company",
+      "count": 4,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/handoffService.ts",
+      "model": "companyService",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/handoffService.ts",
+      "model": "customerLifecycleState",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/handoffService.ts",
+      "model": "membership",
+      "count": 7,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/handoffService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/handoffService.ts",
+      "model": "task",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/importService.ts",
+      "model": "company",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/importService.ts",
+      "model": "contact",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/importService.ts",
+      "model": "customerLifecycleState",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/importService.ts",
+      "model": "leadSource",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/importService.ts",
+      "model": "leadStatus",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/importService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/importService.ts",
+      "model": "service",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/integrationRegistryService.ts",
+      "model": "communication",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/integrationRegistryService.ts",
+      "model": "inboundEmailKey",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/integrationRegistryService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/integrationRegistryService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/integrationRegistryService.ts",
+      "model": "websiteApiKey",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/integrationService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/integrationService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadIntakeService.ts",
+      "model": "company",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadIntakeService.ts",
+      "model": "contact",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadIntakeService.ts",
+      "model": "leadStatus",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadKeyNoteService.ts",
+      "model": "lead",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadKeyNoteService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadPoolService.ts",
+      "model": "leadPoolRequest",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadPoolService.ts",
+      "model": "membership",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadPoolService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadService.ts",
+      "model": "company",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadService.ts",
+      "model": "contact",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadService.ts",
+      "model": "leadSource",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadService.ts",
+      "model": "leadStatus",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/leadService.ts",
+      "model": "service",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/mailService.ts",
+      "model": "communication",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/mailService.ts",
+      "model": "company",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/mailService.ts",
+      "model": "mailDraft",
+      "count": 14,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/mailService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/mailService.ts",
+      "model": "oAuthConnection",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/meContextService.ts",
+      "model": "role",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/meetingService.ts",
+      "model": "activity",
+      "count": 8,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/meetingService.ts",
+      "model": "calendarEventLink",
+      "count": 13,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/meetingService.ts",
+      "model": "contact",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/meetingService.ts",
+      "model": "deal",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/meetingService.ts",
+      "model": "lead",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/meetingService.ts",
+      "model": "oAuthConnection",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/meetingService.ts",
+      "model": "task",
+      "count": 4,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/membershipService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/migrationEngine.ts",
+      "model": "file",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationEngine.ts",
+      "model": "importSession",
+      "count": 10,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationEngine.ts",
+      "model": "importSessionChange",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationEngine.ts",
+      "model": "importSessionIssue",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationEngine.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "company",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "contact",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "customerLifecycleState",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "deal",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "lead",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "leadSource",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "leadStatus",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "lostReason",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "pipelineStage",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "service",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationRows.ts",
+      "model": "tag",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationService.ts",
+      "model": "customFieldDefinition",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationService.ts",
+      "model": "file",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationService.ts",
+      "model": "importMappingPreset",
+      "count": 7,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationService.ts",
+      "model": "importSession",
+      "count": 12,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationService.ts",
+      "model": "importSessionIssue",
+      "count": 4,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/migrationService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/notificationCentreService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/notificationDeliveryPolicy.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/notificationService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/notificationService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/notificationService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/notificationSweepService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "cron-claim"
+    },
+    {
+      "file": "src/services/oauthConnectionService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/oauthConnectionService.ts",
+      "model": "oAuthConnection",
+      "count": 14,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/oauthConnectionService.ts",
+      "model": "oAuthState",
+      "count": 5,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/oauthConnectionService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/orgLimitService.ts",
+      "model": "file",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/orgLimitService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/orgLimitService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/orgLimitService.ts",
+      "model": "organizationUsageCounter",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/organizationDefaults.ts",
+      "model": "customFieldDefinition",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/organizationDefaults.ts",
+      "model": "customerLifecycleState",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/organizationDefaults.ts",
+      "model": "leadSource",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/organizationDefaults.ts",
+      "model": "leadStatus",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/organizationDefaults.ts",
+      "model": "lostReason",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/organizationDefaults.ts",
+      "model": "organizationSetting",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/organizationDefaults.ts",
+      "model": "pipelineStage",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/organizationDefaults.ts",
+      "model": "service",
+      "count": 2,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/organizationLifecycleService.ts",
+      "model": "$tx-escape",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/organizationLifecycleService.ts",
+      "model": "organizationLifecycleEvent",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/organizationLookService.ts",
+      "model": "organization",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/organizationProfileService.ts",
+      "model": "organization",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/organizationProvisioningService.ts",
+      "model": "role",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/organizationSwitcherService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/organizationSwitcherService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/organizationSwitcherService.ts",
+      "model": "session",
+      "count": 1,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/ownerEligibility.ts",
+      "model": "membership",
+      "count": 4,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/paymentService.ts",
+      "model": "invoice",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/paymentService.ts",
+      "model": "membership",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/paymentService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/paymentService.ts",
+      "model": "paymentRecord",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/pipelineService.ts",
+      "model": "customFieldDefinition",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/pipelineService.ts",
+      "model": "deal",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/pipelineService.ts",
+      "model": "service",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/platformDataRequestService.ts",
+      "model": "$adminDb-escape",
+      "count": 7,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformDataRequestService.ts",
+      "model": "$raw-unreadable",
+      "count": 2,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformDataRequestService.ts",
+      "model": "$tx-escape",
+      "count": 4,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformDataRequestService.ts",
+      "model": "file",
+      "count": 1,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformDataRequestService.ts",
+      "model": "membership",
+      "count": 4,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformDataRequestService.ts",
+      "model": "organization",
+      "count": 5,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformDataRequestService.ts",
+      "model": "organizationLifecycleEvent",
+      "count": 1,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformDataRequestService.ts",
+      "model": "platformDataRequest",
+      "count": 16,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformDataRequestService.ts",
+      "model": "platformDeletionCertificate",
+      "count": 1,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformFlagsService.ts",
+      "model": "$tx-escape",
+      "count": 2,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformFlagsService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformOrganizationService.ts",
+      "model": "$adminDb-escape",
+      "count": 1,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/platformPreferenceService.ts",
+      "model": "auditEvent",
+      "count": 1,
+      "category": "platform"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "$adminDb-escape",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "activity",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "attachment",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "automationRun",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "communication",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "contact",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "dataSubjectRequest",
+      "count": 13,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "deal",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "exportApproval",
+      "count": 6,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "file",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "importSession",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "lead",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "role",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "signInEvent",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "syncMutation",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacyService.ts",
+      "model": "task",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/privacySettings.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/profileService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/pwaService.ts",
+      "model": "organization",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/qualificationService.ts",
+      "model": "leadStatus",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quickCaptureService.ts",
+      "model": "company",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quickCaptureService.ts",
+      "model": "contact",
+      "count": 4,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quickCaptureService.ts",
+      "model": "lead",
+      "count": 4,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quickCaptureService.ts",
+      "model": "leadSource",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quickCaptureService.ts",
+      "model": "leadStatus",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quickCaptureService.ts",
+      "model": "service",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quickLogService.ts",
+      "model": "company",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quickLogService.ts",
+      "model": "contact",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quickLogService.ts",
+      "model": "lead",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteDocumentService.ts",
+      "model": "contact",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteDocumentService.ts",
+      "model": "deal",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteDocumentService.ts",
+      "model": "file",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteDocumentService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteDocumentService.ts",
+      "model": "organization",
+      "count": 4,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteDocumentService.ts",
+      "model": "quoteEvent",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteDocumentService.ts",
+      "model": "quoteVersion",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteService.ts",
+      "model": "deal",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteService.ts",
+      "model": "pipelineStage",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteService.ts",
+      "model": "stageRule",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteSignatureService.ts",
+      "model": "deal",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteSignatureService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteSignatureService.ts",
+      "model": "quoteEvent",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/quoteSignatureService.ts",
+      "model": "quoteVersion",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/reassignmentService.ts",
+      "model": "membership",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/recurringServiceService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/recurringServiceService.ts",
+      "model": "organizationSetting",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/recurringServiceService.ts",
+      "model": "service",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/referenceDataService.ts",
+      "model": "customerLifecycleState",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/referenceDataService.ts",
+      "model": "leadSource",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/referenceDataService.ts",
+      "model": "leadStatus",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/referenceDataService.ts",
+      "model": "lostReason",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/referenceDataService.ts",
+      "model": "pipelineStage",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/referenceDataService.ts",
+      "model": "service",
+      "count": 1,
+      "category": "bootstrap"
+    },
+    {
+      "file": "src/services/reminderService.ts",
+      "model": "company",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/reminderService.ts",
+      "model": "companyService",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/reminderService.ts",
+      "model": "organization",
+      "count": 3,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/reminderService.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/reminderService.ts",
+      "model": "proposalReference",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/reminderService.ts",
+      "model": "recurringService",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/renewalSettings.ts",
+      "model": "organizationSetting",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/roleEditorService.ts",
+      "model": "membership",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/roleEditorService.ts",
+      "model": "role",
+      "count": 6,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/roleEditorService.ts",
+      "model": "roleFieldRule",
+      "count": 4,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/scoreEngine.ts",
+      "model": "organizationSetting",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/sessionService.ts",
+      "model": "session",
+      "count": 4,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/signInEventService.ts",
+      "model": "membership",
+      "count": 3,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/signInEventService.ts",
+      "model": "signInEvent",
+      "count": 3,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/signalService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/signalService.ts",
+      "model": "pipelineStage",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/stalledDealAlerts.ts",
+      "model": "deal",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/stalledDealAlerts.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/stalledDealAlerts.ts",
+      "model": "pipelineStage",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/supportAccessService.ts",
+      "model": "$adminDb-escape",
+      "count": 1,
+      "category": "platform",
+      "note": "Hand-checked and fine in the audit (S-1)."
+    },
+    {
+      "file": "src/services/supportAccessService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "platform",
+      "note": "Hand-checked and fine in the audit (S-1)."
+    },
+    {
+      "file": "src/services/supportAccessService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "platform",
+      "note": "Hand-checked and fine in the audit (S-1)."
+    },
+    {
+      "file": "src/services/supportAccessService.ts",
+      "model": "supportAccessGrant",
+      "count": 1,
+      "category": "platform",
+      "note": "Hand-checked and fine in the audit (S-1)."
+    },
+    {
+      "file": "src/services/supportRequestService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/syncService.ts",
+      "model": "pipelineStage",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/taskBackfill.ts",
+      "model": "activity",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/taskBackfill.ts",
+      "model": "lead",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/taskBackfill.ts",
+      "model": "task",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/teamActivityNotifier.ts",
+      "model": "company",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/teamActivityNotifier.ts",
+      "model": "contact",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/teamActivityNotifier.ts",
+      "model": "membership",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/teamActivityNotifier.ts",
+      "model": "organization",
+      "count": 2,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/twoStepService.ts",
+      "model": "membership",
+      "count": 4,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/twoStepService.ts",
+      "model": "organizationSetting",
+      "count": 3,
+      "category": "identity"
+    },
+    {
+      "file": "src/services/websiteLeadAssignmentRuleService.ts",
+      "model": "leadSource",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/websiteLeadAssignmentRuleService.ts",
+      "model": "membership",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/websiteLeadAssignmentRuleService.ts",
+      "model": "service",
+      "count": 1,
+      "category": "tenant-data"
+    },
+    {
+      "file": "src/services/websiteLeadService.ts",
+      "model": "organization",
+      "count": 1,
+      "category": "tenant-data"
+    }
+  ]
+}

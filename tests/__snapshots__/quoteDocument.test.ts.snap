@@ -14,9 +14,11 @@ header img{max-height:56px;max-width:200px}h1{margin:0;font-size:22px;color:var(
 .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}.meta div{font-size:14px}.meta strong{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 table{width:100%;border-collapse:collapse}th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .num{text-align:right;white-space:nowrap}tfoot td{border-bottom:0}.total td{font-weight:700;font-size:17px;border-top:2px solid var(--ink)}
-.terms{margin-top:24px;white-space:pre-wrap;font-size:14px}footer{margin-top:28px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+.terms{margin-top:24px;white-space:pre-wrap;font-size:14px;overflow-wrap:anywhere}footer{margin-top:28px;font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 @media (max-width:560px){.sheet{padding:16px}header{flex-direction:column}th:nth-child(3),td:nth-child(3){display:none}}
-@media print{body{background:#fff}main{padding:0;max-width:none}.sheet{border:0;padding:0}}
+@page{size:A4;margin:16mm 14mm}
+@media print{body{background:#fff;font-size:12pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}main{padding:0;max-width:none}.sheet{border:0;padding:0}
+thead{display:table-header-group}tfoot{display:table-footer-group}tr,header,.meta,footer{break-inside:avoid;page-break-inside:avoid}.total{break-inside:avoid}h1{break-after:avoid}.terms{orphans:3;widows:3}}
 </style></head><body><main><div class="sheet">
 <header><div><h1>Quote Q-2026-0001</h1><div class="muted">Version 2</div></div><div><strong>Figbloom Digital</strong></div></header>
 <section class="meta"><div><strong>Prepared for</strong>Mwangaza Schools<br>Grace Wanjiru</div><div><strong>Issued</strong>4 November 2026</div><div><strong>Valid until</strong>4 December 2026</div><div><strong>Prepared by</strong>Dev Sales</div></section>

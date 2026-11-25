@@ -27301,6 +27301,272 @@
         }
       }
     },
+    "/api/orgs/{orgSlug}/dashboard-layouts": {
+      "get": {
+        "operationId": "getDashboardLayouts",
+        "summary": "Which widgets a role's home shows and in what order. Any member reads their own home; Management can pass `kind` to read another (UC-W1)",
+        "tags": [
+          "Dashboard"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-allowed-roles": [
+          "MANAGEMENT",
+          "SALES",
+          "DELIVERY",
+          "FINANCE",
+          "RESTRICTED_TECHNICAL"
+        ],
+        "x-role-outcomes": {
+          "MANAGEMENT": "A",
+          "SALES": "A",
+          "DELIVERY": "A",
+          "FINANCE": "A",
+          "RESTRICTED_TECHNICAL": "A"
+        },
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putDashboardLayouts",
+        "summary": "Set which widgets a role's home shows and in what order; hiding and reordering only, never revealing. `widgets: null` resets to the default. Management only, audited (UC-W1)",
+        "tags": [
+          "Dashboard"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-allowed-roles": [
+          "MANAGEMENT"
+        ],
+        "x-role-outcomes": {
+          "MANAGEMENT": "V",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Unique string (8 to 200 printable characters). Retrying the same request with the same key returns the first response instead of creating twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string"
+                  },
+                  "widgets": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "visible": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "visible"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "widgets"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (`fieldErrors` lists the fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/orgs/{orgSlug}/dashboard/{section}": {
       "get": {
         "operationId": "getDashboardSection",
@@ -37496,13 +37762,14 @@
         "x-contract-source": "derived",
         "x-allowed-roles": [
           "MANAGEMENT",
-          "SALES"
+          "SALES",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "D",
-          "FINANCE": "D",
+          "FINANCE": "H",
           "RESTRICTED_TECHNICAL": "D"
         }
       },
@@ -45713,11 +45980,12 @@
         ],
         "x-allowed-roles": [
           "MANAGEMENT",
+          "SALES",
           "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
+          "SALES": "A",
           "DELIVERY": "D",
           "FINANCE": "A",
           "RESTRICTED_TECHNICAL": "D"
@@ -46087,11 +46355,12 @@
         ],
         "x-allowed-roles": [
           "MANAGEMENT",
+          "SALES",
           "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "V",
-          "SALES": "D",
+          "SALES": "V",
           "DELIVERY": "D",
           "FINANCE": "V",
           "RESTRICTED_TECHNICAL": "D"
@@ -46371,11 +46640,12 @@
         ],
         "x-allowed-roles": [
           "MANAGEMENT",
+          "SALES",
           "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
-          "SALES": "D",
+          "SALES": "H",
           "DELIVERY": "D",
           "FINANCE": "A",
           "RESTRICTED_TECHNICAL": "D"
@@ -59194,6 +59464,257 @@
         }
       }
     },
+    "/api/orgs/{orgSlug}/memberships/{membershipId}/permissions": {
+      "get": {
+        "operationId": "getMemberAccess",
+        "summary": "One member's per-member permission overrides (keys added and removed on top of the role) and the keys that result (role.assign; V2)",
+        "tags": [
+          "Roles"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "setMemberAccess",
+        "summary": "Replace one member's permission overrides: add (grant) or remove (deny) single keys on top of the role. Reserved and payment keys cannot be added, you cannot edit your own, effective on the next request, audited (role.assign; V2)",
+        "tags": [
+          "Roles"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "x-allowed-roles": [],
+        "x-role-outcomes": {
+          "MANAGEMENT": "D",
+          "SALES": "D",
+          "DELIVERY": "D",
+          "FINANCE": "D",
+          "RESTRICTED_TECHNICAL": "D"
+        },
+        "parameters": [
+          {
+            "name": "orgSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "membershipId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Unique string (8 to 200 printable characters). Retrying the same request with the same key returns the first response instead of creating twice.",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "grant": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "deny": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "grant",
+                  "deny"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "headers": {
+              "x-request-id": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (`fieldErrors` lists the fields).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not allowed (`denial` explains who can).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found in this organisation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/orgs/{orgSlug}/memberships/{membershipId}/reactivate": {
       "post": {
         "operationId": "postMembershipsByMembershipIdReactivate",
@@ -68555,12 +69076,16 @@
                     },
                     "defaultTerms": {
                       "type": "string"
+                    },
+                    "salesDraftInvoices": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
                     "requireForProposalSent",
                     "validityDays",
-                    "defaultTerms"
+                    "defaultTerms",
+                    "salesDraftInvoices"
                   ],
                   "additionalProperties": true
                 }
@@ -68611,13 +69136,14 @@
         "x-contract-source": "derived",
         "x-allowed-roles": [
           "MANAGEMENT",
-          "SALES"
+          "SALES",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "D",
-          "FINANCE": "D",
+          "FINANCE": "A",
           "RESTRICTED_TECHNICAL": "D"
         }
       },
@@ -68660,6 +69186,47 @@
                   },
                   "defaultTerms": {
                     "type": "string"
+                  },
+                  "tax": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "mode": {
+                            "type": "string"
+                          },
+                          "rateBp": {
+                            "type": "number"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "mode",
+                          "rateBp"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "invoiceNumbering": {
+                    "type": "object",
+                    "properties": {
+                      "auto": {
+                        "type": "boolean"
+                      },
+                      "prefix": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "salesDraftInvoices": {
+                    "type": "boolean"
                   }
                 },
                 "additionalProperties": false
@@ -68690,12 +69257,16 @@
                     },
                     "defaultTerms": {
                       "type": "string"
+                    },
+                    "salesDraftInvoices": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
                     "requireForProposalSent",
                     "validityDays",
-                    "defaultTerms"
+                    "defaultTerms",
+                    "salesDraftInvoices"
                   ],
                   "additionalProperties": true
                 }
@@ -68801,6 +69372,84 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "companyId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "validFrom",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 10
+            }
+          },
+          {
+            "name": "validTo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 10
+            }
+          },
+          {
+            "name": "expired",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 10
+            }
+          },
+          {
+            "name": "counts",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          },
+          {
+            "name": "activity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
             }
           },
           {
@@ -68986,6 +69635,9 @@
                           "updatedAt": {
                             "type": "string",
                             "format": "date-time"
+                          },
+                          "ownerMembershipId": {
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -68995,7 +69647,8 @@
                           "companyName",
                           "currency",
                           "latest",
-                          "updatedAt"
+                          "updatedAt",
+                          "ownerMembershipId"
                         ],
                         "additionalProperties": true
                       }
@@ -69083,13 +69736,14 @@
         "x-contract-source": "derived",
         "x-allowed-roles": [
           "MANAGEMENT",
-          "SALES"
+          "SALES",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "D",
-          "FINANCE": "D",
+          "FINANCE": "A",
           "RESTRICTED_TECHNICAL": "D"
         }
       }
@@ -69324,13 +69978,14 @@
         "x-contract-source": "derived",
         "x-allowed-roles": [
           "MANAGEMENT",
-          "SALES"
+          "SALES",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "D",
-          "FINANCE": "D",
+          "FINANCE": "H",
           "RESTRICTED_TECHNICAL": "D"
         }
       }
@@ -69848,13 +70503,14 @@
         "x-contract-source": "derived",
         "x-allowed-roles": [
           "MANAGEMENT",
-          "SALES"
+          "SALES",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "D",
-          "FINANCE": "D",
+          "FINANCE": "H",
           "RESTRICTED_TECHNICAL": "D"
         }
       },
@@ -70231,13 +70887,14 @@
         "x-contract-source": "derived",
         "x-allowed-roles": [
           "MANAGEMENT",
-          "SALES"
+          "SALES",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "D",
-          "FINANCE": "D",
+          "FINANCE": "H",
           "RESTRICTED_TECHNICAL": "D"
         }
       }
@@ -70470,13 +71127,14 @@
         "x-contract-source": "derived",
         "x-allowed-roles": [
           "MANAGEMENT",
-          "SALES"
+          "SALES",
+          "FINANCE"
         ],
         "x-role-outcomes": {
           "MANAGEMENT": "A",
           "SALES": "A",
           "DELIVERY": "D",
-          "FINANCE": "D",
+          "FINANCE": "H",
           "RESTRICTED_TECHNICAL": "D"
         }
       }
@@ -70970,6 +71628,13 @@
                   },
                   "allowSigning": {
                     "type": "boolean"
+                  },
+                  "channel": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "link"
+                    ]
                   }
                 },
                 "additionalProperties": false

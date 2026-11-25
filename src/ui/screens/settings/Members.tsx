@@ -7,7 +7,9 @@ import { Button, ConfirmDialog, Dialog, Input, Select, Avatar } from "../..";
 import { describeError } from "../../errors";
 import { useApi, useApiMutation, useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
+import { useRoles } from "../roles/api";
 import { Gate, Panel, rel, useReport } from "./kit";
+import { MemberAccessDrawer } from "./MemberAccess";
 
 type Row = NonNullable<ReturnType<typeof useApiQuery<"getMemberships">>["data"]>[number];
 interface Checklist {
@@ -17,8 +19,17 @@ interface Checklist {
   totals: Record<string, number>;
 }
 
-/** Roles an organisation can hand out. */
-const OFFERED = ROLES;
+/**
+ * Roles an organisation can hand out: the platform roles plus its own active custom roles (real roles API, V2). When that list is not
+ * available (organisation not on V2, or no access to it) the platform roles are offered, as before.
+ */
+type Offered = { key: string; name: string };
+function useOfferedRoles(): Offered[] {
+  const { orgSlug } = useMember();
+  const q = useRoles(orgSlug);
+  const fromApi = q.data?.roles?.filter((r) => !r.archivedAt).map((r) => ({ key: r.key, name: r.name }));
+  return fromApi && fromApi.length > 0 ? fromApi : ROLES.map((r) => ({ key: r.key, name: r.name }));
+}
 
 const STATE: Record<string, { label: string; tone: string }> = {
   active: { label: "Active", tone: "ok" },
@@ -50,6 +61,7 @@ export function Members() {
 function InviteForm() {
   const { orgSlug } = useMember();
   const report = useReport();
+  const OFFERED = useOfferedRoles();
   const [form, setForm] = useState({ name: "", email: "", roleKey: "SALES" });
   const [problem, setProblem] = useState<Record<string, string>>({});
   const [sent, setSent] = useState<string | null>(null);
@@ -92,10 +104,12 @@ function MemberTable({ rows }: { rows: Row[] }) {
   const api = useApi();
   const qc = useQueryClient();
   const report = useReport();
+  const OFFERED = useOfferedRoles();
   const [busy, setBusy] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ row: Row; kind: "deactivate" | "remove" } | null>(null);
   const [reassign, setReassign] = useState<{ row: Row; checklist: Checklist } | null>(null);
   const [left, setLeft] = useState<{ row: Row; checklist: Checklist } | null>(null);
+  const [customise, setCustomise] = useState<Row | null>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: ["getMemberships", { orgSlug }, null] });
 
   async function run(row: Row, work: () => Promise<unknown>, done: string, what: string) {
@@ -136,7 +150,7 @@ function MemberTable({ rows }: { rows: Row[] }) {
               const self = m.membershipId === membershipId;
               const state = STATE[m.state] ?? STATE["active"]!;
               const locked = m.lockedUntil && new Date(String(m.lockedUntil)).getTime() > Date.now();
-              const offered = OFFERED.some((r) => r.key === m.roleKey) ? OFFERED : ROLES;
+              const offered = OFFERED.some((r) => r.key === m.roleKey) ? OFFERED : [...OFFERED, { key: m.roleKey, name: m.roleName }];
               return (
                 <tr key={m.membershipId} style={{ opacity: m.state === "removed" || m.state === "deactivated" ? 0.7 : 1 }}>
                   <td>
@@ -158,7 +172,7 @@ function MemberTable({ rows }: { rows: Row[] }) {
                         value={m.roleKey}
                         disabled={self || busy === m.membershipId}
                         title={self ? "You cannot change your own role." : undefined}
-                        onChange={(e) => void run(m, () => api.call("postMembershipsByMembershipIdRole", { params: p(m), body: { roleKey: e.target.value } }), `${m.userName} is now ${ROLES.find((r) => r.key === e.target.value)?.name ?? "updated"}.`, "The role was not changed").catch(() => undefined)}
+                        onChange={(e) => void run(m, () => api.call("postMembershipsByMembershipIdRole", { params: p(m), body: { roleKey: e.target.value } }), `${m.userName} is now ${OFFERED.find((r) => r.key === e.target.value)?.name ?? "updated"}.`, "The role was not changed").catch(() => undefined)}
                         style={{ minHeight: 34, height: 34, fontSize: 13 }}
                       >
                         {offered.map((r) => <option key={r.key} value={r.key}>{r.name}</option>)}
@@ -180,6 +194,7 @@ function MemberTable({ rows }: { rows: Row[] }) {
                         {m.state === "deactivated" ? <Button size="sm" disabled={busy === m.membershipId} onClick={() => void run(m, () => api.call("postMembershipsByMembershipIdReactivate", { params: p(m) }), `${m.userName} reactivated.`, "The member was not reactivated").catch(() => undefined)}>Reactivate</Button> : null}
                         {locked ? <Button size="sm" onClick={() => void run(m, () => api.call("postMembershipsByMembershipIdUnlock", { params: p(m) }), `${m.userName} can sign in again.`, "The account was not unlocked").catch(() => undefined)}>Unlock</Button> : null}
                         {m.state === "active" ? <Button size="sm" variant="danger" onClick={() => setConfirm({ row: m, kind: "deactivate" })}>Deactivate</Button> : null}
+                        {m.state === "active" || m.state === "invited" ? <Button size="sm" onClick={() => setCustomise(m)}>Customise access</Button> : null}
                         <Button size="sm" variant="ghost" onClick={() => setConfirm({ row: m, kind: "remove" })}>{m.state === "invited" ? "Cancel invite" : "Remove"}</Button>
                       </span>
                     ) : null}
@@ -233,6 +248,7 @@ function MemberTable({ rows }: { rows: Row[] }) {
           <Checklist checklist={left.checklist} />
         </Dialog>
       ) : null}
+      {customise ? <MemberAccessDrawer membershipId={customise.membershipId} userName={customise.userName} roleName={customise.roleName} onClose={() => setCustomise(null)} /> : null}
       {reassign ? <ReassignDialog row={reassign.row} checklist={reassign.checklist} members={rows} onClose={() => setReassign(null)} onDone={() => { setReassign(null); void refresh(); }} /> : null}
     </Panel>
   );

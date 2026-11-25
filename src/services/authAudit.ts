@@ -20,7 +20,9 @@ export type AuthAuditAction =
   | "auth.two_step.trusted_device_added"
   | "auth.two_step.trusted_device_revoked"
   | "auth.two_step.enrolment_forced"
-  | "auth.org_switched";
+  | "auth.org_switched"
+  | "auth.email_verified_by_invite"
+  | "auth.email_verified_by_invite_replaced_password";
 
 /**
  * Account-level events belong to every organisation the person is a member of

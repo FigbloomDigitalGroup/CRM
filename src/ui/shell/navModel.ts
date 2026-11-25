@@ -19,8 +19,11 @@ export type NavIcon =
   | "handoffs"
   | "renewals"
   | "payments"
+  | "quotes"
+  | "invoices"
   | "reports"
   | "forecast"
+  | "social"
   | "preferences"
   | "settings";
 
@@ -51,7 +54,7 @@ export interface NavSection {
 }
 
 export interface QuickCreateItem {
-  key: "lead" | "contact" | "company" | "task" | "note";
+  key: "lead" | "contact" | "company" | "task" | "quote" | "invoice" | "note";
   label: string;
   /** The page that owns the create form until the create drawers land (M7, M8). */
   path: string;

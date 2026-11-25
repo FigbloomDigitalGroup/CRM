@@ -11,17 +11,20 @@
 @import "./screens/engage/engage.css";
 @import "./screens/extras/extras.css";
 @import "./screens/finance/finance.css";
+@import "./screens/invoices/invoices.css";
 @import "./screens/reports/reports.css";
 @import "./screens/mobile/mobile.css";
 @import "./screens/mobile/capture/capture.css";
 @import "./screens/assistant/assistant.css";
 @import "./screens/preferences/preferences.css";
 @import "./screens/settings/settings.css";
+@import "./screens/settings/dashboards.css";
 @import "./screens/orgside/orgside.css";
 @import "./screens/communication/communication.css";
 @import "./screens/commercial/commercial.css";
 @import "./screens/settingsplus/settingsplus.css";
 @import "./screens/team/team.css";
+@import "./screens/roles/roles.css";
 /*
  * The design system's one stylesheet for the authenticated app (F1.01, F1.02).
  *
@@ -695,3 +698,4 @@ textarea.fb-input { padding: var(--space-3); min-height: 96px; resize: vertical;
 .fb-app .page input.fb-com-targetinput { width: 110px; display: inline-block; min-height: 30px; text-align: right; }
 .fb-app .fb-chat__search { flex-direction: row; font-weight: 400; }
 .fb-app .page .fb-chat__search input { min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
+@import "./screens/social/social.css";

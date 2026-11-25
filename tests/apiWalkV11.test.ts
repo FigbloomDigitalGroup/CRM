@@ -178,7 +178,7 @@ describe("generated authorization matrix on a V1.1 organisation (G2.01)", () => 
   it("opens every V1.1 route to Management: a V1.1 organisation gets no release refusal on a V1.1 feature", () => {
     // Nothing in a V1.1 organisation may answer "not available in your release" except the V2 route families (M17: support access, flags and
     // announcements, custom roles, churn hints, webhooks, API tokens), which are gated on release.v2 and have their own tests under that release.
-    const V2_FAMILY = /\/api\/orgs\/\{orgSlug\}\/(roles|churn-hints|support-access|announcements|webhooks|api-tokens)(\/|$)/;
+    const V2_FAMILY = /\/api\/orgs\/\{orgSlug\}\/(roles|churn-hints|support-access|announcements|webhooks|api-tokens|memberships\/\{membershipId\}\/permissions)(\/|$)/;
     expect([...unavailable].filter((k) => !V2_FAMILY.test(k)).sort()).toEqual([]);
   });
 

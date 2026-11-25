@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { stringifyCsv as stringify } from "../lib/csv";
 import type { AuthContext } from "../auth/context";
-import { hasPermission, requirePermission } from "../auth/context";
+import { deny, hasPermission, requirePermission } from "../auth/context";
 import { NotFoundError, ValidationError } from "../auth/errors";
 import { adminDb } from "../db/adminClient";
 import { cleanText, parseDateOnly, parseMoneyCents, parseOptionalDate } from "../lib/inputParsing";
@@ -29,15 +29,19 @@ import {
   getInvoiceRow,
   getPaymentNote,
   insertInvoice,
+  insertInvoiceAutoNumbered,
   listAllInvoiceRows,
   listInvoiceRows,
   listWonDealRows,
   paymentAggregates,
+  ageingBuckets,
   statusTotals,
   upsertPaymentNote,
   withLockedInvoice,
   type InvoiceWithPayments,
 } from "../repositories/invoices";
+import { effectiveInvoiceNumbering, salesDraftInvoicesEnabled } from "./invoiceSettingsService";
+import { toSalesDraftView } from "../lib/invoiceSalesDraft";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { assertBulkExportAllowed } from "./exportService";
 import { notifyEvent } from "./notificationService";
@@ -54,6 +58,7 @@ import { notifyEvent } from "./notificationService";
  */
 
 const MAX_NOTES = 1000;
+const MAX_TERMS = 2000;
 
 /** A stored amount as a string with two decimals, however Prisma prints the Decimal. */
 function money(value: { toString(): string }): string {
@@ -61,6 +66,8 @@ function money(value: { toString(): string }): string {
 }
 export const INVOICE_SORT_FIELDS = ["dueOn", "issuedOn", "amount", "number", "createdAt"] as const;
 export const MAX_INVOICE_EXPORT_ROWS = 20_000;
+/** UC-R7: the ageing strip's buckets, by days past the due date: not yet due, 1-30, 31-60, 61-90, over 90. */
+export const AGEING_BUCKETS = ["current", "d1_30", "d31_60", "d61_90", "d90_plus"] as const;
 
 export function canViewPayments(ctx: Pick<AuthContext, "permissionKeys">): boolean {
   return ctx.permissionKeys.includes("finance.view.payments");
@@ -71,6 +78,24 @@ function requireView(ctx: AuthContext) {
 }
 function requireManage(ctx: AuthContext) {
   requirePermission(ctx, "finance.manage.payments");
+}
+/**
+ * UC-R7/R9 (FIG-1785, FIG-1780): the split keys of UC-R1 are enforced on top of the existing ones, never instead of them. Every role that
+ * holds `finance.view.payments` / `finance.manage.payments` carries the split keys by implication (docs/QUOTE_INVOICE_PERMISSIONS.md), so no
+ * role changes; a custom role holding only a split key still gets nothing, because payments stay behind the old keys (rule 7).
+ */
+function requireKey(ctx: AuthContext, key: string) {
+  requirePermission(ctx, key);
+}
+
+/**
+ * UC-R10 (FIG-1781): the Sales role may create and read DRAFT invoices of its own deals when Management switched `invoices.sales_draft` on
+ * (ON by default since UC-C7). Only a member who holds invoices.create and deals.edit.own (the platform Sales role) and no payment key; every other role goes the normal way. Never any payment data.
+ */
+async function salesDraftActor(ctx: AuthContext): Promise<boolean> {
+  // Decided by keys, never by a role name (permissionsV2 guard): the invoice keys that open the page, ownership of deals, and no payment key.
+  if (!hasPermission(ctx, "invoices.create") || !hasPermission(ctx, "deals.edit.own") || hasPermission(ctx, "finance.manage.payments") || hasPermission(ctx, "finance.view.payments")) return false;
+  return salesDraftInvoicesEnabled(ctx.organizationId);
 }
 function canWriteNote(ctx: AuthContext) {
   return hasPermission(ctx, "finance.followup.note") || hasPermission(ctx, "finance.manage.payments");
@@ -109,6 +134,8 @@ export function toInvoiceView(row: InvoiceListRow, today: Date) {
     dueOn: row.dueOn,
     allowOverpayment: row.allowOverpayment,
     notes: row.notes,
+    paymentTermsDays: row.paymentTermsDays,
+    terms: row.terms,
     voidedAt: row.voidedAt,
     voidReason: row.voidReason,
     createdAt: row.createdAt,
@@ -147,7 +174,8 @@ const snapshot = (v: InvoiceView) => ({ number: v.number, status: v.storedStatus
 // ---------------------------------------------------------------------------
 
 export interface InvoiceInput {
-  number: string;
+  /** Left out (or blank) asks for the next automatic number; that needs auto-numbering switched on in Settings (UC-R8). */
+  number?: string;
   amount: number | string;
   currency?: string;
   issuedOn: string;
@@ -156,6 +184,10 @@ export interface InvoiceInput {
   dealId?: string;
   recurringServiceId?: string;
   notes?: string;
+  /** UC-R8: days from the issue date to pay. Informational: `dueOn` is still required and is the truth. */
+  paymentTermsDays?: number;
+  /** UC-R8: the payment terms in words. */
+  terms?: string;
   /** Start as already sent. Default: draft. */
   sent?: boolean;
 }
@@ -169,6 +201,14 @@ function cleanCurrency(value: unknown): string {
   const text = typeof value === "string" ? value.trim().toUpperCase() : "KES";
   if (!/^[A-Z]{3}$/.test(text)) throw new ValidationError("currency is not valid.", [{ path: "currency", message: "Use a three-letter code such as KES." }]);
   return text;
+}
+
+function cleanTermsDays(value: unknown): number | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 365) {
+    throw new ValidationError("paymentTermsDays is not valid.", [{ path: "paymentTermsDays", message: "Use a whole number of days from 0 to 365." }]);
+  }
+  return value;
 }
 
 async function resolveInvoiceTarget(ctx: AuthContext, input: { companyId?: string; dealId?: string }) {
@@ -197,31 +237,60 @@ async function resolveInvoiceTarget(ctx: AuthContext, input: { companyId?: strin
 }
 
 export async function createInvoice(ctx: AuthContext, input: InvoiceInput, now = new Date()) {
-  requireManage(ctx);
-  const number = cleanNumber(input.number);
+  const salesDraft = !hasPermission(ctx, "finance.manage.payments") && (await salesDraftActor(ctx));
+  if (salesDraft) {
+    // UC-R10: a draft for a won deal of their own, nothing else. Sending and payments stay with Finance and Management.
+    if (!input.dealId) throw new ValidationError("A won deal is required.", [{ path: "dealId", message: "Sales can create a draft invoice from one of their own won deals.", code: "SALES_DRAFT_NEEDS_DEAL" }]);
+    if (input.sent) throw new ValidationError("Sales can only create a draft.", [{ path: "sent", message: "Finance sends invoices.", code: "SALES_DRAFT_ONLY" }]);
+    if (input.recurringServiceId) throw new ValidationError("Sales can only invoice a won deal.", [{ path: "recurringServiceId", message: "Not available for a draft made by Sales.", code: "SALES_DRAFT_ONLY" }]);
+    const deal = await getDealForInvoice(ctx.organizationId, input.dealId);
+    if (!deal) throw new NotFoundError("Deal", input.dealId);
+    if (deal.ownerMembershipId !== ctx.membershipId) throw deny(ctx, "invoices.sales_draft", ["deals.edit.own"]);
+  } else {
+    requireManage(ctx);
+    requireKey(ctx, "invoices.create");
+  }
+  const typed = typeof input.number === "string" && input.number.trim() !== "" ? cleanNumber(input.number) : null;
+  const numbering = typed === null ? await effectiveInvoiceNumbering(ctx.organizationId) : null;
+  if (numbering && !numbering.auto) {
+    throw new ValidationError("A number is required.", [{ path: "number", message: "Type a number, or switch on automatic numbering in Settings.", code: "NUMBER_REQUIRED" }]);
+  }
   const amountCents = parseMoneyCents(input.amount, "amount");
   const issuedOn = parseDateOnly(input.issuedOn, "issuedOn");
   const dueOn = parseDateOnly(input.dueOn, "dueOn");
   if (dueOn < issuedOn) throw new ValidationError("The due date is before the issue date.", [{ path: "dueOn", message: "Due on or after the issue date." }]);
   const notes = cleanText(input.notes, "notes", MAX_NOTES);
+  const terms = cleanText(input.terms, "terms", MAX_TERMS);
+  const paymentTermsDays = cleanTermsDays(input.paymentTermsDays);
   const target = await resolveInvoiceTarget(ctx, input);
-  if (await findInvoiceByNumber(ctx.organizationId, number)) {
+  if (typed !== null && (await findInvoiceByNumber(ctx.organizationId, typed))) {
     throw new ValidationError("An invoice with this number already exists.", [{ path: "number", message: "Pick a different number.", code: "DUPLICATE_INVOICE_NUMBER" }]);
   }
-  const row = await insertInvoice({
+  const base = {
     organizationId: ctx.organizationId,
-    number,
     amount: fromCents(amountCents),
     currency: cleanCurrency(input.currency),
     issuedOn,
     dueOn,
-    status: input.sent ? "SENT" : "DRAFT",
+    status: (input.sent ? "SENT" : "DRAFT") as "SENT" | "DRAFT",
     dealId: target.dealId,
     companyId: target.companyId,
     recurringServiceId: input.recurringServiceId ?? null,
     notes,
+    paymentTermsDays,
+    terms,
     createdByMembershipId: ctx.membershipId,
-  });
+  };
+  let row;
+  try {
+    row = typed !== null ? await insertInvoice({ ...base, number: typed }) : await insertInvoiceAutoNumbered(base, numbering!.prefix);
+  } catch (err) {
+    // Two people typing the same number at once: the case-insensitive unique index decides, and the loser gets the same answer as above.
+    if (typed !== null && err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      throw new ValidationError("An invoice with this number already exists.", [{ path: "number", message: "Pick a different number.", code: "DUPLICATE_INVOICE_NUMBER" }]);
+    }
+    throw err;
+  }
   const detail = await invoiceDetail(ctx.organizationId, row.id, now);
   await recordAuditEvent({
     organizationId: ctx.organizationId,
@@ -230,12 +299,23 @@ export async function createInvoice(ctx: AuthContext, input: InvoiceInput, now =
     entityType: "Invoice",
     entityId: row.id,
     newValue: snapshot(detail),
+    ...(salesDraft ? { metadata: { salesDraft: true } } : {}),
   });
-  return detail;
+  // The Sales view is a whitelist subset; typed as the full view so callers keep one type (the shape is covered by tests).
+  return (salesDraft ? toSalesDraftView(detail) : detail) as typeof detail;
 }
 
 export async function getInvoice(ctx: AuthContext, invoiceId: string, now = new Date()) {
+  if (!hasPermission(ctx, "finance.view.payments") && (await salesDraftActor(ctx))) {
+    // UC-R10: only a draft of one of the person's own deals; anything else is "not found", so nothing is revealed.
+    const row = await getInvoiceRow(ctx.organizationId, invoiceId);
+    if (!row || row.status !== "DRAFT" || !row.dealId) throw new NotFoundError("Invoice", invoiceId);
+    const deal = await getDealForInvoice(ctx.organizationId, row.dealId);
+    if (!deal || deal.ownerMembershipId !== ctx.membershipId) throw new NotFoundError("Invoice", invoiceId);
+    return toSalesDraftView(toInvoiceView(row, now)) as never;
+  }
   requireView(ctx);
+  requireKey(ctx, "invoices.view");
   return invoiceDetail(ctx.organizationId, invoiceId, now);
 }
 
@@ -246,6 +326,7 @@ export async function updateInvoice(
   now = new Date(),
 ) {
   requireManage(ctx);
+  requireKey(ctx, "invoices.edit");
   const before = await invoiceDetail(ctx.organizationId, invoiceId, now);
   if (before.storedStatus === "VOID") {
     throw new ValidationError("A void invoice cannot be changed.", [{ path: "status", message: "This invoice is void.", code: "INVOICE_VOID" }]);
@@ -291,6 +372,7 @@ export async function updateInvoice(
 
 export async function markInvoiceSent(ctx: AuthContext, invoiceId: string, now = new Date()) {
   requireManage(ctx);
+  requireKey(ctx, "invoices.send");
   const before = await invoiceDetail(ctx.organizationId, invoiceId, now);
   if (before.storedStatus === "SENT") return before;
   if (before.storedStatus !== "DRAFT") {
@@ -313,6 +395,7 @@ export async function markInvoiceSent(ctx: AuthContext, invoiceId: string, now =
 /** Voiding keeps the invoice and its history; it is refused while money is still recorded against it. */
 export async function voidInvoice(ctx: AuthContext, invoiceId: string, input: { reason: string }, now = new Date()) {
   requireManage(ctx);
+  requireKey(ctx, "invoices.edit");
   const reason = cleanText(input.reason, "reason", 300, { required: true })!;
   const before = await invoiceDetail(ctx.organizationId, invoiceId, now);
   if (before.storedStatus === "VOID") return before;
@@ -350,6 +433,7 @@ export async function recordPayment(
   now = new Date(),
 ) {
   requireManage(ctx);
+  requireKey(ctx, "payments.record");
   const paymentCents = parseMoneyCents(input.amount, "amount");
   const paidOn = input.paidOn ? parseDateOnly(input.paidOn, "paidOn") : startOfDay(now);
   if (paidOn.getTime() > startOfDay(now).getTime() + 24 * 60 * 60 * 1000) {
@@ -394,6 +478,7 @@ export async function recordPayment(
 /** A payment recorded by mistake is reversed with a reason; the record stays. */
 export async function reversePayment(ctx: AuthContext, paymentId: string, input: { reason: string }, now = new Date()) {
   requireManage(ctx);
+  requireKey(ctx, "payments.record");
   const reason = cleanText(input.reason, "reason", 300, { required: true })!;
   const record = await adminDb.paymentRecord.findFirst({ where: { id: paymentId, organizationId: ctx.organizationId } });
   if (!record) throw new NotFoundError("PaymentRecord", paymentId);
@@ -440,6 +525,11 @@ export interface InvoiceFilters {
   dealId?: string;
   dueFrom?: string;
   dueTo?: string;
+  /** UC-R7: invoice amount range, two-decimal strings (the invoice total, not the balance). */
+  amountMin?: string;
+  amountMax?: string;
+  /** UC-R7: only invoices that are still owed (sent or part paid, any due date). */
+  hasBalance?: boolean;
   q?: string;
 }
 
@@ -459,6 +549,9 @@ function whereFor(filters: InvoiceFilters, today: Date): Prisma.InvoiceWhereInpu
   if (filters.dealId) and.push({ dealId: filters.dealId });
   if (filters.dueFrom) and.push({ dueOn: { gte: parseDateOnly(filters.dueFrom, "dueFrom") } });
   if (filters.dueTo) and.push({ dueOn: { lte: parseDateOnly(filters.dueTo, "dueTo") } });
+  if (filters.amountMin) and.push({ amount: { gte: fromCents(parseMoneyCents(filters.amountMin, "amountMin", { allowZero: true })) } });
+  if (filters.amountMax) and.push({ amount: { lte: fromCents(parseMoneyCents(filters.amountMax, "amountMax", { allowZero: true })) } });
+  if (filters.hasBalance) and.push({ status: { in: ["SENT", "PART_PAID"] } });
   const q = filters.q?.trim();
   if (q) and.push({ OR: [{ number: { contains: q, mode: "insensitive" } }, { company: { name: { contains: q, mode: "insensitive" } } }] });
   return and.length > 0 ? { AND: and } : {};
@@ -471,16 +564,28 @@ function orderFor(sort: string | undefined): Prisma.InvoiceOrderByWithRelationIn
 }
 
 export async function listInvoices(ctx: AuthContext, filters: InvoiceFilters = {}, request: PageRequest & { sort?: string } = {}, now = new Date()) {
+  if (!hasPermission(ctx, "finance.view.payments") && (await salesDraftActor(ctx))) {
+    // UC-R10: drafts of the person's own deals only; no totals, no ageing, no balances.
+    const paging = resolvePaging(request);
+    const where: Prisma.InvoiceWhereInput = { AND: [whereFor({ ...filters, status: undefined, overdue: false, hasBalance: false }, now), { status: "DRAFT", deal: { ownerMembershipId: ctx.membershipId } }] };
+    const { rows, total } = await listInvoiceRows(ctx.organizationId, where, orderFor(request.sort), paging.skip, paging.take);
+    return { ...buildPage(rows.map((r) => toSalesDraftView(toInvoiceView(r, now))), total, paging), salesDraftOnly: true as const } as never;
+  }
   requireView(ctx);
+  requireKey(ctx, "invoices.view");
   const paging = resolvePaging(request);
   const where = whereFor(filters, now);
   const { rows, total } = await listInvoiceRows(ctx.organizationId, where, orderFor(request.sort), paging.skip, paging.take);
-  const totals = await statusTotals(ctx.organizationId, startOfDay(now), {
+  const totalsFilter = {
     companyId: filters.companyId,
     dealId: filters.dealId,
     dueFrom: filters.dueFrom ? parseDateOnly(filters.dueFrom, "dueFrom") : undefined,
     dueTo: filters.dueTo ? parseDateOnly(filters.dueTo, "dueTo") : undefined,
-  });
+  };
+  const [totals, ageingRows] = await Promise.all([statusTotals(ctx.organizationId, startOfDay(now), totalsFilter), ageingBuckets(ctx.organizationId, startOfDay(now), totalsFilter)]);
+  const ageing: Record<string, { count: number; outstanding: string }> = {};
+  for (const b of AGEING_BUCKETS) ageing[b] = { count: 0, outstanding: "0.00" };
+  for (const row of ageingRows) ageing[row.bucket] = { count: row.count, outstanding: row.outstanding };
   const byStatus: Record<string, { count: number; amount: string; outstanding: string }> = {};
   for (const s of INVOICE_STATUSES) byStatus[s] = { count: 0, amount: "0.00", outstanding: "0.00" };
   for (const row of totals) byStatus[row.status] = { count: row.count, amount: row.amount, outstanding: row.outstanding };
@@ -489,7 +594,7 @@ export async function listInvoices(ctx: AuthContext, filters: InvoiceFilters = {
     .reduce((sum, [, v]) => sum + toCents(v.outstanding), 0);
   return {
     ...buildPage(rows.map((r) => toInvoiceView(r, now)), total, paging),
-    totals: { byStatus, outstanding: fromCents(outstanding), nothingToCollect: outstanding === 0 },
+    totals: { byStatus, outstanding: fromCents(outstanding), nothingToCollect: outstanding === 0, ageing },
   };
 }
 
@@ -499,6 +604,8 @@ const CSV_COLUMNS = ["number", "company", "dealId", "status", "currency", "amoun
 export async function exportInvoicesCsv(ctx: AuthContext, filters: InvoiceFilters = {}, now = new Date()): Promise<string> {
   requireView(ctx);
   requireManage(ctx);
+  requireKey(ctx, "invoices.view");
+  requireKey(ctx, "finance.export");
   const where = whereFor(filters, now);
   const rows = await listAllInvoiceRows(ctx.organizationId, where, orderFor(undefined), MAX_INVOICE_EXPORT_ROWS);
   await assertBulkExportAllowed(ctx, rows.length);

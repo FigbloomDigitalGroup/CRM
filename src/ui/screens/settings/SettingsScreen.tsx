@@ -1,9 +1,10 @@
 "use client";
 
+import { DashboardsEditor } from "./Dashboards";
 import { Building2, ClipboardList, Database, FileText, Globe, History, Inbox, Layers, Lock, RefreshCw, Shield, Tag, Upload, Users, Zap, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { NoAccess } from "../../components/states";
 import { useMember } from "../../data/member";
 import { AuditLog } from "./AuditLog";
@@ -13,7 +14,9 @@ import { Connections } from "../assistant/settings/Connections";
 import { FileDown as DataRequestsIcon, KeyRound as TwoStepIcon } from "lucide-react";
 import { DataRequests, TwoStepSettings } from "../orgside/SettingsTabs";
 import { BookOpen as CatalogueIcon, GitBranch as PipelineIcon, ListOrdered as SequenceIcon, FormInput as WebFormIcon, ShieldCheck as RulesIcon } from "lucide-react";
-import { ApprovalRulesSection, CatalogueSection, PipelinesSection, SequencesSection, WebFormsSection } from "../settingsplus";
+import { ApprovalRulesSection, CatalogueSection, PipelinesSection, InvoiceNumberingSection, QuoteTaxSection, SequencesSection, WebFormsSection } from "../settingsplus";
+import { Network as StructureIcon, ShieldUser as RolesIcon, SlidersHorizontal as SalesAccessIcon, LayoutDashboard as DashboardsIcon } from "lucide-react";
+import { OrgStructureSection, RolesAccessSection, SalesAccessSection } from "../roles";
 import { Automations } from "./Automations";
 import { Integrations } from "./Integrations";
 import { InboundEmail, WebsiteIntegration } from "./Website";
@@ -66,6 +69,16 @@ export const SETTINGS_TABS: TabDef[] = [
   { id: "sequences", label: "Follow-up sequences", icon: <SequenceIcon size={ICON} aria-hidden="true" />, render: () => <SequencesSection /> },
   { id: "webforms", label: "Web forms", icon: <WebFormIcon size={ICON} aria-hidden="true" />, render: () => <WebFormsSection /> },
   { id: "approvalrules", label: "Approval rules", icon: <RulesIcon size={ICON} aria-hidden="true" />, render: () => <ApprovalRulesSection /> },
+  // UC-R5: the organisation tax setting new quotes copy (same editor frame as the sections above; layout to be reviewed against the CrmBilling frames).
+  { id: "quotetax", label: "Quote tax", icon: <CatalogueIcon size={ICON} aria-hidden="true" />, render: () => <QuoteTaxSection /> },
+  // UC-R8: automatic invoice numbers and their prefix (same editor frame).
+  { id: "invoicenumbering", label: "Invoice numbering", icon: <CatalogueIcon size={ICON} aria-hidden="true" />, render: () => <InvoiceNumberingSection /> },
+  // UC-C5/C6: roles and access on the real roles API (V2-gated by the API). UC-C4 Sales access and UC-C2 Organisation structure are on demo data (docs/ROLES_ACCESS_SCREENS.md).
+  { id: "rolesaccess", label: "Roles & access", icon: <RolesIcon size={ICON} aria-hidden="true" />, render: () => <RolesAccessSection /> },
+  { id: "salesaccess", label: "Sales access", icon: <SalesAccessIcon size={ICON} aria-hidden="true" />, render: () => <SalesAccessSection /> },
+  { id: "structure", label: "Organisation structure", icon: <StructureIcon size={ICON} aria-hidden="true" />, render: () => <OrgStructureSection /> },
+  // UC-W1: which widgets each role's home shows, and in what order (real dashboard-layouts API).
+  { id: "dashboards", label: "Dashboards", icon: <DashboardsIcon size={ICON} aria-hidden="true" />, render: () => <DashboardsEditor /> },
 ];
 
 /**
@@ -79,6 +92,12 @@ export function SettingsScreen({ matrix = null }: { matrix?: MatrixData | null }
   const allowed = canAny("organization.manage_settings", "configuration.manage");
   const requested = search?.get("tab") ?? "org";
   const tab = SETTINGS_TABS.find((t) => t.id === requested) ?? SETTINGS_TABS[0]!;
+  const bodyRef = useRef<HTMLDivElement>(null);
+  // The section list is long, so a link near its end is clicked with the page scrolled down while the section opens at the top of the grid:
+  // the page looked blank. Bring the section into view when the tab changes (a no-op when it is already visible).
+  useEffect(() => {
+    bodyRef.current?.scrollIntoView?.({ block: "nearest" });
+  }, [tab.id]);
 
   if (!allowed) {
     return (
@@ -108,7 +127,7 @@ export function SettingsScreen({ matrix = null }: { matrix?: MatrixData | null }
             </Link>
           ))}
         </nav>
-        <div className="fb-set__body" key={tab.id}>
+        <div className="fb-set__body" key={tab.id} ref={bodyRef}>
           {tab.render(matrix)}
         </div>
       </div>

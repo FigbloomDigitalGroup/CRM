@@ -8,10 +8,10 @@ import { gotoAndSettle, loginAs, ORG_SLUG } from "./helpers";
 
 /** What each seeded role sees in the sidebar: written by hand from the design's navigation map and the signed permission model. */
 const NAV: { email: string; label: string; links: string[] }[] = [
-  { email: "dev.management@figbloom.local", label: "Management", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Team", "Companies", "Contacts", "Conversations", "Mail", "Chat", "Video Conference", "Handoffs", "Renewals", "Payments", "Forecast & targets", "Approvals", "Reports", "Preferences", "Settings"] },
-  { email: "dev.sales@figbloom.local", label: "Sales", links: ["Dashboard", "Leads", "Deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Mail", "Chat", "Video Conference", "Handoffs", "Renewals", "Forecast & targets", "My metrics", "Preferences"] },
+  { email: "dev.management@figbloom.local", label: "Management", links: ["Dashboard", "Leads", "Deals", "Quotes", "Tasks", "Calendar", "Team", "Companies", "Contacts", "Conversations", "Mail", "Chat", "Video Conference", "Handoffs", "Renewals", "Invoices", "Payments", "Forecast & targets", "Approvals", "Reports", "Preferences", "Settings"] },
+  { email: "dev.sales@figbloom.local", label: "Sales", links: ["Dashboard", "Leads", "Deals", "Quotes", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Mail", "Chat", "Video Conference", "Handoffs", "Renewals", "Invoices", "Forecast & targets", "My metrics", "Preferences"] },
   { email: "dev.delivery@figbloom.local", label: "Delivery", links: ["Dashboard", "Won deals", "Tasks", "Calendar", "Companies", "Contacts", "Conversations", "Mail", "Chat", "Video Conference", "Handoffs", "Forecast & targets", "My metrics", "Preferences"] },
-  { email: "dev.finance@figbloom.local", label: "Finance", links: ["Dashboard", "Won deals", "Companies", "Contacts", "Chat", "Payments", "Forecast & targets", "My metrics", "Preferences"] },
+  { email: "dev.finance@figbloom.local", label: "Finance", links: ["Dashboard", "Won deals", "Quotes", "Companies", "Contacts", "Chat", "Invoices", "Payments", "Forecast & targets", "My metrics", "Preferences"] },
   { email: "dev.tech@figbloom.local", label: "Restricted Technical", links: ["My work", "Tasks", "Calendar", "Conversations", "Chat", "Preferences"] },
 ];
 
@@ -67,11 +67,13 @@ test.describe("top bar identity", () => {
   test("Quick create offers only what the role may create", async ({ page }) => {
     await loginAs(page, "dev.sales@figbloom.local");
     await page.getByRole("button", { name: "New", exact: true }).click();
-    await expect(page.getByRole("menuitem")).toHaveText(["New lead", "New contact", "New company", "New task", "Log a call or note"]);
+    await expect(page.getByRole("menuitem")).toHaveText(["New lead", "New contact", "New company", "New task", "New quote", "New invoice", "Log a call or note"]);
     await page.keyboard.press("Escape");
     await page.context().clearCookies();
     await loginAs(page, "dev.finance@figbloom.local");
-    await expect(page.getByRole("button", { name: "New", exact: true })).toHaveCount(0); // Finance may create nothing
+    // Finance creates invoices only (UC-R2: New invoice follows invoices.create), nothing else.
+    await page.getByRole("button", { name: "New", exact: true }).click();
+    await expect(page.getByRole("menuitem")).toHaveText(["New invoice"]);
   });
 });
 

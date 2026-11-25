@@ -19,6 +19,9 @@ export const ADMIN_RESERVED_KEYS: readonly string[] = [
   "api_tokens.manage",
   "webhooks.manage",
   "ai.configure",
+  // UC-D3 (DECISIONS 11.9.3, Given 20 Nov 2026): the only new reserved key. The key itself arrives with departments (UC-C1);
+  // reserving it now means it is refused on a custom role from its first day. finance.export and integrations.manage stay delegable.
+  "departments.manage",
 ];
 
 /** Payments are visible only to Finance and Management (hard rule 7), and margin only to Management: never granted to a custom role. */
@@ -26,6 +29,9 @@ export const SENSITIVE_RESERVED_KEYS: readonly string[] = [
   "finance.view.payments",
   "finance.manage.payments",
   "payments.manage",
+  // UC-R1: recording or reversing a payment is a payment key like the three above (rule 7). Given has not ruled on it separately
+  // (UC-D3 / DECISIONS 11.9.3 named only departments.manage as a new reserved key); this follows rule 7 and is easy to lift.
+  "payments.record",
   "deals.margin",
 ];
 
@@ -66,6 +72,9 @@ const NEEDS_VIEW: Array<{ needs: string[]; oneOf: string[]; label: string }> = [
   { needs: ["activities.create"], oneOf: ["activities.view"], label: "activities" },
   { needs: ["proposals.manage"], oneOf: ["proposals.view"], label: "proposals" },
   { needs: ["chat.post", "chat.channels.manage"], oneOf: ["chat.view"], label: "chat" },
+  // UC-R1: the new quote and invoice change keys need a way to open the record (quotes.create and quotes.approve imply quotes.view).
+  { needs: ["quotes.edit", "quotes.send"], oneOf: ["quotes.view", "quotes.create", "quotes.approve"], label: "quotes" },
+  { needs: ["invoices.create", "invoices.edit", "invoices.send"], oneOf: ["invoices.view"], label: "invoices" },
 ];
 
 export interface RoleIssue {
@@ -80,10 +89,11 @@ export function validatePermissionKeys(keys: readonly string[]): RoleIssue[] {
   const known = new Set(PERMISSIONS.map((p) => p.key));
   const set = new Set(keys);
   for (const key of set) {
-    if (!known.has(key)) {
-      issues.push({ path: "permissionKeys", message: `"${key}" is not a permission.`, code: "UNKNOWN_PERMISSION" });
-    } else if (RESERVED_KEYS.has(key)) {
+    // A reserved key is refused as reserved even while it is not in the catalogue yet (departments.manage, UC-D3).
+    if (RESERVED_KEYS.has(key)) {
       issues.push({ path: "permissionKeys", message: `"${key}" cannot be given to a custom role. ${reservedReason(key)}`, code: "RESERVED_PERMISSION" });
+    } else if (!known.has(key)) {
+      issues.push({ path: "permissionKeys", message: `"${key}" is not a permission.`, code: "UNKNOWN_PERMISSION" });
     }
   }
   for (const rule of NEEDS_VIEW) {

@@ -14,6 +14,12 @@ To change the API on purpose:
 A change that removes or renames a path, field or enum value, narrows what a role may do, or makes an optional field required is **breaking** and
 needs a new major version (`API_VERSION` in `src/api/openapi.ts`). Additions are minor. Wording-only and documentation changes are patches.
 
+## 1.1.0, addendum — per-member permission overrides (UC-C5 step 3, FIG-1790, 24 Nov 2026)
+
+contract-hash: c7e5d7846d2145ea55ffac4d00900a1bad399d09053238c097b10bd269260863
+
+Additive only (still version 1.1.0, V2). `GET` and `PUT /orgs/{org}/memberships/{membershipId}/permissions` (`getMemberAccess`, `setMemberAccess`; `role.assign`, Management): add or remove single permission keys for one member on top of the role. See `docs/MEMBER_ACCESS_OVERRIDES.md`. No existing path changed. Re-run `npm run contract:update` after any later API change and replace the hash on this line.
+
 ## 1.1.0, addendum — typed service interest (18 Nov 2026)
 
 contract-hash: 6e840859ead1653d3302937498fac3cfce491356398792b1f062c2b78f0eea22

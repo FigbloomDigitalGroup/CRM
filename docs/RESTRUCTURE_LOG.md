@@ -169,3 +169,7 @@ The V1.1 backend is built and committed on `makeover/m13-backend-v11` (`bbdc883`
 ## M17 close-out (9 Nov 2026)
 
 Backend V2 is built on `makeover/m17-backend-v2` (see the Stage 17 section of `IMPLEMENTATION_NOTES.md`). **Nothing is wired yet:** the V2 demo screens (support access, flags and limits, announcements, e-signature, roles and field access, developers) still read demo data and are to be wired to these routes. FIG-1187 (deposit request) is not built and waits for the payments decision.
+
+## Role dashboards (UC, 24 Nov 2026)
+
+On demo data, to wire: the Social snapshot tile on the Management home (`src/ui/screens/home/demo/data.ts`) and the quote counts in the Quotes and My quotes panels (read from `commercial/demo/store.ts`). Invoice widgets read the real invoices API. See `docs/ROLE_DASHBOARDS.md`.

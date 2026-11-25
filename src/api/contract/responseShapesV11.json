@@ -5946,6 +5946,42 @@
     ],
     "additionalProperties": true
   },
+  "GET /api/orgs/{orgSlug}/dashboard-layouts": {
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string"
+      },
+      "widgets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "visible"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "isDefault": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "kind",
+      "widgets",
+      "isDefault"
+    ],
+    "additionalProperties": true
+  },
   "GET /api/orgs/{orgSlug}/dashboard/{section}": {
     "type": "object",
     "properties": {
@@ -10605,6 +10641,14 @@
         "nullable": true,
         "description": "Observed as null in the reference example."
       },
+      "paymentTermsDays": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "terms": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
       "voidedAt": {
         "nullable": true,
         "description": "Observed as null in the reference example."
@@ -10769,6 +10813,14 @@
               "type": "boolean"
             },
             "notes": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            },
+            "paymentTermsDays": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            },
+            "terms": {
               "nullable": true,
               "description": "Observed as null in the reference example."
             },
@@ -10970,12 +11022,106 @@
           },
           "nothingToCollect": {
             "type": "boolean"
+          },
+          "ageing": {
+            "type": "object",
+            "properties": {
+              "current": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "integer"
+                  },
+                  "outstanding": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "count",
+                  "outstanding"
+                ],
+                "additionalProperties": true
+              },
+              "d1_30": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "integer"
+                  },
+                  "outstanding": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "count",
+                  "outstanding"
+                ],
+                "additionalProperties": true
+              },
+              "d31_60": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "integer"
+                  },
+                  "outstanding": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "count",
+                  "outstanding"
+                ],
+                "additionalProperties": true
+              },
+              "d61_90": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "integer"
+                  },
+                  "outstanding": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "count",
+                  "outstanding"
+                ],
+                "additionalProperties": true
+              },
+              "d90_plus": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "integer"
+                  },
+                  "outstanding": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "count",
+                  "outstanding"
+                ],
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "current",
+              "d1_30",
+              "d31_60",
+              "d61_90",
+              "d90_plus"
+            ],
+            "additionalProperties": true
           }
         },
         "required": [
           "byStatus",
           "outstanding",
-          "nothingToCollect"
+          "nothingToCollect",
+          "ageing"
         ],
         "additionalProperties": true
       }
@@ -15092,12 +15238,16 @@
       },
       "defaultTerms": {
         "type": "string"
+      },
+      "salesDraftInvoices": {
+        "type": "boolean"
       }
     },
     "required": [
       "requireForProposalSent",
       "validityDays",
-      "defaultTerms"
+      "defaultTerms",
+      "salesDraftInvoices"
     ],
     "additionalProperties": true
   },
@@ -15634,6 +15784,9 @@
             "updatedAt": {
               "type": "string",
               "format": "date-time"
+            },
+            "ownerMembershipId": {
+              "type": "string"
             }
           },
           "required": [
@@ -15643,7 +15796,8 @@
             "companyName",
             "currency",
             "latest",
-            "updatedAt"
+            "updatedAt",
+            "ownerMembershipId"
           ],
           "additionalProperties": true
         }
@@ -20043,10 +20197,7 @@
             "status": {
               "type": "string"
             },
-            "lastActiveAt": {
-              "type": "string",
-              "format": "date-time"
-            },
+            "lastActiveAt": {},
             "openLeads": {
               "type": "integer"
             },
@@ -22330,6 +22481,14 @@
         "nullable": true,
         "description": "Observed as null in the reference example."
       },
+      "paymentTermsDays": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "terms": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
       "voidedAt": {
         "nullable": true,
         "description": "Observed as null in the reference example."
@@ -23622,12 +23781,16 @@
       },
       "defaultTerms": {
         "type": "string"
+      },
+      "salesDraftInvoices": {
+        "type": "boolean"
       }
     },
     "required": [
       "requireForProposalSent",
       "validityDays",
-      "defaultTerms"
+      "defaultTerms",
+      "salesDraftInvoices"
     ],
     "additionalProperties": true
   },
@@ -28874,6 +29037,14 @@
         "type": "boolean"
       },
       "notes": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "paymentTermsDays": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "terms": {
         "nullable": true,
         "description": "Observed as null in the reference example."
       },

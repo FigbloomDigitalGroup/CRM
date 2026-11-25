@@ -160,6 +160,8 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `PATCH /custom-fields/{fieldId}` | A | D | D | D | D | same |
 | `GET /custom-fields/{fieldId}/usage` | A | D | D | D | D | same |
 | `GET /dashboard` | A | A | A | A | A | same |
+| `GET /dashboard-layouts` | A | A | A | A | A | same |
+| `PUT /dashboard-layouts` | V | D | D | D | D | same |
 | `GET /dashboard/{section}` | A | D | D | D | D | same |
 | `GET /data-migration` | A | D | D | D | D | same |
 | `GET /data-migration/presets` | A | D | D | D | D | same |
@@ -209,7 +211,7 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `GET /deals/{dealId}/proposals` | A | A | H | H | D | same |
 | `POST /deals/{dealId}/proposals` | V | A | H | H | D | same |
 | `PATCH /deals/{dealId}/proposals/{proposalId}` | A | A | H | H | D | same |
-| `GET /deals/{dealId}/quote` | A | A | D | D | D | opened |
+| `GET /deals/{dealId}/quote` | A | A | D | H | D | opened |
 | `POST /deals/{dealId}/quote` | V | V | H | H | D | opened |
 | `POST /deals/{dealId}/request-approval` | V | V | H | H | D | opened |
 | `POST /deals/{dealId}/restore` | V | V | H | H | D | same |
@@ -264,9 +266,9 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /integrations/website-key/settings` | H | D | D | D | D | same |
 | `GET /integrations/whatsapp` | A | D | D | D | D | same |
 | `PUT /integrations/whatsapp` | A | D | D | D | D | same |
-| `GET /invoices` | A | D | D | A | D | same |
-| `POST /invoices` | V | D | D | V | D | same |
-| `GET /invoices/{invoiceId}` | A | D | D | A | D | same |
+| `GET /invoices` | A | A | D | A | D | same |
+| `POST /invoices` | V | V | D | V | D | same |
+| `GET /invoices/{invoiceId}` | A | H | D | A | D | same |
 | `PATCH /invoices/{invoiceId}` | A | D | D | A | D | same |
 | `POST /invoices/{invoiceId}/payments` | A | D | D | A | D | same |
 | `POST /invoices/{invoiceId}/send` | V | D | D | V | D | same |
@@ -323,6 +325,8 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `GET /memberships` | A | D | D | D | D | same |
 | `POST /memberships` | V | D | D | D | D | same |
 | `POST /memberships/{membershipId}/deactivate` | A | D | D | D | D | same |
+| `GET /memberships/{membershipId}/permissions` | D | D | D | D | D | same |
+| `PUT /memberships/{membershipId}/permissions` | D | D | D | D | D | same |
 | `POST /memberships/{membershipId}/reactivate` | V | D | D | D | D | same |
 | `POST /memberships/{membershipId}/reassign` | V | D | D | D | D | same |
 | `GET /memberships/{membershipId}/reassignment` | A | D | D | D | D | same |
@@ -387,17 +391,17 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /quick-capture/cards/{captureId}/extract` | H | A | D | D | D | opened |
 | `POST /quick-log` | V | V | V | D | D | same |
 | `GET /quick-log/prompt` | A | A | D | D | D | same |
-| `GET /quote-settings` | A | A | D | D | D | opened |
+| `GET /quote-settings` | A | A | D | A | D | opened |
 | `PATCH /quote-settings` | A | D | D | D | D | opened |
-| `GET /quotes` | A | A | D | D | D | opened |
-| `GET /quotes/{quoteId}` | A | A | D | D | D | opened |
+| `GET /quotes` | A | A | D | A | D | opened |
+| `GET /quotes/{quoteId}` | A | A | D | H | D | opened |
 | `POST /quotes/{quoteId}/shares/{shareId}/revoke` | V | A | H | H | D | opened |
 | `POST /quotes/{quoteId}/versions` | V | V | H | H | D | opened |
-| `GET /quotes/{quoteId}/versions/{version}` | A | A | D | D | D | opened |
+| `GET /quotes/{quoteId}/versions/{version}` | A | A | D | H | D | opened |
 | `PUT /quotes/{quoteId}/versions/{version}` | V | V | H | H | D | opened |
-| `GET /quotes/{quoteId}/versions/{version}/activity` | A | A | D | D | D | opened |
+| `GET /quotes/{quoteId}/versions/{version}/activity` | A | A | D | H | D | opened |
 | `POST /quotes/{quoteId}/versions/{version}/apply-to-deal` | V | V | H | H | D | opened |
-| `GET /quotes/{quoteId}/versions/{version}/preview` | A | A | D | D | D | opened |
+| `GET /quotes/{quoteId}/versions/{version}/preview` | A | A | D | H | D | opened |
 | `POST /quotes/{quoteId}/versions/{version}/request-approval` | A | A | H | H | D | opened |
 | `POST /quotes/{quoteId}/versions/{version}/response` | V | V | H | H | D | opened |
 | `POST /quotes/{quoteId}/versions/{version}/send` | V | V | H | H | D | opened |
@@ -533,4 +537,4 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D | same |
 | `GET /whats-new` | A | A | A | A | A | opened |
 
-516 route and method pairs, 2580 role answers: A 870, D 1287, H 255, V 168.
+520 route and method pairs, 2600 role answers: A 878, D 1291, H 261, V 170.

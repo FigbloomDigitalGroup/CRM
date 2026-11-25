@@ -108,6 +108,17 @@ const MATRIX: Record<string, Partial<Record<Resource, { view: Cell; edit: Cell }
     communications: { view: "organisation", edit: "read-only" },
     proposals: { view: "none", edit: "none" },
   },
+  // UC-C7: Marketing sources its own leads, reads customers and communicates; no deals, no proposals.
+  MARKETING: {
+    leads: { view: "own", edit: "own" },
+    deals: { view: "none", edit: "none" },
+    tasks: { view: "own", edit: "own" },
+    companies: { view: "organisation", edit: "read-only" },
+    contacts: { view: "organisation", edit: "read-only" },
+    activities: { view: "organisation", edit: "organisation" },
+    communications: { view: "organisation", edit: "organisation" },
+    proposals: { view: "none", edit: "none" },
+  },
 };
 
 describe("permission matrix (seeded roles, release v1, defaults)", () => {
@@ -127,8 +138,8 @@ describe("permission matrix (seeded roles, release v1, defaults)", () => {
     expect(covered).toEqual(seeded);
   });
 
-  it("has five roles: there is no Customer Support role (decision 12: support tickets go to Figbloom by email)", () => {
-    expect(ROLES.map((r) => r.key)).toEqual(["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL"]);
+  it("has six roles (Marketing added by UC-C7): there is no Customer Support role (decision 12: support tickets go to Figbloom by email)", () => {
+    expect(ROLES.map((r) => r.key)).toEqual(["MANAGEMENT", "SALES", "DELIVERY", "FINANCE", "RESTRICTED_TECHNICAL", "MARKETING"]);
     expect(ROLES.filter((r) => r.requiredFeature)).toEqual([]);
     expect(PERMISSIONS.map((p) => p.key)).not.toContain("tickets.manage");
     expect(Object.keys(ROLE_PERMISSIONS)).not.toContain("CUSTOMER_SUPPORT");
@@ -500,7 +511,7 @@ describe("role catalogue sync", () => {
 
 describe("explained denial envelope", () => {
   const AREAS: { area: string; key: string; expectOwners: string[] }[] = [
-    { area: "Leads", key: "leads.edit.all", expectOwners: ["Management", "Sales"] },
+    { area: "Leads", key: "leads.edit.all", expectOwners: ["Management", "Marketing", "Sales"] }, // Marketing sources leads (UC-C7)
     { area: "Deals", key: "deals.edit.all", expectOwners: ["Management", "Sales"] },
     { area: "Finance", key: "finance.manage.payments", expectOwners: ["Finance", "Management"] }, // Management manages payments too (FIG-1049)
     { area: "Organization", key: "organization.manage_settings", expectOwners: ["Management"] },

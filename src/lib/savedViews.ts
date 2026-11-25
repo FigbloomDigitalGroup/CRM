@@ -5,7 +5,7 @@
  * need a permission the viewer lacks are removed for that viewer (`restrictedKeyPermission`).
  */
 
-export const VIEW_ENTITIES = ["leads", "deals", "companies", "contacts", "tasks"] as const;
+export const VIEW_ENTITIES = ["leads", "deals", "companies", "contacts", "tasks", "quotes"] as const;
 export type ViewEntity = (typeof VIEW_ENTITIES)[number];
 export const VIEW_SCOPES = ["PERSONAL", "SHARED"] as const;
 export type ViewScope = (typeof VIEW_SCOPES)[number];
@@ -17,6 +17,8 @@ export const ENTITY_OPEN_KEYS: Record<ViewEntity, readonly string[]> = {
   companies: ["companies.view"],
   contacts: ["contacts.view"],
   tasks: ["tasks.view.all", "tasks.view.own"],
+  // UC-R3: the Quotes list (the same keys that open the list itself).
+  quotes: ["quotes.view", "quotes.create", "quotes.approve"],
 };
 
 export const MAX_NAME = 40;
@@ -61,6 +63,12 @@ export const VIEW_FIELD_ALLOW: Record<ViewEntity, { filters: readonly string[]; 
     filters: [...COMMON_FILTERS, "status", "priority", "companyId", "contactId", "leadId", "dealId", "overdueOnly", "assigneeMembershipId", "assignee", "dueFrom", "dueTo"],
     sorts: ["createdAt", "updatedAt", "dueAt", "title", "priority", "status", "assignee"],
     columns: ["title", "dueAt", "priority", "status", "assignee", "owner", "linked", "company", "createdAt", "updatedAt"],
+  },
+  // UC-R3: a quote view keeps the page's chip (tab), search text, owner and validity range. Nothing here is a money value (the page cannot filter by one).
+  quotes: {
+    filters: [...COMMON_FILTERS, "status", "expired", "companyId", "validFrom", "validTo"],
+    sorts: ["updatedAt", "number", "company", "status", "owner", "validUntil"],
+    columns: ["number", "company", "owner", "validUntil", "status", "total", "updatedAt"],
   },
 };
 

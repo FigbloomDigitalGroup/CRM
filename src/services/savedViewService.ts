@@ -124,7 +124,7 @@ function checkScope(ctx: AuthContext, scope: unknown): ViewScope {
 
 export async function listViews(ctx: AuthContext, options: { entity?: string; pinned?: boolean } = {}) {
   await requireFeature(ctx.organizationId, "release.v11");
-  if (options.entity !== undefined && !isViewEntity(options.entity)) throw new ValidationError("Unknown list.", [{ path: "entity", message: "Use leads, deals, companies, contacts or tasks." }]);
+  if (options.entity !== undefined && !isViewEntity(options.entity)) throw new ValidationError("Unknown list.", [{ path: "entity", message: "Use leads, deals, companies, contacts, tasks or quotes." }]);
   const [rows, pins, owners] = await Promise.all([listViewRows(ctx.organizationId, options.entity), listPinsOf(ctx.organizationId, ctx.membershipId), ownerNames(ctx.organizationId)]);
   const pinById = new Map(pins.map((p) => [p.savedViewId, p]));
   const names = new Map(owners.map((o) => [o.id, o.user.name]));
@@ -144,7 +144,7 @@ export async function createView(
   input: { entity: string; name: string; scope?: string; filters?: unknown; sort?: unknown; columns?: unknown; pinned?: boolean },
 ) {
   await requireFeature(ctx.organizationId, "release.v11");
-  if (!isViewEntity(input.entity)) throw new ValidationError("Unknown list.", [{ path: "entity", message: "Use leads, deals, companies, contacts or tasks." }]);
+  if (!isViewEntity(input.entity)) throw new ValidationError("Unknown list.", [{ path: "entity", message: "Use leads, deals, companies, contacts, tasks or quotes." }]);
   const entity: ViewEntity = input.entity;
   if (!mayOpenEntity(entity, ctx.permissionKeys)) throw deny(ctx, `${entity} list`, ENTITY_KEYS_HINT[entity]);
   const name = cleanName(input.name);
@@ -258,4 +258,5 @@ const ENTITY_KEYS_HINT: Record<ViewEntity, string[]> = {
   companies: ["companies.view"],
   contacts: ["contacts.view"],
   tasks: ["tasks.view.own"],
+  quotes: ["quotes.view"],
 };

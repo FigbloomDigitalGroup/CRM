@@ -222,10 +222,11 @@ describe("generated authorization matrix (G1.02)", () => {
       expect(bad).toEqual([]);
     });
 
-    it("keeps invoices, payments and the deal payment note to Finance and Management", () => {
+    it("keeps invoices, payments and the deal payment note to Finance and Management (Sales only prepares DRAFT invoices: list, read and create, UC-C7)", () => {
+      const salesDrafts = new Set(["GET /api/orgs/{orgSlug}/invoices", "POST /api/orgs/{orgSlug}/invoices", "GET /api/orgs/{orgSlug}/invoices/{invoiceId}"]);
       const bad = rows()
         .filter(([key]) => PAYMENTS_ONLY.some((re) => re.test(key)))
-        .flatMap(([key, row]) => rolesWithLetter(row, reached).filter((r) => r !== "MANAGEMENT" && r !== "FINANCE").map((r) => `${r} reached ${key}`));
+        .flatMap(([key, row]) => rolesWithLetter(row, reached).filter((r) => r !== "MANAGEMENT" && r !== "FINANCE" && !(r === "SALES" && salesDrafts.has(key))).map((r) => `${r} reached ${key}`));
       expect(bad).toEqual([]);
     });
 

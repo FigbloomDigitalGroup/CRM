@@ -31,7 +31,7 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Conversations](#conversations) (9)
 - [Custom Fields](#custom-fields) (4)
 - [Customer 360](#customer-360) (1)
-- [Dashboard](#dashboard) (3)
+- [Dashboard](#dashboard) (5)
 - [Data and privacy](#data-and-privacy) (18)
 - [Data migration](#data-migration) (17)
 - [Deal Moves](#deal-moves) (1)
@@ -78,7 +78,7 @@ Operations marked *derived* have their request schema recorded from the route it
 - [Reminders](#reminders) (2)
 - [Renewals](#renewals) (10)
 - [Reports](#reports) (15)
-- [Roles](#roles) (7)
+- [Roles](#roles) (9)
 - [Scoring](#scoring) (2)
 - [Search](#search) (4)
 - [Security](#security) (5)
@@ -1510,6 +1510,28 @@ Role home page: the sections this role has, each loaded independently (a section
 - **Returns:** `available`: object[], `sections`?: object[]
 - **Errors:** 401, 403
 
+### `GET …/dashboard-layouts`
+
+`getDashboardLayouts`
+
+Which widgets a role's home shows and in what order. Any member reads their own home; Management can pass `kind` to read another (UC-W1)
+
+- **Credential:** sessionCookie; **access:** management, sales, delivery, finance, restricted technical
+- **Query:** `kind`?: string
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `PUT …/dashboard-layouts`
+
+`putDashboardLayouts`
+
+Set which widgets a role's home shows and in what order; hiding and reordering only, never revealing. `widgets: null` resets to the default. Management only, audited (UC-W1)
+
+- **Credential:** sessionCookie; **access:** management
+- **Body:** `kind`: string, `widgets`: object[] | null
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
+
 ### `GET …/dashboard/{section}`
 
 `getDashboardSection`
@@ -2121,7 +2143,7 @@ Get one deal (value masked for roles without deals.view.value)
 
 `getDealsByDealIdQuote` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales
+- **Credential:** sessionCookie; **access:** management, sales, finance
 - **Returns:** `id`: string, `number`: string, `dealId`: string, `currency`: string, `currentVersion`: number, `versions`: object[], `createdAt`: string, `updatedAt`: string
 - **Errors:** 401, 403, 404
 
@@ -3425,7 +3447,7 @@ Clear the note
 
 Payments tracker list with totals by status (Finance and Management only). Overdue is derived from the due date.
 
-- **Credential:** sessionCookie; **access:** management, finance
+- **Credential:** sessionCookie; **access:** management, sales, finance
 - **Query:** `status`?: string, `overdue`?: "true" | "false", `companyId`?: string, `dealId`?: string, `dueFrom`?: string, `dueTo`?: string, `q`?: string, `sort`?: string, `page`?: string, `pageSize`?: string, `cursor`?: string
 - **Returns:** `items`: object[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`: string | null, `totals`: object
 - **Errors:** 400, 401, 403
@@ -3436,7 +3458,7 @@ Payments tracker list with totals by status (Finance and Management only). Overd
 
 Create an invoice for a company or a won deal. Status only: nothing is processed.
 
-- **Credential:** sessionCookie; **access:** management, finance
+- **Credential:** sessionCookie; **access:** management, sales, finance
 - **Body:** `number`: string, `amount`: number | string, `currency`?: string, `issuedOn`: string, `dueOn`: string, `companyId`?: string, `dealId`?: string, `recurringServiceId`?: string, `notes`?: string, `sent`?: boolean
 - **Returns:** `id`: string, `number`: string, `status`: "DRAFT" | "SENT" | "PART_PAID" | "PAID" | "OVERDUE" | "VOID", `storedStatus`: "DRAFT" | "SENT" | "PART_PAID" | "PAID" | "VOID", `dealId`: string | null, `companyId`: string, `companyName`: string, `amount`: string, `currency`: string, `paidAmount`: string, `balance`: string, `overpaid`: string, `overdue`: boolean, `daysOverdue`: number, `issuedOn`: string, `dueOn`: string, `allowOverpayment`: boolean
 - **Errors:** 400, 401, 403, 404, 409, 422
@@ -3447,7 +3469,7 @@ Create an invoice for a company or a won deal. Status only: nothing is processed
 
 One invoice with its payments
 
-- **Credential:** sessionCookie; **access:** management, finance
+- **Credential:** sessionCookie; **access:** management, sales, finance
 - **Returns:** `id`: string, `number`: string, `status`: "DRAFT" | "SENT" | "PART_PAID" | "PAID" | "OVERDUE" | "VOID", `storedStatus`: "DRAFT" | "SENT" | "PART_PAID" | "PAID" | "VOID", `dealId`: string | null, `companyId`: string, `companyName`: string, `amount`: string, `currency`: string, `paidAmount`: string, `balance`: string, `overpaid`: string, `overdue`: boolean, `daysOverdue`: number, `issuedOn`: string, `dueOn`: string, `allowOverpayment`: boolean, `payments`: object[]
 - **Errors:** 401, 403, 404
 
@@ -3865,8 +3887,8 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 
 `getQuoteSettings` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales
-- **Returns:** `requireForProposalSent`: boolean, `validityDays`: number, `defaultTerms`: string
+- **Credential:** sessionCookie; **access:** management, sales, finance
+- **Returns:** `requireForProposalSent`: boolean, `validityDays`: number, `defaultTerms`: string, `salesDraftInvoices`: boolean
 - **Errors:** 401, 403, 404
 
 ### `PATCH …/quote-settings`
@@ -3874,8 +3896,8 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 `patchQuoteSettings` · *derived*
 
 - **Credential:** sessionCookie; **access:** management
-- **Body:** `requireForProposalSent`?: boolean, `validityDays`?: number, `defaultTerms`?: string
-- **Returns:** `requireForProposalSent`: boolean, `validityDays`: number, `defaultTerms`: string
+- **Body:** `requireForProposalSent`?: boolean, `validityDays`?: number, `defaultTerms`?: string, `tax`?: object | null, `invoiceNumbering`?: object, `salesDraftInvoices`?: boolean
+- **Returns:** `requireForProposalSent`: boolean, `validityDays`: number, `defaultTerms`: string, `salesDraftInvoices`: boolean
 - **Errors:** 400, 401, 403, 404
 
 ## Quotes
@@ -3884,8 +3906,8 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 
 `getQuotes` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales
-- **Query:** `dealId`?: string, `status`?: string, `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
+- **Credential:** sessionCookie; **access:** management, sales, finance
+- **Query:** `dealId`?: string, `status`?: string, `q`?: string, `owner`?: string, `companyId`?: string, `validFrom`?: string, `validTo`?: string, `expired`?: string, `counts`?: "true" | "false", `activity`?: "true" | "false", `limit`?: string, `cursor`?: string, `sort`?: string, `page`?: string, `pageSize`?: string
 - **Returns:** `items`: object[], `page`: number, `pageSize`: number, `total`: number, `pageCount`: number, `nextCursor`?: null
 - **Errors:** 400, 401, 403, 404
 
@@ -3893,7 +3915,7 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 
 `getQuotesByQuoteId` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales
+- **Credential:** sessionCookie; **access:** management, sales, finance
 - **Returns:** `id`: string, `number`: string, `dealId`: string, `currency`: string, `currentVersion`: number, `versions`: object[], `createdAt`: string, `updatedAt`: string
 - **Errors:** 401, 403, 404
 
@@ -3918,7 +3940,7 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 
 `getQuotesByQuoteIdVersionsByVersion` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales
+- **Credential:** sessionCookie; **access:** management, sales, finance
 - **Returns:** `version`: number, `status`: string, `locked`: boolean, `expired`: boolean, `discountPercent`: number, `validUntil`: string, `terms`: string, `currency`: string, `lines`: object[], `subtotal`: number, `discountAmount`: number, `total`: number, `cost`: number, `marginPct`: number, `amountMasked`: boolean, `marginMasked`: boolean, `approvalRequired`: boolean, `submittedAt`: string, `approvedAt`?: null, `decidedByMembershipId`?: null, `decisionReason`?: null, `sentAt`?: null, `respondedAt`?: null, `createdByMembershipId`: string, `createdAt`: string
 - **Errors:** 401, 403, 404
 
@@ -3935,7 +3957,7 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 
 `getQuotesByQuoteIdVersionsByVersionActivity` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales
+- **Credential:** sessionCookie; **access:** management, sales, finance
 - **Returns:** `shares`: object[], `events`: any[], `signatures`: any[], `signaturesMasked`: boolean
 - **Errors:** 401, 403, 404
 
@@ -3951,7 +3973,7 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 
 `getQuotesByQuoteIdVersionsByVersionPreview` · *derived*
 
-- **Credential:** sessionCookie; **access:** management, sales
+- **Credential:** sessionCookie; **access:** management, sales, finance
 - **Returns:** `source`: string, `html`: string, `sha256`: string
 - **Errors:** 401, 403, 404
 
@@ -3978,7 +4000,7 @@ Capture a lead in seconds. A likely duplicate answers 200 DUPLICATE_WARNING and 
 `postQuotesByQuoteIdVersionsByVersionSend` · *derived*
 
 - **Credential:** sessionCookie; **access:** management, sales, delivery, finance
-- **Body:** `to`?: string, `subject`?: string, `body`?: string, `templateId`?: string, `linkExpiresInDays`?: number, `language`?: string, `allowSigning`?: boolean
+- **Body:** `to`?: string, `subject`?: string, `body`?: string, `templateId`?: string, `linkExpiresInDays`?: number, `language`?: string, `allowSigning`?: boolean, `channel`?: "email" | "link"
 - **Returns:** any
 - **Errors:** 400, 401, 403, 404
 
@@ -4391,6 +4413,27 @@ CSV of My metrics
 - **Errors:** 401, 403
 
 ## Roles
+
+### `GET …/memberships/{membershipId}/permissions`
+
+`getMemberAccess`
+
+One member's per-member permission overrides (keys added and removed on top of the role) and the keys that result (role.assign; V2)
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Returns:** object
+- **Errors:** 401, 403, 404
+
+### `PUT …/memberships/{membershipId}/permissions`
+
+`setMemberAccess`
+
+Replace one member's permission overrides: add (grant) or remove (deny) single keys on top of the role. Reserved and payment keys cannot be added, you cannot edit your own, effective on the next request, audited (role.assign; V2)
+
+- **Credential:** sessionCookie; **access:** nobody
+- **Body:** `grant`: string[], `deny`: string[]
+- **Returns:** object
+- **Errors:** 400, 401, 403, 404
 
 ### `GET …/roles`
 

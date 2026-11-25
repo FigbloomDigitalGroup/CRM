@@ -4,10 +4,12 @@ import { redirect } from "next/navigation";
 import { OrganizationUnavailableError, UnauthorizedError } from "@/auth/errors";
 import { resolveRequestContext, resolveUserContext } from "@/auth/requestContext";
 import { unauthenticatedLanding } from "@/auth/twoStep/pending";
+import { isFeatureEnabled } from "@/services/featureService";
 import { getMemberContext } from "@/services/meContextService";
 import { MemberProvider } from "@/ui/data/member";
 import { AppShell } from "@/ui/shell/AppShell";
 import { buildNav, buildQuickCreate } from "@/ui/shell/navigation";
+import { socialScreensEnabled } from "@/ui/screens/social/enabled";
 import { NoFlashScript } from "@/ui/theme/NoFlashScript";
 import { ThemeProvider } from "@/ui/theme/ThemeProvider";
 import { defaultLook, type LookInput } from "@/ui/theme/resolve";
@@ -68,7 +70,8 @@ export default async function OrgLayout({
   // The switcher is real (FIG-1133): shown to anyone who belongs to more than one organisation.
   const multiOrg = me.organisations.length > 1;
 
-  const navInput = { permissionKeys: ctx.permissionKeys, membershipId: ctx.membershipId, hidden: me.preferences?.sidebar.hidden ?? [] };
+  const quotesEnabled = await isFeatureEnabled(ctx.organizationId, "quotes.enabled");
+  const navInput = { permissionKeys: ctx.permissionKeys, membershipId: ctx.membershipId, quotesEnabled, demoScreens: socialScreensEnabled(), hidden: me.preferences?.sidebar.hidden ?? [] };
   const look: LookInput = me.look
     ? { locked: me.look.locked, toggle: me.look.toggle, colours: me.look.colours }
     : defaultLook();

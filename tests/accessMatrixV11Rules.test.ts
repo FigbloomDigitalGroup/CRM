@@ -45,7 +45,7 @@ describe("the V1.1 matrix against the reviewed rules (G2.01)", () => {
 
   it("keeps the V1 routes that are closed to everyone in V1 (a V1.1 feature) from being closed to Management in V1.1", () => {
     // The V2 route families (M17) are closed in V1.1 as well: they open with release.v2 and are walked under that release in their own tests.
-    const V2_FAMILY = /\/api\/orgs\/\{orgSlug\}\/(roles|churn-hints|support-access|announcements|webhooks|api-tokens)(\/|$)/;
+    const V2_FAMILY = /\/api\/orgs\/\{orgSlug\}\/(roles|churn-hints|support-access|announcements|webhooks|api-tokens|memberships\/\{membershipId\}\/permissions)(\/|$)/;
     const stillClosed = Object.keys(v1).filter((key) => !V2_FAMILY.test(key) && v1[key] === "DDDDD" && v11[key]?.[0] === "D");
     expect(stillClosed).toEqual([]);
   });
@@ -58,9 +58,11 @@ describe("the V1.1 matrix against the reviewed rules (G2.01)", () => {
   });
 
   it("keeps invoices, payments and the deal payment note to Finance and Management", () => {
+    // Sales only prepare DRAFT invoices on their own deals: list, read and create (UC-R10; the service refuses everything else, see tests/quoteInvoiceAccess.test.ts).
+    const salesDrafts = new Set(["GET /api/orgs/{orgSlug}/invoices", "POST /api/orgs/{orgSlug}/invoices", "GET /api/orgs/{orgSlug}/invoices/{invoiceId}"]);
     const bad = rows
       .filter(([key]) => PAYMENTS_ONLY.some((re) => re.test(key)))
-      .flatMap(([key, row]) => notRefusedBy(row).filter((r) => r !== "MANAGEMENT" && r !== "FINANCE").map((r) => `${r} reached ${key}`));
+      .flatMap(([key, row]) => notRefusedBy(row).filter((r) => r !== "MANAGEMENT" && r !== "FINANCE" && !(r === "SALES" && salesDrafts.has(key))).map((r) => `${r} reached ${key}`));
     expect(bad).toEqual([]);
   });
 
@@ -99,8 +101,8 @@ describe("the V1.1 matrix against the reviewed rules (G2.01)", () => {
     expect(at("POST /assistant/ask")).toEqual(["MANAGEMENT", "SALES", "DELIVERY", "FINANCE"]);
     expect(at("GET /communications/mail/drafts")).toEqual(["MANAGEMENT", "SALES", "DELIVERY"]);
     expect(at("POST /communications/meetings")).toEqual(["MANAGEMENT", "SALES", "DELIVERY"]);
-    // quotes.create: Management and Sales. quotes.approve and catalogue.manage: Management.
-    expect(at("GET /quotes")).toEqual(["MANAGEMENT", "SALES"]);
+    // quotes.view: Management, Sales and Finance (Finance reads quotes). quotes.approve and catalogue.manage: Management.
+    expect(at("GET /quotes")).toEqual(["MANAGEMENT", "SALES", "FINANCE"]);
     expect(at("POST /approvals/{approvalId}/decision")).toEqual(["MANAGEMENT"]);
     expect(at("POST /catalogue")).toEqual(["MANAGEMENT"]);
     // chat: everybody.

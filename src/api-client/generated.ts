@@ -3532,6 +3532,30 @@ export interface Operations {
       [key: string]: unknown;
     };
   };
+  getDashboardLayouts: {
+    params: { orgSlug: string };
+    query: {
+      kind?: string;
+    };
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  putDashboardLayouts: {
+    params: { orgSlug: string };
+    query: undefined;
+    body: {
+      kind: string;
+      widgets: Array<{
+        id: string;
+        visible: boolean;
+      }> | null;
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
   getDashboardSection: {
     params: { orgSlug: string; section: string };
     query: undefined;
@@ -7919,6 +7943,25 @@ export interface Operations {
       [key: string]: unknown;
     };
   };
+  getMemberAccess: {
+    params: { orgSlug: string; membershipId: string };
+    query: undefined;
+    body: undefined;
+    response: {
+      [key: string]: unknown;
+    };
+  };
+  setMemberAccess: {
+    params: { orgSlug: string; membershipId: string };
+    query: undefined;
+    body: {
+      grant: Array<string>;
+      deny: Array<string>;
+    };
+    response: {
+      [key: string]: unknown;
+    };
+  };
   postMembershipsByMembershipIdReactivate: {
     params: { orgSlug: string; membershipId: string };
     query: undefined;
@@ -8976,6 +9019,7 @@ export interface Operations {
       requireForProposalSent: boolean;
       validityDays: number;
       defaultTerms: string;
+      salesDraftInvoices: boolean;
       [key: string]: unknown;
     };
   };
@@ -8986,11 +9030,22 @@ export interface Operations {
       requireForProposalSent?: boolean;
       validityDays?: number;
       defaultTerms?: string;
+      tax?: {
+        mode: string;
+        rateBp: number;
+        label?: string;
+      } | null;
+      invoiceNumbering?: {
+        auto?: boolean;
+        prefix?: string;
+      };
+      salesDraftInvoices?: boolean;
     };
     response: {
       requireForProposalSent: boolean;
       validityDays: number;
       defaultTerms: string;
+      salesDraftInvoices: boolean;
       [key: string]: unknown;
     };
   };
@@ -8999,6 +9054,14 @@ export interface Operations {
     query: {
       dealId?: string;
       status?: string;
+      q?: string;
+      owner?: string;
+      companyId?: string;
+      validFrom?: string;
+      validTo?: string;
+      expired?: string;
+      counts?: "true" | "false";
+      activity?: "true" | "false";
       limit?: string;
       cursor?: string;
       sort?: string;
@@ -9039,6 +9102,7 @@ export interface Operations {
           [key: string]: unknown;
         };
         updatedAt: string;
+        ownerMembershipId: string;
         [key: string]: unknown;
       }>;
       page: number;
@@ -9280,6 +9344,7 @@ export interface Operations {
       linkExpiresInDays?: number;
       language?: string;
       allowSigning?: boolean;
+      channel?: "email" | "link";
     };
     response: unknown;
   };
@@ -12299,6 +12364,8 @@ export const operations = {
   patchCustomFieldsByFieldId: { method: "PATCH", path: "/api/orgs/{orgSlug}/custom-fields/{fieldId}", tag: "Custom Fields", summary: "PATCH /custom-fields/{fieldId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getCustomFieldsByFieldIdUsage: { method: "GET", path: "/api/orgs/{orgSlug}/custom-fields/{fieldId}/usage", tag: "Custom Fields", summary: "GET /custom-fields/{fieldId}/usage", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   getDashboard: { method: "GET", path: "/api/orgs/{orgSlug}/dashboard", tag: "Dashboard", summary: "Role home page: the sections this role has, each loaded independently (a section the role lacks is absent)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  getDashboardLayouts: { method: "GET", path: "/api/orgs/{orgSlug}/dashboard-layouts", tag: "Dashboard", summary: "Which widgets a role's home shows and in what order. Any member reads their own home; Management can pass `kind` to read another (UC-W1)", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE","RESTRICTED_TECHNICAL"] },
+  putDashboardLayouts: { method: "PUT", path: "/api/orgs/{orgSlug}/dashboard-layouts", tag: "Dashboard", summary: "Set which widgets a role's home shows and in what order; hiding and reordering only, never revealing. `widgets: null` resets to the default. Management only, audited (UC-W1)", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getDashboardSection: { method: "GET", path: "/api/orgs/{orgSlug}/dashboard/{section}", tag: "Dashboard", summary: "One dashboard section (sales_today, management, delivery, finance, technical, my_metrics)", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   listMigrationEntities: { method: "GET", path: "/api/orgs/{orgSlug}/data-migration", tag: "Data migration", summary: "What can be migrated, each kind's fields, the seven steps", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
   listMigrationPresets: { method: "GET", path: "/api/orgs/{orgSlug}/data-migration/presets", tag: "Data migration", summary: "Saved mappings", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
@@ -12348,7 +12415,7 @@ export const operations = {
   getDealsByDealIdProposals: { method: "GET", path: "/api/orgs/{orgSlug}/deals/{dealId}/proposals", tag: "Deals", summary: "GET /deals/{dealId}/proposals", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postDealsByDealIdProposals: { method: "POST", path: "/api/orgs/{orgSlug}/deals/{dealId}/proposals", tag: "Deals", summary: "POST /deals/{dealId}/proposals", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   patchDealsByDealIdProposalsByProposalId: { method: "PATCH", path: "/api/orgs/{orgSlug}/deals/{dealId}/proposals/{proposalId}", tag: "Deals", summary: "PATCH /deals/{dealId}/proposals/{proposalId}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
-  getDealsByDealIdQuote: { method: "GET", path: "/api/orgs/{orgSlug}/deals/{dealId}/quote", tag: "Deals", summary: "GET /deals/{dealId}/quote", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getDealsByDealIdQuote: { method: "GET", path: "/api/orgs/{orgSlug}/deals/{dealId}/quote", tag: "Deals", summary: "GET /deals/{dealId}/quote", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
   postDealsByDealIdQuote: { method: "POST", path: "/api/orgs/{orgSlug}/deals/{dealId}/quote", tag: "Deals", summary: "POST /deals/{dealId}/quote", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postDealsByDealIdRequestApproval: { method: "POST", path: "/api/orgs/{orgSlug}/deals/{dealId}/request-approval", tag: "Deals", summary: "POST /deals/{dealId}/request-approval", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postDealsByDealIdRestore: { method: "POST", path: "/api/orgs/{orgSlug}/deals/{dealId}/restore", tag: "Deals", summary: "POST /deals/{dealId}/restore", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
@@ -12403,9 +12470,9 @@ export const operations = {
   postIntegrationsWebsiteKeySettings: { method: "POST", path: "/api/orgs/{orgSlug}/integrations/website-key/settings", tag: "Integrations", summary: "POST /integrations/website-key/settings", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getWhatsAppConfig: { method: "GET", path: "/api/orgs/{orgSlug}/integrations/whatsapp", tag: "Integrations", summary: "Click-to-chat configuration: organisation number, default message, templates (Management)", contentType: "json", errors: [401,403], allowedRoles: ["MANAGEMENT"] },
   updateWhatsAppConfig: { method: "PUT", path: "/api/orgs/{orgSlug}/integrations/whatsapp", tag: "Integrations", summary: "Set the WhatsApp number (any local form) and the message templates used by wa.me links", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT"] },
-  listInvoices: { method: "GET", path: "/api/orgs/{orgSlug}/invoices", tag: "Payments", summary: "Payments tracker list with totals by status (Finance and Management only). Overdue is derived from the due date.", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","FINANCE"] },
-  createInvoice: { method: "POST", path: "/api/orgs/{orgSlug}/invoices", tag: "Payments", summary: "Create an invoice for a company or a won deal. Status only: nothing is processed.", contentType: "json", errors: [400,401,403,404,409,422], allowedRoles: ["MANAGEMENT","FINANCE"] },
-  getInvoice: { method: "GET", path: "/api/orgs/{orgSlug}/invoices/{invoiceId}", tag: "Payments", summary: "One invoice with its payments", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","FINANCE"] },
+  listInvoices: { method: "GET", path: "/api/orgs/{orgSlug}/invoices", tag: "Payments", summary: "Payments tracker list with totals by status (Finance and Management only). Overdue is derived from the due date.", contentType: "json", errors: [400,401,403], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
+  createInvoice: { method: "POST", path: "/api/orgs/{orgSlug}/invoices", tag: "Payments", summary: "Create an invoice for a company or a won deal. Status only: nothing is processed.", contentType: "json", errors: [400,401,403,404,409,422], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
+  getInvoice: { method: "GET", path: "/api/orgs/{orgSlug}/invoices/{invoiceId}", tag: "Payments", summary: "One invoice with its payments", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
   updateInvoice: { method: "PATCH", path: "/api/orgs/{orgSlug}/invoices/{invoiceId}", tag: "Payments", summary: "Edit an invoice (audited before and after); the amount cannot fall below what was received", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","FINANCE"] },
   recordPayment: { method: "POST", path: "/api/orgs/{orgSlug}/invoices/{invoiceId}/payments", tag: "Payments", summary: "Record money received. The sum can never exceed the invoice unless `allowOverpayment` is sent.", contentType: "json", errors: [400,401,403,404,422], allowedRoles: ["MANAGEMENT","FINANCE"] },
   markInvoiceSent: { method: "POST", path: "/api/orgs/{orgSlug}/invoices/{invoiceId}/send", tag: "Payments", summary: "Draft to sent; already sent comes back unchanged", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","FINANCE"] },
@@ -12462,6 +12529,8 @@ export const operations = {
   getMemberships: { method: "GET", path: "/api/orgs/{orgSlug}/memberships", tag: "Memberships", summary: "GET /memberships", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   postMemberships: { method: "POST", path: "/api/orgs/{orgSlug}/memberships", tag: "Memberships", summary: "POST /memberships", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   postMembershipsByMembershipIdDeactivate: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/deactivate", tag: "Memberships", summary: "POST /memberships/{membershipId}/deactivate", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
+  getMemberAccess: { method: "GET", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/permissions", tag: "Roles", summary: "One member's per-member permission overrides (keys added and removed on top of the role) and the keys that result (role.assign; V2)", contentType: "json", errors: [401,403,404], allowedRoles: [] },
+  setMemberAccess: { method: "PUT", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/permissions", tag: "Roles", summary: "Replace one member's permission overrides: add (grant) or remove (deny) single keys on top of the role. Reserved and payment keys cannot be added, you cannot edit your own, effective on the next request, audited (role.assign; V2)", contentType: "json", errors: [400,401,403,404], allowedRoles: [] },
   postMembershipsByMembershipIdReactivate: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/reactivate", tag: "Memberships", summary: "POST /memberships/{membershipId}/reactivate", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
   postMembershipsByMembershipIdReassign: { method: "POST", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/reassign", tag: "Memberships", summary: "POST /memberships/{membershipId}/reassign", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
   getMembershipsByMembershipIdReassignment: { method: "GET", path: "/api/orgs/{orgSlug}/memberships/{membershipId}/reassignment", tag: "Memberships", summary: "GET /memberships/{membershipId}/reassignment", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT"] },
@@ -12526,17 +12595,17 @@ export const operations = {
   postQuickCaptureCardsByCaptureIdExtract: { method: "POST", path: "/api/orgs/{orgSlug}/quick-capture/cards/{captureId}/extract", tag: "Quick Capture", summary: "POST /quick-capture/cards/{captureId}/extract", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
   quickLog: { method: "POST", path: "/api/orgs/{orgSlug}/quick-log", tag: "Conversations", summary: "One-tap log of a call or WhatsApp message. Send an Idempotency-Key: a double tap logs once.", contentType: "json", errors: [400,401,403,404,422], allowedRoles: ["MANAGEMENT","SALES","DELIVERY"] },
   getQuickLogPrompt: { method: "GET", path: "/api/orgs/{orgSlug}/quick-log/prompt", tag: "Conversations", summary: "What the call or WhatsApp prompt needs: the number and its tel: and wa.me links, or NO_PHONE_ON_FILE", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
-  getQuoteSettings: { method: "GET", path: "/api/orgs/{orgSlug}/quote-settings", tag: "Quote Settings", summary: "GET /quote-settings", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getQuoteSettings: { method: "GET", path: "/api/orgs/{orgSlug}/quote-settings", tag: "Quote Settings", summary: "GET /quote-settings", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
   patchQuoteSettings: { method: "PATCH", path: "/api/orgs/{orgSlug}/quote-settings", tag: "Quote Settings", summary: "PATCH /quote-settings", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT"] },
-  getQuotes: { method: "GET", path: "/api/orgs/{orgSlug}/quotes", tag: "Quotes", summary: "GET /quotes", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
-  getQuotesByQuoteId: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}", tag: "Quotes", summary: "GET /quotes/{quoteId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getQuotes: { method: "GET", path: "/api/orgs/{orgSlug}/quotes", tag: "Quotes", summary: "GET /quotes", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
+  getQuotesByQuoteId: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}", tag: "Quotes", summary: "GET /quotes/{quoteId}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
   postQuotesByQuoteIdSharesByShareIdRevoke: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/shares/{shareId}/revoke", tag: "Quotes", summary: "POST /quotes/{quoteId}/shares/{shareId}/revoke", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postQuotesByQuoteIdVersions: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
-  getQuotesByQuoteIdVersionsByVersion: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getQuotesByQuoteIdVersionsByVersion: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
   putQuotesByQuoteIdVersionsByVersion: { method: "PUT", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}", tag: "Quotes", summary: "PUT /quotes/{quoteId}/versions/{version}", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
-  getQuotesByQuoteIdVersionsByVersionActivity: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/activity", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}/activity", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getQuotesByQuoteIdVersionsByVersionActivity: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/activity", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}/activity", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
   postQuotesByQuoteIdVersionsByVersionApplyToDeal: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/apply-to-deal", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/apply-to-deal", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
-  getQuotesByQuoteIdVersionsByVersionPreview: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/preview", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}/preview", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES"] },
+  getQuotesByQuoteIdVersionsByVersionPreview: { method: "GET", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/preview", tag: "Quotes", summary: "GET /quotes/{quoteId}/versions/{version}/preview", contentType: "json", errors: [401,403,404], allowedRoles: ["MANAGEMENT","SALES","FINANCE"] },
   postQuotesByQuoteIdVersionsByVersionRequestApproval: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/request-approval", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/request-approval", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postQuotesByQuoteIdVersionsByVersionResponse: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/response", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/response", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },
   postQuotesByQuoteIdVersionsByVersionSend: { method: "POST", path: "/api/orgs/{orgSlug}/quotes/{quoteId}/versions/{version}/send", tag: "Quotes", summary: "POST /quotes/{quoteId}/versions/{version}/send", contentType: "json", errors: [400,401,403,404], allowedRoles: ["MANAGEMENT","SALES","DELIVERY","FINANCE"] },

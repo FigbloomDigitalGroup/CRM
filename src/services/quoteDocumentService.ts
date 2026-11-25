@@ -8,7 +8,7 @@ import { assertWritable } from "../lib/archive";
 import { discountNeedsApproval } from "../lib/approvalRules";
 import { createTranslator, isClientLocale, type ClientLocale } from "../lib/clientText";
 import { LOGO_PLACEHOLDER, escapeHtml, renderQuoteHtml, type QuoteDocumentInput } from "../lib/quoteDocument";
-import { isExpiredOn, todayIso } from "../lib/quotes";
+import { isExpiredOn, quoteTaxAmount, quoteTaxOf, todayIso } from "../lib/quotes";
 import { lookColours } from "../preferences/catalogue";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { createActivity } from "../repositories/activities";
@@ -82,6 +82,8 @@ export async function buildQuoteDocument(organizationId: string, quote: { number
   const creator = version.createdByMembershipId
     ? await adminDb.membership.findFirst({ where: { id: version.createdByMembershipId, organizationId }, select: { user: { select: { name: true } } } })
     : null;
+  const taxTerms = quoteTaxOf(version);
+  const taxAmount = quoteTaxAmount(version.lines.map((l) => ({ lineTotal: Number(l.lineTotal), taxable: l.taxable })), Number(version.discountPercent), taxTerms);
   const input: QuoteDocumentInput = {
     organization: {
       name: org.displayName?.trim() ? org.displayName : org.name,
@@ -102,6 +104,8 @@ export async function buildQuoteDocument(organizationId: string, quote: { number
       subtotal: Number(version.subtotal),
       discountAmount: Number(version.discountAmount),
       total: Number(version.total),
+      // UC-R5: tax lines only for a version made with a tax setting; a version made before tax has no `tax` key and the document is what it always was.
+      ...(taxTerms === null ? {} : { tax: { mode: taxTerms.mode, rateBp: taxTerms.rateBp, label: taxTerms.label, amount: taxAmount ?? 0 } }),
       lines: version.lines.map((l) => ({ description: l.description, unit: l.unit, quantity: Number(l.quantity), unitPrice: Number(l.unitPrice), lineTotal: Number(l.lineTotal), taxable: l.taxable })),
     },
     preparedFor: { company: deal.company.name, contact: deal.primaryContact ? [deal.primaryContact.firstName, deal.primaryContact.lastName].filter(Boolean).join(" ") : null },
@@ -125,7 +129,7 @@ async function loadVersion(ctx: AuthContext, quoteId: string, version: number) {
 /** The document as the client would see it. A sent version returns the stored snapshot. */
 export async function previewQuote(ctx: AuthContext, quoteId: string, version: number, now = new Date(), languageInput?: unknown) {
   await requireFeature(ctx.organizationId, "quotes.enabled");
-  if (!hasPermission(ctx, "quotes.create") && !hasPermission(ctx, "quotes.approve")) throw deny(ctx, "quotes (quotes.create or quotes.approve)", ["quotes.create", "quotes.approve"]);
+  if (!["quotes.view", "quotes.create", "quotes.approve"].some((k) => hasPermission(ctx, k))) throw deny(ctx, "quotes (quotes.view, quotes.create or quotes.approve)", ["quotes.view", "quotes.create", "quotes.approve"]);
   const { quote, deal } = await loadQuoteAndDeal(ctx, quoteId);
   requireSeesAmounts(ctx, deal, "the quote document");
   const row = await loadVersion(ctx, quoteId, version);
@@ -146,6 +150,12 @@ export interface SendQuoteInput {
   language?: string;
   /** FIG-1186: the email also carries an online signing link (V2: needs release V2). */
   allowSigning?: boolean;
+  /**
+   * UC-R4: "email" (default, as before) or "link": make the secure link without sending any email, for Copy link and WhatsApp. It locks and
+   * marks the version as sent exactly like an email does (the client is about to receive it), keeps every link rule (hashed token, expiry,
+   * revocation) and needs no recipient and no mail permission. Online signing needs an email address, so it is refused with "link".
+   */
+  channel?: string;
 }
 
 // The same pattern the mail service uses: one address, no list separators or angle brackets.
@@ -155,7 +165,11 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
   await requireFeature(ctx.organizationId, "quotes.enabled");
   const { quote, deal } = await loadQuoteAndDeal(ctx, quoteId);
   requireQuoteWrite(ctx, deal);
-  requirePermission(ctx, "communications.create");
+  if (input.channel !== undefined && input.channel !== "email" && input.channel !== "link") {
+    throw new ValidationError("channel is not a choice.", [{ path: "channel", message: "Use email or link.", code: "INVALID_CHANNEL" }]);
+  }
+  const linkOnly = input.channel === "link";
+  if (!linkOnly) requirePermission(ctx, "communications.create");
   requireSeesAmounts(ctx, deal, "sending a quote");
   assertWritable(ctx, "deal", deal, "sending its quote");
   const row = await loadVersion(ctx, quoteId, version);
@@ -174,13 +188,14 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
   }
 
   // Online signing is V2: on an organisation below V2 the signing link would be dead, so asking for one is refused up front.
+  if (linkOnly && allowSigning) throw fail("Online signing needs the quote to be emailed, so it cannot be used with a copied link.", "SIGNING_NEEDS_EMAIL", "allowSigning");
   if (allowSigning && !(await isFeatureEnabled(ctx.organizationId, "release.v2"))) throw fail("Online signing is not available for this organisation yet.", "SIGNING_NOT_AVAILABLE", "allowSigning");
 
-  let to = input.to?.trim();
-  if (!to && deal.primaryContactId) {
+  let to = linkOnly ? undefined : input.to?.trim();
+  if (!linkOnly && !to && deal.primaryContactId) {
     to = (await adminDb.contact.findFirst({ where: { id: deal.primaryContactId, organizationId: ctx.organizationId }, select: { email: true } }))?.email ?? undefined;
   }
-  if (!to || !EMAIL.test(to)) throw fail("Give the email address to send the quote to.", "RECIPIENT_REQUIRED", "to");
+  if (!linkOnly && (!to || !EMAIL.test(to))) throw fail("Give the email address to send the quote to.", "RECIPIENT_REQUIRED", "to");
   if (input.linkExpiresInDays !== undefined && (!Number.isInteger(input.linkExpiresInDays) || input.linkExpiresInDays < 1 || input.linkExpiresInDays > MAX_LINK_DAYS)) {
     throw fail(`A link lasts 1 to ${MAX_LINK_DAYS} days.`, "INVALID_LINK_DAYS", "linkExpiresInDays");
   }
@@ -197,7 +212,7 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
 
   let subject = input.subject;
   let body = input.body;
-  if (input.templateId && (subject === undefined || body === undefined)) {
+  if (!linkOnly && input.templateId && (subject === undefined || body === undefined)) {
     const rendered = await renderTemplate(ctx, input.templateId, { dealId: deal.id, contactId: deal.primaryContactId ?? undefined });
     subject = subject ?? rendered.subject;
     body = body ?? rendered.body;
@@ -211,8 +226,8 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
   const signLink = allowSigning ? signLinkFor(token) : null;
   if (signLink && !body.includes(signLink)) body += `\n\n${tr.t("mail.signLink", { link: signLink })}`;
 
-  // Email first: when it fails, nothing is locked and no link exists.
-  await sendAndLogEmail(ctx, { to, subject, body, dealId: deal.id, companyId: deal.companyId, contactId: deal.primaryContactId ?? undefined, templateId: input.templateId });
+  // Email first: when it fails, nothing is locked and no link exists. A copied link sends nothing.
+  if (!linkOnly) await sendAndLogEmail(ctx, { to: to!, subject, body, dealId: deal.id, companyId: deal.companyId, contactId: deal.primaryContactId ?? undefined, templateId: input.templateId });
 
   let updated: VersionWithLines | null = row;
   if (row.status === "DRAFT" || row.status === "APPROVED") {
@@ -223,7 +238,7 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
     organizationId: ctx.organizationId,
     quoteVersionId: row.id,
     tokenHash: hashToken(token),
-    recipientEmail: to,
+    recipientEmail: to ?? "",
     expiresAt,
     documentHtml: document.html,
     documentSha256: document.sha256,
@@ -239,11 +254,11 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
     entityType: "Quote",
     entityId: quoteId,
     newValue: quoteAuditSnapshot(quote, updated!),
-    metadata: { shareId: share.id, expiresAt: expiresAt.toISOString(), language, signingEnabled: allowSigning },
+    metadata: { shareId: share.id, expiresAt: expiresAt.toISOString(), language, signingEnabled: allowSigning, channel: linkOnly ? "link" : "email" },
   });
   return {
     version: presentVersion(ctx, deal, updated!, null, now),
-    share: { id: share.id, recipientEmail: to, expiresAt, documentSha256: document.sha256 },
+    share: { id: share.id, recipientEmail: to ?? null, expiresAt, documentSha256: document.sha256 },
     /** Shown once: only a hash is kept. */
     link,
     /** Shown once, like the link: the address of the online signing page, when it was asked for. */
@@ -254,7 +269,7 @@ export async function sendQuote(ctx: AuthContext, quoteId: string, version: numb
 /** The links of a version and what happened to them. Tokens are never returned. */
 export async function getQuoteActivity(ctx: AuthContext, quoteId: string, version: number, nowDate = new Date()) {
   await requireFeature(ctx.organizationId, "quotes.enabled");
-  if (!hasPermission(ctx, "quotes.create") && !hasPermission(ctx, "quotes.approve")) throw deny(ctx, "quotes (quotes.create or quotes.approve)", ["quotes.create", "quotes.approve"]);
+  if (!["quotes.view", "quotes.create", "quotes.approve"].some((k) => hasPermission(ctx, k))) throw deny(ctx, "quotes (quotes.view, quotes.create or quotes.approve)", ["quotes.view", "quotes.create", "quotes.approve"]);
   const { deal } = await loadQuoteAndDeal(ctx, quoteId);
   const row = await loadVersion(ctx, quoteId, version);
   const now = nowDate.getTime();

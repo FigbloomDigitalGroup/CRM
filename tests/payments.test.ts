@@ -85,16 +85,25 @@ describe("invoices and payments", () => {
   it("Finance and Management manage them; every other role is refused", async () => {
     const { finance, management, sales, delivery, technical, deal } = await setup();
     const input = { number: "INV-1", amount: 100000, issuedOn: "2026-11-01", dueOn: "2026-11-15", dealId: deal.id };
-    await expect(createInvoice(sales, input)).rejects.toBeInstanceOf(ForbiddenError);
+    // Sales (24 Nov 2026) may create a draft on an own won deal (see createInvoice.test.ts); the rest of the invoice surface stays closed to it.
     await expect(createInvoice(delivery, input)).rejects.toBeInstanceOf(ForbiddenError);
     await expect(createInvoice(technical, input)).rejects.toBeInstanceOf(ForbiddenError);
     const inv = await createInvoice(finance, input, NOW);
     expect(inv).toMatchObject({ number: "INV-1", status: "DRAFT", amount: "100000.00", balance: "100000.00", dealId: deal.id, companyId: deal.companyId });
-    for (const who of [sales, delivery, technical]) {
+    for (const who of [delivery, technical]) {
       await expect(getInvoice(who, inv.id)).rejects.toBeInstanceOf(ForbiddenError);
       await expect(listInvoices(who)).rejects.toBeInstanceOf(ForbiddenError);
       await expect(getPaymentAggregates(who)).rejects.toBeInstanceOf(ForbiddenError);
     }
+    // Sales: the draft list and get exist (draft view, own deals), the aggregates and every payment action do not. The deal is Sales' own.
+    const salesList = (await listInvoices(sales)) as { items: Array<Record<string, unknown>>; salesDraftOnly?: boolean };
+    expect(salesList.salesDraftOnly).toBe(true);
+    for (const row of salesList.items) for (const k of ["paidAmount", "balance", "overdue", "payments"]) expect(row).not.toHaveProperty(k);
+    expect(await getInvoice(sales, inv.id)).not.toHaveProperty("balance");
+    await expect(getPaymentAggregates(sales)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(markInvoiceSent(sales, inv.id, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(recordPayment(sales, inv.id, { amount: 1 }, NOW)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(voidInvoice(sales, inv.id, { reason: "x" }, NOW)).rejects.toBeInstanceOf(ForbiddenError);
     expect((await getInvoice(management, inv.id, NOW)).number).toBe("INV-1");
     const second = await createInvoice(management, { number: "INV-2", amount: "2500.50", issuedOn: "2026-11-02", dueOn: "2026-11-30", companyId: deal.companyId });
     expect(second.dealId).toBeNull();

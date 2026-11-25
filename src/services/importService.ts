@@ -480,7 +480,7 @@ async function addContactForCompanyRow(ctx: AuthContext, companyId: string, comp
   const { phone, others } = splitPhones(rawPhone);
   if (!email && !phone) return false;
   if (email) {
-    const known = await adminDb.contact.findFirst({ where: { organizationId: ctx.organizationId, archivedAt: null, mergedIntoId: null, email: { equals: email, mode: "insensitive" } }, select: { id: true } });
+    const known = await withOrgContext(ctx.organizationId, (tx) => tx.contact.findFirst({ where: { organizationId: ctx.organizationId, archivedAt: null, mergedIntoId: null, email: { equals: email, mode: "insensitive" } }, select: { id: true } }));
     if (known) return false;
   }
   await createContact({

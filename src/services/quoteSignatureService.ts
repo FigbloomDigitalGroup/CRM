@@ -248,7 +248,7 @@ export interface PresentedSignature {
 /** The signatures of a quote with their check. Needs the quote's read rights and the right to see the amounts the signed document shows. */
 export async function listQuoteSignatures(ctx: AuthContext, quoteId: string, versionNumber?: number): Promise<PresentedSignature[]> {
   await requireFeature(ctx.organizationId, "quotes.enabled");
-  if (!hasPermission(ctx, "quotes.create") && !hasPermission(ctx, "quotes.approve")) throw deny(ctx, "quotes (quotes.create or quotes.approve)", ["quotes.create", "quotes.approve"]);
+  if (!["quotes.view", "quotes.create", "quotes.approve"].some((k) => hasPermission(ctx, k))) throw deny(ctx, "quotes (quotes.view, quotes.create or quotes.approve)", ["quotes.view", "quotes.create", "quotes.approve"]);
   const { deal } = await loadQuoteAndDeal(ctx, quoteId);
   // The record proves a document that is all prices, so it follows the deal value rule (docs/MASKING.md).
   if (!canSeeDealValue(ctx, deal)) throw deny(ctx, "the signed quote record (deals.view.value, or owning the deal)", ["deals.view.value"]);

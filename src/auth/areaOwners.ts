@@ -26,7 +26,10 @@ export function ownerRoleKeysForArea(area: string): string[] {
   const viewers: string[] = [];
   for (const role of ROLES) {
     const keys = ROLE_PERMISSIONS[role.key] ?? [];
-    const inArea = keys.filter((k) => AREA_BY_KEY.get(k) === area);
+    // UC-C7: Sales holds invoices.view and invoices.create to prepare drafts. That does not make it an owner of Finance: payments, balances and the
+    // rest of the invoice work stay with the roles that hold the payment keys, and the explained denial must keep saying so.
+    const draftOnly = !keys.includes("finance.view.payments");
+    const inArea = keys.filter((k) => AREA_BY_KEY.get(k) === area && !(draftOnly && (k === "invoices.view" || k === "invoices.create")));
     if (inArea.some((k) => !isViewKey(k))) owners.push(role.key);
     // For an area that is only ever looked at (Reporting, Audit), whoever sees
     // the whole organisation's view of it owns it; "own" views do not.

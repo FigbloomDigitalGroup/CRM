@@ -4,7 +4,7 @@
  * open the list it filters (the same keys as the page itself), so sharing never widens what anyone can see.
  */
 
-export type ViewPage = "leads";
+export type ViewPage = "leads" | "quotes";
 
 export interface SavedView {
   id: string;
@@ -20,7 +20,7 @@ export interface SavedView {
   order: number;
 }
 
-const PAGE_KEYS: Record<ViewPage, string[]> = { leads: ["leads.view.own", "leads.view.all", "leads.view.shared"] };
+const PAGE_KEYS: Record<ViewPage, string[]> = { leads: ["leads.view.own", "leads.view.all", "leads.view.shared"], quotes: ["quotes.view", "quotes.create", "quotes.approve"] };
 
 export function canOpenPage(page: ViewPage, permissionKeys: readonly string[]): boolean {
   return PAGE_KEYS[page].some((k) => permissionKeys.includes(k));

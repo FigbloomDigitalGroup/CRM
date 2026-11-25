@@ -5,24 +5,33 @@ import { NotFoundError, ValidationError, type ValidationIssue } from "../auth/er
 import { canSeeDealValue, canSeeMargin } from "../auth/masking";
 import { assertRecordVisible } from "../auth/visibility";
 import { adminDb } from "../db/adminClient";
+import { withOrgContext } from "../db/orgScopedClient";
 import { assertWritable } from "../lib/archive";
 import { discountNeedsApproval, type ApprovalRuleSettings } from "../lib/approvalRules";
 import { normaliseCurrency, parseMoney, round2 } from "../lib/commercialMoney";
 import { buildPage, resolvePaging, type PageRequest } from "../lib/pagination";
 import {
+  DEFAULT_TAX_LABEL,
   DEFAULT_TERMS,
   DEFAULT_VALIDITY_DAYS,
   MAX_QUOTE_DISCOUNT,
   MAX_QUOTE_LINES,
+  MAX_TAX_LABEL_LENGTH,
+  MAX_TAX_RATE_BP,
   MAX_TERMS_LENGTH,
+  TAX_MODES,
   addDays,
   computeTotals,
   isExpiredOn,
   isIsoDate,
   isLockedStatus,
+  isTaxMode,
   lineTotal,
   quoteMarginPct,
+  quoteTaxAmount,
+  quoteTaxOf,
   todayIso,
+  type QuoteTax,
 } from "../lib/quotes";
 import { recordAuditEvent } from "../repositories/auditEvents";
 import { getCatalogueItems } from "../repositories/catalogueItems";
@@ -64,10 +73,10 @@ type VersionRow = QuoteVersion & { lines: QuoteLine[] };
 // Access
 // ---------------------------------------------------------------------------
 
-const READ_KEYS = ["quotes.create", "quotes.approve"];
+const READ_KEYS = ["quotes.create", "quotes.approve", "quotes.view"];
 
 function requireQuoteRead(ctx: AuthContext): void {
-  if (!READ_KEYS.some((k) => hasPermission(ctx, k))) throw deny(ctx, "quotes (quotes.create or quotes.approve)", READ_KEYS);
+  if (!READ_KEYS.some((k) => hasPermission(ctx, k))) throw deny(ctx, "quotes (quotes.view, quotes.create or quotes.approve)", READ_KEYS);
 }
 
 async function loadVisibleDeal(ctx: AuthContext, dealId: string) {
@@ -124,7 +133,22 @@ export function presentVersion(ctx: Pick<AuthContext, "permissionKeys" | "member
   const total = Number(v.total);
   const cost = v.costTotal === null ? null : Number(v.costTotal);
   const validUntil = v.validUntil.toISOString().slice(0, 10);
+  // UC-R5: tax fields exist only on a version that carries a rate. A quote made before tax gets exactly the response it always had.
+  const tax = quoteTaxOf(v);
+  // The list summary is presented without its lines, so there is nothing to work the tax out from: null there, never a wrong zero.
+  const taxAmount = tax === null || v.lines.length === 0 ? null : quoteTaxAmount(v.lines.map((l) => ({ lineTotal: Number(l.lineTotal), taxable: l.taxable })), Number(v.discountPercent), tax);
+  // Margin is on what the customer pays for the goods: with tax added on top (EXCLUSIVE) the tax is not revenue, so it is taken out.
+  const marginBase = tax !== null && tax.mode === "EXCLUSIVE" && taxAmount !== null ? total - taxAmount : total;
   return {
+    ...(tax === null
+      ? {}
+      : {
+          taxMode: tax.mode,
+          taxRateBp: tax.rateBp,
+          taxLabel: tax.label,
+          /** Money: null for a role that may not see the quote's amounts (rule 7), exactly like the total. */
+          taxAmount: money(showValue, taxAmount),
+        }),
     version: v.version,
     status: v.status,
     locked: v.lockedAt !== null,
@@ -151,7 +175,7 @@ export function presentVersion(ctx: Pick<AuthContext, "permissionKeys" | "member
     discountAmount: money(showValue, v.discountAmount),
     total: money(showValue, v.total),
     cost: showMargin ? cost : null,
-    marginPct: showMargin ? quoteMarginPct(total, cost) : null,
+    marginPct: showMargin ? quoteMarginPct(marginBase, cost) : null,
     amountMasked: !showValue,
     marginMasked: !showMargin,
     approvalRequired: rules ? discountNeedsApproval(Number(v.discountPercent), rules) : null,
@@ -320,9 +344,14 @@ function parseTerms(value: string | null, issues: ValidationIssue[]): string | n
   return t === "" ? null : t;
 }
 
-function contentFor(lines: NewLine[], discountPercent: number, validUntil: string, terms: string | null): VersionContent {
-  const totals = computeTotals(lines, discountPercent);
-  return { discountPercent, validUntil, terms, ...totals };
+/**
+ * `tax` is the version's tax terms (null: none, worked out as before). `storeTax` writes them onto the version: true when a version is
+ * made (a new quote copies the organisation setting, a new version copies its source), false when a draft is edited, which keeps the
+ * terms it already has.
+ */
+function contentFor(lines: NewLine[], discountPercent: number, validUntil: string, terms: string | null, tax: QuoteTax | null = null, storeTax = false): VersionContent {
+  const totals = computeTotals(lines, discountPercent, tax);
+  return { discountPercent, validUntil, terms, ...totals, ...(storeTax && tax !== null ? { taxMode: tax.mode, taxRateBp: tax.rateBp, taxLabel: tax.label } : {}) };
 }
 
 // ---------------------------------------------------------------------------
@@ -336,6 +365,32 @@ export interface QuoteSettings {
   requireForProposalSent: boolean;
   validityDays: number;
   defaultTerms: string;
+  /**
+   * UC-R5: the organisation's tax setting. Absent means tax is off (every quote is VAT-inclusive with no tax line, as before). When set, NEW
+   * quotes copy it onto their first version; quotes already made are never changed by it.
+   */
+  tax?: QuoteTax;
+}
+
+/** The stored tax setting, or undefined when it is missing or not valid (a damaged value means tax off, never a guessed rate). */
+function parseStoredTax(raw: unknown): QuoteTax | undefined {
+  if (typeof raw !== "object" || raw === null) return undefined;
+  const t = raw as Record<string, unknown>;
+  if (!isTaxMode(t.mode) || typeof t.rateBp !== "number" || !Number.isInteger(t.rateBp) || t.rateBp < 1 || t.rateBp > MAX_TAX_RATE_BP) return undefined;
+  const label = typeof t.label === "string" && t.label.trim() !== "" && t.label.trim().length <= MAX_TAX_LABEL_LENGTH ? t.label.trim() : DEFAULT_TAX_LABEL;
+  return { mode: t.mode, rateBp: t.rateBp, label };
+}
+
+function validateTaxPatch(tax: { mode?: unknown; rateBp?: unknown; label?: unknown }, issues: ValidationIssue[]): QuoteTax | null {
+  const before = issues.length;
+  if (!isTaxMode(tax.mode)) issues.push({ path: "tax.mode", message: `The tax mode is ${TAX_MODES.join(" or ")}.`, code: "INVALID_TAX_MODE" });
+  if (typeof tax.rateBp !== "number" || !Number.isInteger(tax.rateBp) || tax.rateBp < 1 || tax.rateBp > MAX_TAX_RATE_BP) {
+    issues.push({ path: "tax.rateBp", message: `Give the rate in basis points, a whole number from 1 to ${MAX_TAX_RATE_BP} (1600 is 16%).`, code: "INVALID_TAX_RATE" });
+  }
+  const label = tax.label === undefined ? DEFAULT_TAX_LABEL : typeof tax.label === "string" ? tax.label.trim() : "";
+  if (label === "" || label.length > MAX_TAX_LABEL_LENGTH) issues.push({ path: "tax.label", message: `The tax name is 1 to ${MAX_TAX_LABEL_LENGTH} characters.`, code: "INVALID_TAX_LABEL" });
+  if (issues.length > before) return null;
+  return { mode: tax.mode as QuoteTax["mode"], rateBp: tax.rateBp as number, label };
 }
 
 export async function loadQuoteSettings(organizationId: string): Promise<QuoteSettings> {
@@ -343,24 +398,33 @@ export async function loadQuoteSettings(organizationId: string): Promise<QuoteSe
   const v = (row?.value ?? {}) as Record<string, unknown>;
   // The Proposal Sent gate is a stage rule (B6.15, QUOTE_REQUIRED on a stage with the key PROPOSAL_SENT); this reports whether it is on.
   const gated = await adminDb.stageRule.count({ where: { organizationId, type: "QUOTE_REQUIRED", enabled: true, stageId: { in: (await adminDb.pipelineStage.findMany({ where: { organizationId, key: "PROPOSAL_SENT" }, select: { id: true } })).map((x) => x.id) } } });
+  const tax = parseStoredTax(v.tax);
   return {
     requireForProposalSent: gated > 0,
     validityDays: typeof v.validityDays === "number" && Number.isInteger(v.validityDays) && v.validityDays >= 1 && v.validityDays <= 365 ? v.validityDays : DEFAULT_VALIDITY_DAYS,
     defaultTerms: typeof v.defaultTerms === "string" && v.defaultTerms.trim() !== "" ? v.defaultTerms : DEFAULT_TERMS,
+    ...(tax ? { tax } : {}),
   };
 }
 
 /** Management (`configuration.manage`) sets the quote defaults and whether Proposal Sent needs a valid quote. */
-export async function updateQuoteSettings(ctx: AuthContext, patch: { requireForProposalSent?: boolean; validityDays?: number; defaultTerms?: string }) {
+export async function updateQuoteSettings(ctx: AuthContext, patch: { requireForProposalSent?: boolean; validityDays?: number; defaultTerms?: string; tax?: { mode?: unknown; rateBp?: unknown; label?: unknown } | null }) {
   await requireFeature(ctx.organizationId, "quotes.enabled");
   requirePermission(ctx, "configuration.manage");
   const issues: ValidationIssue[] = [];
   if (patch.validityDays !== undefined && (!Number.isInteger(patch.validityDays) || patch.validityDays < 1 || patch.validityDays > 365)) issues.push({ path: "validityDays", message: "Use a whole number of days from 1 to 365." });
   if (patch.defaultTerms !== undefined && (patch.defaultTerms.trim() === "" || patch.defaultTerms.length > MAX_TERMS_LENGTH)) issues.push({ path: "defaultTerms", message: `Terms of 1 to ${MAX_TERMS_LENGTH} characters are required.` });
+  // `tax: null` switches tax off; an object sets it; left out keeps what is there. Only new quotes ever read it.
+  const newTax = patch.tax === undefined || patch.tax === null ? null : validateTaxPatch(patch.tax, issues);
   if (issues.length > 0) throw new ValidationError("These quote settings are not valid.", issues);
   const before = await loadQuoteSettings(ctx.organizationId);
-  const next = { ...before, ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) } as QuoteSettings;
-  const stored = { validityDays: next.validityDays, defaultTerms: next.defaultTerms };
+  const { tax: _patchTax, ...patchRest } = patch;
+  void _patchTax;
+  const { tax: _beforeTax, ...beforeRest } = before;
+  void _beforeTax;
+  const nextTax = patch.tax === undefined ? before.tax : newTax ?? undefined;
+  const next = { ...beforeRest, ...Object.fromEntries(Object.entries(patchRest).filter(([, v]) => v !== undefined)), ...(nextTax ? { tax: nextTax } : {}) } as QuoteSettings;
+  const stored = { validityDays: next.validityDays, defaultTerms: next.defaultTerms, ...(next.tax ? { tax: next.tax } : {}) };
   await adminDb.organizationSetting.upsert({
     where: { organizationId_key: { organizationId: ctx.organizationId, key: QUOTE_SETTINGS_KEY } },
     update: { value: stored as unknown as Prisma.InputJsonValue },
@@ -418,7 +482,7 @@ export async function createQuote(
     dealId,
     currency,
     createdByMembershipId: ctx.membershipId,
-    content: contentFor(lines, discount, validUntil, terms),
+    content: contentFor(lines, discount, validUntil, terms, settings.tax ?? null, true),
     lines,
     year: now.getUTCFullYear(),
   });
@@ -465,31 +529,133 @@ function parseDealIdFilter(value: string | undefined): string[] | undefined {
   return ids;
 }
 
+/** UC-R3: what the Quotes list may be filtered by, besides the deal and the latest version's status. All additive; none is a money value. */
+export interface QuoteListFiltersInput {
+  dealId?: string;
+  status?: string;
+  /** Text in the quote number, the customer's name or the deal's notes. */
+  q?: string;
+  /** The deal's owner (a membership id). */
+  owner?: string;
+  companyId?: string;
+  /** The latest version's validity date, `YYYY-MM-DD`, inclusive. */
+  validFrom?: string;
+  validTo?: string;
+  /** "only" = derived Expired (SENT or APPROVED, past its validity date); "exclude" = everything else. */
+  expired?: string;
+  /** Add `statusCounts` (per chip, over the same filters except the status) to the page. */
+  counts?: boolean;
+  /** Add `activity` (links, views, revocations) to each row. */
+  activity?: boolean;
+}
+
+export interface QuoteRowActivity {
+  /** Links made for the latest version. */
+  links: number;
+  /** Links that still work (not revoked, not past their end). */
+  activeLinks: number;
+  revokedLinks: number;
+  /** Links that ran out without being revoked. */
+  expiredLinks: number;
+  views: number;
+  lastViewedAt: Date | null;
+}
+
+const asDate = (value: string | undefined, path: string): string | undefined => {
+  if (value === undefined || value === "") return undefined;
+  if (!isIsoDate(value)) throw new ValidationError(`${path} is not a date.`, [{ path, message: "Use YYYY-MM-DD." }]);
+  return value;
+};
+
 /** Quotes on the deals the caller can open, newest change first, each with its latest version summary. */
-export async function listQuotesPage(ctx: AuthContext, filters: { dealId?: string; status?: string } = {}, request: PageRequest = {}, now = new Date()) {
+export async function listQuotesPage(ctx: AuthContext, filters: QuoteListFiltersInput = {}, request: PageRequest = {}, now = new Date()) {
   await requireFeature(ctx.organizationId, "quotes.enabled");
   requireQuoteRead(ctx);
   if (filters.status !== undefined && !["DRAFT", "PENDING_APPROVAL", "APPROVED", "REJECTED", "SENT", "ACCEPTED", "DECLINED"].includes(filters.status)) {
     throw new ValidationError("status is not a quote status.", [{ path: "status", message: "Use DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, SENT, ACCEPTED or DECLINED." }]);
   }
+  if (filters.expired !== undefined && filters.expired !== "" && filters.expired !== "only" && filters.expired !== "exclude") {
+    throw new ValidationError("expired is not a choice.", [{ path: "expired", message: "Use only or exclude." }]);
+  }
+  const validFrom = asDate(filters.validFrom, "validFrom");
+  const validTo = asDate(filters.validTo, "validTo");
+  if (validFrom && validTo && validFrom > validTo) throw new ValidationError("validFrom is after validTo.", [{ path: "validFrom", message: "The start of the range is after its end." }]);
+  const text = filters.q?.trim().slice(0, 100);
   const paging = resolvePaging(request);
   // `dealId` is one deal id or several separated by commas (the Quotes list asks for the quotes of the deals on its page in one request).
   const asked = parseDealIdFilter(filters.dealId);
   let dealIds: string[] | undefined;
   if (!hasPermission(ctx, "deals.view.all")) {
-    if (!hasPermission(ctx, "deals.view.own")) throw deny(ctx, "deals.view", ["deals.view.own", "deals.view.all"]);
+    // The deals the caller may open: their own (deals.view.own) and, for Finance and Delivery, the won ones (deals.view.won), as on the Deals list.
+    const visible: Prisma.DealWhereInput[] = [];
+    if (hasPermission(ctx, "deals.view.own")) visible.push({ ownerMembershipId: ctx.membershipId });
+    if (hasPermission(ctx, "deals.view.won")) visible.push({ outcome: "WON" });
+    if (visible.length === 0) throw deny(ctx, "deals.view", ["deals.view.own", "deals.view.all", "deals.view.won"]);
     // A deal asked for that the caller cannot open drops out here (the answer is an empty list, never another person's quote).
-    dealIds = (await adminDb.deal.findMany({ where: { organizationId: ctx.organizationId, ownerMembershipId: ctx.membershipId, ...(asked ? { id: { in: asked } } : {}) }, select: { id: true } })).map((d) => d.id);
+    dealIds = (await adminDb.deal.findMany({ where: { organizationId: ctx.organizationId, OR: visible, ...(asked ? { id: { in: asked } } : {}) }, select: { id: true } })).map((d) => d.id);
   }
-  const { rows, total } = await listQuotes(ctx.organizationId, { dealIds, dealId: asked, status: filters.status }, paging);
+  const { rows, total, statusCounts } = await listQuotes(
+    ctx.organizationId,
+    {
+      dealIds,
+      dealId: asked,
+      status: filters.status,
+      ...(text ? { q: text } : {}),
+      ...(filters.owner ? { ownerMembershipId: filters.owner } : {}),
+      ...(filters.companyId ? { companyId: filters.companyId } : {}),
+      ...(validFrom ? { validFrom } : {}),
+      ...(validTo ? { validTo } : {}),
+      ...(filters.expired === "only" || filters.expired === "exclude" ? { expired: filters.expired } : {}),
+      today: todayIso(now),
+    },
+    paging,
+    { counts: filters.counts === true },
+  );
   const deals = await adminDb.deal.findMany({ where: { organizationId: ctx.organizationId, id: { in: rows.map((q) => q.dealId) } }, select: { id: true, ownerMembershipId: true, company: { select: { name: true } } } });
   const dealById = new Map(deals.map((d) => [d.id, d]));
+  const activity = filters.activity === true ? await rowActivity(ctx.organizationId, rows.map((q) => q.versions[0]!.id), now) : null;
   const items = rows.map((q) => {
     const deal = dealById.get(q.dealId)!;
     const latest = q.versions[0]!;
-    return { id: q.id, number: q.number, dealId: q.dealId, companyName: deal.company.name, currency: q.currency, latest: presentSummary(ctx, deal, latest, now), updatedAt: q.updatedAt };
+    return {
+      id: q.id,
+      number: q.number,
+      dealId: q.dealId,
+      companyName: deal.company.name,
+      currency: q.currency,
+      latest: presentSummary(ctx, deal, latest, now),
+      updatedAt: q.updatedAt,
+      // The owner's membership id lets the list show who owns it without another call; it is not a hidden field.
+      ownerMembershipId: deal.ownerMembershipId,
+      ...(activity ? { activity: activity.get(latest.id) ?? EMPTY_ACTIVITY } : {}),
+    };
   });
-  return buildPage(items, total, paging);
+  return { ...buildPage(items, total, paging), ...(statusCounts ? { statusCounts } : {}) };
+}
+
+const EMPTY_ACTIVITY: QuoteRowActivity = { links: 0, activeLinks: 0, revokedLinks: 0, expiredLinks: 0, views: 0, lastViewedAt: null };
+
+/** The share links of the given versions, summed per version: what the list shows as sent, viewed, revoked and expired (no tokens, no addresses). */
+async function rowActivity(organizationId: string, versionIds: string[], now: Date): Promise<Map<string, QuoteRowActivity>> {
+  const out = new Map<string, QuoteRowActivity>();
+  if (versionIds.length === 0) return out;
+  const shares = await withOrgContext(organizationId, (tx) =>
+    tx.quoteShare.findMany({
+      where: { organizationId, quoteVersionId: { in: versionIds } },
+      select: { quoteVersionId: true, expiresAt: true, revokedAt: true, viewCount: true, lastViewedAt: true },
+    }),
+  );
+  for (const s of shares) {
+    const a = out.get(s.quoteVersionId) ?? { ...EMPTY_ACTIVITY };
+    a.links += 1;
+    if (s.revokedAt) a.revokedLinks += 1;
+    else if (s.expiresAt.getTime() <= now.getTime()) a.expiredLinks += 1;
+    else a.activeLinks += 1;
+    a.views += s.viewCount;
+    if (s.lastViewedAt && (!a.lastViewedAt || s.lastViewedAt > a.lastViewedAt)) a.lastViewedAt = s.lastViewedAt;
+    out.set(s.quoteVersionId, a);
+  }
+  return out;
 }
 
 function lockedError(status: string): ValidationError {
@@ -520,7 +686,7 @@ export async function updateDraftVersion(ctx: AuthContext, quoteId: string, vers
 
   let updated;
   try {
-    updated = await replaceDraftContent(ctx.organizationId, current.id, contentFor(effective, discount, validUntil, terms), lines);
+    updated = await replaceDraftContent(ctx.organizationId, current.id, contentFor(effective, discount, validUntil, terms, quoteTaxOf(current)), lines);
   } catch (err) {
     // The database trigger is the backstop if the version was locked between the read and the write.
     if (err instanceof Error && /locked/i.test(err.message)) throw lockedError("locked");
@@ -571,7 +737,7 @@ export async function createNewVersion(ctx: AuthContext, quoteId: string, option
     version: latest.version + 1,
     currency: source!.currency,
     createdByMembershipId: ctx.membershipId,
-    content: contentFor(lines, Number(source!.discountPercent), validUntil, source!.terms),
+    content: contentFor(lines, Number(source!.discountPercent), validUntil, source!.terms, quoteTaxOf(source!), true),
     lines,
   });
   await recordAuditEvent({ organizationId: ctx.organizationId, actorMembershipId: ctx.membershipId, action: "quote.version_created", entityType: "Quote", entityId: quoteId, newValue: auditSnapshot(quote, created), metadata: { fromVersion: latest.version } });

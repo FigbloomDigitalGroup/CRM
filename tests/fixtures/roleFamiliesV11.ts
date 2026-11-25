@@ -89,6 +89,6 @@ export const V11_ROLE_FAMILIES: Record<"SALES" | "DELIVERY" | "FINANCE" | "RESTR
     key("/quick-capture/cards/{captureId}"),
   ],
   DELIVERY: [...SELF_SERVICE_V11, ...SEQUENCE_READ, ...ASSISTANT, ...MAIL_AND_MEETINGS, key("/pipelines", "GET"), key("/pipelines/{pipelineId}", "GET")],
-  FINANCE: [...SELF_SERVICE_V11, key("/assistant/ask"), key("/assistant/settings", "GET"), under("/assistant/proposals/{proposalId}"), key("/catalogue", "GET"), key("/catalogue/{itemId}", "GET"), key("/pipelines", "GET"), key("/pipelines/{pipelineId}", "GET")],
+  FINANCE: [...SELF_SERVICE_V11, key("/assistant/ask"), key("/assistant/settings", "GET"), under("/assistant/proposals/{proposalId}"), key("/catalogue", "GET"), key("/catalogue/{itemId}", "GET"), key("/pipelines", "GET"), key("/pipelines/{pipelineId}", "GET"), key("/quotes", "GET"), key("/quote-settings", "GET")],
   RESTRICTED_TECHNICAL: [...SELF_SERVICE_V11, ...SEQUENCE_READ],
 };
