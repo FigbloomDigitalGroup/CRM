@@ -59,7 +59,7 @@ const PROBES: Array<{ name: string; path: string; method: "GET" | "POST"; body?:
   { name: "list leads", path: "/leads", method: "GET", needsAny: ["leads.view.own", "leads.view.all", "leads.view.shared"] },
   { name: "list deals", path: "/deals", method: "GET", needsAny: ["deals.view.own", "deals.view.all", "deals.view.won"] },
   { name: "audit log", path: "/audit", method: "GET", query: "?entityType=Deal&entityId=00000000-0000-4000-8000-000000000000", needsAny: ["audit.view"] },
-  { name: "list invoices", path: "/invoices", method: "GET", needsAny: ["finance.view.payments"] },
+  { name: "list invoices", path: "/invoices", method: "GET", needsAny: ["finance.view.payments", "invoices.create"] }, // invoices.create: Sales' own-draft list (24 Nov 2026), checked below to carry no payment data
 ];
 
 describe("authorization matrix generated from live roles (V2 organisation)", () => {
@@ -74,7 +74,7 @@ describe("authorization matrix generated from live roles (V2 organisation)", () 
     await createRole(management, { name: "Empty", permissionKeys: [] });
 
     const { roles } = await listRoles(management);
-    expect(roles.filter((r) => r.kind === "platform")).toHaveLength(5);
+    expect(roles.filter((r) => r.kind === "platform")).toHaveLength(6); // Management, Sales, Delivery, Finance, Restricted Technical, Marketing
     expect(roles.filter((r) => r.kind === "custom")).toHaveLength(4);
 
     // One deal with a sentinel value, owned by the Management member, that no role without value rights may ever see.
@@ -102,6 +102,11 @@ describe("authorization matrix generated from live roles (V2 organisation)", () 
         if (allowed) expect(result.status, `${role.name} / ${probe.name} should be reached`).not.toBe(403);
         else expect(result.status, `${role.name} / ${probe.name} should be refused`).toBe(403);
         letters.push(result.status === 403 ? "D" : "A");
+        // A role that reaches invoices without the payment key (Sales drafts) gets the draft view only: no balances, no payment fields.
+        if (probe.path === "/invoices" && result.status === 200 && !keys.has("finance.view.payments")) {
+          expect(result.json?.salesDraftOnly, `${role.name} invoices are draft-only`).toBe(true);
+          expect(result.text).not.toMatch(/"(paidAmount|balance|overdue|payments)"/);
+        }
 
         // No answer for a role without value rights may hold the sentinel; a refusal must explain itself.
         if (!keys.has("deals.view.value")) expect(result.text.replace(/[,\s]/g, "")).not.toContain(String(SENTINEL_VALUE));

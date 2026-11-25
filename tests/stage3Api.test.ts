@@ -101,7 +101,11 @@ describe("payments over HTTP", () => {
     const none = await call(null, invoices.GET, "/invoices");
     expect(none.status).toBe(401);
     expect(none.body).toMatchObject({ code: "UNAUTHORIZED" });
-    const denied = await call(f.sales, invoices.GET, "/invoices");
+    // Sales (24 Nov 2026): the invoice list answers with its own drafts only (no totals); payments stay behind the explained 403.
+    const salesList = await call(f.sales, invoices.GET, "/invoices");
+    expect(salesList.status).toBe(200);
+    expect(salesList.body).toMatchObject({ salesDraftOnly: true });
+    const denied = await call(f.sales, paymentSummary.GET, "/payments/summary");
     expect(denied.status).toBe(403);
     expect(denied.body).toMatchObject({ code: "FORBIDDEN", denial: { yourRole: "Sales", ownerRoles: ["Finance", "Management"] } });
     for (const who of [f.delivery, f.technical]) expect((await call(who, paymentSummary.GET, "/payments/summary")).status).toBe(403);
@@ -150,7 +154,8 @@ describe("payments over HTTP", () => {
     const rev = await call(f.management, paymentReverse.POST, `/payments/${paymentId}/reverse`, { body: { reason: "Wrong invoice" }, params: { paymentId } });
     expect(rev.body).toMatchObject({ status: "SENT", paidAmount: "0.00" });
     expect((await call(f.finance, invoiceVoid.POST, `/invoices/${id}/void`, { body: { reason: "Raised twice" }, params: p })).body).toMatchObject({ status: "VOID" });
-    expect((await call(f.sales, invoiceOne.GET, `/invoices/${id}`, { params: p })).status).toBe(403);
+    // Sales reads own drafts only: a voided (non-draft) invoice is "not found" to it, so nothing is revealed.
+    expect((await call(f.sales, invoiceOne.GET, `/invoices/${id}`, { params: p })).status).toBe(404);
     expect((await call(f.finance, invoiceOne.GET, "/invoices/nope", { params: { invoiceId: "nope" } })).status).toBe(404);
   });
 

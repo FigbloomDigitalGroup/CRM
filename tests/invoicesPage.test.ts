@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ForbiddenError, ValidationError } from "../src/auth/errors";
+import { ForbiddenError, NotFoundError, ValidationError } from "../src/auth/errors";
 import type { AuthContext } from "../src/auth/context";
 import { createInvoice, exportInvoicesCsv, getInvoice, listInvoices, markInvoiceSent, recordPayment, reversePayment, voidInvoice } from "../src/services/paymentService";
 import { createTestContext, createTestOrganization } from "./helpers/fixtures";
@@ -84,11 +84,17 @@ describe("invoice list filters and ageing (UC-R7)", () => {
   it("refuses the list, the invoice and the export to every role that is not Finance or Management", async () => {
     const { sales, delivery, technical, finance, management, mk } = await setup();
     const inv = await mk("R-1", 100, "2026-12-01");
-    for (const who of [sales, delivery, technical]) {
+    for (const who of [delivery, technical]) {
       await expect(listInvoices(who, {}, {}, NOW)).rejects.toBeInstanceOf(ForbiddenError);
       await expect(getInvoice(who, inv.id)).rejects.toBeInstanceOf(ForbiddenError);
       await expect(exportInvoicesCsv(who, {}, NOW)).rejects.toBeInstanceOf(ForbiddenError);
     }
+    // Sales (24 Nov 2026): draft-only view of own deals. A sent invoice is invisible to it, the list carries no totals, the export is refused.
+    const salesList = (await listInvoices(sales, {}, {}, NOW)) as { items: unknown[]; salesDraftOnly?: boolean };
+    expect(salesList.salesDraftOnly).toBe(true);
+    expect(salesList.items).toEqual([]);
+    await expect(getInvoice(sales, inv.id)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(exportInvoicesCsv(sales, {}, NOW)).rejects.toBeInstanceOf(ForbiddenError);
     expect((await listInvoices(management, {}, {}, NOW)).total).toBe(1);
     expect((await listInvoices(finance, {}, {}, NOW)).total).toBe(1);
   });

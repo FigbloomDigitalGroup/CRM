@@ -13,13 +13,15 @@ const keysOf = (role: string) => ROLE_PERMISSIONS[role]!;
 const items = (role: string) => buildNav({ permissionKeys: keysOf(role), membershipId: "m1", demoScreens: true }).flatMap((s) => s.items.map((i) => i.key));
 
 describe("new nav items follow the keys the API enforces (UC-R11)", () => {
-  it("Invoices is shown only to a role that holds the payment key and invoices.view, i.e. Finance and Management", () => {
+  it("Invoices is shown exactly to a role that holds invoices.view: Finance, Management and, for its own drafts, Sales (24 Nov 2026)", () => {
     for (const role of roles) {
       const shown = items(role).includes("invoices");
-      const holds = keysOf(role).includes("finance.view.payments") && keysOf(role).includes("invoices.view");
-      expect(shown, role).toBe(holds);
+      expect(shown, role).toBe(keysOf(role).includes("invoices.view"));
     }
-    expect(roles.filter((r) => items(r).includes("invoices")).sort()).toEqual(["FINANCE", "MANAGEMENT"]);
+    expect(roles.filter((r) => items(r).includes("invoices")).sort()).toEqual(["FINANCE", "MANAGEMENT", "SALES"]);
+    // Sales sees drafts only: it never holds the payment keys that unlock balances and payments.
+    for (const k of ["finance.view.payments", "finance.manage.payments", "finance.export", "invoices.send", "invoices.edit"]) expect(keysOf("SALES"), k).not.toContain(k);
+    for (const role of ["DELIVERY", "RESTRICTED_TECHNICAL"]) expect(items(role)).not.toContain("invoices");
   });
 
   it("Quotes is never shown without quotes.view, and never to Delivery or Restricted Technical", () => {
@@ -28,11 +30,11 @@ describe("new nav items follow the keys the API enforces (UC-R11)", () => {
     expect(items("RESTRICTED_TECHNICAL")).not.toContain("quotes");
   });
 
-  it("New invoice needs both invoices.create and finance.manage.payments; New quote needs quotes.create", () => {
+  it("New invoice follows invoices.create (Sales makes drafts only, without the payment keys); New quote needs quotes.create", () => {
     for (const role of roles) {
       const kinds = buildQuickCreate({ permissionKeys: keysOf(role), membershipId: "m1" }).map((q) => q.key);
       expect(kinds.includes("invoice"), role).toBe(keysOf(role).includes("invoices.create"));
-      if (kinds.includes("invoice")) expect(keysOf(role), role).toContain("finance.manage.payments");
+      if (kinds.includes("invoice") && role !== "SALES") expect(keysOf(role), role).toContain("finance.manage.payments");
       expect(kinds.includes("quote"), role).toBe(keysOf(role).includes("quotes.create"));
     }
   });

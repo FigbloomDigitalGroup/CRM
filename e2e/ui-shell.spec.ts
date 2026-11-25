@@ -67,7 +67,7 @@ test.describe("top bar identity", () => {
   test("Quick create offers only what the role may create", async ({ page }) => {
     await loginAs(page, "dev.sales@figbloom.local");
     await page.getByRole("button", { name: "New", exact: true }).click();
-    await expect(page.getByRole("menuitem")).toHaveText(["New lead", "New contact", "New company", "New task", "Log a call or note"]);
+    await expect(page.getByRole("menuitem")).toHaveText(["New lead", "New contact", "New company", "New task", "New quote", "New invoice", "Log a call or note"]);
     await page.keyboard.press("Escape");
     await page.context().clearCookies();
     await loginAs(page, "dev.finance@figbloom.local");

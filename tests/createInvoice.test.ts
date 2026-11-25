@@ -38,7 +38,15 @@ describe("create invoice (UC-R8)", () => {
   it("lets Management and Finance create, and refuses Sales, Delivery and Restricted Technical", async () => {
     const w = await setup();
     const input = { ...base, number: "ROLE-1", companyId: w.deal.companyId };
-    await expect(createInvoice(w.sales, input)).rejects.toBeInstanceOf(ForbiddenError);
+    // Sales (24 Nov 2026): a DRAFT on an own won deal only; never without a deal, sent, on another's deal, or with payment fields.
+    await expect(createInvoice(w.sales, input)).rejects.toBeInstanceOf(ValidationError);
+    const salesInput = { ...base, number: "ROLE-S1", dealId: w.deal.id };
+    const draft = (await createInvoice(w.sales, salesInput)) as Record<string, unknown>;
+    expect(draft).toMatchObject({ number: "ROLE-S1", status: "DRAFT", salesDraftOnly: true });
+    for (const k of ["paidAmount", "balance", "overdue", "payments"]) expect(draft).not.toHaveProperty(k);
+    await expect(createInvoice(w.sales, { ...salesInput, number: "ROLE-S2", sent: true })).rejects.toBeInstanceOf(ValidationError);
+    const others = await createWonDeal(w.org.id, w.management, { value: 100 });
+    await expect(createInvoice(w.sales, { ...salesInput, number: "ROLE-S3", dealId: others.id })).rejects.toBeInstanceOf(ForbiddenError);
     await expect(createInvoice(w.delivery, input)).rejects.toBeInstanceOf(ForbiddenError);
     await expect(createInvoice(w.technical, input)).rejects.toBeInstanceOf(ForbiddenError);
     expect((await createInvoice(w.finance, input)).number).toBe("ROLE-1");

@@ -90,7 +90,15 @@ test.describe("negative paths", () => {
       const api = await page.request.get(`/api/orgs/${ORG_SLUG}/invoices?limit=1`);
       const allowed = role.key === "finance" || role.key === "management";
       if (allowed) expect(api.status(), `${role.label} payments API`).toBe(200);
-      else expect([401, 403], `${role.label} payments API`).toContain(api.status());
+      else if (role.key === "sales") {
+        // UC-R10: Sales prepare DRAFT invoices on their own deals, so the list answers 200, but only drafts and never any payment or balance.
+        expect(api.status(), `${role.label} invoices API`).toBe(200);
+        const body = (await api.json()) as { items?: Array<Record<string, unknown>> };
+        for (const row of body.items ?? []) {
+          expect(row["status"], `${role.label} sees only drafts`).toBe("DRAFT");
+          for (const k of ["paid", "balance", "outstanding", "payments", "paidAmount"]) expect(Object.keys(row), `${role.label} must not get ${k}`).not.toContain(k);
+        }
+      } else expect([401, 403], `${role.label} payments API`).toContain(api.status());
       // Leave the app page before the session goes: its own session check would otherwise redirect it to /login while the next sign-in loads.
       await page.goto("about:blank");
       await page.context().clearCookies();
