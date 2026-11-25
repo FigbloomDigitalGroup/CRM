@@ -1,5 +1,6 @@
 "use client";
 
+import { DashboardsEditor } from "./Dashboards";
 import { Building2, ClipboardList, Database, FileText, Globe, History, Inbox, Layers, Lock, RefreshCw, Shield, Tag, Upload, Users, Zap, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -14,7 +15,7 @@ import { FileDown as DataRequestsIcon, KeyRound as TwoStepIcon } from "lucide-re
 import { DataRequests, TwoStepSettings } from "../orgside/SettingsTabs";
 import { BookOpen as CatalogueIcon, GitBranch as PipelineIcon, ListOrdered as SequenceIcon, FormInput as WebFormIcon, ShieldCheck as RulesIcon } from "lucide-react";
 import { ApprovalRulesSection, CatalogueSection, PipelinesSection, InvoiceNumberingSection, QuoteTaxSection, SequencesSection, WebFormsSection } from "../settingsplus";
-import { Network as StructureIcon, ShieldUser as RolesIcon, SlidersHorizontal as SalesAccessIcon } from "lucide-react";
+import { Network as StructureIcon, ShieldUser as RolesIcon, SlidersHorizontal as SalesAccessIcon, LayoutDashboard as DashboardsIcon } from "lucide-react";
 import { OrgStructureSection, RolesAccessSection, SalesAccessSection } from "../roles";
 import { Automations } from "./Automations";
 import { Integrations } from "./Integrations";
@@ -76,6 +77,8 @@ export const SETTINGS_TABS: TabDef[] = [
   { id: "rolesaccess", label: "Roles & access", icon: <RolesIcon size={ICON} aria-hidden="true" />, render: () => <RolesAccessSection /> },
   { id: "salesaccess", label: "Sales access", icon: <SalesAccessIcon size={ICON} aria-hidden="true" />, render: () => <SalesAccessSection /> },
   { id: "structure", label: "Organisation structure", icon: <StructureIcon size={ICON} aria-hidden="true" />, render: () => <OrgStructureSection /> },
+  // UC-W1: which widgets each role's home shows, and in what order (real dashboard-layouts API).
+  { id: "dashboards", label: "Dashboards", icon: <DashboardsIcon size={ICON} aria-hidden="true" />, render: () => <DashboardsEditor /> },
 ];
 
 /**

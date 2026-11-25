@@ -8241,6 +8241,48 @@
       "additionalProperties": false
     }
   },
+  "PUT /api/orgs/{orgSlug}/dashboard-layouts": {
+    "body": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "widgets": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "visible": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "visible"
+                ],
+                "additionalProperties": false
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "widgets"
+      ],
+      "additionalProperties": false
+    }
+  },
   "PUT /api/orgs/{orgSlug}/data-migration/sessions/{sessionId}/mapping": {
     "body": {
       "$schema": "https://json-schema.org/draft/2020-12/schema",

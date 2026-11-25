@@ -97,6 +97,7 @@ export const PAYMENTS_ONLY: RegExp[] = [under("/invoices"), under("/payments"), 
 /** What every signed-in member does for themselves: preferences, notifications, search, their own tasks and files, their device. */
 const SELF_SERVICE: RegExp[] = [
   under("/me"),
+  key("/dashboard-layouts"), // UC-W1: every member reads their own home layout (GET); only Management writes (PUT, checked by the service)
   key("/notification-preferences"),
   under("/notifications"),
   under("/search"),

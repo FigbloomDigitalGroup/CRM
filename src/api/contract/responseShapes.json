@@ -4232,6 +4232,42 @@
     ],
     "additionalProperties": true
   },
+  "GET /api/orgs/{orgSlug}/dashboard-layouts": {
+    "type": "object",
+    "properties": {
+      "kind": {
+        "type": "string"
+      },
+      "widgets": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "visible": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "visible"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "isDefault": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "kind",
+      "widgets",
+      "isDefault"
+    ],
+    "additionalProperties": true
+  },
   "GET /api/orgs/{orgSlug}/dashboard/{section}": {
     "type": "object",
     "properties": {

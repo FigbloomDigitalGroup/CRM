@@ -7,7 +7,7 @@ import { describeError } from "../../errors";
 import { NoAccess } from "../../components/states";
 import { useApiQuery } from "../../data/hooks";
 import { useMember } from "../../data/member";
-import { HCols, HIcon, KpiGrid, Panel, SectionFailed, type KpiDef } from "./kit";
+import { HIcon, KpiGrid, Panel, SectionFailed, type KpiDef } from "./kit";
 import { NewLeadsPanel, MovingAndStalled, PipelineByStage, TodoPanel, useLastVisit, useNewLeads } from "./blocks";
 import {
   AdoptionCard,
@@ -29,6 +29,8 @@ import type { DeliveryData, FinanceData, ManagementData, SalesTodayData, Section
 import { LoaderBlock } from "../../components/loader";
 import { settingsHref } from "@/lib/settingsLinks";
 import { SocialHome } from "./SocialHome";
+import { homeKindFrom } from "./catalogue";
+import { LayoutBody } from "./layout";
 import { AgeingPanel, InvoiceDraftsPanel, InvoiceTiles, QuotesPanel, SocialSnapshotTile } from "./widgets";
 
 type Kind = "management" | "sales" | "delivery" | "finance" | "technical" | "marketing";
@@ -98,14 +100,7 @@ export function HomeScreen() {
 
   const kind: Kind | null = useMemo(() => {
     if (!sections) return null;
-    const has = (k: string) => sections.some((s) => s.key === k);
-    if (has("management")) return "management";
-    if (has("sales_today")) return "sales";
-    if (has("delivery")) return "delivery";
-    if (has("finance")) return "finance";
-    if (has("technical")) return "technical";
-    if (m.can("social.view")) return "marketing";
-    return null;
+    return homeKindFrom((k) => sections.some((s) => s.key === k), m.can);
   }, [sections, m]);
 
   const retry = () => void qc.invalidateQueries({ queryKey: ["getDashboard"] });
@@ -306,13 +301,18 @@ function SalesHome({ sections, retry }: RoleProps) {
     { key: "stalled", label: "Stalled deals", value: d.stalledDeals ?? 0, sub: "no activity for 10+ days", icon: "briefcase", tone: "orange", href: `/o/${m.orgSlug}/deals` },
   ];
   return (
-    <>
-      <KpiGrid items={kpis} />
-      <HCols
-        left={[<TodoPanel key="todo" />, ...(d.pipeline ? [<PipelineByStage key="pipe" />] : []), <InvoiceDraftsPanel key="drafts" />]}
-        right={[<NewLeadsPanel key="new" rows={leads.rows} since={since} />, ...(d.pipeline ? [<MovingAndStalled key="moving" />] : []), <QuotesPanel key="quotes" variant="sales" />]}
-      />
-    </>
+    <LayoutBody
+      kind="sales"
+      widgets={{
+        kpis: <KpiGrid items={kpis} />,
+        todo: <TodoPanel />,
+        new_leads: <NewLeadsPanel rows={leads.rows} since={since} />,
+        pipeline: d.pipeline ? <PipelineByStage /> : undefined,
+        moving: d.pipeline ? <MovingAndStalled /> : undefined,
+        invoice_drafts: <InvoiceDraftsPanel />,
+        quotes: <QuotesPanel variant="sales" />,
+      }}
+    />
   );
 }
 
@@ -339,18 +339,25 @@ function ManagementHome({ sections, retry }: RoleProps) {
     { key: "stalled", label: "Stalled deals", value: stalled, sub: "no activity for 10+ days", icon: "briefcase", tone: "orange", href: `/o/${m.orgSlug}/deals` },
   ];
   return (
-    <>
-      <FirstRunChecklist />
-      <KpiGrid items={kpis} />
-      <HCols
-        left={[<TodoPanel key="todo" showOwner />, <PipelineByStage key="pipe" />]}
-        right={[<NewLeadsPanel key="new" rows={leads.rows} since={since} />, <MovingAndStalled key="moving" showOwner />]}
-      />
-      <InvoiceTiles />
-      <HCols left={[<QuotesPanel key="quotes" variant="management" />]} right={[<SocialSnapshotTile key="social" />]} />
-      <MonthVsLast data={d} />
-      <HCols left={[<RevenueByService key="rev" data={d} />, <RetentionCard key="ret" />]} right={[<TeamHealth key="team" data={d} />, <AdoptionCard key="adopt" data={d} />]} />
-    </>
+    <LayoutBody
+      kind="management"
+      widgets={{
+        first_run: <FirstRunChecklist />,
+        kpis: <KpiGrid items={kpis} />,
+        todo: <TodoPanel showOwner />,
+        new_leads: <NewLeadsPanel rows={leads.rows} since={since} />,
+        pipeline: <PipelineByStage />,
+        moving: <MovingAndStalled showOwner />,
+        invoice_tiles: <InvoiceTiles />,
+        quotes: <QuotesPanel variant="management" />,
+        social: <SocialSnapshotTile />,
+        month_vs_last: <MonthVsLast data={d} />,
+        revenue: <RevenueByService data={d} />,
+        team_health: <TeamHealth data={d} />,
+        retention: <RetentionCard />,
+        adoption: <AdoptionCard data={d} />,
+      }}
+    />
   );
 }
 
@@ -365,13 +372,15 @@ function DeliveryHome({ sections, retry }: RoleProps) {
   const d = s.data;
   if (d.awaitingOwner + d.onboardingInProgress + d.delivered === 0 && open === 0) return <EmptyHome kind="delivery" />;
   return (
-    <>
-      <KpiGrid items={deliveryKpis(m.orgSlug, d, open)} />
-      <div className="fb-hgrid fb-hgrid--wide">
-        <HandedOff />
-        <TodoPanel title="My tasks" groups={["OVERDUE", "TODAY", "THIS_WEEK"]} emptyText="No open tasks." bare />
-      </div>
-    </>
+    <LayoutBody
+      kind="delivery"
+      grid
+      widgets={{
+        kpis: <KpiGrid items={deliveryKpis(m.orgSlug, d, open)} />,
+        handed_off: <HandedOff />,
+        my_tasks: <TodoPanel title="My tasks" groups={["OVERDUE", "TODAY", "THIS_WEEK"]} emptyText="No open tasks." bare />,
+      }}
+    />
   );
 }
 
@@ -382,11 +391,15 @@ function FinanceHome({ sections, retry }: RoleProps) {
   if (s.state !== "ok") return null;
   if (s.data.wonDeals === 0) return <EmptyHome kind="finance" />;
   return (
-    <>
-      <KpiGrid items={financeKpis(s.data, pay.rows, pay.loading)} />
-      <InvoiceTiles />
-      <HCols left={[<WonDealsTable key="won" rows={pay.rows} loading={pay.loading} />]} right={[<AgeingPanel key="ageing" />]} />
-    </>
+    <LayoutBody
+      kind="finance"
+      widgets={{
+        kpis: <KpiGrid items={financeKpis(s.data, pay.rows, pay.loading)} />,
+        invoice_tiles: <InvoiceTiles />,
+        won_deals: <WonDealsTable rows={pay.rows} loading={pay.loading} />,
+        ageing: <AgeingPanel />,
+      }}
+    />
   );
 }
 
@@ -398,17 +411,22 @@ function TechnicalHome({ sections, retry }: RoleProps) {
   const c = s.data.counts;
   if (c.OVERDUE + c.TODAY + c.THIS_WEEK + c.LATER + c.NO_DATE === 0) return <EmptyHome kind="technical" />;
   return (
-    <>
-      <KpiGrid items={technicalKpis(m.orgSlug, s.data)} />
-      <div className="fb-infobar">
-        <HIcon name="info" size={17} />
-        <span>
-          You see the tasks assigned to you and the client requirements that go with them. Your access to client data is logged in the audit history. Need
-          context on something else? Ask your organisation’s Management.
-        </span>
-      </div>
-      <TechnicalWork />
-    </>
+    <LayoutBody
+      kind="technical"
+      widgets={{
+        kpis: <KpiGrid items={technicalKpis(m.orgSlug, s.data)} />,
+        tech_notice: (
+          <div className="fb-infobar">
+            <HIcon name="info" size={17} />
+            <span>
+              You see the tasks assigned to you and the client requirements that go with them. Your access to client data is logged in the audit history. Need
+              context on something else? Ask your organisation’s Management.
+            </span>
+          </div>
+        ),
+        tech_work: <TechnicalWork />,
+      }}
+    />
   );
 }
 

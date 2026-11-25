@@ -167,6 +167,13 @@
     },
     {
       "file": "src/repositories/memberships.ts",
+      "model": "membershipPermissionOverride",
+      "count": 1,
+      "category": "identity",
+      "note": "UC-C5 step 3: the per-member overrides are read in the same statement that resolves the member's role keys (resolveActiveMembership), keyed on the membership id of the lookup itself. Writes go through withOrgContext (memberAccessService)."
+    },
+    {
+      "file": "src/repositories/memberships.ts",
       "model": "organization",
       "count": 1,
       "category": "identity",

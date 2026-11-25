@@ -153,6 +153,8 @@ export function effectivePermissionKeys(input: {
   config: FeatureConfig;
   /** B7.06: a custom role of the organisation. It has no seeded departure rows, so a departure that is off removes its keys from it whole. */
   custom?: boolean;
+  /** UC-C5 step 3: per-member overrides. Applied last: GRANT keys are added (with their implied keys, release-filtered), then DENY keys are removed. */
+  overrides?: { grant?: readonly string[]; deny?: readonly string[] };
 }): string[] {
   const { roleKey, catalogueKeys, config } = input;
   if (!roleIsAvailable(roleKey, config)) return [];
@@ -174,6 +176,17 @@ export function effectivePermissionKeys(input: {
     const min = PERMISSION_MIN_RELEASE[key];
     if (min && !releaseAtLeast(config.release, min)) keys.delete(key);
   }
+  if (input.overrides?.grant?.length) {
+    for (const key of input.overrides.grant) {
+      keys.add(key);
+      for (const implied of PERMISSION_IMPLICATIONS[key] ?? []) keys.add(implied);
+    }
+    for (const key of [...keys]) {
+      const min = PERMISSION_MIN_RELEASE[key];
+      if (min && !releaseAtLeast(config.release, min)) keys.delete(key);
+    }
+  }
+  for (const key of input.overrides?.deny ?? []) keys.delete(key);
   return [...keys].sort();
 }
 

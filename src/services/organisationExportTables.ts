@@ -47,6 +47,7 @@ export const EXCLUDED_TABLES: Readonly<Record<string, string>> = {
   card_captures: "private business-card captures (images and extracted personal data) of individual members",
   roles: "custom role definitions (FIG-1188); their permission rows have no organisation column and cannot be exported alone, and Management reads them in Settings, Roles",
   role_field_rules: "field-visibility rules of custom roles; exported with the role definitions or not at all",
+  membership_permission_overrides: "per-member permission overrides (UC-C5); Management reads them in Settings, Members",
   churn_hints: "assistant hints derived from the exported records (FIG-1190), with individuals' feedback; regenerated nightly",
   api_tokens: "credential records (hashes) of individual members; never exported (FIG-805)",
   webhook_endpoints: "integration configuration with encrypted signing secrets; never exported (FIG-804)",

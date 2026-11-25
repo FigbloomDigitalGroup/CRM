@@ -3,7 +3,7 @@ import { OrganizationUnavailableError } from "../auth/errors";
 import { effectivePermissionKeys } from "../auth/permissions";
 import { adminDb } from "../db/adminClient";
 import { loadFeatureConfig } from "../lib/featureConfig";
-import { hiddenFieldsOf } from "../lib/roleLimits";
+import { hiddenFieldsOf, isReservedKey } from "../lib/roleLimits";
 
 export interface AddMembershipInput {
   organizationId: string;
@@ -85,10 +85,13 @@ export async function resolveActiveMembership(
   // membership, so it is read at the same time.
   const [rows, config] = await Promise.all([
     adminDb.$queryRaw<
-      Array<{ id: string; user_id: string; organization_id: string; role_id: string; role_key: string; role_org: string | null; org_status: string; org_name: string; keys: string[] }>
+      Array<{ id: string; user_id: string; organization_id: string; role_id: string; role_key: string; role_org: string | null; org_status: string; org_name: string; keys: string[]; grants: string[]; denies: string[] }>
     >(Prisma.sql`
       SELECT m.id, m.user_id, m.organization_id, r.id AS role_id, r.key AS role_key, r.organization_id AS role_org, o.status::text AS org_status, o.name AS org_name,
-             COALESCE(array_agg(p.key) FILTER (WHERE p.key IS NOT NULL), ARRAY[]::text[]) AS keys
+             COALESCE(array_agg(p.key) FILTER (WHERE p.key IS NOT NULL), ARRAY[]::text[]) AS keys,
+             -- UC-C5 step 3: per-member overrides, applied after the role's keys (effectivePermissionKeys).
+             COALESCE((SELECT array_agg(o.permission_key) FROM membership_permission_overrides o WHERE o.membership_id = m.id AND o.effect = 'GRANT'), ARRAY[]::text[]) AS grants,
+             COALESCE((SELECT array_agg(o.permission_key) FROM membership_permission_overrides o WHERE o.membership_id = m.id AND o.effect = 'DENY'), ARRAY[]::text[]) AS denies
       FROM memberships m
       JOIN roles r ON r.id = m.role_id
       JOIN organizations o ON o.id = m.organization_id
@@ -144,6 +147,7 @@ export async function resolveActiveMembership(
       catalogueKeys: membership.keys,
       config,
       custom: membership.role_org !== null,
+      overrides: { grant: membership.grants.filter((k) => !isReservedKey(k)), deny: membership.denies },
     }),
     ...(hiddenFields.length > 0 ? { hiddenFields } : {}),
   };

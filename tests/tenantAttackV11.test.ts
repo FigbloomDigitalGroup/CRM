@@ -49,6 +49,7 @@ const V11_TABLES = [
   "churn_hints",
   "quote_signatures",
   "role_field_rules",
+  "membership_permission_overrides",
   "webhook_deliveries",
   "webhook_endpoints",
   "approval_requests",

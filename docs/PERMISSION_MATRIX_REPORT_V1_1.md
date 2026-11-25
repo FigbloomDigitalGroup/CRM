@@ -160,6 +160,8 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `PATCH /custom-fields/{fieldId}` | A | D | D | D | D | same |
 | `GET /custom-fields/{fieldId}/usage` | A | D | D | D | D | same |
 | `GET /dashboard` | A | A | A | A | A | same |
+| `GET /dashboard-layouts` | A | A | A | A | A | same |
+| `PUT /dashboard-layouts` | V | D | D | D | D | same |
 | `GET /dashboard/{section}` | A | D | D | D | D | same |
 | `GET /data-migration` | A | D | D | D | D | same |
 | `GET /data-migration/presets` | A | D | D | D | D | same |
@@ -264,9 +266,9 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /integrations/website-key/settings` | H | D | D | D | D | same |
 | `GET /integrations/whatsapp` | A | D | D | D | D | same |
 | `PUT /integrations/whatsapp` | A | D | D | D | D | same |
-| `GET /invoices` | A | A | D | A | D | changed |
-| `POST /invoices` | V | V | D | V | D | changed |
-| `GET /invoices/{invoiceId}` | A | H | D | A | D | changed |
+| `GET /invoices` | A | A | D | A | D | same |
+| `POST /invoices` | V | V | D | V | D | same |
+| `GET /invoices/{invoiceId}` | A | H | D | A | D | same |
 | `PATCH /invoices/{invoiceId}` | A | D | D | A | D | same |
 | `POST /invoices/{invoiceId}/payments` | A | D | D | A | D | same |
 | `POST /invoices/{invoiceId}/send` | V | D | D | V | D | same |
@@ -323,6 +325,8 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `GET /memberships` | A | D | D | D | D | same |
 | `POST /memberships` | V | D | D | D | D | same |
 | `POST /memberships/{membershipId}/deactivate` | A | D | D | D | D | same |
+| `GET /memberships/{membershipId}/permissions` | D | D | D | D | D | same |
+| `PUT /memberships/{membershipId}/permissions` | D | D | D | D | D | same |
 | `POST /memberships/{membershipId}/reactivate` | V | D | D | D | D | same |
 | `POST /memberships/{membershipId}/reassign` | V | D | D | D | D | same |
 | `GET /memberships/{membershipId}/reassignment` | A | D | D | D | D | same |
@@ -533,4 +537,4 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D | same |
 | `GET /whats-new` | A | A | A | A | A | opened |
 
-516 route and method pairs, 2580 role answers: A 873, D 1277, H 261, V 169.
+520 route and method pairs, 2600 role answers: A 878, D 1291, H 261, V 170.

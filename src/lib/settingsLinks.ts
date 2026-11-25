@@ -36,6 +36,7 @@ export const SETTINGS_TAB_IDS = [
   "rolesaccess",
   "salesaccess",
   "structure",
+  "dashboards",
 ] as const;
 
 export type SettingsTabId = (typeof SETTINGS_TAB_IDS)[number];

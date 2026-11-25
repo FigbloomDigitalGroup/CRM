@@ -157,6 +157,8 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `PATCH /custom-fields/{fieldId}` | A | D | D | D | D |
 | `GET /custom-fields/{fieldId}/usage` | A | D | D | D | D |
 | `GET /dashboard` | A | A | A | A | A |
+| `GET /dashboard-layouts` | A | A | A | A | A |
+| `PUT /dashboard-layouts` | V | D | D | D | D |
 | `GET /dashboard/{section}` | A | D | D | D | D |
 | `GET /data-migration` | A | D | D | D | D |
 | `GET /data-migration/presets` | A | D | D | D | D |
@@ -320,6 +322,8 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `GET /memberships` | A | D | D | D | D |
 | `POST /memberships` | V | D | D | D | D |
 | `POST /memberships/{membershipId}/deactivate` | A | D | D | D | D |
+| `GET /memberships/{membershipId}/permissions` | D | D | D | D | D |
+| `PUT /memberships/{membershipId}/permissions` | D | D | D | D | D |
 | `POST /memberships/{membershipId}/reactivate` | V | D | D | D | D |
 | `POST /memberships/{membershipId}/reassign` | V | D | D | D | D |
 | `GET /memberships/{membershipId}/reassignment` | A | D | D | D | D |
@@ -530,4 +534,4 @@ On a V1 organisation every V1.1 route answers D (not in the release). Who may us
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D |
 | `GET /whats-new` | D | D | D | D | D |
 
-516 route and method pairs, 2580 role answers: A 677, D 1676, H 135, V 92.
+520 route and method pairs, 2600 role answers: A 682, D 1690, H 135, V 93.

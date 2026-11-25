@@ -18,6 +18,7 @@
 @import "./screens/assistant/assistant.css";
 @import "./screens/preferences/preferences.css";
 @import "./screens/settings/settings.css";
+@import "./screens/settings/dashboards.css";
 @import "./screens/orgside/orgside.css";
 @import "./screens/communication/communication.css";
 @import "./screens/commercial/commercial.css";
