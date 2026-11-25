@@ -15,7 +15,7 @@ const PreviewSchema = z.strictObject({
 export async function POST(request: Request, { params }: { params: Promise<{ orgSlug: string }> }) {
   return handleRoute(async () => {
     const { orgSlug } = await params;
-    const ctx = await resolveGatedContext(orgSlug, "release.v2");
+    const ctx = await resolveGatedContext(orgSlug, "roles.custom");
     return previewRole(ctx, await parseJsonBody(request, PreviewSchema));
   });
 }

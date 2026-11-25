@@ -150,3 +150,18 @@ export function whoCan(roles: readonly RoleView[], key: string): { roles: RoleVi
   const holders = roles.filter((r) => r.permissionKeys.includes(key));
   return { roles: holders, people: holders.reduce((n, r) => n + r.memberCount, 0) };
 }
+
+/** "n / m Active": how many of a group's permissions the draft has switched on. */
+export function activeCount(permissions: readonly CatalogPermission[], keys: readonly string[]): number {
+  return permissions.filter((p) => keys.includes(p.key)).length;
+}
+
+/** The category names for the filter, alphabetical. */
+export function areaNames(permissions: readonly CatalogPermission[]): string[] {
+  return groupPermissions(permissions).map((g) => g.area);
+}
+
+/** Grant all: every permission an organisation may grant, plus any key the role already holds (so nothing is silently dropped). */
+export function grantAllKeys(catalog: RoleCatalog, current: readonly string[]): string[] {
+  return [...new Set([...current, ...catalog.permissions.filter((p) => p.grantable).map((p) => p.key)])];
+}

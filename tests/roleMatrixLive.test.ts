@@ -174,7 +174,7 @@ describe("the editor's routes, end to end", () => {
     current.ctx = null;
   }, 120_000);
 
-  it("answers an organisation below V2 with the explained 'not available yet', before anything else", async () => {
+  it("answers an organisation below V1.1 with the explained 'not available yet', before anything else", async () => {
     const org = await createTestOrganization("RoleRoutesV1");
     const management = await createTestContext(org.id, "MANAGEMENT", "v1.mgmt");
     current.ctx = management;

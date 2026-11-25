@@ -22,7 +22,7 @@ Starter templates ("Marketing lead", "Read-only analyst") are lists of EXISTING 
 Nothing in the API is weakened. Reserved keys stay disabled; platform roles are read-only; the 25-role limit and the "a change key needs its view key" rule come back from the API and are shown.
 
 **Caveats of the real part**
-- The routes are gated by the **V2 release flag** (`resolveGatedContext(..., "release.v2")`) and `roles.manage`. An organisation not on V2 sees the "not available yet" state. On the MVP (V2 hidden) the tab therefore shows that state until the flag moves (conflict with `DECISIONS 7.1`, D-7).
+- The routes are gated by the **`roles.custom` toggle (V1.1 and later)** (`resolveGatedContext(..., "release.v2")`) and `roles.manage`. An organisation not on V2 sees the "not available yet" state. On the MVP (V2 hidden) the tab therefore shows that state until the flag moves (conflict with `DECISIONS 7.1`, D-7).
 - The API does **not** check that an admin only grants keys the admin holds. Custom roles can only carry non-reserved keys, which Management already controls, so nothing was added. A "grant only what you hold" rule would be a backend change.
 - Custom role keys are still globally unique (`Role.key`); namespacing per organisation (rest of FIG-1790) is a backend task.
 - The members list per role (names, "change role") is not on this tab: the preview shows names for an edited role and Members already changes roles.
@@ -46,3 +46,9 @@ Both screens carry a "Preview only" badge and banner, save nothing, and keep the
 ## Tests
 
 `tests/components/screens/roles/roles.test.tsx` (components project, stubbed API): list, add role from a starting point and the create body, reserved key disabled, standard role read-only, archive disabled while in use, the API's refusal shown in the preview, the not-available state, switch dependencies, home tiles and sidebar rules, department add and archive, axe on the list and Sales access.
+
+## 25 Nov 2026: brought forward from V2 (Given)
+
+- The roles routes (`/roles`, `/roles/{id}`, `/roles/catalog`, `/roles/preview`) and `/memberships/{id}/permissions` are gated by the organisation toggle `roles.custom` (V1.1 and later, default on) instead of `release.v2`. An organisation on V1.1 (the MVP) now sees the tab; a V1 organisation still gets the explained not-available state. Switch it off per organisation in Platform, Flags.
+- The tab is a role list on the left (standard roles and your roles with people counts, New role, Grant all, Revoke all) and one role's editor on the right: name, description, search, category, Copy from, the pages the role opens, a collapsible Preview as this role, who has the role, and permission cards by area with an n / m Active count. Same API, same reserved keys, same preview. Save is explicit (one Save changes button), not per click, so the API can refuse a bad set as a whole.
+- Not changed: platform roles stay read-only; only Management (`roles.manage`) edits; reserved keys cannot go on a custom role. There is no separate Switch off and Delete role: Archive role is the one action, refused while people hold the role.

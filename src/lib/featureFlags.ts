@@ -117,6 +117,12 @@ export const TOGGLES: readonly ToggleDef[] = [
     minRelease: "v1.1",
   },
   {
+    key: "roles.custom",
+    description: "Roles & access: custom roles, the role editor and per-member permission overrides. Brought forward from V2 on 25 Nov 2026 (Given).",
+    defaultValue: true,
+    minRelease: "v1.1",
+  },
+  {
     key: "communication.group",
     description: "The Communication group: Chat, Mail and Meetings (FIG-1384).",
     defaultValue: true,
