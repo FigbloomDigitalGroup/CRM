@@ -62,7 +62,10 @@ describe("platform roles keep exactly their effective access (snapshot against t
         const { release, toggles } = configFor(label);
         const now = effectivePermissionKeys({ roleKey: role.key, catalogueKeys: ROLE_PERMISSIONS[role.key] ?? [], config: { release, toggles } });
         const before = (baseline.effective[label] as Record<string, string[]>)[role.key]!;
-        expect(now.filter((k) => !NEW.has(k) && !SOCIAL_KEYS.has(k)), "keys other than the ten new ones must be identical to the baseline").toEqual(before);
+        // roles.manage moved from V2 to V1.1 on 25 Nov 2026 (Roles & access brought forward, Given): the one deliberate change to a baseline role, asserted here.
+        const rolesManageNow = role.key === "MANAGEMENT" && release !== "v1";
+        expect(now.includes("roles.manage"), "roles.manage: Management from V1.1, nobody else, never at V1").toBe(rolesManageNow || (role.key === "MANAGEMENT" && before.includes("roles.manage")));
+        expect(now.filter((k) => !NEW.has(k) && !SOCIAL_KEYS.has(k) && !(rolesManageNow && k === "roles.manage")), "keys other than the ten new ones must be identical to the baseline").toEqual(before.filter((k) => !(rolesManageNow && k === "roles.manage")));
         expect(now.filter((k) => NEW.has(k)).sort(), "the new keys this role gains").toEqual(expectedAdditions(role.key, release));
       });
     }

@@ -12,7 +12,7 @@ The V1 organisation matrix is in `docs/PERMISSION_MATRIX_REPORT.md` (V1.1 routes
 | H | 404: the record exists but this role may not open it, so it is hidden rather than refused. |
 | V | 400 after a valid-shaped request: the request failed a rule before access could be judged. |
 
-Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this walk opens: 130.
+Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this walk opens: 135.
 
 | Route | Mgmt | Sales | Deliv | Fin | RT | In V1 matrix |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -446,12 +446,12 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `GET /reports/v2/my-metrics/export` | A | A | A | A | D | same |
 | `GET /retention` | A | A | D | D | D | same |
 | `GET /roles` | A | D | D | D | D | opened |
-| `POST /roles` | D | D | D | D | D | same |
-| `DELETE /roles/{roleId}` | D | D | D | D | D | same |
+| `POST /roles` | A | D | D | D | D | opened |
+| `DELETE /roles/{roleId}` | H | D | D | D | D | opened |
 | `GET /roles/{roleId}` | H | D | D | D | D | opened |
-| `PATCH /roles/{roleId}` | D | D | D | D | D | same |
-| `GET /roles/catalog` | D | D | D | D | D | same |
-| `POST /roles/preview` | D | D | D | D | D | same |
+| `PATCH /roles/{roleId}` | H | D | D | D | D | opened |
+| `GET /roles/catalog` | A | D | D | D | D | opened |
+| `POST /roles/preview` | A | D | D | D | D | opened |
 | `GET /scoring/weights` | A | D | D | D | D | same |
 | `PATCH /scoring/weights` | A | D | D | D | D | same |
 | `GET /search` | A | A | A | A | A | same |
@@ -537,4 +537,4 @@ Routes new since the V1 matrix: 0. Routes closed in a V1 organisation that this 
 | `POST /website-lead-assignment-rules/{ruleId}/move` | A | D | D | D | D | same |
 | `GET /whats-new` | A | A | A | A | A | opened |
 
-520 route and method pairs, 2600 role answers: A 881, D 1287, H 262, V 170.
+520 route and method pairs, 2600 role answers: A 884, D 1282, H 264, V 170.

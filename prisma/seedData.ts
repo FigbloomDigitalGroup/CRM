@@ -610,7 +610,7 @@ export const PERMISSION_MIN_RELEASE: Record<string, "v1" | "v1.1" | "v2"> = {
   "meetings.schedule": "v1.1",
   "api_tokens.manage": "v2",
   "webhooks.manage": "v2",
-  "roles.manage": "v2",
+  "roles.manage": "v1.1", // brought forward from V2 on 25 Nov 2026 (Given); the roles.custom toggle gates the routes
 };
 
 /**

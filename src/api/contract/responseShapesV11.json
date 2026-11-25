@@ -18347,6 +18347,145 @@
     ],
     "additionalProperties": true
   },
+  "GET /api/orgs/{orgSlug}/roles/catalog": {
+    "type": "object",
+    "properties": {
+      "permissions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "area": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "grantable": {
+              "type": "boolean"
+            },
+            "reason": {},
+            "release": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "key",
+            "area",
+            "description",
+            "grantable",
+            "reason",
+            "release"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "fields": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "governedBy": {
+              "type": "string"
+            },
+            "editable": {
+              "type": "boolean"
+            },
+            "options": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "help": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "governedBy",
+            "editable",
+            "options",
+            "help"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "startingPoints": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "key",
+            "name",
+            "description"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "limits": {
+        "type": "object",
+        "properties": {
+          "maxCustomRoles": {
+            "type": "integer"
+          },
+          "nameLength": {
+            "type": "object",
+            "properties": {
+              "min": {
+                "type": "integer"
+              },
+              "max": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "min",
+              "max"
+            ],
+            "additionalProperties": true
+          },
+          "descriptionMax": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "maxCustomRoles",
+          "nameLength",
+          "descriptionMax"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "required": [
+      "permissions",
+      "fields",
+      "startingPoints",
+      "limits"
+    ],
+    "additionalProperties": true
+  },
   "GET /api/orgs/{orgSlug}/roles": {
     "type": "object",
     "properties": {
@@ -32795,6 +32934,185 @@
       "sequence",
       "isActive",
       "createdAt",
+      "updatedAt"
+    ],
+    "additionalProperties": true
+  },
+  "POST /api/orgs/{orgSlug}/roles/preview": {
+    "type": "object",
+    "properties": {
+      "valid": {
+        "type": "boolean"
+      },
+      "gained": {
+        "type": "array",
+        "items": {}
+      },
+      "lost": {
+        "type": "array",
+        "items": {}
+      },
+      "permissionKeys": {
+        "type": "array",
+        "items": {}
+      },
+      "scopes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "resource": {
+              "type": "string"
+            },
+            "action": {
+              "type": "string"
+            },
+            "scope": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "changed": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            }
+          },
+          "required": [
+            "resource",
+            "action",
+            "scope",
+            "reason"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "fields": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "access": {
+              "type": "string"
+            },
+            "was": {
+              "nullable": true,
+              "description": "Observed as null in the reference example."
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "access"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "people": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "names": {
+            "type": "array",
+            "items": {}
+          }
+        },
+        "required": [
+          "count",
+          "names"
+        ],
+        "additionalProperties": true
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "valid",
+      "gained",
+      "lost",
+      "permissionKeys",
+      "scopes",
+      "fields",
+      "people",
+      "warnings"
+    ],
+    "additionalProperties": true
+  },
+  "POST /api/orgs/{orgSlug}/roles": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "key": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      },
+      "description": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "kind": {
+        "type": "string"
+      },
+      "basedOnRoleKey": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "editable": {
+        "type": "boolean"
+      },
+      "permissionKeys": {
+        "type": "array",
+        "items": {}
+      },
+      "fieldRules": {
+        "type": "object",
+        "properties": {
+          "deal.value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deal.value"
+        ],
+        "additionalProperties": true
+      },
+      "memberCount": {
+        "type": "integer"
+      },
+      "archivedAt": {
+        "nullable": true,
+        "description": "Observed as null in the reference example."
+      },
+      "updatedAt": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "id",
+      "key",
+      "name",
+      "kind",
+      "editable",
+      "permissionKeys",
+      "fieldRules",
+      "memberCount",
       "updatedAt"
     ],
     "additionalProperties": true
