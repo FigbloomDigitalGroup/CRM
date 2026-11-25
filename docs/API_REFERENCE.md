@@ -4452,7 +4452,7 @@ The platform roles and this organisation's custom roles with their permissions, 
 
 Create a custom role, optionally starting from a platform role; reserved keys are refused (roles.manage; V2)
 
-- **Credential:** sessionCookie; **access:** nobody
+- **Credential:** sessionCookie; **access:** management
 - **Body:** `name`: string, `basedOnRoleKey`?: string, `description`?: string | null, `permissionKeys`?: string[], `fieldRules`?: object
 - **Returns:** object
 - **Errors:** 400, 401, 403, 404
@@ -4473,7 +4473,7 @@ One role
 
 Rename a custom role or change its permissions and field rules; effective on the next request, audited. Platform roles are fixed (roles.manage; V2)
 
-- **Credential:** sessionCookie; **access:** nobody
+- **Credential:** sessionCookie; **access:** management
 - **Body:** `name`?: string, `description`?: string | null, `permissionKeys`?: string[], `fieldRules`?: object
 - **Returns:** object
 - **Errors:** 400, 401, 403, 404
@@ -4484,7 +4484,7 @@ Rename a custom role or change its permissions and field rules; effective on the
 
 Archive a custom role nobody holds any more (roles.manage; V2)
 
-- **Credential:** sessionCookie; **access:** nobody
+- **Credential:** sessionCookie; **access:** management
 - **Returns:** object
 - **Errors:** 401, 403, 404
 
@@ -4494,7 +4494,7 @@ Archive a custom role nobody holds any more (roles.manage; V2)
 
 Every permission with whether it may be granted to a custom role and why not, the controllable fields and the starting-point roles (roles.manage; V2)
 
-- **Credential:** sessionCookie; **access:** nobody
+- **Credential:** sessionCookie; **access:** management
 - **Returns:** object
 - **Errors:** 401, 403, 404
 
@@ -4504,7 +4504,7 @@ Every permission with whether it may be granted to a custom role and why not, th
 
 The effect of a role change before saving: keys gained and lost, what the role can see and change per screen family, the people reached, warnings. Writes nothing (roles.manage; V2)
 
-- **Credential:** sessionCookie; **access:** nobody
+- **Credential:** sessionCookie; **access:** management
 - **Body:** `roleId`?: string, `basedOnRoleKey`?: string, `permissionKeys`?: string[], `fieldRules`?: object
 - **Returns:** object
 - **Errors:** 400, 401, 403, 404

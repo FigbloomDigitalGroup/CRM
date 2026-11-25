@@ -186,3 +186,36 @@ describe("the editor's routes, end to end", () => {
     current.ctx = null;
   });
 });
+
+describe("Roles & access on a V1.1 organisation (brought forward from V2, 25 Nov 2026)", () => {
+  it("Management holds roles.manage and can list, create, preview, edit and archive; Sales is refused with an explained denial", async () => {
+    const org = await createTestOrganization("RoleRoutesV11");
+    await setOrganizationRelease(org.id, "v1.1");
+    const management = await createTestContext(org.id, "MANAGEMENT", "v11.mgmt");
+    const sales = await createTestContext(org.id, "SALES", "v11.sales");
+    const roles = route("/roles");
+    const one = route("/roles/{roleId}");
+    const values = { orgSlug: "x" };
+
+    expect(management.permissionKeys, "Management carries roles.manage at V1.1").toContain("roles.manage");
+    expect(sales.permissionKeys).not.toContain("roles.manage");
+
+    current.ctx = sales;
+    const refused = await invoke(roles, "POST", values, { body: { name: "Nope", permissionKeys: [] } });
+    expect(refused.status).toBe(403);
+    expect(refused.json.denial).toBeTruthy();
+
+    current.ctx = management;
+    expect((await invoke(roles, "GET", values)).status).toBe(200);
+    expect((await invoke(route("/roles/catalog"), "GET", values)).status).toBe(200);
+    const created = await invoke(roles, "POST", values, { body: { name: "V11 Role", permissionKeys: ["contacts.view"] }, headers: { "idempotency-key": "role-v11-create-1" } });
+    expect(created.status).toBe(200);
+    const id = created.json.id as string;
+    const preview = await invoke(route("/roles/preview"), "POST", values, { body: { roleId: id, permissionKeys: ["contacts.view", "companies.view"] } });
+    expect(preview.status).toBe(200);
+    const patched = await invoke(one, "PATCH", { ...values, roleId: id }, { body: { permissionKeys: ["contacts.view", "companies.view"] } });
+    expect(patched.status).toBe(200);
+    expect((await invoke(one, "DELETE", { ...values, roleId: id })).json).toEqual({ archived: true });
+    current.ctx = null;
+  }, 120_000);
+});

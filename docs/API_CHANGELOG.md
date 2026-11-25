@@ -16,9 +16,9 @@ needs a new major version (`API_VERSION` in `src/api/openapi.ts`). Additions are
 
 ## 1.1.0, addendum — roles brought forward from V2 (25 Nov 2026)
 
-contract-hash: de6f5a1c63d4b467f975e1990fccbcab544eaa121a62790867f35f730ac2baef
+contract-hash: ec13a6f26ccc9082de47a9f462af57dc02749d0d359ae280beb6e9036c006442
 
-No path, field or enum changed (still version 1.1.0). The roles routes (`GET`/`POST /orgs/{org}/roles`, `GET`/`PATCH`/`DELETE /orgs/{org}/roles/{roleId}`, `GET /roles/catalog`, `POST /roles/preview`) and `GET`/`PUT /orgs/{org}/memberships/{membershipId}/permissions` are gated by the organisation toggle `roles.custom` (V1.1 and later, on by default) instead of the V2 release. On a V1.1 organisation Management is now allowed (`A`) where the contract recorded `D` (feature unavailable); the other four roles stay denied. Widens access for Management only, so not breaking. See `docs/ROLES_ACCESS_SCREENS.md`.
+No path, field or enum changed (still version 1.1.0). The roles routes (`GET`/`POST /orgs/{org}/roles`, `GET`/`PATCH`/`DELETE /orgs/{org}/roles/{roleId}`, `GET /roles/catalog`, `POST /roles/preview`) and `GET`/`PUT /orgs/{org}/memberships/{membershipId}/permissions` are gated by the organisation toggle `roles.custom` (V1.1 and later, on by default) instead of the V2 release, and the permission `roles.manage` now takes effect from V1.1 (it was V2-only, so Management held it on no V1.1 organisation). On a V1.1 organisation Management is now allowed where the contract recorded `D` (feature unavailable or no permission), on all seven roles routes; the other four roles stay denied. Widens access for Management only, so not breaking. See `docs/ROLES_ACCESS_SCREENS.md`.
 
 ## 1.1.0, addendum — per-member permission overrides (UC-C5 step 3, FIG-1790, 24 Nov 2026)
 

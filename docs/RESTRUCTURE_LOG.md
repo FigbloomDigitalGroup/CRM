@@ -84,7 +84,7 @@ The dates are my proposal to fit the fixed 22 Nov date; they are not signed off.
 | Forecast and targets (Q4) | FIG-1170 | built on demo data | **yes (W4, 5 Nov 2026)**: `GET /forecast`, `GET/PUT /forecast/targets`, open deals from `GET /deals`; per-deal probability override dropped (the API has stage probabilities only) |
 | Settings: catalogue, pipelines and stage rules, sequences, web forms, approval rules (S6#2) | FIG-1174 | built on demo data | **partly (W3, 5 Nov 2026)**: catalogue, pipelines and stage rules, approval rules wired (`GET/POST/PATCH /catalogue`, `/pipelines`, `/approval-rules`); sequences (`GET/POST/PATCH /sequences`) and web forms (`GET/POST/PATCH /web-forms`, rotate-key, submissions) wired by W4, 5 Nov 2026; Settings › Sequences and Web forms no longer need demo screens enabled |
 | E-signature page and deposit request (Q2) | FIG-1193 | yes | **V2, hidden 9 Nov 2026 (MVP-13)**: `/sign/{token}` answers a plain "this link is not available" page with no data. `SignClient.tsx` and `demoSigning.ts` stay (parked for V2, they have their own test) but no route uses them. **Update 11 Nov 2026:** the V2 backend (FIG-1186, B7.04) has since landed, so `/sign/{token}` is now the real signing page (`LiveSign`); an unknown, revoked or replaced token, and any organisation below release V2, still gets the same plain "not available" 404 (checked on production 11 Nov 2026) |
-| Settings: roles and field access, developers (S8#2) | FIG-1194 | yes (`settingsplus/demo/`) | **V2, hidden 9 Nov 2026 (MVP-13)**: no Settings tab; `Roles.tsx`, `Developers.tsx` and `settingsplus/demo/` stay parked for V2 and are used by no screen |
+| Settings: roles and field access, developers (S8#2) | FIG-1194 | yes (`settingsplus/demo/`) | **V2, hidden 9 Nov 2026 (MVP-13)**: no Settings tab; `Roles.tsx`, `Developers.tsx` and `settingsplus/demo/` stay parked for V2 and are used by no screen | **Roles & access only (FIG-1790, tab `rolesaccess`) was brought forward to V1.1 on 25 Nov 2026 (Given):** real roles API, toggle `roles.custom`, permission `roles.manage` min release v1.1; the screen was rebuilt (`src/ui/screens/roles/`). Developers and the other V2 screens stay as above.
 | Communication group in the sidebar (Conversations moved in, not duplicated) | FIG-1378 | built 29 Oct 2026; the group is real navigation, the Mail, Chat and Video links are demo-only (`src/ui/shell/navigation.ts`, see docs/M10_COMMUNICATION.md) | Mail, Chat and Video links are real now (keys `mail.use`, `chat.view`, `meetings.schedule`, no demo flag) |
 | Chat workspace | FIG-1379 | yes (demo store removed) | wired 5 Nov 2026 to `/chat/*` (`src/ui/screens/communication/api.ts`, polling); gaps: no mute, no unread badge in the sidebar yet; needs test against a live database |
 | Mail workspace | FIG-1380 | yes (demo store removed) | wired 5 Nov 2026: Conversations (EMAIL), Needs linking, drafts, send, reply, connection status; gaps: only a 240-character preview of received mail, no read flag, no templates or attachments, no automation-draft marker |
@@ -153,7 +153,7 @@ The V1.1 backend is built and committed on `makeover/m13-backend-v11` (`bbdc883`
 | Forecast and targets (FIG-1170) | FIG-1146 | none |
 | Settings: catalogue, pipelines, sequences, web forms, approval rules (FIG-1174) | FIG-1142, FIG-1147, FIG-1150, FIG-1151, FIG-1145 | none |
 | E-signature and deposit request (FIG-1193) | none | V2 backend (M16) |
-| Settings: roles and field access, developers (FIG-1194) | none | V2 backend (M16) |
+| Settings: roles and field access, developers (FIG-1194) | none | V2 backend (M16) | Roles half: brought forward to V1.1 on 25 Nov 2026 (see line 87); Developers stays V2.
 | Communication group (FIG-1378) | FIG-1384 (`communication.group` toggle and keys) | none |
 | Chat workspace (FIG-1379) | FIG-1382 to FIG-1385 | none |
 | Mail workspace (FIG-1380) | FIG-807, FIG-1153 | none |
@@ -168,7 +168,7 @@ The V1.1 backend is built and committed on `makeover/m13-backend-v11` (`bbdc883`
 
 ## M17 close-out (9 Nov 2026)
 
-Backend V2 is built on `makeover/m17-backend-v2` (see the Stage 17 section of `IMPLEMENTATION_NOTES.md`). **Nothing is wired yet:** the V2 demo screens (support access, flags and limits, announcements, e-signature, roles and field access, developers) still read demo data and are to be wired to these routes. FIG-1187 (deposit request) is not built and waits for the payments decision.
+Backend V2 is built on `makeover/m17-backend-v2` (see the Stage 17 section of `IMPLEMENTATION_NOTES.md`). **Nothing is wired yet:** the V2 demo screens (support access, flags and limits, announcements, e-signature, roles and field access, developers) still read demo data and are to be wired to these routes. FIG-1187 (deposit request) is not built and waits for the payments decision. Update 25 Nov 2026: Roles & access is no longer one of the unwired V2 screens; it runs on the real roles API on V1.1 (`roles.custom`, `roles.manage` at v1.1).
 
 ## Role dashboards (UC, 24 Nov 2026)
 
