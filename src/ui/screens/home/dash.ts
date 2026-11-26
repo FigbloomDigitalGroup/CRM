@@ -99,10 +99,13 @@ export function recordHref(orgSlug: string, type: string, id: string): string {
 }
 
 /** The chip on a task row: "Lead · Name", "Deal · Company", "Customer · Name", as the design writes it. */
-export function linkChipLabel(link: { type: string; label: string }): string {
-  if (link.label.includes(" · ")) return link.label;
-  const kind = { lead: "Lead", deal: "Deal", company: "Customer", contact: "Contact" }[link.type.toLowerCase() as "lead"];
-  return kind ? `${kind} · ${link.label}` : link.label;
+export function linkChipLabel(link: { type?: string | null; label?: string | null }): string {
+  // The label is empty when the person's role cannot see the linked record (a role change can cause that), so it falls back to the kind alone.
+  const kind = { lead: "Lead", deal: "Deal", company: "Customer", contact: "Contact" }[(link.type ?? "").toLowerCase() as "lead"];
+  const label = link.label ?? "";
+  if (!label) return kind ?? "Linked record";
+  if (label.includes(" · ")) return label;
+  return kind ? `${kind} · ${label}` : label;
 }
 
 /** The person's name for a lead row: the company first, then the contact. */

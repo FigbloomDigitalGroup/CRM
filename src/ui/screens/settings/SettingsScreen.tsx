@@ -43,6 +43,7 @@ const ICON = 16;
 export const SETTINGS_TABS: TabDef[] = [
   { id: "org", label: "Organization profile", icon: <Building2 size={ICON} aria-hidden="true" />, render: () => <OrganisationProfile /> },
   { id: "members", label: "Members", icon: <Users size={ICON} aria-hidden="true" />, render: () => <Members /> },
+  { id: "rolesaccess", label: "Roles & access", icon: <RolesIcon size={ICON} aria-hidden="true" />, render: () => <RolesAccessSection /> },
   { id: "website", label: "Website integration", icon: <Globe size={ICON} aria-hidden="true" />, render: () => <WebsiteIntegration /> },
   { id: "email", label: "Inbound email", icon: <Inbox size={ICON} aria-hidden="true" />, render: () => <InboundEmail /> },
   { id: "ref", label: "Reference data", icon: <Database size={ICON} aria-hidden="true" />, render: () => <ReferenceData /> },
@@ -63,7 +64,7 @@ export const SETTINGS_TABS: TabDef[] = [
   // V1.1 organisation-side sections: S7#2 two-step sign-in and OS6 data requests (both on the real API).
   { id: "twofa", label: "Two-step sign-in", icon: <TwoStepIcon size={ICON} aria-hidden="true" />, render: () => <TwoStepSettings /> },
   { id: "datareq", label: "Data requests", icon: <DataRequestsIcon size={ICON} aria-hidden="true" />, render: () => <DataRequests /> },
-  // Commercial engine sections (S6#2, S8#2, FIG-1174). Roles & field access and Developers (FIG-1194) are V2 and are not listed.
+  // Commercial engine sections (S6#2, S8#2, FIG-1174). Developers (FIG-1194) is V2 and is not listed.
   { id: "catalogue", label: "Service catalogue", icon: <CatalogueIcon size={ICON} aria-hidden="true" />, render: () => <CatalogueSection /> },
   { id: "pipelines", label: "Pipelines & stage rules", icon: <PipelineIcon size={ICON} aria-hidden="true" />, render: () => <PipelinesSection /> },
   { id: "sequences", label: "Follow-up sequences", icon: <SequenceIcon size={ICON} aria-hidden="true" />, render: () => <SequencesSection /> },
@@ -74,7 +75,6 @@ export const SETTINGS_TABS: TabDef[] = [
   // UC-R8: automatic invoice numbers and their prefix (same editor frame).
   { id: "invoicenumbering", label: "Invoice numbering", icon: <CatalogueIcon size={ICON} aria-hidden="true" />, render: () => <InvoiceNumberingSection /> },
   // UC-C5/C6: roles and access on the real roles API (V2-gated by the API). UC-C4 Sales access and UC-C2 Organisation structure are on demo data (docs/ROLES_ACCESS_SCREENS.md).
-  { id: "rolesaccess", label: "Roles & access", icon: <RolesIcon size={ICON} aria-hidden="true" />, render: () => <RolesAccessSection /> },
   { id: "salesaccess", label: "Sales access", icon: <SalesAccessIcon size={ICON} aria-hidden="true" />, render: () => <SalesAccessSection /> },
   { id: "structure", label: "Organisation structure", icon: <StructureIcon size={ICON} aria-hidden="true" />, render: () => <OrgStructureSection /> },
   // UC-W1: which widgets each role's home shows, and in what order (real dashboard-layouts API).

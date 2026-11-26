@@ -1,7 +1,8 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { Badge, Button, ConfirmDialog, EmptyState, FormErrorSummary, Input, LoadingState, Select, describeError, useApi, useMember, useToast } from "@/ui";
+import { Badge, Button, ConfirmDialog, EmptyState, FormErrorSummary, Input, LoadingState, Select, describeError, useApi, useApiQuery, useMember, useToast } from "@/ui";
 import { buildNav } from "../../shell/navigation";
 import { QueryFailure } from "../../featureUnavailable";
 import { Panel } from "../settings/kit";
@@ -58,7 +59,7 @@ export function RolesAccess() {
 
   return (
     <>
-      <Panel title="Roles & access" description="Who can do what in this organisation. The five standard roles are fixed; create roles of your own, each based on a standard role.">
+      <Panel title="Roles & access" description="Who can do what in this organisation. Change a standard role and it is saved as a role of your own, based on the standard one; the standard roles themselves stay the same everywhere.">
         <div className="fb-rl-shell">
           <nav className="fb-rl-rail" aria-label="Roles">
             <RoleGroup title="Standard roles" roles={standard} current={current} onPick={setSelected} />
@@ -81,6 +82,7 @@ export function RolesAccess() {
               roles={list.roles}
               role={role}
               mayManage={mayManage}
+              atLimit={atLimit}
               onSaved={(id) => setSelected(id)}
               onArchive={() => role && setArchiving(role)}
             />
@@ -131,19 +133,29 @@ function RoleGroup({ title, roles, current, onPick, empty }: { title: string; ro
   );
 }
 
-function RoleEditor({ catalog, roles, role, mayManage, onSaved, onArchive }: { catalog: RoleCatalog; roles: RoleView[]; role: RoleView | undefined; mayManage: boolean; onSaved: (id: string) => void; onArchive: () => void }) {
+function RoleEditor({ catalog, roles, role, mayManage, atLimit, onSaved, onArchive }: { catalog: RoleCatalog; roles: RoleView[]; role: RoleView | undefined; mayManage: boolean; atLimit: boolean; onSaved: (id: string) => void; onArchive: () => void }) {
   const { orgSlug } = useMember();
   const api = useApi();
   const toast = useToast();
   const create = useCreateRole();
   const update = useUpdateRole();
+  const qc = useQueryClient();
   const creating = !role;
-  const readOnly = !mayManage || (role ? !role.editable : false);
+  // A standard role is shared by every organisation, so changing it saves a role of this organisation's own, based on it (Management itself
+  // stays fixed: it holds the reserved admin permissions a custom role cannot carry).
+  const fromStandard = role?.kind === "platform" && role.key !== "MANAGEMENT" && mayManage;
+  const readOnly = !mayManage || (role ? (role.kind === "platform" ? !fromStandard : !role.editable) : false);
+  const startKeys = useMemo(() => (fromStandard ? keysFromStartingPoint(role, catalog) : (role?.permissionKeys ?? [])), [fromStandard, role, catalog]);
+  const holdersQuery = useApiQuery("getMemberships", { params: { orgSlug } } as never, { enabled: fromStandard } as never) as unknown as {
+    data?: Array<{ membershipId: string; roleKey: string; state: string; userName: string }>;
+  };
+  const holders = fromStandard ? (holdersQuery.data ?? []).filter((m) => m.roleKey === role.key && (m.state === "active" || m.state === "invited")) : [];
+  const [moveHolders, setMoveHolders] = useState(true);
 
-  const [name, setName] = useState(role?.name ?? "");
+  const [name, setName] = useState(fromStandard ? `${role.name} (edited)` : (role?.name ?? ""));
   const [description, setDescription] = useState(role?.description ?? "");
   const [basedOn, setBasedOn] = useState<string | null>(null);
-  const [keys, setKeys] = useState<string[]>(role?.permissionKeys ?? []);
+  const [keys, setKeys] = useState<string[]>(startKeys);
   const [dealValue, setDealValue] = useState<string>(role?.fieldRules["deal.value"] ?? "");
   const [filter, setFilter] = useState("");
   const [area, setArea] = useState("");
@@ -152,7 +164,7 @@ function RoleEditor({ catalog, roles, role, mayManage, onSaved, onArchive }: { c
   const [previewProblem, setPreviewProblem] = useState<string | null>(null);
 
   const problems = readOnly ? [] : validateRoleDraft(name, description, catalog);
-  const dirty = creating ? name.trim() !== "" || keys.length > 0 : name.trim() !== role.name || (description.trim() || null) !== (role.description ?? null) || !sameKeys(keys, role.permissionKeys) || dealValue !== (role.fieldRules["deal.value"] ?? "");
+  const dirty = creating ? name.trim() !== "" || keys.length > 0 : fromStandard ? !sameKeys(keys, startKeys) || dealValue !== "" : name.trim() !== role.name || (description.trim() || null) !== (role.description ?? null) || !sameKeys(keys, role.permissionKeys) || dealValue !== (role.fieldRules["deal.value"] ?? "");
   const groups = useMemo(() => groupPermissions(catalog.permissions, filter).filter((g) => !area || g.area === area), [catalog.permissions, filter, area]);
   const dealField = catalog.fields.find((f) => f.id === "deal.value" && f.editable);
   const hasReserved = catalog.permissions.some((p) => !p.grantable);
@@ -165,7 +177,7 @@ function RoleEditor({ catalog, roles, role, mayManage, onSaved, onArchive }: { c
         try {
           const result = (await api.call("previewRole" as never, {
             params: { orgSlug },
-            body: { ...(role ? { roleId: role.id } : {}), permissionKeys: keys, ...(dealValue ? { fieldRules: { "deal.value": dealValue } } : {}) },
+            body: { ...(role ? (fromStandard ? { basedOnRoleKey: role.key } : { roleId: role.id }) : {}), permissionKeys: keys, ...(dealValue ? { fieldRules: { "deal.value": dealValue } } : {}) },
           } as never)) as unknown as RolePreview;
           if (!cancelled) {
             setPreview(result);
@@ -205,7 +217,23 @@ function RoleEditor({ catalog, roles, role, mayManage, onSaved, onArchive }: { c
     setApiProblems([]);
     try {
       const fieldRules = dealValue ? { "deal.value": dealValue } : undefined;
-      if (role) {
+      if (fromStandard) {
+        const made = await create.mutateAsync({
+          params: { orgSlug },
+          body: { name: name.trim(), ...(description.trim() ? { description: description.trim() } : {}), basedOnRoleKey: role.key, permissionKeys: keys, ...(fieldRules ? { fieldRules } : {}) },
+        });
+        let moved = 0;
+        if (moveHolders && made?.key) {
+          for (const m of holders) {
+            await api.call("postMembershipsByMembershipIdRole" as never, { params: { orgSlug, membershipId: m.membershipId }, body: { roleKey: made.key } } as never);
+            moved += 1;
+          }
+          await qc.invalidateQueries({ queryKey: ["getMemberships"] });
+          await qc.invalidateQueries({ queryKey: ["listRoles"] });
+        }
+        toast.show({ message: `${name.trim()} saved${moved ? `, and ${moved} ${moved === 1 ? "person" : "people"} moved to it` : ""}`, tone: "success" });
+        if (made?.id) onSaved(made.id);
+      } else if (role) {
         await update.mutateAsync({ params: { orgSlug, roleId: role.id }, body: { name: name.trim(), description: description.trim() || null, permissionKeys: keys, ...(fieldRules ? { fieldRules } : {}) } });
         toast.show({ message: `${name.trim()} saved`, tone: "success" });
       } else {
@@ -236,14 +264,14 @@ function RoleEditor({ catalog, roles, role, mayManage, onSaved, onArchive }: { c
         </div>
         <div className="fb-rl-detailfoot">
           <p className="fb-set-muted">
-            {role?.kind === "platform" ? <Badge>Standard, read-only</Badge> : creating ? <Badge tone="info">New</Badge> : <Badge tone="info">Custom</Badge>}{" "}
+            {role?.kind === "platform" ? <Badge>{fromStandard ? "Standard · changes save as your own role" : "Standard, read-only"}</Badge> : creating ? <Badge tone="info">New</Badge> : <Badge tone="info">Custom</Badge>}{" "}
             {basedOnName ? `Based on ${basedOnName} · ` : ""}
             {creating ? "Nobody holds it yet" : `${people} ${people === 1 ? "person has" : "people have"} it`}
           </p>
           <div className="fb-rl-actions">
             {!readOnly ? (
-              <Button variant="primary" loading={saving} disabledReason={problems.length ? "Fix the problems below first" : previewProblem ? "The preview shows what to fix" : !dirty ? "Nothing has changed" : undefined} onClick={() => void save()}>
-                {creating ? "Add role" : "Save changes"}
+              <Button variant="primary" loading={saving} disabledReason={problems.length ? "Fix the problems below first" : previewProblem ? "The preview shows what to fix" : fromStandard && atLimit ? `An organisation has at most ${catalog.limits.maxCustomRoles} custom roles` : !dirty ? "Nothing has changed" : undefined} onClick={() => void save()}>
+                {creating ? "Add role" : fromStandard ? "Save as our own role" : "Save changes"}
               </Button>
             ) : null}
             {role?.kind === "custom" ? (
@@ -253,7 +281,18 @@ function RoleEditor({ catalog, roles, role, mayManage, onSaved, onArchive }: { c
             ) : null}
           </div>
         </div>
-        {readOnly && role ? <p className="fb-set-muted">Standard roles are the same in every organisation and cannot be changed. Pick New role, then Copy from this one, to start your own.</p> : null}
+        {fromStandard && role ? (
+          <>
+            <p className="fb-set-muted">{role.name} is the same in every organisation, so your changes are saved as a role of your own, based on it. The standard role stays as it is.</p>
+            {holders.length > 0 ? (
+              <label className="fb-rl-move">
+                <input type="checkbox" checked={moveHolders} onChange={(e) => setMoveHolders(e.target.checked)} /> Move the {holders.length === 1 ? "1 person" : `${holders.length} people`} who {holders.length === 1 ? "has" : "have"} {role.name} to this role ({holders.map((h) => h.userName).join(", ")})
+              </label>
+            ) : null}
+          </>
+        ) : readOnly && role ? (
+          <p className="fb-set-muted">{role.key === "MANAGEMENT" ? "Management runs the organisation and holds the reserved permissions, so it cannot be changed." : "Standard roles are the same in every organisation and cannot be changed. Pick New role, then Copy from this one, to start your own."}</p>
+        ) : null}
       </section>
 
       <div className="fb-rl-toolbar">

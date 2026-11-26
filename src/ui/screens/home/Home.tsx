@@ -106,7 +106,7 @@ export function HomeScreen() {
   const retry = () => void qc.invalidateQueries({ queryKey: ["getDashboard"] });
 
   // Marketing has no dashboard section of its own: its home is the Social overview, whatever the dashboard call answers.
-  if (m.can("social.view") && (dash.isError || (sections && !sections.some((s) => s.key !== "my_metrics")))) {
+  if (m.can("social.view") && (dash.isError || kind === "marketing")) {
     return (
       <div className="fb-home">
         <Header kind="marketing" timeZone={m.timeZone} quick={[]} />

@@ -50,7 +50,7 @@ describe("Roles & access (real roles API)", () => {
     previewRole: () => preview,
   });
 
-  it("lists the standard roles and your own roles with their people, and opens the first role read-only", async () => {
+  it("lists the standard roles and your own roles with their people, and opens the first role ready to change", async () => {
     const { client } = stubClient(handlers());
     const { container } = renderScreen(<RolesAccess />, client, { permissionKeys: MANAGER });
     expect(await screen.findByRole("heading", { name: "Roles & access" })).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("Roles & access (real roles API)", () => {
     expect(within(rail).getByText("Your roles")).toBeInTheDocument();
     expect(within(rail).getByRole("button", { name: /Sales/ })).toHaveAttribute("aria-current", "true");
     expect(within(rail).getByLabelText("4 people")).toBeInTheDocument();
-    expect(screen.getByLabelText("Name")).toHaveAttribute("readonly");
+    expect(screen.getByLabelText("Name")).not.toHaveAttribute("readonly");
     expect(screen.getByRole("table", { name: /Permissions held per role/ })).toBeInTheDocument();
     expect(await violations(container)).toEqual([]);
   });
@@ -121,17 +121,44 @@ describe("Roles & access (real roles API)", () => {
     expect(screen.queryByRole("checkbox", { name: "leads.create" })).not.toBeInTheDocument();
   });
 
-  it("a standard role is read-only, and a role in use cannot be archived", async () => {
+  it("a role in use cannot be archived, and Management cannot be changed", async () => {
     const used = { ...custom, id: "r-used", name: "Used", memberCount: 2 };
-    const { client } = stubClient({ ...handlers(), listRoles: () => ({ roles: [sales, used], limits: { maxCustomRoles: 25, customRoles: 1 } }) });
+    const mgmt = { ...sales, id: "r-mgmt", key: "MANAGEMENT", name: "Management" };
+    const { client } = stubClient({ ...handlers(), listRoles: () => ({ roles: [mgmt, sales, used], limits: { maxCustomRoles: 25, customRoles: 1 } }) });
     renderScreen(<RolesAccess />, client, { permissionKeys: MANAGER });
     const user = userEvent.setup();
-    expect(await screen.findByText(/cannot be changed/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeInTheDocument();
+    expect(await screen.findByText(/runs the organisation/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Grant all" })).not.toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "leads.create" })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: /Used/ }));
     expect(screen.getByRole("button", { name: "Archive role" })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("changing a standard role saves a role of your own based on it and moves the people who held it", async () => {
+    const created: unknown[] = [];
+    const moved: unknown[] = [];
+    const { client } = stubClient({
+      ...handlers(),
+      getMemberships: () => [
+        { membershipId: "m1", roleKey: "SALES", state: "active", userName: "Amina" },
+        { membershipId: "m2", roleKey: "FINANCE", state: "active", userName: "Zed" },
+      ],
+      createRole: (a) => (created.push(a.body), { ...custom, id: "r-new", key: "custom_abc", name: "Sales (edited)" }),
+      postMembershipsByMembershipIdRole: (a) => (moved.push([a.params?.membershipId, a.body]), {}),
+    });
+    renderScreen(<RolesAccess />, client, { permissionKeys: MANAGER });
+    const user = userEvent.setup();
+    // Sales is the first role: editable, with the reserved key off and the move option showing who would move.
+    expect(await screen.findByLabelText("Name")).toHaveValue("Sales (edited)");
+    expect(await screen.findByText(/Amina/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save as our own role" })).toHaveAttribute("aria-disabled", "true");
+    await user.click(screen.getByRole("checkbox", { name: "contacts.view" }));
+    await user.click(screen.getByRole("button", { name: "Save as our own role" }));
+    await waitFor(() => expect(created).toHaveLength(1));
+    expect(created[0]).toMatchObject({ name: "Sales (edited)", basedOnRoleKey: "SALES" });
+    expect((created[0] as { permissionKeys: string[] }).permissionKeys).toContain("contacts.view");
+    expect((created[0] as { permissionKeys: string[] }).permissionKeys).not.toContain("audit.view");
+    await waitFor(() => expect(moved).toEqual([["m1", { roleKey: "custom_abc" }]]));
   });
 
   it("Save changes sends the edited role's new keys", async () => {
