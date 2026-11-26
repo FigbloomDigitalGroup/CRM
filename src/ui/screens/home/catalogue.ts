@@ -120,10 +120,12 @@ export function layoutProblems(kind: string, widgets: unknown): string[] {
 /** Which home a person gets: the same order the Home screen has always used. `has` answers whether the dashboard has a section. */
 export function homeKindFrom(has: (sectionKey: string) => boolean, can: (key: string) => boolean): HomeKind | null {
   if (has("management")) return "management";
+  // Marketing (social.view) comes before the others: the Marketing role also holds some sales rights, but its own home is the Social overview,
+  // so a person moved to Marketing from Sales gets the Marketing home, not the sales one they had before.
+  if (can("social.view")) return "marketing";
   if (has("sales_today")) return "sales";
   if (has("delivery")) return "delivery";
   if (has("finance")) return "finance";
   if (has("technical")) return "technical";
-  if (can("social.view")) return "marketing";
   return null;
 }

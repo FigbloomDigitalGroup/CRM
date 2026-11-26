@@ -60,3 +60,6 @@
 .fb-app .fb-rl-perm input { flex: none; width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary-btn); }
 .fb-app .fb-rl-perm:focus-within { outline: 2px solid var(--focus-ring, var(--primary)); outline-offset: 2px; }
 .fb-app .fb-rl-permtext { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+
+.fb-rl-move { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; font-size: 13px; color: var(--text-2); }
+

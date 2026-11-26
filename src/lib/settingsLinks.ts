@@ -8,6 +8,7 @@
 export const SETTINGS_TAB_IDS = [
   "org",
   "members",
+  "rolesaccess",
   "website",
   "email",
   "ref",
@@ -33,7 +34,6 @@ export const SETTINGS_TAB_IDS = [
   "approvalrules",
   "quotetax",
   "invoicenumbering",
-  "rolesaccess",
   "salesaccess",
   "structure",
   "dashboards",

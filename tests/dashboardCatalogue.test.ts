@@ -42,6 +42,9 @@ describe("widget catalogue", () => {
     expect(homeKindFrom(has("management", "sales_today"), keys())).toBe("management");
     expect(homeKindFrom(has("sales_today"), keys())).toBe("sales");
     expect(homeKindFrom(has("my_metrics"), keys("social.view"))).toBe("marketing");
+    // Marketing also holds some sales rights, but its own home is the Social overview; Management keeps the management home.
+    expect(homeKindFrom(has("sales_today"), keys("social.view"))).toBe("marketing");
+    expect(homeKindFrom(has("management", "sales_today"), keys("social.view"))).toBe("management");
     expect(homeKindFrom(has("my_metrics"), keys())).toBeNull();
   });
 });
